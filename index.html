@@ -109,6 +109,10 @@
   @media (prefers-reduced-motion: reduce) { #wx-layer { display:none; } }
   select.flash { animation:flash 1.2s ease; }
   @keyframes flash { 0%,60% { box-shadow:0 0 0 4px #f6ad55; border-color:#dd6b20; } 100% { box-shadow:none; } }
+  .mic-btn { width:100%; margin:4px 0 6px; padding:16px; font-size:1.1rem; background:#2b6cb0; }
+  .mic-btn.on { background:#e53e3e; animation:micpulse 1.2s infinite; }
+  .mic-btn:disabled { background:#a0aec0; font-size:.92rem; }
+  @keyframes micpulse { 0%,100% { box-shadow:0 0 0 0 rgba(229,62,62,.5); } 50% { box-shadow:0 0 0 10px rgba(229,62,62,0); } }
   .chg-box { margin-top:14px; border-top:1px solid #edf2f7; padding-top:10px; }
   .chg-box > summary { list-style:none; display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:4px 0; }
   .chg-box > summary::-webkit-details-marker { display:none; }
@@ -221,7 +225,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-3</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-4</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -782,15 +786,42 @@ function openQuickChange(){
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🎤 말로 근무일 변경</div>
-    <div class="muted" style="margin-bottom:8px;">아래 칸을 누르고 <b>키보드의 마이크 🎤</b>를 눌러 말하거나, 글로 적어 주세요.</div>
+    <button type="button" id="qc-mic" class="mic-btn">🎤 눌러서 말하기</button>
+    <div id="qc-mic-msg" class="muted" style="text-align:center;margin:-2px 0 8px;min-height:1em;"></div>
     <div class="notice" style="font-size:.88rem;">예) <b>송태인 16일을 15일로 병원</b><br>예) <b>고부 경로당 16일에서 15일 행사</b><br>예) <b>김옥분 11월 4일 대신 5일 개인 사정</b></div>
     <textarea id="qc-text" rows="3" placeholder="누가, 며칠을, 며칠로, 왜" style="font-size:1.05rem;"></textarea>
     <div id="qc-result" style="margin-bottom:8px;"></div>
     <div class="grid-2"><button class="secondary" id="qc-cancel">닫기</button><button id="qc-go">확인하기</button></div></div>`;
   document.body.appendChild(back);
-  const ta = back.querySelector('#qc-text'); ta.focus();
-  back.querySelector('#qc-cancel').onclick = () => back.remove();
+  const ta = back.querySelector('#qc-text');
+  // 앱 안 마이크: 휴대폰의 음성 인식 기능 사용 (인터넷 필요)
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micBtn = back.querySelector('#qc-mic'), micMsg = back.querySelector('#qc-mic-msg');
+  let rec = null, listening = false;
+  if (!SR) {
+    micBtn.disabled = true; micBtn.textContent = '🎤 이 휴대폰에서는 앱 마이크가 안 돼요';
+    micMsg.innerHTML = '아래 칸을 누르고 <b>키보드의 마이크</b>를 쓰거나 글로 적어 주세요.';
+  } else {
+    micBtn.onclick = () => {
+      if (listening) { rec.stop(); return; }
+      rec = new SR(); rec.lang = 'ko-KR'; rec.interimResults = true; rec.continuous = false;
+      const before = ta.value ? ta.value.trim() + ' ' : '';
+      rec.onstart = () => { listening = true; micBtn.classList.add('on'); micBtn.textContent = '⏺ 듣고 있어요… (다 말하면 누르세요)'; micMsg.textContent = ''; };
+      rec.onresult = e => { ta.value = before + [...e.results].map(r => r[0].transcript).join(''); };
+      rec.onerror = e => {
+        micMsg.innerHTML = e.error === 'not-allowed' || e.error === 'service-not-allowed'
+          ? '마이크 사용이 막혀 있어요. 주소창 왼쪽 <b>자물쇠(또는 ⓘ) → 권한 → 마이크 허용</b>을 눌러 주세요.'
+          : e.error === 'network' ? '음성 인식은 인터넷이 필요해요. 인터넷 연결을 확인해 주세요.'
+          : e.error === 'no-speech' ? '말소리가 들리지 않았어요. 다시 눌러서 말해 주세요.'
+          : '음성 인식이 잘 안 됐어요. 다시 해 보거나 글로 적어 주세요.';
+      };
+      rec.onend = () => { listening = false; micBtn.classList.remove('on'); micBtn.textContent = '🎤 눌러서 말하기'; if (ta.value.trim()) micMsg.textContent = '들은 내용이 맞으면 "확인하기"를 누르세요.'; };
+      try { rec.start(); } catch(e) { micMsg.textContent = '마이크를 켤 수 없어요. 키보드 마이크나 글로 적어 주세요.'; }
+    };
+  }
+  back.querySelector('#qc-cancel').onclick = () => { try { rec && rec.abort(); } catch(e) {} back.remove(); };
   const go = (person, r, all) => {
+    try { rec && rec.abort(); } catch(e) {}
     back.remove();
     openModal(person.id);
     const mk = r.dates[0] ? r.dates[0].slice(0,7) : monthKey();
