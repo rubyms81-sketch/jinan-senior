@@ -169,6 +169,7 @@
     <div class="wd-head"><h3 id="wd-title"></h3><button class="small secondary" onclick="openWorkdays()">날짜 정하기</button></div>
     <div id="wd-chips" class="chips"></div>
     <div id="wd-note" class="muted"></div>
+    <button class="warning full" onclick="openQuickChange()" style="margin-top:10px;">🎤 말로 근무일 변경</button>
     <details id="chg-box" class="chg-box">
       <summary><h3 id="chg-title"></h3><span class="chg-arrow"></span></summary>
       <div id="chg-list"></div>
@@ -220,7 +221,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-2</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-3</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -737,8 +738,93 @@ function changeLogDate(logId){
   }, `📋 점검 기록 날짜 바꾸기 (지금: ${Number(l.date.slice(5,7))}월 ${dd(l.date)})`);
 }
 
-function addChange(){
+// ---------- 🎤 말로 근무일 변경 ----------
+// 예) "송태인 어르신 16일을 15일로 병원"  /  "고부 경로당 16일에서 15일 행사"
+const REASON_WORDS = [
+  ['병원 진료', /병원|진료|치료|아프|아퍼|입원|검진|수술|약/],
+  ['경조사', /경조|장례|상가|초상|결혼|혼사|돌잔치|칠순|팔순|구순|제사/],
+  ['행사', /행사|축제|잔치|회의|교육|모임|대회|여행/],
+  ['개인 사정', /개인|사정|볼일|일이\s*있|농사|집안|가족|외출/]
+];
+function parseChange(text){
+  const t = String(text||''), ns = t.replace(/\s+/g, '');
+  // 한글 숫자도 알아듣기: "이십일" → 20일, "십육일" → 16일, "시월" → 10월
+  const KN = {일:1,이:2,삼:3,사:4,오:5,육:6,칠:7,팔:8,구:9};
+  const kn = w => { if (!w) return null; let n = 0; const i = w.indexOf('십');
+    if (i < 0) return KN[w] ?? null; n = (i ? KN[w[i-1]] : 1) * 10; if (w[i+1]) n += KN[w[i+1]]; return n; };
+  const td = t.replace(/시월/g, '10월').replace(/유월/g, '6월')
+    .replace(/(?<![0-9가-힣])((?:[이삼]?십)?[일이삼사오육칠팔구]?)\s*(월|일)/g, (all, w, u) => {
+      if (!w || !/^(?:[이삼]?십)?[일이삼사오육칠팔구]?$/.test(w)) return all;
+      const n = kn(w); return n ? `${n}${u}` : all; });
+  // 날짜: "11월 3일" 또는 "16일"
+  const dates = []; const re = /(?:(\d{1,2})\s*월\s*)?(\d{1,2})\s*일/g; let m;
+  while ((m = re.exec(td))) {
+    const mon = m[1] ? Number(m[1]) : (dates.length ? Number(dates[dates.length-1].slice(5,7)) : curMonth), day = Number(m[2]);   // 월을 안 말하면 앞 날짜의 달
+    let y = YEAR; if (mon < curMonth - 6) y = YEAR + 1;
+    if (day >= 1 && day <= new Date(y, mon, 0).getDate()) dates.push(ymd(y, mon, day));
+  }
+  // 사람: 이름이 들어 있으면 (긴 이름 먼저, 겹치는 짧은 이름은 제외)
+  let people = participants.filter(p => ns.includes(p.name));
+  people = people.filter(p => !people.some(q => q.name !== p.name && q.name.includes(p.name)));
+  // 경로당: 사람 이름이 없을 때 "○○ 경로당"
+  let site = null;
+  if (!people.length) {
+    const sites = [...new Set(participants.map(p => p.town+'|'+seniorOf(p)))].map(k => k.split('|'));
+    const parts = k => [k, ...k.split(/[()]/).map(x => x.trim()).filter(x => x.length >= 2)];
+    const hits = sites.filter(([tw, k]) => parts(k).some(x => ns.includes(x.replace(/\s+/g,''))));
+    hits.sort((a,b) => b[1].length - a[1].length);
+    if (hits.length) site = hits[0];
+  }
+  const reason = (REASON_WORDS.find(([, r]) => r.test(t)) || [''])[0];
+  return { dates, people, site, reason };
+}
+function openQuickChange(){
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🎤 말로 근무일 변경</div>
+    <div class="muted" style="margin-bottom:8px;">아래 칸을 누르고 <b>키보드의 마이크 🎤</b>를 눌러 말하거나, 글로 적어 주세요.</div>
+    <div class="notice" style="font-size:.88rem;">예) <b>송태인 16일을 15일로 병원</b><br>예) <b>고부 경로당 16일에서 15일 행사</b><br>예) <b>김옥분 11월 4일 대신 5일 개인 사정</b></div>
+    <textarea id="qc-text" rows="3" placeholder="누가, 며칠을, 며칠로, 왜" style="font-size:1.05rem;"></textarea>
+    <div id="qc-result" style="margin-bottom:8px;"></div>
+    <div class="grid-2"><button class="secondary" id="qc-cancel">닫기</button><button id="qc-go">확인하기</button></div></div>`;
+  document.body.appendChild(back);
+  const ta = back.querySelector('#qc-text'); ta.focus();
+  back.querySelector('#qc-cancel').onclick = () => back.remove();
+  const go = (person, r, all) => {
+    back.remove();
+    openModal(person.id);
+    const mk = r.dates[0] ? r.dates[0].slice(0,7) : monthKey();
+    const days = personDays(person, mk);
+    let from = r.dates[0], to = r.dates[1];
+    // 날짜가 하나뿐이면: 근무일이면 "원래 날짜", 아니면 "바꿀 날짜"
+    if (r.dates.length === 1) { if (days.includes(from)) to = ''; else { to = from; from = days.find(d => d >= today()) || days[0]; } }
+    let note = `🎤 "<b>${esc(ta.value.trim())}</b>"`;
+    if (from && !days.includes(from)) note += `<br>⚠️ ${dd(from)}은 근무일이 아니에요. 원래 근무일을 다시 골라 주세요.`;
+    if (to && endDay(mk) && to > endDay(mk)) note += `<br>⚠️ ${dd(to)}은 마감일 이후예요.`;
+    if (!to) note += '<br>바꿀 날짜를 달력에서 눌러 주세요.';
+    setTimeout(() => addChange({ from, to, reason: r.reason, all, note }), 50);
+  };
+  back.querySelector('#qc-go').onclick = () => {
+    const r = parseChange(ta.value), box = back.querySelector('#qc-result');
+    if (!r.people.length && !r.site) { box.innerHTML = '<div class="notice red">어르신 이름이나 경로당을 찾지 못했어요. 이름을 정확히 말해 주세요.</div>'; return; }
+    if (!r.dates.length) { box.innerHTML = '<div class="notice red">날짜를 찾지 못했어요. "16일을 15일로"처럼 말해 주세요.</div>'; return; }
+    if (r.site && !r.people.length) {
+      const [tw, k] = r.site;
+      const members = participants.filter(p => p.town===tw && seniorOf(p)===k && !stats(p).dropped);
+      if (!members.length) { box.innerHTML = '<div class="notice red">그 경로당에 참여 중인 어르신이 없어요.</div>'; return; }
+      return go(members[0], r, true);
+    }
+    if (r.people.length === 1) return go(r.people[0], r, false);
+    // 같은 이름이 여러 분이거나 여러 이름이 나오면 고르기
+    box.innerHTML = '<div style="margin-bottom:4px;"><b>어느 분인가요?</b></div>' + r.people.map(p =>
+      `<button class="site" data-id="${p.id}" style="padding:10px 12px;"><div><b>${esc(p.name)}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span></div><span class="arrow">›</span></button>`).join('');
+    box.querySelectorAll('button[data-id]').forEach(b => b.onclick = () => go(participants.find(p => p.id===Number(b.dataset.id)), r, false));
+  };
+}
+
+function addChange(pre){
   const p = current(); if (!p) return;
+  pre = pre || {};
   const mk = monthKey(), days = personDays(p, mk);
   const mates = participants.filter(x => x.id!==p.id && x.town===p.town && seniorOf(x)===seniorOf(p) && !stats(x).dropped);
   const defFrom = days.find(d => d >= today()) || days[0];   // 앞으로 다가올 첫 근무일
@@ -790,6 +876,12 @@ function addChange(){
     });
   };
   back.querySelector('#cg-from')?.addEventListener('change', () => { back.querySelector('#cg-to').value=''; back.querySelector('#cg-picked').innerHTML=`원래 날짜 <b>${dd(back.querySelector('#cg-from').value)}</b> — 이제 옮길 빈 날짜를 누르세요`; drawCal(); });
+  // 말로 변경에서 넘어온 값 미리 채우기
+  if (pre.from && days.includes(pre.from)) back.querySelector('#cg-from').value = pre.from;
+  if (pre.to) {
+    back.querySelector('#cg-to').value = pre.to;
+    back.querySelector('#cg-picked').innerHTML = `<b>${dd(back.querySelector('#cg-from').value)} → <span style="color:var(--warning)">${dd(pre.to)}</span></b>`;
+  }
   drawCal();
   // 사유 단추: 누르면 선택, 다시 누르면 해제
   back.querySelectorAll('#cg-types button').forEach(b => b.onclick = () => {
@@ -798,6 +890,9 @@ function addChange(){
     if (on) b.classList.add('on');
     back.querySelector('#cg-type').value = on ? b.dataset.v : '';
   });
+  if (pre.reason) back.querySelector(`#cg-types button[data-v="${pre.reason}"]`)?.click();
+  if (pre.all && back.querySelector('#cg-all')) back.querySelector('#cg-all').checked = true;
+  if (pre.note) back.querySelector('.dlg').insertAdjacentHTML('afterbegin', `<div class="notice" style="margin-bottom:8px;">${pre.note}</div>`);
   back.querySelector('#cg-cancel').onclick = () => back.remove();
   back.querySelector('#cg-save').onclick = () => {
     const reason = back.querySelector('#cg-type').value;
