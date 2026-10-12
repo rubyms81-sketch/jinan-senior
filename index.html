@@ -207,25 +207,33 @@
   </div>
 
   <div class="card" id="tools-card">
-    <h3>⚙️ 명단 관리</h3>
-    <div class="grid-2">
-      <button onclick="openAdd()">+ 참여자 신규 등록</button>
-      <label for="bulk-file" class="filebtn">📂 엑셀로 한번에 등록</label>
-    </div>
+    <details class="chg-box" id="tools-box" style="margin-top:0;border-top:none;padding-top:0;">
+      <summary><h3>⚙️ 명단 관리</h3><span class="chg-arrow"></span></summary>
+      <div style="margin-top:8px;">
+        <div class="grid-2">
+          <button onclick="openAdd()">+ 참여자 신규 등록</button>
+          <label for="bulk-file" class="filebtn">📂 엑셀로 한번에 등록</label>
+        </div>
+        <button class="secondary small full" onclick="downloadTemplate()">엑셀 등록 양식 내려받기</button>
+      </div>
+    </details>
     <input type="file" id="bulk-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="sr-only" onchange="bulkImport(this)">
-    <button class="secondary small full" onclick="downloadTemplate()">엑셀 등록 양식 내려받기</button>
   </div>
 
   <div class="card">
-    <h3>📥 마감 · 엑셀 내려받기</h3>
-    <div class="close-sum" id="close-sum"></div>
-    <p class="muted" style="margin-top:0;" id="export-desc"></p>
-    <button class="full" onclick="exportExcel()">엑셀 파일로 내려받기</button>
-    <button class="danger small full" id="btn-reset" onclick="resetMonth()" style="margin-top:14px;"></button>
+    <details class="chg-box" id="close-box" style="margin-top:0;border-top:none;padding-top:0;">
+      <summary><h3>📥 마감 · 엑셀 내려받기</h3><span class="chg-arrow"></span></summary>
+      <div style="margin-top:8px;">
+        <div class="close-sum" id="close-sum"></div>
+        <p class="muted" style="margin-top:0;" id="export-desc"></p>
+        <button class="full" onclick="exportExcel()">엑셀 파일로 내려받기</button>
+        <button class="danger small full" id="btn-reset" onclick="resetMonth()" style="margin-top:14px;"></button>
+      </div>
+    </details>
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-4</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-5</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1720,6 +1728,7 @@ renderList();
 loadWeather();
 if (!participants.length) notify('처음 사용하시는군요!\n\n아래 "명단 관리"의 "📂 엑셀로 한번에 등록"을 눌러, 담당자에게 받은 명단 엑셀 파일을 한 번만 넣어 주세요.\n\n명단은 이 휴대폰에만 저장됩니다.');
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
+if (!participants.length) document.getElementById('tools-box').open = true;
 </script>
 </body>
 </html>
