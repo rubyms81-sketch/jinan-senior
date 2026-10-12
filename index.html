@@ -209,6 +209,13 @@
     </details>
   </div>
 
+  <div class="card">
+    <details id="ex-box" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
+      <summary><h3 id="ex-title">🚫 내년도 참여 제외 대상</h3><span class="chg-arrow"></span></summary>
+      <div id="ex-list"></div>
+    </details>
+  </div>
+
   <div class="card" id="tools-card">
     <details class="chg-box" id="tools-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3>⚙️ 명단 관리</h3><span class="chg-arrow"></span></summary>
@@ -237,7 +244,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-7</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-8</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -282,6 +289,21 @@
 
   <h4>📋 지금까지 점검 기록</h4>
   <div id="log-list"></div>
+
+  <details class="info" id="ex-panel">
+    <summary id="ex-panel-title">🚫 내년도 참여 제외</summary>
+    <div style="margin-top:10px;">
+      <div class="muted" style="margin-bottom:6px;">내년 일자리 참여 명단에서 뺄 분이면 사유를 고르고 저장하세요.</div>
+      <input type="hidden" id="ex-reason">
+      <div class="grid-2" id="ex-reasons" style="margin-bottom:10px;">
+        <button type="button" class="reason" data-v="근무 태도 미흡">🙅 근무 태도 미흡</button>
+        <button type="button" class="reason" data-v="건강 악화">🏥 건강 악화</button>
+      </div>
+      <label>사유 (자세히)</label>
+      <textarea id="ex-memo" rows="2" placeholder="예: 근무지 이탈 반복, 거동이 어려워짐"></textarea>
+      <div class="grid-2"><button class="secondary" id="ex-clear" onclick="clearExclude()">제외 해제</button><button class="danger" onclick="saveExclude()">제외 대상으로 저장</button></div>
+    </div>
+  </details>
 
   <details class="info">
     <summary>어르신 정보 고치기 · 중도포기 · 삭제</summary>
@@ -967,7 +989,51 @@ function renderGuessBtn(){
   b.classList.toggle('hidden', !n); b.textContent = `📍 추정 경로당 한번에 정리 (${n}명)`;
   document.querySelector('#tools-box > summary h3').innerHTML = '⚙️ 명단 관리' + (n ? ` <span class="badge bg-warning" style="vertical-align:2px;">📍 추정 ${n}명</span>` : '');
 }
+// ---------- 🚫 내년도 참여 제외 ----------
+const exYear = () => viewYear() + 1;
+const exOf = p => (p.exclude && p.exclude.year === exYear()) ? p.exclude : null;
+document.addEventListener('click', e => {   // 사유 단추
+  const b = e.target.closest('#ex-reasons button'); if (!b) return;
+  const on = !b.classList.contains('on');
+  document.querySelectorAll('#ex-reasons button').forEach(x => x.classList.remove('on'));
+  if (on) b.classList.add('on');
+  document.getElementById('ex-reason').value = on ? b.dataset.v : '';
+});
+function renderExPanel(p){
+  const ex = exOf(p);
+  document.getElementById('ex-panel-title').innerHTML = ex
+    ? `🚫 <b style="color:var(--danger)">${exYear()}년 참여 제외 대상</b> <span class="muted">(${esc(ex.reason||'사유 미선택')})</span>`
+    : `🚫 ${exYear()}년 참여 제외로 지정`;
+  document.getElementById('ex-reason').value = ex?.reason || '';
+  document.querySelectorAll('#ex-reasons button').forEach(b => b.classList.toggle('on', !!ex && b.dataset.v === ex.reason));
+  document.getElementById('ex-memo').value = ex?.memo || '';
+  document.getElementById('ex-clear').classList.toggle('hidden', !ex);
+}
+function saveExclude(){
+  const p = current(); if (!p) return;
+  const reason = document.getElementById('ex-reason').value, memo = document.getElementById('ex-memo').value.trim();
+  if (!reason && !memo) return notify('사유를 고르거나 적어 주세요.');
+  p.exclude = { year: exYear(), reason, memo, date: today() };
+  saveData(false); renderModal(); document.getElementById('ex-panel').open = false;
+  notify(`${p.name} 어르신을 ${exYear()}년 참여 제외 대상으로 저장했어요.`);
+}
+async function clearExclude(){
+  const p = current(); if (!p || !exOf(p)) return;
+  if (!await ask(`${p.name} 어르신의 ${exYear()}년 참여 제외를 해제할까요?`)) return;
+  delete p.exclude; saveData(false); renderModal();
+}
+function renderExList(){
+  const list = participants.filter(p => exOf(p) && visibleTowns().includes(p.town))
+    .sort((a,b) => a.town.localeCompare(b.town) || seniorRank(seniorOf(a))-seniorRank(seniorOf(b)) || seniorOf(a).localeCompare(seniorOf(b)) || a.name.localeCompare(b.name));
+  document.getElementById('ex-title').textContent = `🚫 ${exYear()}년 참여 제외 대상 (${list.length}명)`;
+  document.getElementById('ex-list').innerHTML = list.length ? list.map(p => { const ex = exOf(p); return `
+    <button class="pen-row" onclick="openModal(${p.id})"><span class="muted">🏠 ${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
+      <b>${esc(p.name)}</b> ${ex.reason?`<b style="color:var(--danger)">${esc(ex.reason)}</b>`:''}${ex.memo?`<br><span class="muted">📝 ${esc(ex.memo)}</span>`:''}</button>`; }).join('')
+    : '<div class="muted">제외 대상이 없어요. 어르신 점검 화면 아래 "🚫 참여 제외로 지정"에서 넣을 수 있어요.</div>';
+}
+
 function renderBoard(){
+  renderExList();
   renderGuessBtn();
   document.getElementById('month-label').textContent = `${YEAR}년 ${curMonth}월`;
   let totalPen = 0;
@@ -1411,6 +1477,8 @@ function bulkImport(input){
       if (nGuess) msg += `\n\n📍 주소를 보고 경로당을 넣은 분: ${nGuess}명 (앱에 "추정"으로 표시)`;
       if (added.some(p => !p.senior)) msg += `\n※ 경로당을 찾지 못한 분: ${added.filter(p=>!p.senior).length}명`;
       if (unquit.length) msg += `\n\n🔁 다시 참여하시는 분(중도포기 풀림): ${list(unquit.map(p=>p.name))}`;
+      const exIn = [...same, ...updated.map(u => u[0])].filter(p => p.exclude && p.exclude.year >= new Date().getFullYear());
+      if (exIn.length) msg += `\n\n🚫 참여 제외 대상으로 표시했는데 새 명단에 있는 분: ${list(exIn.map(p => `${p.name}(${p.exclude.reason||'제외'})`))}`;
       if (dup.length) msg += `\n\n파일 안에서 겹쳐 건너뜀 ${dup.length}명: ${list(dup)}`;
       if (notActive.length) msg += `\n\n참여 중이 아니어서 건너뜀 ${notActive.length}명: ${list(notActive)}`;
       if (noTown.length) msg += `\n\n읍·면을 알 수 없어 건너뜀 ${noTown.length}명: ${list(noTown)}\n(위에서 담당 면을 고른 뒤 다시 넣으면 그 면으로 등록됩니다)`;
@@ -1520,6 +1588,7 @@ function openModal(id){
 function renderModal(){
   const p = current(), s = stats(p);
   renderPersonDays(p);
+  renderExPanel(p);
   if (document.getElementById('c-date').value) setCheckDate(document.getElementById('c-date').value);
   document.getElementById('modal-title').textContent = `${p.name} 어르신 점검`;
   let n = `<div class="notice">${viewYear()}년 누적 감점 <b style="color:var(--danger)">${s.penalty}점</b> (근무지 이탈 1회당 -1점 / -${MAX_LEAVE}점이면 중도포기 · 새해에 0점부터)</div>`;
@@ -1728,7 +1797,8 @@ function exportExcel(){
     [`${curMonth}월 조끼 미착용`]:m.vest, [`${curMonth}월 명찰 미착용`]:m.badge, '누적 이탈 횟수':s.leaves, '누적 감점':s.penalty, '상태':s.status, '마지막 점검일':s.last,
     [`${curMonth}월 활동 날짜`]: personDays(p, monthKey()).map(d => Number(d.slice(8,10))).join(', '),
     [`${curMonth}월 활동일 수`]: personDays(p, monthKey()).length,
-    '근무일 변경': changesIn(p, monthKey()).map(c => `${dd(c.from)}→${dd(c.to)}${c.reason?` (${c.reason})`:''}`).join(' / ') }; });
+    '근무일 변경': changesIn(p, monthKey()).map(c => `${dd(c.from)}→${dd(c.to)}${c.reason?` (${c.reason})`:''}`).join(' / '),
+    [`${exYear()}년 참여 제외`]: exOf(p) ? [exOf(p).reason, exOf(p).memo].filter(Boolean).join(' - ') : '' }; });
 
   const sheet2 = [];
   list.forEach(p => [...mLogs(p)].sort((a,b)=>a.date.localeCompare(b.date)).forEach(l => sheet2.push({
@@ -1785,6 +1855,12 @@ function exportExcel(){
   const ws3 = chgRows.length ? XLSX.utils.json_to_sheet(chgRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 근무일 변경 인원이 없습니다.`]]);
   ws3['!cols'] = [8,14,10,12,12,20,30].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws3, '근무일 변경');
+  // 내년도 참여 제외 대상
+  const exRows = list.filter(p => exOf(p)).map(p => ({ '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '나이':p.age, '연락처':p.phone,
+    '제외 사유':exOf(p).reason, '자세한 사유':exOf(p).memo, '지정일':exOf(p).date }));
+  const ws4 = exRows.length ? XLSX.utils.json_to_sheet(exRows) : XLSX.utils.aoa_to_sheet([[`${exYear()}년 참여 제외 대상이 없습니다.`]]);
+  ws4['!cols'] = [8,14,10,6,15,16,36,12].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws4, `${exYear()}년 참여 제외`);
   XLSX.writeFile(wb, fname + '.xlsx');
 }
 
