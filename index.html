@@ -257,7 +257,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-17</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-18</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -288,8 +288,8 @@
     <input type="hidden" id="c-attitude">
     <div class="seg" data-for="c-attitude"><button type="button" data-v="우수">우수</button><button type="button" data-v="보통">보통</button><button type="button" data-v="불량" data-bad>불량</button></div>
 
-    <label>특이사항 (근무일 변경 등)</label>
-    <textarea id="c-memo" rows="3" placeholder="예: 병원 진료로 근무일 변경"></textarea>
+    <label>점검 메모 (이날 점검에서 본 것)</label>
+    <textarea id="c-memo" rows="3" placeholder="예: 경로당 청소 상태 좋음"></textarea>
     <div id="edit-bar" class="notice hidden" style="margin-bottom:6px;"></div>
     <button class="full" id="btn-save-check" onclick="saveCheck()">점검 저장</button>
     <button class="secondary full hidden" id="btn-cancel-edit" onclick="cancelEdit()">수정 취소</button>
@@ -300,6 +300,11 @@
   <div id="m-chg"></div>
   <button class="warning full" onclick="addChange()">🔄 근무일 변경 추가</button>
   <button class="secondary full" id="btn-custom" onclick="openCustom()">🩹 보충 근무 · 🏥 입원 표시</button>
+
+  <h4 id="note-title">📝 특이사항 (점검과 별개)</h4>
+  <div class="muted" style="margin:-4px 0 6px;font-size:.85rem;">점검하지 않은 날 생긴 일(업무 외 사고·입원, 전화로 들은 소식 등)을 적어 두세요.</div>
+  <div id="note-list"></div>
+  <button class="secondary full" onclick="openNote()">＋ 특이사항 적기</button>
 
   <h4>📋 지금까지 점검 기록</h4>
   <div id="log-list"></div>
@@ -865,6 +870,62 @@ function openCustom(){
     notify(inHosp ? `🏥 입원 중으로 저장했어요.\n입원 ${rangeText(hd)}\n📞 일주일 뒤 ${mdw(p.hospCall.due)}에 안부 전화 알림이 나와요.\n퇴원하면 "고치기"에서 복귀일을 정해 주세요.`
       : `보충 근무를 저장했어요.\n${days.map(d => Number(d.slice(8,10))).join(', ')}일 (${days.length}일)`);
   };
+}
+// ---------- 📝 특이사항 (점검과 별개) ----------
+// p.notes = [{ id, date, cat, text }]
+const NOTE_CATS = [['업무 외 사고','🏠'],['업무 중 사고','⚠️'],['건강·입원','🏥'],['전화 소식','📞'],['가정사','👪'],['기타','📌']];
+const noteIcon = c => (NOTE_CATS.find(x => x[0]===c) || ['','📝'])[1];
+function renderNotes(p){
+  const ns = [...(p.notes||[])].sort((a,b) => b.date.localeCompare(a.date) || b.id - a.id);
+  document.getElementById('note-title').textContent = `📝 특이사항 (점검과 별개)${ns.length ? ` ${ns.length}건` : ''}`;
+  document.getElementById('note-list').innerHTML = ns.length ? ns.map(n => `<div class="log ${n.cat==='업무 중 사고'?'bad':n.cat==='업무 외 사고'||n.cat==='건강·입원'?'warn':''}">
+    <b>${Number(n.date.slice(5,7))}월 ${dd(n.date)}</b> ${n.cat?`<span class="badge bg-gray">${noteIcon(n.cat)} ${esc(n.cat)}</span>`:''}
+    <br>${esc(n.text).replace(/\n/g,'<br>')}
+    <br><button class="small warning" onclick="openNote(${n.id})">✏️ 고치기</button> <button class="small secondary" onclick="delNote(${n.id})">지우기</button></div>`).join('')
+    : '';
+}
+function openNote(id){
+  const p = current(); if (!p) return;
+  const old = id ? (p.notes||[]).find(n => n.id===id) : null;
+  let date = old?.date || today(), cat = old?.cat || '';
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📝 ${esc(p.name)} 어르신 특이사항</div>
+    <label>날짜 (일이 있었던 날)</label>
+    <button type="button" class="secondary full" id="nt-date" style="margin-bottom:10px;"></button>
+    <label>구분</label>
+    <div class="grid-2" id="nt-cats" style="margin-bottom:10px;">${NOTE_CATS.map(([c,i]) => `<button type="button" class="reason" data-v="${c}">${i} ${c}</button>`).join('')}</div>
+    <label>내용</label>
+    <textarea id="nt-text" rows="4" placeholder="예: 집에서 넘어져 손목 골절, 진안의료원 입원 (일자리 하다 다친 것 아님)"></textarea>
+    <div class="grid-2"><button class="secondary" id="nt-cancel">취소</button><button id="nt-save">저장</button></div></div>`;
+  document.body.appendChild(bg);
+  const showDate = () => bg.querySelector('#nt-date').innerHTML = `📅 <b>${date.slice(0,4)}년 ${Number(date.slice(5,7))}월 ${dd(date)}</b>${date===today()?' 오늘':''} <span class="muted">바꾸기 ▾</span>`;
+  const pick = v => { cat = v; bg.querySelectorAll('#nt-cats button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); };
+  showDate(); pick(cat);
+  bg.querySelector('#nt-text').value = old?.text || '';
+  bg.querySelectorAll('#nt-cats button').forEach(b => b.onclick = () => pick(b.classList.contains('on') ? '' : b.dataset.v));
+  bg.querySelector('#nt-date').onclick = () => openDatePicker(date, k => { date = k; showDate(); }, '📝 일이 있었던 날을 누르세요');
+  bg.querySelector('#nt-cancel').onclick = () => bg.remove();
+  bg.querySelector('#nt-save').onclick = () => {
+    const text = bg.querySelector('#nt-text').value.trim();
+    if (!text) return notify('내용을 적어 주세요.');
+    if (old) {
+      logEvent('특이사항 수정', p, `${cat?`[${cat}] `:''}${text}${old.date!==date?` (날짜 ${old.date} → ${date})`:''}`, date);
+      Object.assign(old, { date, cat, text });
+    } else {
+      (p.notes ||= []).push({ id: Date.now(), date, cat, text });
+      logEvent('특이사항', p, `${cat?`[${cat}] `:''}${text}`, date);
+    }
+    saveData(false); bg.remove(); renderModal();
+  };
+  setTimeout(() => bg.querySelector('#nt-text').focus(), 50);
+}
+async function delNote(id){
+  const p = current(); if (!p) return;
+  const n = (p.notes||[]).find(x => x.id===id); if (!n) return;
+  if (!await ask('이 특이사항을 지울까요?')) return;
+  logEvent('특이사항 삭제', p, `${n.cat?`[${n.cat}] `:''}${n.text}`, n.date);
+  p.notes = p.notes.filter(x => x.id!==id); saveData(false); renderModal();
 }
 async function delCustom(){
   const p = current(), mk = monthKey(); if (!p || !customOf(p, mk)) return;
@@ -1580,7 +1641,7 @@ function renderList(){
     document.getElementById('close-sum').innerHTML =
       `<button onclick="showClose('leave')"><b style="color:var(--danger)">${pen?'-'+pen:0}점</b>이탈 감점 ›</button><button onclick="showClose('vest')"><b style="color:var(--warning)">${vest}회</b>조끼 미착용 ›</button><button onclick="showClose('badge')"><b style="color:var(--warning)">${badge}회</b>명찰 미착용 ›</button>`; }
   document.getElementById('export-desc').innerHTML = (all ? (showOthers ? '<b>전체 읍·면</b> 명단을' : `<b>내 담당(${myTowns.join('·')})</b> 명단을`) : `<b>${esc(town)}</b> 명단을`) +
-    ` <b>${curMonth}월</b> 점검 내용을 내려받습니다.<br>엑셀 파일 안에 <b>마감 요약</b>(활동일·출장, 이탈·조끼·명찰 횟수), <b>참여자 현황</b>(어르신별 활동 날짜), <b>${curMonth}월 점검 기록</b>, <b>근무일 변경</b>, <b>${exYear()}년 참여 제외</b>, <b>변경 이력</b>(그달 바뀐 내용 전부)이 들어 있습니다.`;
+    ` <b>${curMonth}월</b> 점검 내용을 내려받습니다.<br>엑셀 파일 안에 <b>마감 요약</b>(활동일·출장, 이탈·조끼·명찰 횟수), <b>참여자 현황</b>(어르신별 활동 날짜), <b>${curMonth}월 점검 기록</b>, <b>근무일 변경</b>, <b>보충 근무·입원</b>, <b>특이사항</b>, <b>${exYear()}년 참여 제외</b>, <b>변경 이력</b>(그달 바뀐 내용 전부)이 들어 있습니다.`;
 
   // 읍·면 선택칸 (인원 표시)
   const tSel = document.getElementById('filter-town');
@@ -1913,6 +1974,7 @@ function openModal(id){
 function renderModal(){
   const p = current(), s = stats(p);
   renderPersonDays(p);
+  renderNotes(p);
   renderExPanel(p);
   if (document.getElementById('c-date').value) setCheckDate(document.getElementById('c-date').value);
   document.getElementById('modal-title').textContent = `${p.name} 어르신 점검`;
@@ -2148,6 +2210,7 @@ function exportExcel(){
     [`${curMonth}월 활동일 수`]: personDays(p, monthKey()).length,
     '근무일 변경': changesIn(p, monthKey()).map(c => `${dd(c.from)}→${dd(c.to)}${c.reason?` (${c.reason})`:''}`).join(' / '),
     '보충 근무·입원': cuText(p, monthKey()),
+    [`${curMonth}월 특이사항`]: (p.notes||[]).filter(n => n.date.startsWith(monthKey())).sort((a,b) => a.date.localeCompare(b.date)).map(n => `${dd(n.date)}${n.cat?` [${n.cat}]`:''} ${n.text}`).join(' / '),
     [`${exYear()}년 참여 제외`]: exOf(p) ? [exOf(p).reason, exOf(p).memo].filter(Boolean).join(' - ') : '' }; });
 
   const sheet2 = [];
@@ -2173,6 +2236,7 @@ function exportExcel(){
     ['근무일 변경 인원', `${list.filter(p => changesIn(p, monthKey()).length).length}명`],
     ['보충 근무 인원', `${list.filter(p => customOf(p, monthKey()) && !customOf(p, monthKey()).inHosp).length}명`],
     ['입원 중 인원', `${list.filter(p => customOf(p, monthKey())?.inHosp).length}명`],
+    ['특이사항', `${list.reduce((n,p) => n + (p.notes||[]).filter(x => x.date.startsWith(monthKey())).length, 0)}건`],
     ['출장 일정', Object.keys(trips).filter(d => d.startsWith(monthKey())).sort().map(d => `${dd(d)} ${tripLong(d)}`).join(' / ') || '없음'], [],
     ['읍면','경로당','인원','이탈 감점(점)','조끼 미착용(회)','명찰 미착용(회)']];
   const tot = {n:0, pen:0, vest:0, badge:0};
@@ -2222,6 +2286,14 @@ function exportExcel(){
   const ws6 = cuRows.length ? XLSX.utils.json_to_sheet(cuRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 보충 근무·입원 인원이 없습니다.`]]);
   ws6['!cols'] = [8,14,10,14,10,30,16,12,24,16,16,30,9,12,14,14].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws6, '보충 근무·입원');
+  // 특이사항 (점검과 별개)
+  const ntRows = [];
+  list.forEach(p => (p.notes||[]).filter(n => n.date.startsWith(monthKey())).forEach(n => ntRows.push({
+    '날짜':n.date, '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '구분':n.cat || '', '내용':n.text })));
+  ntRows.sort((a,b) => a['날짜'].localeCompare(b['날짜']) || a['성명'].localeCompare(b['성명']));
+  const ws7 = ntRows.length ? XLSX.utils.json_to_sheet(ntRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 특이사항이 없습니다.`]]);
+  ws7['!cols'] = [12,8,14,10,14,60].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws7, '특이사항');
   // 내년도 참여 제외 대상
   const exRows = list.filter(p => exOf(p)).map(p => ({ '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '나이':p.age, '연락처':p.phone,
     '제외 사유':exOf(p).reason, '자세한 사유':exOf(p).memo, '지정일':exOf(p).date }));
