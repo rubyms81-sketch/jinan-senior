@@ -263,7 +263,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-20</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-21</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1976,7 +1976,6 @@ function openSmsApp(nums, body){
 const telOf = p => String(p.phone||'').replace(/[^0-9]/g,'');
 function openGroupSms(){
   const mk = monthKey(), days = monthDays(mk), groups = smsGroups();
-  const same = p => personDays(p, mk).join() === days.join();
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">📩 ${curMonth}월 활동일 문자 보내기</div>
@@ -1989,7 +1988,6 @@ function openGroupSms(){
       <div class="grid-2"><button class="warning" id="gs-copy">📋 문구 복사</button><button id="gs-open">💬 문자 앱 열기</button></div>
       <button class="secondary full" id="gs-nums">📋 받는 번호 복사</button>
       <div class="muted" id="gs-help" style="margin:4px 0 8px;font-size:.85rem;">휴대폰에 따라 <b>단체방(그룹 대화)</b>으로 갈 수 있어요. 문자 앱 설정에서 그룹 대화를 끄면 한 분씩 따로 갑니다. 문자 앱이 안 열리면 문구·번호를 복사해서 붙여넣으세요.</div>
-      <div id="gs-solo"></div>
       <button class="secondary full" id="gs-back">◀ 다른 곳 고르기</button>
     </div>
     <button class="secondary full" id="gs-close" style="margin-top:6px;">닫기</button></div>`;
@@ -1998,21 +1996,13 @@ function openGroupSms(){
   let cur = null;
   const show = g => {
     cur = g;
-    const withTel = g.ps.filter(p => telOf(p)), main = withTel.filter(same), solo = g.ps.filter(p => !same(p)), noTel = g.ps.filter(p => !telOf(p));
+    // 월초에 보내는 문자라 모두 같은 활동일로 보냄
+    const main = g.ps.filter(p => telOf(p)), noTel = g.ps.filter(p => !telOf(p));
     cur.main = main;
     bg.querySelector('#gs-groups').classList.add('hidden'); bg.querySelector('#gs-body').classList.remove('hidden');
     bg.querySelector('#gs-who').innerHTML = `📩 ${esc(g.label)} · 받는 분 <span style="color:var(--primary)">${main.length}명</span>`
       + (noTel.length ? `<div class="muted" style="font-weight:normal;font-size:.85rem;">연락처 없는 분 ${noTel.length}명: ${noTel.map(p => esc(p.name)).join(', ')}</div>` : '');
     ta.value = workdayText(mk, days, g.key === '게이트볼' ? '게이트볼장 관리도우미 어르신' : `${g.label} 경로당지킴이 어르신`);
-    // 근무일이 바뀐 분은 단체 문자에서 빼고, 본인 날짜로 따로 보내기
-    bg.querySelector('#gs-solo').innerHTML = solo.length ? `<div class="notice" style="margin-bottom:8px;"><b>근무일이 바뀐 분 ${solo.length}명</b>은 단체 문자에서 뺐어요. 본인 날짜로 따로 보내 주세요.
-      ${solo.map(p => `<button type="button" class="secondary grp-btn" data-solo="${p.id}" ${telOf(p)?'':'disabled style="opacity:.5"'}><span><b>${esc(p.name)}</b> <span class="muted">${esc(seniorOf(p))}${customOf(p, mk)?.inHosp?' · 🏥 입원 중':''}</span><br><span style="font-size:.85rem;">${dayList(personDays(p, mk)) || '근무일 없음'}</span></span><span>💬</span></button>`).join('')}</div>` : '';
-    bg.querySelectorAll('#gs-solo button[data-solo]').forEach(b => b.onclick = async () => {
-      const p = participants.find(x => x.id === Number(b.dataset.solo)), pd = personDays(p, mk);
-      const text = workdayText(mk, pd, `${p.name} 어르신`).replace('활동일을 알려 드립니다.', '활동일을 알려 드립니다.\n(근무일이 바뀌어 어르신 날짜로 따로 안내드립니다)');
-      logEvent('활동일 문자(개인)', p, `${curMonth}월 ${dayList(pd)}`);
-      await copyText(text); openSmsApp([telOf(p)], text);
-    });
   };
   bg.querySelectorAll('#gs-groups button[data-i]').forEach(b => b.onclick = () => show(groups[Number(b.dataset.i)]));
   bg.querySelector('#gs-back').onclick = () => { bg.querySelector('#gs-body').classList.add('hidden'); bg.querySelector('#gs-groups').classList.remove('hidden'); };
