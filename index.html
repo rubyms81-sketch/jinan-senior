@@ -148,6 +148,9 @@
   .call-card { background:#fff5f7; border:2px solid #d53f8c; border-radius:12px; padding:10px 12px; margin-bottom:12px; }
   .call-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-top:1px dashed #fbb6ce; }
   .call-row:first-of-type { border-top:none; }
+  .call-card.chg { background:#fffaf0; border-color:var(--warning); }
+  .call-card.chg .call-row { border-top-color:#fbd38d; }
+  .call-row.called { opacity:.55; }
   .call-row .who { flex:1; text-align:left; background:none; border:none; color:#2d3748; padding:0; margin:0; font-size:1rem; width:auto; }
   .call-row button.done-btn { width:auto; margin:0; padding:8px 10px; font-size:.9rem; white-space:nowrap; background:#38a169; }
   .cus-box { background:#fffaf0; border:1px solid #fbd38d; border-radius:10px; padding:8px 10px; margin-bottom:10px; }
@@ -257,7 +260,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-18</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-19</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -718,20 +721,54 @@ const mdw = k => `${Number(k.slice(5,7))}/${Number(k.slice(8,10))}(${WEEK[dObj(k
 const daysBetween = (a, b) => Math.round((dObj(b) - dObj(a)) / 86400000);
 const telBtn = p => { const t = String(p.phone||'').replace(/[^0-9+]/g,''); return t ? `<a class="tel-link" href="tel:${t}">📞 ${esc(p.phone)}</a>` : '<span class="muted">연락처 없음</span>'; };
 function callDue(){ return participants.filter(p => p.hospCall && p.hospCall.due <= today()).sort((a,b) => a.hospCall.due.localeCompare(b.hospCall.due) || a.name.localeCompare(b.name)); }
+// 🔄 그날 바뀐 날짜(근무일 변경·보충한 날)로 근무하는 어르신: [{p, from(원래 날짜) or '', kind}]
+function chgOn(k){
+  const mk = k.slice(0,7), reg = monthDays(mk), out = [];
+  participants.filter(p => visibleTowns().includes(p.town) && !stats(p).dropped).forEach(p => {
+    if (!personDays(p, mk).includes(k)) return;
+    const c = changesIn(p, mk).find(c => c.to === k);
+    if (c) out.push({ p, from: c.from, reason: c.reason, kind: '변경' });
+    else if (customOf(p, mk) && !reg.includes(k)) out.push({ p, from: '', reason: customOf(p, mk).reason, kind: '보충' });
+  });
+  return out.sort((a,b) => !!dayCalled(a.p, k) - !!dayCalled(b.p, k) || seniorRank(seniorOf(a.p))-seniorRank(seniorOf(b.p)) || seniorOf(a.p).localeCompare(seniorOf(b.p)) || a.p.name.localeCompare(b.p.name));
+}
+const dayCalled = (p, k) => (p.dayCalls || []).includes(k);
 function renderCallAlert(){
   const box = document.getElementById('call-alert'), td = today();
   const all = participants.filter(p => p.hospCall), due = callDue();
-  if (!all.length) { box.innerHTML = ''; return; }
-  const next = all.filter(p => p.hospCall.due > td).sort((a,b) => a.hospCall.due.localeCompare(b.hospCall.due));
-  box.innerHTML = `<div class="call-card">
+  const chg = chgOn(td), tmr = chgOn(addDays(td, 1));
+  let h = '';
+  if (chg.length || tmr.length) {
+    const left = chg.filter(x => !dayCalled(x.p, td)).length;
+    h += `<div class="call-card chg">
+      <div style="font-weight:bold;color:#c05621;margin-bottom:4px;">${chg.length ? `🔄 오늘 바뀐 날짜로 근무하는 어르신 ${chg.length}명${left ? ` · 📞 확인 전화 ${left}명 남음` : ' · ✔ 모두 통화함'}` : '🔄 오늘은 바뀐 날짜로 근무하는 어르신이 없어요'}</div>
+      ${chg.map(x => { const done = dayCalled(x.p, td); return `<div class="call-row ${done?'called':''}">
+        <button class="who" onclick="openModal(${x.p.id})"><b>${esc(x.p.name)}</b> <span class="muted">${esc(x.p.town)} · ${esc(seniorOf(x.p))}</span><br>
+          <span style="font-size:.85rem;">${x.kind==='변경' ? `원래 ${dd(x.from)} → <b style="color:var(--warning)">오늘</b>` : '<b style="color:var(--warning)">보충 근무</b>'}${x.reason?` · ${esc(x.reason)}`:''}</span><br>${telBtn(x.p)}</button>
+        ${done ? '<span class="muted" style="white-space:nowrap;">✔ 통화함</span>' : `<button class="done-btn" onclick="dayCallDone(${x.p.id})">✔ 통화했어요</button>`}</div>`; }).join('')}
+      ${tmr.length ? `<div class="muted" style="font-size:.85rem;margin-top:4px;">내일 바뀐 날짜로 근무: ${tmr.map(x => `<a href="#" onclick="openModal(${x.p.id});return false;" style="color:inherit;">${esc(x.p.name)}</a>`).join(', ')}</div>` : ''}
+    </div>`;
+  }
+  if (all.length) {
+    const next = all.filter(p => p.hospCall.due > td).sort((a,b) => a.hospCall.due.localeCompare(b.hospCall.due));
+    h += `<div class="call-card">
     <div style="font-weight:bold;color:#97266d;margin-bottom:4px;">${due.length ? `📞 오늘 안부 전화할 입원 어르신 ${due.length}명` : `🏥 입원 중인 어르신 ${all.length}명`}</div>
-    ${due.map(p => { const h = p.hospCall, late = daysBetween(h.due, td); return `<div class="call-row">
+    ${due.map(p => { const hc = p.hospCall, late = daysBetween(hc.due, td); return `<div class="call-row">
       <button class="who" onclick="openModal(${p.id})"><b>${esc(p.name)}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
-        ${(() => { const c = customOf(p, td.slice(0,7)) || customOf(p, h.since.slice(0,7)); const r = [c?.reason, c?.memo].filter(Boolean).join(' · '); return r ? `<span style="font-size:.85rem;">📝 ${esc(r)}</span><br>` : ''; })()}
-        <span class="muted" style="font-size:.85rem;">입원 ${daysBetween(h.since, td)+1}일째 · 마지막 통화 ${mdw(h.last)}${late>0?` · <b style="color:var(--danger)">${late}일 지남</b>`:''}</span><br>${telBtn(p)}</button>
+        ${(() => { const c = customOf(p, td.slice(0,7)) || customOf(p, hc.since.slice(0,7)); const r = [c?.reason, c?.memo].filter(Boolean).join(' · '); return r ? `<span style="font-size:.85rem;">📝 ${esc(r)}</span><br>` : ''; })()}
+        <span class="muted" style="font-size:.85rem;">입원 ${daysBetween(hc.since, td)+1}일째 · 마지막 통화 ${mdw(hc.last)}${late>0?` · <b style="color:var(--danger)">${late}일 지남</b>`:''}</span><br>${telBtn(p)}</button>
       <button class="done-btn" onclick="callDone(${p.id})">✔ 통화했어요</button></div>`; }).join('')}
     ${next.length ? `<div class="muted" style="font-size:.85rem;margin-top:4px;">다음 안부 전화: ${next.map(p => `<a href="#" onclick="openModal(${p.id});return false;" style="color:inherit;">${esc(p.name)} ${mdw(p.hospCall.due)}</a>`).join(', ')}</div>` : ''}
   </div>`;
+  }
+  box.innerHTML = h;
+}
+function dayCallDone(id){
+  const p = participants.find(x => x.id === id), td = today(); if (!p) return;
+  if (!dayCalled(p, td)) (p.dayCalls ||= []).push(td);
+  const x = chgOn(td).find(x => x.p.id === id);
+  logEvent('바뀐 근무일 확인 전화', p, x ? (x.kind==='변경' ? `원래 ${dd(x.from)} → ${dd(td)} 근무 확인 통화` : `${dd(td)} 보충 근무 확인 통화`) : `${dd(td)} 확인 통화`, td);
+  saveData(false); renderList();
 }
 function callDone(id){
   const p = participants.find(x => x.id === id); if (!p || !p.hospCall) return;
@@ -2270,9 +2307,10 @@ function exportExcel(){
     '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '변경 횟수':cs.length,
     '변경 내용': cs.map(c => `${dd(c.from)}→${dd(c.to)}`).join(' / '),
     '사유': cs.map(c => c.reason).filter(Boolean).filter((v,i,a) => a.indexOf(v)===i).join(', '),
-    [`${curMonth}월 활동 날짜(변경 반영)`]: personDays(p, monthKey()).map(d => Number(d.slice(8,10))).join(', ') }); });
+    [`${curMonth}월 활동 날짜(변경 반영)`]: personDays(p, monthKey()).map(d => Number(d.slice(8,10))).join(', '),
+    '확인 전화한 날': (p.dayCalls||[]).filter(d => d.startsWith(monthKey())).sort().map(dd).join(', ') }); });
   const ws3 = chgRows.length ? XLSX.utils.json_to_sheet(chgRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 근무일 변경 인원이 없습니다.`]]);
-  ws3['!cols'] = [8,14,10,9,40,20,30].map(w=>({wch:w}));
+  ws3['!cols'] = [8,14,10,9,40,20,30,20].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws3, '근무일 변경');
   // 보충 근무 (사고·입원 후 몰아서 근무)
   const n2 = d => Number(d.slice(8,10));
@@ -2281,10 +2319,11 @@ function exportExcel(){
     '입원 날짜': rangeText(cu.hosp || []), '복귀일':cu.back || '미정',
     '원래 활동 날짜': reg.map(n2).join(', '), '못 나온 날': reg.filter(d => !days.includes(d)).map(n2).join(', '),
     '보충한 날': days.filter(d => !reg.includes(d)).map(n2).join(', '),
+    '보충일 확인 전화': (p.dayCalls||[]).filter(d => d.startsWith(monthKey())).sort().map(n2).join(', '),
     [`${curMonth}월 실제 근무 날짜`]: days.map(n2).join(', '), '근무일 수': days.length, '지정일': cu.date,
     '마지막 안부 전화': p.hospCall?.last || '', '다음 안부 전화': p.hospCall?.due || '' }; });
   const ws6 = cuRows.length ? XLSX.utils.json_to_sheet(cuRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 보충 근무·입원 인원이 없습니다.`]]);
-  ws6['!cols'] = [8,14,10,14,10,30,16,12,24,16,16,30,9,12,14,14].map(w=>({wch:w}));
+  ws6['!cols'] = [8,14,10,14,10,30,16,12,24,16,16,16,30,9,12,14,14].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws6, '보충 근무·입원');
   // 특이사항 (점검과 별개)
   const ntRows = [];
@@ -2318,7 +2357,12 @@ if (!participants.length) notify('처음 사용하시는군요!\n\n아래 "명�
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
 if (!participants.length) document.getElementById('tools-box').open = true;
 // 앱을 열 때: 오늘 안부 전화할 입원 어르신 알림
-setTimeout(() => { const due = callDue(); if (due.length) notify(`📞 오늘 안부 전화할 입원 어르신이 ${due.length}명 있어요.\n${due.map(p => `· ${p.name} (${seniorOf(p)})`).join('\n')}\n\n맨 위 분홍색 칸에서 전화하세요.`); }, 400);
+setTimeout(() => {
+  const due = callDue(), td = today(), chg = chgOn(td).filter(x => !dayCalled(x.p, td)), msg = [];
+  if (chg.length) msg.push(`🔄 오늘 바뀐 날짜로 근무하는 어르신 ${chg.length}명\n${chg.map(x => `· ${x.p.name} (${seniorOf(x.p)})${x.p.phone?' '+x.p.phone:''}`).join('\n')}`);
+  if (due.length) msg.push(`📞 오늘 안부 전화할 입원 어르신 ${due.length}명\n${due.map(p => `· ${p.name} (${seniorOf(p)})${p.phone?' '+p.phone:''}`).join('\n')}`);
+  if (msg.length) notify(msg.join('\n\n') + '\n\n맨 위 칸에서 번호를 누르면 바로 전화돼요.');
+}, 400);
 </script>
 </body>
 </html>
