@@ -279,7 +279,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-3</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-4</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1046,16 +1046,21 @@ function openZone(id){
   };
   // 경로당 고르기: 면 → 경로당 목록(체크)
   let pick = null, curTown = null;
-  const townsWith = TOWNS.filter(t => participants.some(p => p.town===t)).sort((a,b) => myTowns.includes(b) - myTowns.includes(a));
+  const townsWith = [...TOWNS].sort((a,b) => myTowns.includes(b) - myTowns.includes(a));   // 11개 읍·면 모두 (내 담당 먼저)
   const drawList = () => {
-    const sites = [...new Set(participants.filter(p => p.town===curTown).map(seniorOf))].sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
+    // 명단에 있는 경로당 + 직접 적어 넣은 경로당
+    const sites = [...new Set([...participants.filter(p => p.town===curTown).map(seniorOf),
+      ...[...pick].filter(k => k.startsWith(curTown+'|')).map(k => k.split('|')[1])])].sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
     $('#zn-pick-title').textContent = `${curTown} 경로당을 누르세요 (여러 곳)`;
     $('#zn-list').innerHTML = sites.map(k => {
       const other = zoneOfSite(curTown, k), mine = pick.has(siteKey(curTown, k));
       const n = siteMembers(curTown, k).filter(p => !stats(p).dropped).length;
       return `<button type="button" class="site ${mine?'zs-on':''}" data-k="${esc(k)}" style="padding:9px 12px;margin:4px 0;${mine?'background:#c6f6d5;border-color:#38a169;':''}">
         <div>${mine?'✔ ':''}<b>${esc(k)}</b> <span class="muted">${n}명</span>${other && other.id!==z.id ? ` <span class="badge bg-gray">${esc(other.name)}</span>` : ''}</div><span class="arrow">${mine?'':'＋'}</span></button>`;
-    }).join('') || '<div class="muted">경로당이 없습니다.</div>';
+    }).join('') + `<div style="display:flex;gap:6px;margin-top:6px;"><input type="text" id="zn-new" placeholder="명단에 없는 경로당 이름 적기" autocomplete="off" style="margin:0;"><button type="button" class="small secondary" id="zn-new-add" style="margin:0;white-space:nowrap;">＋ 넣기</button></div>`;
+    const addNew = () => { const inp = $('#zn-new'); inp.blur(); setTimeout(() => { const v = inp.value.trim(); if (!v) return; pick.add(siteKey(curTown, v)); drawList(); }, 50); };
+    $('#zn-new-add').onclick = addNew;
+    $('#zn-new').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addNew(); } });
     bg.querySelectorAll('#zn-list button[data-k]').forEach(b => b.onclick = () => {
       const key = siteKey(curTown, b.dataset.k);
       pick.has(key) ? pick.delete(key) : pick.add(key); drawList();
