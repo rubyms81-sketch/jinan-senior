@@ -247,7 +247,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-12</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-13</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -574,17 +574,22 @@ function renderWork(){
       <b>${esc(p.name)}</b> ${cu.reason?`<span class="muted">${esc(cu.reason)}</span>`:''}${cu.back?` <span class="muted">· ${dd(cu.back)} 복귀</span>`:''}<br>
       <span style="font-size:.9rem;">${cu.days.map(d => reg.includes(d) ? Number(d.slice(8,10)) : `<b style="color:var(--warning)">${Number(d.slice(8,10))}</b>`).join(', ')}일</span></button>`;
   }).join('') + '<div class="muted" style="font-size:.8rem;">주황 숫자 = 원래 근무일이 아닌 보충한 날</div></div>' : '';
-  // 같은 날짜로 옮긴 분끼리 묶어서 짧게 보여 줌 (누르면 펼쳐짐)
+  // 한 어르신의 변경은 하나로 묶고, 변경 내용이 똑같은 분끼리 같은 줄에 모음 (누르면 펼쳐짐)
+  const byPerson = new Map();
+  rows.forEach(r => { if (!byPerson.has(r.p.id)) byPerson.set(r.p.id, { p: r.p, cs: [] }); byPerson.get(r.p.id).cs.push(r.c); });
   const groups = {};
-  rows.forEach(r => (groups[r.c.from+'|'+r.c.to] ||= []).push(r));
+  byPerson.forEach(x => {
+    x.cs.sort((a,b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
+    (groups[x.cs.map(c => c.from+'|'+c.to).join(';')] ||= []).push(x);
+  });
   const keys = Object.keys(groups).sort();
   document.getElementById('chg-list').innerHTML = cusHTML + (keys.length ? keys.map(k => {
-    const g = groups[k], [from, to] = k.split('|');
-    const reasons = [...new Set(g.map(r => r.c.reason).filter(Boolean))];
+    const g = groups[k], pairs = k.split(';').map(x => x.split('|'));
+    const reasons = [...new Set(g.flatMap(x => x.cs.map(c => c.reason)).filter(Boolean))];
     const bySite = {};
-    g.forEach(r => (bySite[(town==='전체'?r.p.town+' · ':'')+seniorOf(r.p)] ||= []).push(r.p));
+    g.forEach(x => (bySite[(town==='전체'?x.p.town+' · ':'')+seniorOf(x.p)] ||= []).push(x.p));
     return `<details class="chg-group">
-      <summary><span><b>${dd(from)} → <span style="color:var(--warning)">${dd(to)}</span></b>${reasons.length?` <span class="muted">${esc(reasons.join(', '))}</span>`:''}</span>
+      <summary><span>${pairs.map(([from, to]) => `<b style="white-space:nowrap;">${dd(from)} → <span style="color:var(--warning)">${dd(to)}</span></b>`).join('<br>')}${reasons.length?` <span class="muted">${esc(reasons.join(', '))}</span>`:''}</span>
         <span class="chg-cnt">${g.length}명 ▾</span></summary>
       ${Object.keys(bySite).sort().map(site => `<div class="chg-site"><span class="muted">🏠 ${esc(site)}</span>
         <div class="chips">${bySite[site].map(p => `<button class="chip name" onclick="openModal(${p.id})">${esc(p.name)}</button>`).join('')}</div></div>`).join('')}
@@ -2080,11 +2085,14 @@ function exportExcel(){
   XLSX.utils.book_append_sheet(wb, ws2, '점검 기록');
   // 근무일 변경 시트
   const chgRows = [];
-  list.forEach(p => changesIn(p, monthKey()).sort((a,b)=>a.from.localeCompare(b.from)).forEach(c => chgRows.push({
-    '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '원래 근무일':c.from, '바꾼 날짜':c.to, '사유':c.reason,
-    [`${curMonth}월 활동 날짜(변경 반영)`]: personDays(p, monthKey()).map(d => Number(d.slice(8,10))).join(', ') })));
+  // 한 어르신이 여러 번 바꿨으면 한 줄로 묶음
+  list.forEach(p => { const cs = changesIn(p, monthKey()).sort((a,b)=>a.from.localeCompare(b.from)); if (!cs.length) return; chgRows.push({
+    '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '변경 횟수':cs.length,
+    '변경 내용': cs.map(c => `${dd(c.from)}→${dd(c.to)}`).join(' / '),
+    '사유': cs.map(c => c.reason).filter(Boolean).filter((v,i,a) => a.indexOf(v)===i).join(', '),
+    [`${curMonth}월 활동 날짜(변경 반영)`]: personDays(p, monthKey()).map(d => Number(d.slice(8,10))).join(', ') }); });
   const ws3 = chgRows.length ? XLSX.utils.json_to_sheet(chgRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 근무일 변경 인원이 없습니다.`]]);
-  ws3['!cols'] = [8,14,10,12,12,20,30].map(w=>({wch:w}));
+  ws3['!cols'] = [8,14,10,9,40,20,30].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws3, '근무일 변경');
   // 보충 근무 (사고·입원 후 몰아서 근무)
   const n2 = d => Number(d.slice(8,10));
