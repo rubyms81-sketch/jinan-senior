@@ -263,7 +263,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-22</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-23</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1965,7 +1965,7 @@ const dayList = days => days.map(d => `${Number(d.slice(8,10))}일(${WEEK[dObj(d
 function workdayText(mk, days, who){
   const m = Number(mk.slice(5,7)), last = days[days.length-1];
   return `[진안군노인회] ${m}월 활동일 안내\n\n${who},\n${mk.slice(0,4)}년 ${m}월 활동일을 알려 드립니다.\n\n▶ 활동일 (${days.length}일)\n${m}월 ${dayList(days)}\n` + (last ? `※ 마지막 날: ${m}월 ${dd(last)}\n` : '') +
-    `\n▶ 꼭 지켜 주세요\n· 근무지를 비우면(이탈) 1번에 -1점, 그날 일당이 나오지 않습니다.\n· 한 해에 -${MAX_LEAVE}점이 되면 중도포기 처리되어 더 이상 일하실 수 없습니다.\n· 날짜를 바꿔야 할 때는 꼭 미리 담당자에게 연락 주세요.\n· 조끼와 명찰을 꼭 착용해 주세요.\n\n감사합니다.`;
+    `\n▶ 꼭 지켜 주세요\n· 근무지를 비우면(이탈) 1번에 -1점, 그날 일당이 나오지 않습니다.\n· 한 해에 -${MAX_LEAVE}점이 되면 중도포기 처리되어 더 이상 일하실 수 없습니다.\n· 날짜를 바꿔야 할 때는 꼭 미리 담당자에게 연락 주세요.\n· 조끼와 명찰을 꼭 착용해 주세요.\n\n감사합니다.\n※ 단체 문자라 답장은 받지 않습니다.`;
 }
 // 문자 앱 열기 (여러 명이면 쉼표로)
 function openSmsApp(nums, body){
@@ -1985,6 +1985,12 @@ function openGroupSms(){
     <div id="gs-body" class="hidden">
       <div id="gs-who" style="font-weight:bold;margin:6px 0;"></div>
       <textarea id="gs-text" rows="14" style="font-size:.92rem;"></textarea>
+      <label style="margin-top:6px;">🖼 사진 함께 보내기 (선택)</label>
+      <input type="file" id="gs-img" accept="image/*" class="hidden">
+      <button type="button" class="secondary full" id="gs-img-btn">🖼 휴대폰에서 사진 불러오기</button>
+      <div id="gs-img-box" class="hidden" style="text-align:center;margin-bottom:8px;">
+        <img id="gs-img-view" style="max-width:100%;max-height:220px;border-radius:8px;border:1px solid #e2e8f0;">
+        <div><button type="button" class="small secondary" id="gs-img-del">사진 빼기</button></div></div>
       <div class="grid-2"><button class="warning" id="gs-copy">📋 문구 복사</button><button id="gs-open">💬 문자 앱 열기</button></div>
       <button class="secondary full" id="gs-nums">📋 받는 번호 복사</button>
       <div class="muted" id="gs-help" style="margin:4px 0 8px;font-size:.85rem;">휴대폰에 따라 <b>단체방(그룹 대화)</b>으로 갈 수 있어요. 문자 앱 설정에서 그룹 대화를 끄면 한 분씩 따로 갑니다. 문자 앱이 안 열리면 문구·번호를 복사해서 붙여넣으세요.</div>
@@ -2010,12 +2016,38 @@ function openGroupSms(){
     help.innerHTML = ok ? '<b style="color:var(--success)">✔ 문구를 복사했어요.</b> 문자 창에서 길게 눌러 "붙여넣기" 하세요.' : '복사가 안 되면 위 글을 길게 눌러 "전체 선택 → 복사" 하세요.'; };
   bg.querySelector('#gs-nums').onclick = async () => { const ok = await copyText(cur.main.map(p => telOf(p)).join(','));
     help.innerHTML = ok ? `<b style="color:var(--success)">✔ 번호 ${cur.main.length}개를 복사했어요.</b> 문자 앱 받는 사람 칸에 붙여넣으세요.` : '복사가 안 됐어요.'; };
+  // 사진 불러오기
+  let img = null;
+  const imgIn = bg.querySelector('#gs-img'), imgView = bg.querySelector('#gs-img-view'), imgBox = bg.querySelector('#gs-img-box'), imgBtn = bg.querySelector('#gs-img-btn');
+  const setImg = file => {
+    img = file || null; imgIn.value = '';
+    if (imgView.src) URL.revokeObjectURL(imgView.src);
+    if (img) imgView.src = URL.createObjectURL(img); else imgView.removeAttribute('src');
+    imgBox.classList.toggle('hidden', !img);
+    imgBtn.textContent = img ? '🖼 다른 사진으로 바꾸기' : '🖼 휴대폰에서 사진 불러오기';
+    bg.querySelector('#gs-open').textContent = img ? '📤 사진과 함께 보내기' : '💬 문자 앱 열기';
+    if (img) help.innerHTML = '사진을 넣으면 <b>공유 창</b>이 열려요. <b>메시지</b>를 고른 뒤, 받는 사람 칸을 길게 눌러 <b>붙여넣기</b> 하세요. (번호는 자동으로 복사돼요)';
+  };
+  imgBtn.onclick = () => imgIn.click();
+  imgIn.onchange = () => setImg(imgIn.files[0]);
+  bg.querySelector('#gs-img-del').onclick = () => setImg(null);
   bg.querySelector('#gs-open').onclick = async () => {
     if (!cur.main.length) return notify('보낼 번호가 없습니다.');
+    const nums = cur.main.map(p => telOf(p));
+    if (img) {
+      // 문자 주소(sms:)로는 사진을 못 붙여서, 휴대폰 공유 기능으로 보냄
+      if (!(navigator.canShare && navigator.canShare({ files: [img] })))
+        return notify('이 휴대폰(브라우저)에서는 앱에서 사진을 바로 보낼 수 없어요.\n"문구 복사" 후 문자 앱에서 사진을 직접 첨부해 주세요.');
+      await copyText(nums.join(','));
+      try { await navigator.share({ files: [img], text: ta.value }); }
+      catch(e) { if (e.name !== 'AbortError') notify('공유 창을 열지 못했어요. 문구 복사 후 문자 앱에서 사진을 첨부해 주세요.'); return; }
+      logEvent('활동일 문자', null, `${cur.label} ${cur.main.length}명 · 사진 포함 · ${curMonth}월 ${dayList(days)}`);
+      return;
+    }
     logEvent('활동일 문자', null, `${cur.label} ${cur.main.length}명 · ${curMonth}월 ${dayList(days)}`);
-    await copyText(ta.value); openSmsApp(cur.main.map(p => telOf(p)), ta.value);
+    await copyText(ta.value); openSmsApp(nums, ta.value);
   };
-  bg.querySelector('#gs-close').onclick = () => bg.remove();
+  bg.querySelector('#gs-close').onclick = () => { if (imgView.src) URL.revokeObjectURL(imgView.src); bg.remove(); };
 }
 function smsDialog(p, date, nth){
   return new Promise(resolve => {
