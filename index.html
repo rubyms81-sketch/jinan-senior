@@ -158,6 +158,16 @@
   .call-row.called { opacity:.55; }
   .call-row .who { flex:1; text-align:left; background:none; border:none; color:#2d3748; padding:0; margin:0; font-size:1rem; width:auto; }
   .call-row button.done-btn { width:auto; margin:0; padding:8px 10px; font-size:.9rem; white-space:nowrap; background:#38a169; }
+  .zone-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .zone-btn { margin:0; padding:10px 8px; background:#f0fff4; color:#22543d; border:2px solid #9ae6b4; border-radius:10px; text-align:center; line-height:1.3; }
+  .zone-btn b { display:block; font-size:1rem; }
+  .zone-btn small { color:#4a5568; font-size:.78rem; }
+  .zone-btn.empty { background:#f7fafc; border-color:#e2e8f0; color:#4a5568; }
+  .zs-site { border:1px solid #e2e8f0; border-radius:8px; margin:6px 0; padding:0; }
+  .zs-site summary { padding:9px 10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:6px; list-style:none; }
+  .zs-site summary::-webkit-details-marker { display:none; }
+  .zs-site .zs-people { padding:0 10px 8px; }
+  .zs-person { border-top:1px dashed #e2e8f0; padding:7px 0; font-size:.92rem; }
   .cus-box { background:#fffaf0; border:1px solid #fbd38d; border-radius:10px; padding:8px 10px; margin-bottom:10px; }
   .legend { display:flex; flex-wrap:wrap; gap:10px; font-size:.78rem; color:#4a5568; margin-bottom:4px; }
   .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-1px; margin-right:3px; }
@@ -180,6 +190,10 @@
 
 <div class="container">
   <div id="call-alert"></div>
+  <div class="card" id="zone-card" style="padding:12px 14px;">
+    <div style="font-weight:bold;margin-bottom:6px;">🗺 구역 <span class="muted" style="font-weight:normal;font-size:.85rem;">(누르면 경로당·어르신)</span></div>
+    <div class="zone-grid" id="zone-btns"></div>
+  </div>
   <div class="card">
     <div class="month-bar">
       <button id="m-prev" onclick="moveMonth(-1)">◀</button>
@@ -265,7 +279,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-24</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-1</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -969,6 +983,119 @@ async function delNote(id){
   logEvent('특이사항 삭제', p, `${n.cat?`[${n.cat}] `:''}${n.text}`, n.date);
   p.notes = p.notes.filter(x => x.id!==id); saveData(false); renderModal();
 }
+// ---------- 🗺 구역 (팀장별 담당 경로당) ----------
+// zones = [{ id, name, sites:[{town, senior}] }]  — 구역 이름은 바꿀 수 있음(예: 길대금 팀장)
+let zones = (() => { try { const v = JSON.parse(load('jinan_zones')); if (Array.isArray(v) && v.length) return v; } catch(e) {}
+  return [1,2,3,4].map(i => ({ id: i, name: `${i}구역`, sites: [] })); })();
+const saveZones = () => store('jinan_zones', JSON.stringify(zones));
+const siteKey = (town, senior) => town + '|' + senior;
+const zoneOfSite = (town, senior) => zones.find(z => z.sites.some(x => x.town===town && x.senior===senior)) || null;
+const zoneOf = p => zoneOfSite(p.town, seniorOf(p));
+const siteMembers = (town, senior) => participants.filter(p => p.town===town && seniorOf(p)===senior)
+  .sort((a,b) => stats(a).dropped - stats(b).dropped || a.name.localeCompare(b.name));
+function renderZones(){
+  const box = document.getElementById('zone-btns'); if (!box) return;
+  box.innerHTML = zones.map(z => {
+    const n = z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0);
+    return `<button type="button" class="zone-btn ${z.sites.length?'':'empty'}" onclick="openZone(${z.id})"><b>${esc(z.name)}</b><small>${z.sites.length ? `경로당 ${z.sites.length}곳 · ${n}명` : '경로당을 넣어 주세요'}</small></button>`;
+  }).join('');
+}
+function openZone(id){
+  const z = zones.find(x => x.id === id); if (!z) return;
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.15rem;margin-bottom:8px;" id="zn-title"></div>
+    <label>구역 이름 <span class="muted" style="font-weight:normal;">(예: 길대금 팀장)</span></label>
+    <div style="display:flex;gap:6px;margin-bottom:12px;"><input type="text" id="zn-name" autocomplete="off" style="margin:0;"><button type="button" class="small" id="zn-rename" style="margin:0;white-space:nowrap;">이름 저장</button></div>
+    <div id="zn-main">
+      <label>담당 경로당 <span class="muted" style="font-weight:normal;">(누르면 어르신·연락처)</span></label>
+      <div id="zn-sites"></div>
+      <button type="button" class="warning full" id="zn-add">＋ 경로당 고르기</button>
+    </div>
+    <div id="zn-pick" class="hidden">
+      <label id="zn-pick-title">면을 고르세요</label>
+      <div id="zn-towns" class="grid-2" style="margin-bottom:8px;"></div>
+      <div id="zn-list"></div>
+      <div class="grid-2" style="margin-top:8px;"><button type="button" class="secondary" id="zn-pick-back">◀ 돌아가기</button><button type="button" id="zn-pick-save">선택 저장</button></div>
+    </div>
+    <button type="button" class="secondary full" id="zn-close" style="margin-top:8px;">닫기</button></div>`;
+  document.body.appendChild(bg);
+  const $ = q => bg.querySelector(q);
+  $('#zn-name').value = z.name;
+  const drawMain = () => {
+    const total = z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0);
+    $('#zn-title').innerHTML = `🗺 ${esc(z.name)} <span class="muted" style="font-size:.85rem;font-weight:normal;">경로당 ${z.sites.length}곳 · 어르신 ${total}명</span>`;
+    const sorted = [...z.sites].sort((a,b) => a.town.localeCompare(b.town) || seniorRank(a.senior)-seniorRank(b.senior) || a.senior.localeCompare(b.senior));
+    $('#zn-sites').innerHTML = sorted.length ? sorted.map(x => {
+      const ms = siteMembers(x.town, x.senior);
+      return `<details class="zs-site"><summary><span><span class="muted">${esc(x.town)}</span> <b>${esc(x.senior)}</b></span><span class="muted">${ms.filter(p => !stats(p).dropped).length}명 ▾</span></summary>
+        <div class="zs-people">${ms.length ? ms.map(p => { const st = stats(p); return `<div class="zs-person">
+          <b>${esc(p.name)}</b> ${p.age?`<span class="muted">(${esc(p.age)}세)</span>`:''} ${st.dropped?`<span class="badge bg-danger">${esc(st.status)}</span>`:badgeOf(st)}${inHospNow(p)?' <span class="badge bg-hosp">🏥 입원 중</span>':''}
+          <br>${telBtn(p)}${p.address?`<br><span class="muted" style="font-size:.85rem;">🏠 ${esc(p.address)}</span>`:''}
+          <br><button type="button" class="small secondary" data-open="${p.id}">점검 화면 열기 ›</button></div>`; }).join('') : '<div class="muted">어르신이 없습니다.</div>'}
+          <button type="button" class="small secondary" data-del="${esc(siteKey(x.town, x.senior))}" style="margin-top:4px;">이 경로당 구역에서 빼기</button></div></details>`;
+    }).join('') : '<div class="muted" style="margin-bottom:8px;">아직 경로당이 없어요. 아래 "＋ 경로당 고르기"를 눌러 주세요.</div>';
+    bg.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { bg.remove(); openModal(Number(b.dataset.open)); });
+    bg.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      const [town, senior] = b.dataset.del.split('|');
+      if (!await ask(`${town} ${senior} 경로당을 ${z.name}에서 뺄까요?`)) return;
+      z.sites = z.sites.filter(x => !(x.town===town && x.senior===senior));
+      logEvent('구역 경로당 빼기', null, `${z.name}: ${town} ${senior}`);
+      saveZones(); drawMain(); renderZones();
+    });
+  };
+  // 경로당 고르기: 면 → 경로당 목록(체크)
+  let pick = null, curTown = null;
+  const townsWith = TOWNS.filter(t => participants.some(p => p.town===t)).sort((a,b) => myTowns.includes(b) - myTowns.includes(a));
+  const drawList = () => {
+    const sites = [...new Set(participants.filter(p => p.town===curTown).map(seniorOf))].sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
+    $('#zn-pick-title').textContent = `${curTown} 경로당을 누르세요 (여러 곳)`;
+    $('#zn-list').innerHTML = sites.map(k => {
+      const other = zoneOfSite(curTown, k), mine = pick.has(siteKey(curTown, k));
+      const n = siteMembers(curTown, k).filter(p => !stats(p).dropped).length;
+      return `<button type="button" class="site ${mine?'zs-on':''}" data-k="${esc(k)}" style="padding:9px 12px;margin:4px 0;${mine?'background:#c6f6d5;border-color:#38a169;':''}">
+        <div>${mine?'✔ ':''}<b>${esc(k)}</b> <span class="muted">${n}명</span>${other && other.id!==z.id ? ` <span class="badge bg-gray">${esc(other.name)}</span>` : ''}</div><span class="arrow">${mine?'':'＋'}</span></button>`;
+    }).join('') || '<div class="muted">경로당이 없습니다.</div>';
+    bg.querySelectorAll('#zn-list button[data-k]').forEach(b => b.onclick = () => {
+      const key = siteKey(curTown, b.dataset.k);
+      pick.has(key) ? pick.delete(key) : pick.add(key); drawList();
+    });
+  };
+  const drawTowns = () => {
+    $('#zn-towns').innerHTML = townsWith.map(t => `<button type="button" class="reason ${t===curTown?'on':''}" data-t="${t}">${t}</button>`).join('');
+    bg.querySelectorAll('#zn-towns button').forEach(b => b.onclick = () => { curTown = b.dataset.t; drawTowns(); drawList(); });
+  };
+  $('#zn-add').onclick = () => {
+    pick = new Set(z.sites.map(x => siteKey(x.town, x.senior))); curTown = null;
+    $('#zn-main').classList.add('hidden'); $('#zn-pick').classList.remove('hidden');
+    $('#zn-pick-title').textContent = '면을 고르세요'; $('#zn-list').innerHTML = ''; drawTowns();
+  };
+  $('#zn-pick-back').onclick = () => { $('#zn-pick').classList.add('hidden'); $('#zn-main').classList.remove('hidden'); };
+  $('#zn-pick-save').onclick = () => {
+    const before = new Set(z.sites.map(x => siteKey(x.town, x.senior)));
+    const added = [...pick].filter(k => !before.has(k)), removed = [...before].filter(k => !pick.has(k));
+    // 다른 구역에 있던 경로당은 이 구역으로 옮김
+    added.forEach(k => { const [t, s] = k.split('|'); zones.forEach(o => { if (o.id !== z.id && o.sites.some(x => x.town===t && x.senior===s)) {
+      o.sites = o.sites.filter(x => !(x.town===t && x.senior===s)); logEvent('구역 경로당 옮김', null, `${t} ${s}: ${o.name} → ${z.name}`); } }); });
+    z.sites = [...pick].map(k => { const [town, senior] = k.split('|'); return { town, senior }; });
+    if (added.length) logEvent('구역 경로당 넣기', null, `${z.name}: ${added.map(k => k.replace('|',' ')).join(', ')}`);
+    if (removed.length) logEvent('구역 경로당 빼기', null, `${z.name}: ${removed.map(k => k.replace('|',' ')).join(', ')}`);
+    saveZones(); renderZones();
+    $('#zn-pick').classList.add('hidden'); $('#zn-main').classList.remove('hidden'); drawMain();
+  };
+  $('#zn-rename').onclick = () => {
+    const inp = $('#zn-name'); inp.blur();
+    setTimeout(() => {
+      const v = inp.value.trim(); if (!v) return notify('구역 이름을 적어 주세요.');
+      if (v === z.name) return;
+      logEvent('구역 이름 바꾸기', null, `${z.name} → ${v}`); z.name = v; saveZones(); drawMain(); renderZones();
+      notify(`구역 이름을 "${v}"(으)로 바꿨어요.`);
+    }, 50);
+  };
+  $('#zn-name').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); $('#zn-rename').click(); } });
+  $('#zn-close').onclick = () => bg.remove();
+  drawMain();
+}
 async function delCustom(){
   const p = current(), mk = monthKey(); if (!p || !customOf(p, mk)) return;
   if (!await ask(`${p.name} 어르신의 ${curMonth}월 보충 근무·입원 표시를 지우고\n원래 활동일로 되돌릴까요?`)) return;
@@ -1656,6 +1783,9 @@ function renameSenior(){
     if (nn === old) return back.remove();
     if (others.has(nn) && !await ask(`"${old}" ${members.length}명을 이미 있는 "${nn}" 경로당으로 합칠까요?`)) return;
     members.forEach(p => { logEvent('경로당 변경', p, `${old} → ${nn} (경로당 이름 바꾸기)`); p.senior = nn; delete p.guess; });
+    // 구역에 들어 있던 경로당이면 새 이름으로 바꿔 둠
+    zones.forEach(z => z.sites.forEach(x => { if (x.town===town && x.senior===old) x.senior = nn; }));
+    zones.forEach(z => z.sites = z.sites.filter((x,i,a) => a.findIndex(y => y.town===x.town && y.senior===x.senior) === i)); saveZones();
     saveData(false); back.remove(); curSenior = nn; renderList();
     notify(`${members.length}명의 경로당이 "${nn}"(으)로 바뀌었습니다.`);
   };
@@ -1678,6 +1808,7 @@ function onPerson(){
 
 function renderList(){
   renderCallAlert();
+  renderZones();
   renderBoard();
   renderWork();
   let town = lastTown;
@@ -2109,7 +2240,7 @@ function openModal(id){
   setSeg('c-attitude','우수');
   // 전화번호를 누르면 바로 전화 걸기
   const tel = String(p.phone||'').replace(/[^0-9+]/g,'');
-  document.getElementById('modal-sub').innerHTML = `[${esc(p.town)}] ${esc(seniorOf(p))}` +
+  document.getElementById('modal-sub').innerHTML = `[${esc(p.town)}] ${esc(seniorOf(p))}${zoneOf(p) ? ` · 🗺 ${esc(zoneOf(p).name)}` : ''}` +
     (p.phone ? ` · ${tel ? `<a class="tel-link" href="tel:${tel}">📞 ${esc(p.phone)}</a>` : esc(p.phone)}` : '');
   document.getElementById('c-memo').value = '';
   renderModal();
@@ -2349,7 +2480,7 @@ function exportExcel(){
   const town = (document.getElementById('filter-town').value || '전체');
 
   const sheet1 = list.map(p => { const s = stats(p), m = mstats(p); return {
-    '읍면':p.town, '경로당':p.senior, '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '나이':p.age, '연락처':p.phone, '주소':p.address,
+    '읍면':p.town, '경로당':p.senior, '구역':zoneOf(p)?.name || '', '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '나이':p.age, '연락처':p.phone, '주소':p.address,
     [`${curMonth}월 점검 횟수`]:mLogs(p).length, [`${curMonth}월 감점`]:-m.leaves.length, [`${curMonth}월 일당 미지급 일수`]:m.leaves.length,
     [`${curMonth}월 조끼 미착용`]:m.vest, [`${curMonth}월 명찰 미착용`]:m.badge, '누적 이탈 횟수':s.leaves, '누적 감점':s.penalty, '상태':s.status, '마지막 점검일':s.last,
     [`${curMonth}월 활동 날짜`]: personDays(p, monthKey()).map(d => Number(d.slice(8,10))).join(', '),
@@ -2384,6 +2515,7 @@ function exportExcel(){
     ['입원 중 인원', `${list.filter(p => customOf(p, monthKey())?.inHosp).length}명`],
     ['특이사항', `${list.reduce((n,p) => n + (p.notes||[]).filter(x => x.date.startsWith(monthKey())).length, 0)}건`],
     ['활동일 문자', eventLog.filter(h => h.type.startsWith('활동일 문자') && h.at.slice(0,4) >= String(YEAR) && h.detail.includes(`${curMonth}월 `)).map(h => `${h.at.slice(5)} ${h.name ? h.name+'(개인)' : h.detail.split(' · ')[0]}`).join(' / ') || '보낸 기록 없음'],
+    ['구역', zones.map(z => `${z.name}: 경로당 ${z.sites.length}곳 ${z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0)}명`).join(' / ')],
     ['출장 일정', Object.keys(trips).filter(d => d.startsWith(monthKey())).sort().map(d => `${dd(d)} ${tripLong(d)}`).join(' / ') || '없음'], [],
     ['읍면','경로당','인원','이탈 감점(점)','조끼 미착용(회)','명찰 미착용(회)']];
   const tot = {n:0, pen:0, vest:0, badge:0};
@@ -2406,7 +2538,7 @@ function exportExcel(){
   XLSX.utils.book_append_sheet(wb, ws0, '마감 요약');
   const ws1 = XLSX.utils.json_to_sheet(sheet1);
   const ws2 = sheet2.length ? XLSX.utils.json_to_sheet(sheet2) : XLSX.utils.aoa_to_sheet([['점검 기록이 없습니다.']]);
-  ws1['!cols'] = [8,14,10,6,15,22,11,9,15,13,13,11,9,18,13].map(w=>({wch:w}));
+  ws1['!cols'] = [8,14,14,10,6,15,22,11,9,15,13,13,11,9,18,13].map(w=>({wch:w}));
   ws2['!cols'] = [12,8,14,10,8,8,9,10,6,7,30].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws1, '참여자 현황');
   XLSX.utils.book_append_sheet(wb, ws2, '점검 기록');
@@ -2435,6 +2567,15 @@ function exportExcel(){
   const ws6 = cuRows.length ? XLSX.utils.json_to_sheet(cuRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 보충 근무·입원 인원이 없습니다.`]]);
   ws6['!cols'] = [8,14,10,14,10,30,16,12,24,16,16,16,30,9,12,14,14].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws6, '보충 근무·입원');
+  // 구역 (팀장별 담당 경로당·어르신)
+  const znRows = [];
+  zones.forEach(z => [...z.sites].sort((a,b) => a.town.localeCompare(b.town) || a.senior.localeCompare(b.senior)).forEach(x => {
+    if (!list.some(p => p.town===x.town)) return;
+    siteMembers(x.town, x.senior).forEach(p => znRows.push({ '구역':z.name, '읍면':x.town, '경로당':x.senior, '성명':p.name, '나이':p.age, '연락처':p.phone, '주소':p.address, '상태':stats(p).status }));
+  }));
+  const ws8 = znRows.length ? XLSX.utils.json_to_sheet(znRows) : XLSX.utils.aoa_to_sheet([['구역에 넣은 경로당이 없습니다.']]);
+  ws8['!cols'] = [16,8,14,10,6,15,30,10].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws8, '구역');
   // 특이사항 (점검과 별개)
   const ntRows = [];
   list.forEach(p => (p.notes||[]).filter(n => n.date.startsWith(monthKey())).forEach(n => ntRows.push({
