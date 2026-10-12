@@ -176,7 +176,9 @@
   </div>
 
   <div class="card">
-    <label>📍 읍·면 선택</label>
+    <input type="search" id="search" placeholder="🔍 어르신 이름으로 바로 찾기 (모든 면)" oninput="renderList()" autocomplete="off" style="margin:0 0 4px;">
+    <div id="participant-list"></div>
+    <label style="margin-top:10px;">📍 읍·면 선택</label>
     <select id="filter-town" onchange="onTown()"></select>
 
     <div id="senior-wrap" class="hidden">
@@ -190,8 +192,6 @@
       <select id="sel-person" onchange="onPerson()"></select>
     </div>
 
-    <input type="text" id="search" placeholder="🔍 어르신 이름으로 바로 찾기" oninput="renderList()" style="margin-bottom:4px;">
-    <div id="participant-list"></div>
   </div>
 
   <div class="card">
@@ -220,7 +220,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-2</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1050,7 +1050,8 @@ function renderList(){
   // 이름 검색
   const box = document.getElementById('participant-list');
   if (q) {
-    const found = inTown.filter(p => p.name.includes(q)).sort((a,b)=>a.name.localeCompare(b.name));
+    // 면을 고르지 않아도, 골라도 모든 면에서 찾음
+    const found = participants.filter(p => p.name.includes(q)).sort((a,b)=>a.name.localeCompare(b.name) || a.town.localeCompare(b.town));
     box.innerHTML = found.length ? found.map(p => personRow(p, true)).join('') : '<p class="muted" style="text-align:center;">찾는 어르신이 없습니다.</p>';
   } else box.innerHTML = '';
 }
