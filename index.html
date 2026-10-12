@@ -140,6 +140,8 @@
   .cal button.work { background:var(--primary); color:#fff; border-color:var(--primary); opacity:.55; }
   .cal button.from { background:#fffaf0; color:var(--warning); border:2px dashed var(--warning); opacity:1; }
   .cal button.pick { background:var(--warning); color:#fff; border-color:var(--warning); font-weight:bold; }
+  .cal button.skip { background:#fff; color:#a0aec0; border:2px dashed #a0aec0; text-decoration:line-through; }
+  .cus-box { background:#fffaf0; border:1px solid #fbd38d; border-radius:10px; padding:8px 10px; margin-bottom:10px; }
   .legend { display:flex; flex-wrap:wrap; gap:10px; font-size:.78rem; color:#4a5568; margin-bottom:4px; }
   .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-1px; margin-right:3px; }
   .chip.past { background:#edf2f7; color:#a0aec0; font-weight:normal; }
@@ -245,7 +247,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-11</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-12</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -287,6 +289,7 @@
   <div id="m-days" class="chips"></div>
   <div id="m-chg"></div>
   <button class="warning full" onclick="addChange()">🔄 근무일 변경 추가</button>
+  <button class="secondary full" id="btn-custom" onclick="openCustom()">🩹 보충 근무 (사고·입원 후 몰아서 근무)</button>
 
   <h4>📋 지금까지 점검 기록</h4>
   <div id="log-list"></div>
@@ -532,9 +535,13 @@ const isShifted = d => ![1,3,5].includes(dObj(d).getDay());   // 월·수·금�
 const monthDays = mk => workdays[mk] || suggestDays(mk);
 const endDay = mk => { const d = monthDays(mk); return d[d.length-1] || ''; };   // 열흘째 = 마감일
 const changesIn = (p, mk) => (p.changes || []).filter(c => c.from.startsWith(mk) || c.to.startsWith(mk));
-// 이 어르신의 실제 근무일 (변경 반영)
+// 🩹 보충 근무(개인 일정): 사고·입원 등으로 쉬다가 돌아와 남은 날을 몰아서 일할 때
+// p.custom = { 'YYYY-MM': { days:[...], reason, back:'YYYY-MM-DD', date } }
+const customOf = (p, mk) => (p.custom && p.custom[mk]) || null;
+// 이 어르신의 실제 근무일 (보충 근무·변경 반영)
 function personDays(p, mk){
-  const set = new Set(monthDays(mk));
+  const cu = customOf(p, mk);
+  const set = new Set(cu ? cu.days : monthDays(mk));
   changesIn(p, mk).forEach(c => { set.delete(c.from); if (c.to.startsWith(mk)) set.add(c.to); });
   return [...set].sort();
 }
@@ -558,12 +565,20 @@ function renderWork(){
   const rows = [];
   ps.forEach(p => changesIn(p, mk).forEach(c => rows.push({p, c})));
   rows.sort((a,b) => a.c.from.localeCompare(b.c.from) || seniorOf(a.p).localeCompare(seniorOf(b.p)) || a.p.name.localeCompare(b.p.name));
-  document.getElementById('chg-title').textContent = `🔄 ${curMonth}월 근무일 변경 (${new Set(rows.map(r=>r.p.id)).size}명)`;
+  const cus = ps.filter(p => customOf(p, mk))
+    .sort((a,b) => seniorRank(seniorOf(a))-seniorRank(seniorOf(b)) || seniorOf(a).localeCompare(seniorOf(b)) || a.name.localeCompare(b.name));
+  document.getElementById('chg-title').textContent = `🔄 ${curMonth}월 근무일 변경 (${new Set(rows.map(r=>r.p.id)).size}명)` + (cus.length ? ` · 🩹 보충 ${cus.length}명` : '');
+  const cusHTML = cus.length ? `<div class="cus-box"><div style="font-weight:bold;margin-bottom:4px;">🩹 보충 근무 (개인 일정) ${cus.length}명</div>` + cus.map(p => {
+    const cu = customOf(p, mk), reg = monthDays(mk);
+    return `<button class="pen-row warn" onclick="openModal(${p.id})"><span class="muted">🏠 ${town==='전체'?esc(p.town)+' · ':''}${esc(seniorOf(p))}</span><br>
+      <b>${esc(p.name)}</b> ${cu.reason?`<span class="muted">${esc(cu.reason)}</span>`:''}${cu.back?` <span class="muted">· ${dd(cu.back)} 복귀</span>`:''}<br>
+      <span style="font-size:.9rem;">${cu.days.map(d => reg.includes(d) ? Number(d.slice(8,10)) : `<b style="color:var(--warning)">${Number(d.slice(8,10))}</b>`).join(', ')}일</span></button>`;
+  }).join('') + '<div class="muted" style="font-size:.8rem;">주황 숫자 = 원래 근무일이 아닌 보충한 날</div></div>' : '';
   // 같은 날짜로 옮긴 분끼리 묶어서 짧게 보여 줌 (누르면 펼쳐짐)
   const groups = {};
   rows.forEach(r => (groups[r.c.from+'|'+r.c.to] ||= []).push(r));
   const keys = Object.keys(groups).sort();
-  document.getElementById('chg-list').innerHTML = keys.length ? keys.map(k => {
+  document.getElementById('chg-list').innerHTML = cusHTML + (keys.length ? keys.map(k => {
     const g = groups[k], [from, to] = k.split('|');
     const reasons = [...new Set(g.map(r => r.c.reason).filter(Boolean))];
     const bySite = {};
@@ -574,7 +589,7 @@ function renderWork(){
       ${Object.keys(bySite).sort().map(site => `<div class="chg-site"><span class="muted">🏠 ${esc(site)}</span>
         <div class="chips">${bySite[site].map(p => `<button class="chip name" onclick="openModal(${p.id})">${esc(p.name)}</button>`).join('')}</div></div>`).join('')}
     </details>`;
-  }).join('') : '<div class="muted">변경한 어르신이 없습니다.</div>';
+  }).join('') : (cus.length ? '' : '<div class="muted">변경한 어르신이 없습니다.</div>'));
 }
 
 // 활동일 정하기 (달력)
@@ -622,13 +637,124 @@ function openWorkdays(){
 
 // 이 어르신 근무일 표시 (점검 화면)
 function renderPersonDays(p){
-  const mk = monthKey(), days = personDays(p, mk), chg = changesIn(p, mk);
+  const mk = monthKey(), days = personDays(p, mk), chg = changesIn(p, mk), cu = customOf(p, mk), reg = monthDays(mk);
   const moved = new Set(chg.map(c => c.to));
-  document.getElementById('m-days-title').textContent = `📅 ${curMonth}월 근무일 (${days.length}일)`;
-  document.getElementById('m-days').innerHTML = days.map(d => `<span class="chip ${moved.has(d)?'moved':''}">${dd(d)}${moved.has(d)?' 변경':''}</span>`).join('')
-    + chg.filter(c => !days.includes(c.from)).map(c => `<span class="chip off">${dd(c.from)}</span>`).join('');
-  document.getElementById('m-chg').innerHTML = chg.map(c => `<div class="log warn">🔄 <b>${dd(c.from)} → ${dd(c.to)}</b>${c.reason?` <span class="muted">(${esc(c.reason)})</span>`:''}
+  document.getElementById('m-days-title').innerHTML = `📅 ${curMonth}월 근무일 (${days.length}일)${cu?' <span class="badge bg-warning" style="vertical-align:2px;">🩹 보충 근무</span>':''}`;
+  if (cu) {
+    // 보충 근무: 원래 근무일 중 쉰 날(줄 긋기) + 실제 근무일(보충한 날은 주황)
+    const all = [...new Set([...days, ...reg])].sort();
+    document.getElementById('m-days').innerHTML = all.map(d => days.includes(d)
+      ? `<span class="chip ${(!reg.includes(d) || moved.has(d))?'moved':''}">${dd(d)}${moved.has(d)?' 변경':!reg.includes(d)?' 보충':''}</span>`
+      : `<span class="chip off">${dd(d)} 쉼</span>`).join('');
+  } else {
+    document.getElementById('m-days').innerHTML = days.map(d => `<span class="chip ${moved.has(d)?'moved':''}">${dd(d)}${moved.has(d)?' 변경':''}</span>`).join('')
+      + chg.filter(c => !days.includes(c.from)).map(c => `<span class="chip off">${dd(c.from)}</span>`).join('');
+  }
+  document.getElementById('m-chg').innerHTML = (cu ? `<div class="log warn">🩹 <b>보충 근무 (개인 일정)</b>${cu.reason?` <span class="muted">· ${esc(cu.reason)}</span>`:''}${cu.back?` <span class="muted">· ${dd(cu.back)} 복귀</span>`:''}
+      <br><span class="muted">원래 근무일 중 쉰 날 ${reg.filter(d => !days.includes(d)).length}일, 보충한 날 ${days.filter(d => !reg.includes(d)).length}일</span>
+      <br><button class="small secondary" onclick="openCustom()">고치기</button> <button class="small secondary" onclick="delCustom()">보충 근무 지우기</button></div>` : '')
+    + chg.map(c => `<div class="log warn">🔄 <b>${dd(c.from)} → ${dd(c.to)}</b>${c.reason?` <span class="muted">(${esc(c.reason)})</span>`:''}
       <br><button class="small secondary" onclick="delChange(${c.id})">이 변경 지우기</button></div>`).join('');
+  document.getElementById('btn-custom').textContent = cu ? '🩹 보충 근무 고치기' : '🩹 보충 근무 (사고·입원 후 몰아서 근무)';
+}
+
+// ---------- 🩹 보충 근무 (개인 일정) ----------
+// 복귀일부터: 원래 근무일은 그대로 + 모자란 날은 복귀일 이후 가장 빠른 평일(공휴일 제외)로 채움 (마감일 넘지 않음)
+function fillFromBack(mk, back, before){
+  const reg = monthDays(mk), end = endDay(mk);
+  const out = new Set(before.filter(d => d < back));
+  reg.filter(d => d >= back).forEach(d => out.add(d));
+  const y = Number(mk.slice(0,4)), m = Number(mk.slice(5,7)), last = new Date(y, m, 0).getDate();
+  for (let d = Number(back.slice(8,10)); d <= last && out.size < WORK_TARGET; d++) {
+    const k = ymd(y,m,d), w = new Date(y, m-1, d).getDay();
+    if (end && k > end) break;
+    if (w===0 || w===6 || HOLIDAYS.has(k) || out.has(k)) continue;
+    out.add(k);
+  }
+  return [...out].sort();
+}
+function openCustom(){
+  const p = current(); if (!p) return;
+  const mk = monthKey(), reg = monthDays(mk), end = endDay(mk), cu = customOf(p, mk);
+  const y = YEAR, m = curMonth, lastD = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
+  // 복귀일 기본값: 오늘 다음의 첫 근무일 (이번 달이 아니면 그달 첫 근무일)
+  let back = cu?.back || (today().startsWith(mk) ? (reg.find(d => d > today()) || today()) : reg[0] || ymd(y,m,1));
+  // 처음 만들 때: 복귀일 전 근무일은 쉰 것으로 보고, 복귀일부터 10일 채운 날짜로 시작 (복귀 전에 일한 날은 눌러서 넣기)
+  let sel = new Set(cu ? cu.days : fillFromBack(mk, back, [])), reason = cu?.reason || '';
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🩹 ${esc(p.name)} 어르신 보충 근무 (${m}월)</div>
+    <div class="muted" style="margin-bottom:8px;">사고·입원 등으로 쉬다가 돌아와서 <b>남은 날을 몰아서</b> 일할 때 씁니다.</div>
+    <label>사유</label>
+    <div class="grid-2" id="cu-reasons" style="margin-bottom:10px;">
+      <button type="button" class="reason" data-v="사고·부상">🩹 사고·부상</button><button type="button" class="reason" data-v="입원·치료">🏥 입원·치료</button><button type="button" class="reason" data-v="개인 사정" style="grid-column:1 / -1;">🙋 개인 사정</button>
+    </div>
+    <label>다시 나오는 날 (복귀일)</label>
+    <button type="button" class="secondary full" id="cu-back" style="margin-bottom:6px;"></button>
+    <button type="button" class="warning full" id="cu-fill">⚡ 복귀일부터 ${WORK_TARGET}일 채우기</button>
+    <div class="muted" style="margin:6px 0;">날짜를 눌러 넣고 뺄 수 있어요. 복귀 전에 일한 날이 있으면 눌러서 넣어 주세요. 마감일(${end?dd(end):''}) 이후는 못 고릅니다.</div>
+    <div class="legend"><span><i style="background:var(--primary)"></i>근무</span><span><i style="background:var(--warning)"></i>보충한 날</span><span><i style="background:#fff;border:2px dashed #a0aec0"></i>쉰 날(원래 근무일)</span></div>
+    <div class="cal" id="cu-cal"></div>
+    <div style="text-align:center;margin-bottom:10px;">근무: <b id="cu-n"></b>일 <span class="muted">(보통 ${WORK_TARGET}일)</span></div>
+    <div class="grid-2"><button class="secondary" id="cu-cancel">취소</button><button id="cu-save">저장</button></div></div>`;
+  document.body.appendChild(bg);
+  const showBack = () => bg.querySelector('#cu-back').innerHTML = `📅 <b>${dd(back)}</b> 복귀 <span class="muted">바꾸기 ▾</span>`;
+  const draw = () => {
+    let h = WEEK.map(w => `<div class="h">${w}</div>`).join('') + '<div></div>'.repeat(first);
+    for (let d = 1; d <= lastD; d++) {
+      const k = ymd(y,m,d), w = new Date(y, m-1, d).getDay(), isReg = reg.includes(k), on = sel.has(k);
+      const cls = [on ? (isReg ? 'on' : 'pick') : (isReg ? 'skip' : ''), (w===0 || HOLIDAYS.has(k))?'red':'', k===end?'end':'', k===back?'sel':''].join(' ');
+      const tag = k===back ? '복귀' : on && !isReg ? '보충' : !on && isReg ? '쉼' : k===end ? '마감' : '';
+      h += `<button data-k="${k}" class="${cls}" ${end && k > end ? 'disabled' : ''}>${d}${tag?`<small>${tag}</small>`:''}</button>`;
+    }
+    bg.querySelector('#cu-cal').innerHTML = h;
+    bg.querySelector('#cu-n').textContent = sel.size;
+    bg.querySelectorAll('#cu-cal button:not(:disabled)').forEach(b => b.onclick = () => {
+      const k = b.dataset.k;
+      if (sel.has(k)) sel.delete(k);
+      else if (sel.size >= WORK_TARGET) return notify(`근무일은 ${WORK_TARGET}일까지입니다.\n다른 날을 먼저 눌러서 빼 주세요.`);
+      else sel.add(k);
+      draw();
+    });
+  };
+  showBack(); draw();
+  bg.querySelectorAll('#cu-reasons button').forEach(b => {
+    b.classList.toggle('on', b.dataset.v === reason);
+    b.onclick = () => { const on = !b.classList.contains('on');
+      bg.querySelectorAll('#cu-reasons button').forEach(x => x.classList.remove('on'));
+      if (on) b.classList.add('on'); reason = on ? b.dataset.v : ''; };
+  });
+  bg.querySelector('#cu-back').onclick = () => openDatePicker(back, k => {
+    if (!k.startsWith(mk)) return notify(`${m}월 안의 날짜를 골라 주세요.`);
+    back = k; showBack(); sel = new Set(fillFromBack(mk, back, [...sel])); draw();
+  }, '🩹 다시 나오는 날(복귀일)을 누르세요');
+  bg.querySelector('#cu-fill').onclick = () => { sel = new Set(fillFromBack(mk, back, [...sel])); draw(); };
+  bg.querySelector('#cu-cancel').onclick = () => bg.remove();
+  bg.querySelector('#cu-save').onclick = async () => {
+    if (!sel.size) return notify('근무일을 하루 이상 골라 주세요.');
+    const days = [...sel].sort();
+    if (days.length < WORK_TARGET && !await ask(`근무일이 ${days.length}일입니다. (보통 ${WORK_TARGET}일)\n이대로 저장할까요?`)) return;
+    // 이달 근무일 변경이 있으면 보충 근무에 합쳐서 정리
+    const chg = changesIn(p, mk);
+    if (chg.length) {
+      if (!await ask(`이 어르신의 ${m}월 근무일 변경 ${chg.length}건은\n보충 근무 날짜로 대신하고 지울까요?`)) return;
+      chg.forEach(c => logEvent('근무일 변경 취소', p, `${dd(c.from)} → ${dd(c.to)} (보충 근무로 대신)`, c.from));
+      p.changes = (p.changes||[]).filter(c => !chg.includes(c));
+    }
+    (p.custom ||= {})[mk] = { days, reason, back, date: today() };
+    const off = reg.filter(d => !days.includes(d)), add = days.filter(d => !reg.includes(d));
+    logEvent(cu ? '보충 근무 수정' : '보충 근무 지정', p,
+      `${reason?reason+' · ':''}${dd(back)} 복귀 · 근무 ${days.map(d => Number(d.slice(8,10))).join(', ')}일 (${days.length}일)`
+      + (off.length ? ` · 쉰 날 ${off.map(d => Number(d.slice(8,10))).join(', ')}일` : '') + (add.length ? ` · 보충 ${add.map(d => Number(d.slice(8,10))).join(', ')}일` : ''), back);
+    saveData(false); bg.remove(); renderModal();
+    notify(`보충 근무를 저장했어요.\n${days.map(d => Number(d.slice(8,10))).join(', ')}일 (${days.length}일)`);
+  };
+}
+async function delCustom(){
+  const p = current(), mk = monthKey(); if (!p || !customOf(p, mk)) return;
+  if (!await ask(`${p.name} 어르신의 ${curMonth}월 보충 근무를 지우고\n원래 활동일로 되돌릴까요?`)) return;
+  logEvent('보충 근무 취소', p, `${curMonth}월 원래 활동일로 되돌림`, customOf(p, mk).back);
+  delete p.custom[mk]; saveData(false); renderModal();
 }
 
 // ---------- 출장 (점검 나가는 지역·직원) ----------
@@ -737,6 +863,7 @@ function openTrip(d){
 function dayInfo(p, k){
   const mk = k.slice(0,7), days = p ? personDays(p, mk) : monthDays(mk), end = endDay(mk);
   const moved = p ? new Set(changesIn(p, mk).map(c => c.to)) : new Set();
+  if (p && customOf(p, mk)) { const reg = monthDays(mk); days.forEach(d => { if (!reg.includes(d)) moved.add(d); }); }
   return { work: days.includes(k), moved: moved.has(k), end: k===end, after: end && k > end };
 }
 function setCheckDate(k){
@@ -1805,13 +1932,14 @@ function resetMonth(){
   const mk = monthKey();
   const logCnt = participants.reduce((n,p) => n + p.logs.filter(l => l.date.startsWith(mk)).length, 0);
   const chgCnt = participants.reduce((n,p) => n + (p.changes||[]).filter(c => c.from.startsWith(mk)).length, 0);
+  const cusCnt = participants.filter(p => customOf(p, mk)).length;
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;color:var(--danger);">🗑 ${YEAR}년 ${curMonth}월 초기화</div>
     <div style="margin-bottom:8px;">이 휴대폰에 저장된 <b>${curMonth}월 기록만</b> 지웁니다. 다른 달과 어르신 명단은 그대로예요.</div>
     <div class="notice red" style="margin-bottom:10px;">
       · 점검 기록(감점·조끼·명찰) <b>${logCnt}건</b><br>
-      · 근무일 변경 <b>${chgCnt}건</b><br>
+      · 근무일 변경 <b>${chgCnt}건</b> · 보충 근무 <b>${cusCnt}명</b><br>
       · ${curMonth}월 활동일 설정${workdays[mk]?'':' (아직 정하지 않음)'} · 출장 일정<br>
       <b>지운 뒤에는 되돌릴 수 없습니다.</b></div>
     <button class="secondary full" id="rs-export">📥 먼저 ${curMonth}월 엑셀 내려받기</button>
@@ -1828,6 +1956,7 @@ function resetMonth(){
     participants.forEach(p => {
       p.logs = p.logs.filter(l => !l.date.startsWith(mk));
       if (p.changes) p.changes = p.changes.filter(c => !c.from.startsWith(mk));
+      if (p.custom) delete p.custom[mk];
     });
     delete workdays[mk]; store('jinan_workdays', JSON.stringify(workdays));
     Object.keys(trips).filter(d => d.startsWith(mk)).forEach(d => delete trips[d]); store('jinan_trips', JSON.stringify(trips));
@@ -1877,6 +2006,13 @@ async function loadWeather(){
 setInterval(loadWeather, 30*60*1000);   // 30분마다 새로
 
 // ---------- 엑셀 내려받기 ----------
+// 엑셀용 한 줄 설명: "사고·부상 · 13일(화) 복귀 · 쉰 날 1, 5일 · 보충 14, 15일"
+function cuText(p, mk){
+  const cu = customOf(p, mk); if (!cu) return '';
+  const reg = monthDays(mk), days = personDays(p, mk), n2 = d => Number(d.slice(8,10));
+  const off = reg.filter(d => !days.includes(d)), add = days.filter(d => !reg.includes(d));
+  return [cu.reason, cu.back ? `${dd(cu.back)} 복귀` : '', off.length ? `쉰 날 ${off.map(n2).join(', ')}일` : '', add.length ? `보충 ${add.map(n2).join(', ')}일` : ''].filter(Boolean).join(' · ');
+}
 function exportExcel(){
   const town0 = (document.getElementById('filter-town').value || '전체');
   const list = participants.filter(p => town0==='전체' ? visibleTowns().includes(p.town) : p.town===town0)
@@ -1891,6 +2027,7 @@ function exportExcel(){
     [`${curMonth}월 활동 날짜`]: personDays(p, monthKey()).map(d => Number(d.slice(8,10))).join(', '),
     [`${curMonth}월 활동일 수`]: personDays(p, monthKey()).length,
     '근무일 변경': changesIn(p, monthKey()).map(c => `${dd(c.from)}→${dd(c.to)}${c.reason?` (${c.reason})`:''}`).join(' / '),
+    '보충 근무': cuText(p, monthKey()),
     [`${exYear()}년 참여 제외`]: exOf(p) ? [exOf(p).reason, exOf(p).memo].filter(Boolean).join(' - ') : '' }; });
 
   const sheet2 = [];
@@ -1914,6 +2051,7 @@ function exportExcel(){
   const sum = [[`${YEAR}년 ${curMonth}월 마감 요약 (${town})`],
     [`${curMonth}월 활동일 (${mDays.length}일)${workdays[monthKey()]?'':' ※ 추천 날짜(확정 전)'}`, mDays.map(dd).join(', ')],
     ['근무일 변경 인원', `${list.filter(p => changesIn(p, monthKey()).length).length}명`],
+    ['보충 근무 인원', `${list.filter(p => customOf(p, monthKey())).length}명`],
     ['출장 일정', Object.keys(trips).filter(d => d.startsWith(monthKey())).sort().map(d => `${dd(d)} ${tripLong(d)}`).join(' / ') || '없음'], [],
     ['읍면','경로당','인원','이탈 감점(점)','조끼 미착용(회)','명찰 미착용(회)']];
   const tot = {n:0, pen:0, vest:0, badge:0};
@@ -1948,6 +2086,16 @@ function exportExcel(){
   const ws3 = chgRows.length ? XLSX.utils.json_to_sheet(chgRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 근무일 변경 인원이 없습니다.`]]);
   ws3['!cols'] = [8,14,10,12,12,20,30].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws3, '근무일 변경');
+  // 보충 근무 (사고·입원 후 몰아서 근무)
+  const n2 = d => Number(d.slice(8,10));
+  const cuRows = list.filter(p => customOf(p, monthKey())).map(p => { const cu = customOf(p, monthKey()), reg = monthDays(monthKey()), days = personDays(p, monthKey()); return {
+    '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '사유':cu.reason, '복귀일':cu.back,
+    '원래 활동 날짜': reg.map(n2).join(', '), '쉰 날': reg.filter(d => !days.includes(d)).map(n2).join(', '),
+    '보충한 날': days.filter(d => !reg.includes(d)).map(n2).join(', '),
+    [`${curMonth}월 실제 근무 날짜`]: days.map(n2).join(', '), '근무일 수': days.length, '지정일': cu.date }; });
+  const ws6 = cuRows.length ? XLSX.utils.json_to_sheet(cuRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 보충 근무 인원이 없습니다.`]]);
+  ws6['!cols'] = [8,14,10,10,12,24,16,16,30,9,12].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws6, '보충 근무');
   // 내년도 참여 제외 대상
   const exRows = list.filter(p => exOf(p)).map(p => ({ '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '나이':p.age, '연락처':p.phone,
     '제외 사유':exOf(p).reason, '자세한 사유':exOf(p).memo, '지정일':exOf(p).date }));
