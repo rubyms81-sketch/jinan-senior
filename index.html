@@ -77,6 +77,8 @@
   .trip-prev { font-size:1.15rem; background:#fffaf0; border-radius:8px; padding:2px 8px; }
   .chip.daybtn.end .tr-town { color:#fefcbf; } .chip.daybtn.end .tr-staff { color:#fff; }
   .chip.daybtn.past .tr-town { color:#ed8936; } .chip.daybtn.past .tr-staff { color:#718096; }
+  .chip.daybtn .tr-none { color:var(--danger); font-size:.95rem; }
+  .chip.daybtn.end .tr-none { color:#fff; }
   .chip.daybtn .trip.empty { color:#a0aec0; font-weight:normal; }
   .chip.daybtn.end .trip, .chip.daybtn.up.end .trip { color:#fefcbf; }
   .chip.daybtn.end .trip.empty { color:#fbd38d; }
@@ -263,7 +265,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-23</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-24</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1000,10 +1002,11 @@ function tripHTML(towns, staff){
   return `${t?`<b class="tr-town">${esc(t)}</b>`:''}${st?`<span class="tr-staff">(${esc(st)})</span>`:''}`;
 }
 function tripShort(d){
-  const t = trips[d]; if (!t || (!t.towns?.length && !t.staff?.length)) return '';
+  const t = trips[d]; if (t?.none) return '<b class="tr-none">✕</b>';   // 바빠서 출장 안 나간 날
+  if (!t || (!t.towns?.length && !t.staff?.length)) return '';
   return tripHTML(t.towns, t.staff);
 }
-const tripLong = d => { const t = trips[d]; return t ? `${(t.towns||[]).join('·')}${t.staff?.length?` (${t.staff.join('·')})`:''}` : ''; };
+const tripLong = d => { const t = trips[d]; if (t?.none) return '출장 안 나감'; return t ? `${(t.towns||[]).join('·')}${t.staff?.length?` (${t.staff.join('·')})`:''}` : ''; };
 function openTrip(d){
   const t = trips[d] || {towns:[], staff:[]};
   const selT = new Set(t.towns||[]), selS = new Set(t.staff||[]);
@@ -1011,6 +1014,7 @@ function openTrip(d){
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">🚗 ${Number(d.slice(5,7))}월 ${dd(d)} 출장</div>
+    <button type="button" class="full ${t.none?'danger':'secondary'}" id="tp-none" style="margin-bottom:10px;">${t.none ? '✕ 이날은 출장 안 나감 <small>(누르면 취소)</small>' : '✕ 이날은 출장 안 나감'}</button>
     <label>가는 지역 <span class="muted" style="font-weight:normal;">(여러 곳 고를 수 있어요)</span></label>
     <div class="pick-grid" id="tp-towns">${order.map(x => `<button type="button" class="pick2" data-v="${x}">${x}</button>`).join('')}</div>
     <label>나가는 직원</label>
@@ -1070,6 +1074,12 @@ function openTrip(d){
     if (!selT.size && !selS.size) delete trips[d];
     else trips[d] = { towns:[...selT].sort((a,b)=>TOWNS.indexOf(a)-TOWNS.indexOf(b)), staff:[...selS] };
     logEvent('출장 일정', null, `${dd(d)} ${trips[d] ? tripLong(d) : '지움'}`, d);
+    done();
+  };
+  // 바빠서 출장을 안 나가는 날: 바깥 날짜 칸에 ✕ 표시
+  back.querySelector('#tp-none').onclick = () => {
+    if (t.none) { delete trips[d]; logEvent('출장 일정', null, `${dd(d)} 출장 안 나감 취소`, d); }
+    else { trips[d] = { none: true }; logEvent('출장 일정', null, `${dd(d)} 출장 안 나감`, d); }
     done();
   };
   back.querySelector('#tp-clear').onclick = () => { delete trips[d]; logEvent('출장 일정', null, `${dd(d)} 지움`, d); done(); };
