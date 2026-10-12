@@ -245,7 +245,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-10</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-11</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -406,6 +406,17 @@ saveData(false);
 function saveData(render=true){ store(KEY, JSON.stringify(participants)); if(render) renderList(); }
 
 // ---------- 누적 계산 ----------
+// ---------- 📜 변경 이력 (마감 엑셀 "변경 이력" 시트로 나감) ----------
+// ※ 앞으로 기능을 추가하거나 바꿀 때: 데이터가 바뀌는 곳마다 logEvent(...)를 부르고, 마감 엑셀에도 나오게 할 것
+let eventLog = (() => { try { return JSON.parse(load('jinan_history')) || []; } catch(e) { return []; } })();
+function logEvent(type, p, detail, date){
+  const now = new Date();
+  eventLog.push({ at: `${today()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,
+    date: date || today(), type, town: p?.town || '', senior: p ? seniorOf(p) : '', name: p?.name || '', detail: detail || '' });
+  if (eventLog.length > 5000) eventLog = eventLog.slice(-5000);
+  store('jinan_history', JSON.stringify(eventLog));
+}
+
 // 감점·중도포기는 해마다 새로 시작 (화면에서 보고 있는 연도 기준)
 const viewYear = () => (typeof YEAR !== 'undefined' ? YEAR : new Date().getFullYear());
 function stats(p){
@@ -604,6 +615,7 @@ function openWorkdays(){
   back.querySelector('#cal-save').onclick = () => {
     if (!sel.size) return notify('활동일을 하루 이상 골라 주세요.');
     workdays[mk] = [...sel].sort(); store('jinan_workdays', JSON.stringify(workdays));
+    logEvent('활동일 설정', null, `${m}월: ${workdays[mk].map(d => Number(d.slice(8,10))).join(', ')}일`, workdays[mk][0]);
     back.remove(); renderList();
   };
 }
@@ -714,9 +726,10 @@ function openTrip(d){
   back.querySelector('#tp-save').onclick = () => {
     if (!selT.size && !selS.size) delete trips[d];
     else trips[d] = { towns:[...selT].sort((a,b)=>TOWNS.indexOf(a)-TOWNS.indexOf(b)), staff:[...selS] };
+    logEvent('출장 일정', null, `${dd(d)} ${trips[d] ? tripLong(d) : '지움'}`, d);
     done();
   };
-  back.querySelector('#tp-clear').onclick = () => { delete trips[d]; done(); };
+  back.querySelector('#tp-clear').onclick = () => { delete trips[d]; logEvent('출장 일정', null, `${dd(d)} 지움`, d); done(); };
   back.querySelector('#tp-cancel').onclick = () => back.remove();
 }
 
@@ -773,6 +786,7 @@ function changeLogDate(logId){
   openDatePicker(l.date, async k => {
     if (k === l.date) return;
     if (!await ask(`이 점검 기록 날짜를 바꿀까요?\n${Number(l.date.slice(5,7))}월 ${dd(l.date)} → ${Number(k.slice(5,7))}월 ${dd(k)}`)) return;
+    logEvent('점검 날짜 변경', p, `${l.date} → ${k}`, k);
     l.date = k; saveData(false); renderModal();
     notify('점검 날짜가 바뀌었습니다.');
   }, `📋 점검 기록 날짜 바꾸기 (지금: ${Number(l.date.slice(5,7))}월 ${dd(l.date)})`);
@@ -975,6 +989,7 @@ function addChange(pre){
       const xd = personDays(x, mk);
       if (!xd.includes(from) || xd.includes(to)) return;
       (x.changes ||= []).push({ id: Date.now() + (seq++), from, to, reason });
+      logEvent('근무일 변경', x, `${dd(from)} → ${dd(to)}${reason?` (${reason})`:''}`, from);
     });
     saveData(false); back.remove(); renderModal();
     notify(`${targets.length > 1 ? targets.length+'명 ' : ''}근무일 변경이 저장되었습니다.\n${dd(from)} → ${dd(to)}`);
@@ -982,7 +997,7 @@ function addChange(pre){
 }
 function delChange(cid){
   const p = current(); if (!p) return;
-  ask('이 근무일 변경을 지울까요?').then(ok => { if (!ok) return; p.changes = (p.changes||[]).filter(c => c.id!==cid); saveData(false); renderModal(); });
+  ask('이 근무일 변경을 지울까요?').then(ok => { if (!ok) return; const c0 = (p.changes||[]).find(c => c.id===cid); if (c0) logEvent('근무일 변경 취소', p, `${dd(c0.from)} → ${dd(c0.to)}`, c0.from); p.changes = (p.changes||[]).filter(c => c.id!==cid); saveData(false); renderModal(); });
 }
 
 // 이번 달 감점·경고가 있는 읍·면 표시
@@ -1016,12 +1031,14 @@ function saveExclude(){
   const reason = document.getElementById('ex-reason').value, memo = document.getElementById('ex-memo').value.trim();
   if (!reason && !memo) return notify('사유를 고르거나 적어 주세요.');
   p.exclude = { year: exYear(), reason, memo, date: today() };
+  logEvent('참여 제외 지정', p, `${exYear()}년 · ${[reason, memo].filter(Boolean).join(' - ')}`);
   saveData(false); renderModal(); document.getElementById('ex-panel').open = false;
   notify(`${p.name} 어르신을 ${exYear()}년 참여 제외 대상으로 저장했어요.`);
 }
 async function clearExclude(){
   const p = current(); if (!p || !exOf(p)) return;
   if (!await ask(`${p.name} 어르신의 ${exYear()}년 참여 제외를 해제할까요?`)) return;
+  logEvent('참여 제외 해제', p, `${exYear()}년`);
   delete p.exclude; saveData(false); renderModal();
 }
 function renderExList(){
@@ -1081,6 +1098,7 @@ function openAddExclude(){
     if (!picked) return notify('먼저 어르신 이름을 찾아서 눌러 주세요.');
     if (!reason && !memo) return notify('사유를 고르거나 적어 주세요.');
     picked.exclude = { year: exYear(), reason, memo, date: today() };
+    logEvent('참여 제외 지정', picked, `${exYear()}년 · ${[reason, memo].filter(Boolean).join(' - ')}`);
     saveData(false); back.remove(); renderList();
     document.getElementById('ex-box').open = true;
     notify(`${picked.name} 어르신을 ${exYear()}년 참여 제외 대상으로 저장했어요.`);
@@ -1252,6 +1270,7 @@ function openGuessFix(){
     back.querySelectorAll('.gfx-one').forEach(o => {
       const p = participants.find(x => x.id===Number(o.dataset.id)); if (!p || o.value==='__new') return;
       if (p.senior !== o.value) changed++; else kept++;
+      logEvent(p.senior !== o.value ? '경로당 변경' : '경로당 확정', p, p.senior !== o.value ? `추정 ${p.senior} → ${o.value}` : `추정 경로당 "${o.value}" 확정`);
       p.senior = o.value; delete p.guess;
     });
     saveData(false); back.remove(); curSenior = null; renderList();
@@ -1282,7 +1301,7 @@ function renameSenior(){
     if (!nn) return notify('새 경로당 이름을 적어 주세요.');
     if (nn === old) return back.remove();
     if (others.has(nn) && !await ask(`"${old}" ${members.length}명을 이미 있는 "${nn}" 경로당으로 합칠까요?`)) return;
-    members.forEach(p => { p.senior = nn; delete p.guess; });
+    members.forEach(p => { logEvent('경로당 변경', p, `${old} → ${nn} (경로당 이름 바꾸기)`); p.senior = nn; delete p.guess; });
     saveData(false); back.remove(); curSenior = nn; renderList();
     notify(`${members.length}명의 경로당이 "${nn}"(으)로 바뀌었습니다.`);
   };
@@ -1317,7 +1336,7 @@ function renderList(){
     document.getElementById('close-sum').innerHTML =
       `<button onclick="showClose('leave')"><b style="color:var(--danger)">${pen?'-'+pen:0}점</b>이탈 감점 ›</button><button onclick="showClose('vest')"><b style="color:var(--warning)">${vest}회</b>조끼 미착용 ›</button><button onclick="showClose('badge')"><b style="color:var(--warning)">${badge}회</b>명찰 미착용 ›</button>`; }
   document.getElementById('export-desc').innerHTML = (all ? (showOthers ? '<b>전체 읍·면</b> 명단을' : `<b>내 담당(${myTowns.join('·')})</b> 명단을`) : `<b>${esc(town)}</b> 명단을`) +
-    ` <b>${curMonth}월</b> 점검 내용을 내려받습니다.<br>엑셀 파일 안에 <b>마감 요약</b>(활동일, 이탈·조끼·명찰 횟수), <b>참여자 현황</b>(어르신별 활동 날짜), <b>${curMonth}월 점검 기록</b>, <b>근무일 변경</b>이 들어 있습니다.`;
+    ` <b>${curMonth}월</b> 점검 내용을 내려받습니다.<br>엑셀 파일 안에 <b>마감 요약</b>(활동일·출장, 이탈·조끼·명찰 횟수), <b>참여자 현황</b>(어르신별 활동 날짜), <b>${curMonth}월 점검 기록</b>, <b>근무일 변경</b>, <b>${exYear()}년 참여 제외</b>, <b>변경 이력</b>(그달 바뀐 내용 전부)이 들어 있습니다.`;
 
   // 읍·면 선택칸 (인원 표시)
   const tSel = document.getElementById('filter-town');
@@ -1405,6 +1424,7 @@ async function addParticipant(){
   if (isDup(participants, v('n-name'), v('n-senior'), v('n-phone')) && !await ask('같은 분이 이미 등록되어 있습니다. 그래도 등록할까요?')) return;
   participants.push({ id: Date.now(), town:v('n-town'), senior:v('n-senior'), name:v('n-name'), age:v('n-age'),
     phone:v('n-phone'), address:v('n-address'), quit:false, logs:[] });
+  logEvent('신규 등록', participants[participants.length-1], '한 명씩 등록');
   saveData();
   ['n-senior','n-name','n-age','n-phone','n-address'].forEach(id => document.getElementById(id).value='');
   closeAdd();
@@ -1541,12 +1561,15 @@ function bulkImport(input){
       if (!await ask(msg + '\n\n이대로 정리할까요?')) return;
 
       participants.push(...added);
-      updated.forEach(([p, ch]) => { ch.forEach(([k, v]) => p[k] = v); if (ch.some(c => c[0]==='senior')) delete p.guess; });
-      unquit.forEach(p => { p.quit = false; });
+      added.forEach(p => logEvent('신규 등록', p, '엑셀 명단' + (p.guess ? ' · 경로당 추정' : '')));
+      updated.forEach(([p, ch]) => {
+        logEvent('정보 수정', p, ch.map(([k, v, label]) => `${label}: ${p[k]||'(없음)'} → ${v}`).join(' / ') + ' (엑셀 명단)');
+        ch.forEach(([k, v]) => p[k] = v); if (ch.some(c => c[0]==='senior')) delete p.guess; });
+      unquit.forEach(p => { p.quit = false; logEvent('중도포기 해제', p, '새 명단에 참여로 있음'); });
       let moved = 0;
       if (gone.length && await ask(`새 명단에 없는 ${gone.length}명을 목록에서 뺄까요?\n${list(gone.map(p=>p.name))}\n\n(점검 기록은 지워지지 않고 "지난 명단"에 보관됩니다. 빼기 전에 마감 엑셀을 받아 두시면 좋아요)`)) {
         let arc = []; try { arc = JSON.parse(load('jinan_archive')) || []; } catch(e) {}
-        gone.forEach(p => arc.push({ ...p, archivedAt: today() }));
+        gone.forEach(p => { arc.push({ ...p, archivedAt: today() }); logEvent('명단에서 뺌', p, '새 명단에 없음 (지난 명단에 보관)'); });
         store('jinan_archive', JSON.stringify(arc));
         const ids = new Set(gone.map(p => p.id));
         participants = participants.filter(p => !ids.has(p.id));
@@ -1699,6 +1722,8 @@ async function saveCheck(){
     const l = p.logs.find(x => x.id===editingLogId);
     if (!l) { cancelEdit(); return; }
     const wasLeave = l.leave==='이탈';
+    const before = `${l.date} 명찰 ${l.badge}·조끼 ${l.vest}·태도 ${l.attitude}·${l.leave}`;
+    logEvent('점검 기록 수정', p, `${before} → ${date} 명찰 ${g('c-badge')}·조끼 ${g('c-vest')}·태도 ${g('c-attitude')}·${g('c-leave')}`, date);
     Object.assign(l, { date, badge:g('c-badge'), vest:g('c-vest'), attitude:g('c-attitude'), leave:g('c-leave'), memo:g('c-memo').trim() });
     saveData(false);
     const s = stats(p);
@@ -1722,6 +1747,7 @@ async function saveCheck(){
   p.phone = g('m-phone').trim();
   saveData(false);
   const s = stats(p);
+  if (log.leave==='이탈') logEvent('근무지 이탈', p, `감점 -1점 (${viewYear()}년 누적 ${s.penalty}점)` + (s.leaves >= MAX_LEAVE ? ' → 감점 누적 중도포기' : ''), date);
 
   if (log.leave==='이탈') {
     let msg = `근무지 이탈 -1점 (누적 ${s.penalty}점), 당일 일당 미지급입니다.`;
@@ -1738,6 +1764,8 @@ async function saveCheck(){
 async function deleteLog(logId){
   const p = current();
   if (!await ask('이 점검 기록을 지울까요? (잘못 입력한 경우에만 지워 주세요)')) return;
+  const dl = p.logs.find(l => l.id === logId);
+  if (dl) logEvent('점검 기록 삭제', p, `${dl.date} 명찰 ${dl.badge}·조끼 ${dl.vest}·${dl.leave}`, dl.date);
   p.logs = p.logs.filter(l => l.id !== logId);
   saveData(false); renderModal();
 }
@@ -1745,7 +1773,12 @@ async function deleteLog(logId){
 function saveInfo(){
   const p = current(); const g = id => document.getElementById(id).value.trim();
   if (!g('m-name')) return notify('성명은 비워 둘 수 없습니다.');
-  Object.assign(p, { town:g('m-town'), name:g('m-name'), age:g('m-age'), senior:g('m-senior'), phone:g('m-phone'), address:g('m-address') });
+  const NEWV = { town:g('m-town'), name:g('m-name'), age:g('m-age'), senior:g('m-senior'), phone:g('m-phone'), address:g('m-address') };
+  const LB = { town:'읍면', name:'성명', age:'나이', senior:'경로당', phone:'연락처', address:'주소' };
+  const diff = Object.keys(NEWV).filter(k => String(p[k]||'') !== NEWV[k]).map(k => `${LB[k]}: ${p[k]||'(없음)'} → ${NEWV[k]||'(없음)'}`);
+  if (diff.length) logEvent('정보 수정', p, diff.join(' / '));
+  else if (p.guess) logEvent('경로당 확정', p, `추정 경로당 "${seniorOf(p)}" 확정`);
+  Object.assign(p, NEWV);
   delete p.guess;   // 저장하면 확인된 경로당
   saveData(false); renderModal(); notify('인적사항이 저장되었습니다.');
 }
@@ -1753,12 +1786,15 @@ function saveInfo(){
 async function toggleQuit(){
   const p = current();
   if (!stats(p).quitNow && !await ask(`${p.name} 어르신을 본인 사정으로 인한 중도포기로 처리할까요?`)) return;
-  p.quit = !(stats(p).quitNow); p.quitYear = viewYear(); saveData(false); renderModal();
+  p.quit = !(stats(p).quitNow); p.quitYear = viewYear();
+  logEvent(p.quit ? '중도포기(본인 사정)' : '중도포기 취소', p, `${viewYear()}년`);
+  saveData(false); renderModal();
 }
 
 async function deleteParticipant(){
   const p = current();
   if (!await ask(`${p.name} 어르신을 명단에서 완전히 삭제할까요?\n점검 기록도 함께 사라집니다.\n(그만두신 경우에는 삭제 대신 "중도포기 처리"를 눌러 주세요)`)) return;
+  logEvent('명단에서 삭제', p, `점검 기록 ${p.logs.length}건 함께 삭제`);
   participants = participants.filter(x => x.id !== p.id);
   saveData(); closeModal();
 }
@@ -1795,6 +1831,8 @@ function resetMonth(){
     });
     delete workdays[mk]; store('jinan_workdays', JSON.stringify(workdays));
     Object.keys(trips).filter(d => d.startsWith(mk)).forEach(d => delete trips[d]); store('jinan_trips', JSON.stringify(trips));
+    eventLog = eventLog.filter(h => !h.date.startsWith(mk));
+    logEvent('월 기록 초기화', null, `${YEAR}년 ${curMonth}월`, mk + '-01');
     saveData(false); back.remove(); renderList();
     notify(`${YEAR}년 ${curMonth}월 기록을 초기화했습니다.`);
   };
@@ -1916,6 +1954,14 @@ function exportExcel(){
   const ws4 = exRows.length ? XLSX.utils.json_to_sheet(exRows) : XLSX.utils.aoa_to_sheet([[`${exYear()}년 참여 제외 대상이 없습니다.`]]);
   ws4['!cols'] = [8,14,10,6,15,16,36,12].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws4, `${exYear()}년 참여 제외`);
+  // 그달 변경 이력 (그 면 것 + 면과 상관없는 것)
+  const hTowns = new Set(list.map(p => p.town));
+  const hRows = eventLog.filter(h => (h.date.startsWith(monthKey()) || h.at.startsWith(monthKey())) && (!h.town || hTowns.has(h.town)))
+    .sort((a,b) => a.at.localeCompare(b.at))
+    .map(h => ({ '기록 시각':h.at, '해당 날짜':h.date, '구분':h.type, '읍면':h.town, '경로당':h.senior, '성명':h.name, '내용':h.detail }));
+  const ws5 = hRows.length ? XLSX.utils.json_to_sheet(hRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 변경 이력이 없습니다.`]]);
+  ws5['!cols'] = [17,11,14,8,14,10,60].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws5, '변경 이력');
   XLSX.writeFile(wb, fname + '.xlsx');
 }
 
