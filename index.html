@@ -217,6 +217,7 @@
           <button onclick="openAdd()">+ 참여자 신규 등록</button>
           <label for="bulk-file" class="filebtn">📂 엑셀로 한번에 등록</label>
         </div>
+        <button class="warning full hidden" id="btn-guess" onclick="openGuessFix()"></button>
         <button class="secondary small full" onclick="downloadTemplate()">엑셀 등록 양식 내려받기</button>
       </div>
     </details>
@@ -236,7 +237,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-6</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.12-7</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -961,7 +962,13 @@ function delChange(cid){
 }
 
 // 이번 달 감점·경고가 있는 읍·면 표시
+function renderGuessBtn(){
+  const n = participants.filter(p => p.guess).length, b = document.getElementById('btn-guess');
+  b.classList.toggle('hidden', !n); b.textContent = `📍 추정 경로당 한번에 정리 (${n}명)`;
+  document.querySelector('#tools-box > summary h3').innerHTML = '⚙️ 명단 관리' + (n ? ` <span class="badge bg-warning" style="vertical-align:2px;">📍 추정 ${n}명</span>` : '');
+}
 function renderBoard(){
+  renderGuessBtn();
   document.getElementById('month-label').textContent = `${YEAR}년 ${curMonth}월`;
   let totalPen = 0;
   visibleTowns().forEach(tw => participants.filter(p => p.town===tw).forEach(p => totalPen += mstats(p).leaves.length));
@@ -1076,6 +1083,61 @@ function openMyTowns(){
   };
 }
 // 경로당 이름 바꾸기: 그 경로당 어르신 전체가 한 번에 바뀜
+// ---------- 📍 추정 경로당 한번에 정리 ----------
+// 주소로 자동으로 넣은(추정) 경로당을 묶음별로 보고, 한 번에 확정하거나 바꿈
+function openGuessFix(){
+  const list = participants.filter(p => p.guess);
+  if (!list.length) return notify('추정으로 들어간 경로당이 없어요.');
+  const towns = [...new Set(list.map(p => p.town))].sort((a,b) => TOWNS.indexOf(a)-TOWNS.indexOf(b));
+  const sitesOf = tw => [...new Set(participants.filter(p => p.town===tw && p.senior).map(p => p.senior))].sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
+  const opts = (tw, cur) => sitesOf(tw).map(k => `<option value="${esc(k)}" ${k===cur?'selected':''}>${esc(k)}</option>`).join('') + '<option value="__new">✏️ 새 이름 직접 입력…</option>';
+  const short = a => String(a||'').replace(/^(전북특별자치도|전라북도)\s*진안군\s*\S+\s*/, '');
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg" style="max-width:520px;">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">📍 추정 경로당 한번에 정리 (${list.length}명)</div>
+    <div class="muted" style="margin-bottom:8px;">주소를 보고 자동으로 넣은 경로당이에요. 맞으면 그대로, 틀리면 바꾼 뒤 <b>저장</b>을 누르세요.<br>묶음 위의 칸을 바꾸면 그 묶음 <b>모두</b> 한 번에 바뀌어요.</div>
+    ${towns.map(tw => {
+      const groups = {}; list.filter(p => p.town===tw).forEach(p => (groups[p.senior] ||= []).push(p));
+      return `<div style="font-weight:bold;margin:10px 0 4px;">📍 ${esc(tw)}</div>` + Object.keys(groups).sort().map(g => `
+        <div class="gfx-group" style="background:#fffaf0;border-left:4px solid var(--warning);border-radius:4px;padding:8px 10px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:6px;"><span style="white-space:nowrap;"><b>${esc(g)}</b> 추정 ${groups[g].length}명 → 모두</span>
+            <select class="gfx-all" data-town="${esc(tw)}" style="margin:0;padding:6px;">${opts(tw, g)}</select></div>
+          ${groups[g].map(p => `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+            <div style="flex:1;min-width:0;"><b>${esc(p.name)}</b> <span class="muted" style="font-size:.8rem;">${esc(short(p.address))}</span></div>
+            <select class="gfx-one" data-id="${p.id}" data-town="${esc(tw)}" style="margin:0;padding:6px;width:46%;">${opts(tw, p.senior)}</select></div>`).join('')}
+        </div>`).join('');
+    }).join('')}
+    <div class="grid-2" style="margin-top:6px;"><button class="secondary" id="gfx-cancel">닫기</button><button id="gfx-save">✔ 저장 (모두 확정)</button></div></div>`;
+  document.body.appendChild(back);
+  // "새 이름 직접 입력" 고르면 이름 받아서 그 면의 선택지에 추가
+  const askNew = async (sel) => {
+    const nn = (prompt('새 경로당 이름을 적어 주세요') || '').trim();
+    if (!nn) { sel.value = sel.dataset.prev || sel.options[0].value; return; }
+    back.querySelectorAll(`select[data-town="${sel.dataset.town}"]`).forEach(x => {
+      if (![...x.options].some(o => o.value===nn)) x.insertBefore(new Option(nn, nn), x.querySelector('option[value="__new"]'));
+    });
+    sel.value = nn; sel.dataset.prev = nn; sel.dispatchEvent(new Event('apply'));
+  };
+  back.querySelectorAll('select').forEach(x => { x.dataset.prev = x.value; });
+  back.querySelectorAll('.gfx-one').forEach(x => x.onchange = () => { if (x.value==='__new') askNew(x); else x.dataset.prev = x.value; });
+  back.querySelectorAll('.gfx-all').forEach(x => {
+    const apply = () => x.closest('.gfx-group').querySelectorAll('.gfx-one').forEach(o => { o.value = x.value; o.dataset.prev = x.value; });
+    x.addEventListener('apply', apply);
+    x.onchange = () => { if (x.value==='__new') askNew(x); else { x.dataset.prev = x.value; apply(); } };
+  });
+  back.querySelector('#gfx-cancel').onclick = () => back.remove();
+  back.querySelector('#gfx-save').onclick = () => {
+    let changed = 0, kept = 0;
+    back.querySelectorAll('.gfx-one').forEach(o => {
+      const p = participants.find(x => x.id===Number(o.dataset.id)); if (!p || o.value==='__new') return;
+      if (p.senior !== o.value) changed++; else kept++;
+      p.senior = o.value; delete p.guess;
+    });
+    saveData(false); back.remove(); curSenior = null; renderList();
+    notify(`추정 경로당을 확정했어요.\n그대로 ${kept}명 · 바꿈 ${changed}명`);
+  };
+}
+
 function renameSenior(){
   const town = lastTown, old = curSenior; if (!old || town==='전체') return;
   const members = participants.filter(p => p.town===town && seniorOf(p)===old);
@@ -1099,7 +1161,7 @@ function renameSenior(){
     if (!nn) return notify('새 경로당 이름을 적어 주세요.');
     if (nn === old) return back.remove();
     if (others.has(nn) && !await ask(`"${old}" ${members.length}명을 이미 있는 "${nn}" 경로당으로 합칠까요?`)) return;
-    members.forEach(p => p.senior = nn);
+    members.forEach(p => { p.senior = nn; delete p.guess; });
     saveData(false); back.remove(); curSenior = nn; renderList();
     notify(`${members.length}명의 경로당이 "${nn}"(으)로 바뀌었습니다.`);
   };
