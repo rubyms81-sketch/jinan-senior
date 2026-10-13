@@ -393,7 +393,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-3</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-4</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2353,7 +2353,7 @@ function renderNotVisited(){
   document.getElementById('nv-title').innerHTML = `🚶 아직 안 간 경로당 <span style="color:${n?'var(--warning)':'var(--success)'}">${n}곳</span>${dn ? ` <span style="color:var(--success);font-size:.85rem;">· ✔ 다녀옴 ${dn}곳</span>` : ''}${bn ? ` <span style="color:var(--danger);font-size:.85rem;">· ⚠ 미흡 ${bn}곳</span>` : ''}`;
   const chip = (x, k, ok) => { const v = siteVisits(x.tw, k), last = ok ? x.inRange(k).pop() : v[v.length-1];
     const pr = ok ? x.probs(k) : [];
-    return `<button type="button" class="chip nv-chip${ok ? (pr.length ? ' bad' : ' ok') : ''}" data-t="${esc(x.tw)}" data-k="${esc(k)}"><span>${ok ? (pr.length ? '⚠ ' : '✔ ') : ''}${crown(x.tw, k)}${esc(k)}</span><small>${ok ? (pr.length ? `${md(last)} · ${pr.join('·')}` : `${md(last)} 다녀옴`) : last ? `마지막 ${md(last)}` : '점검 기록 없음'}</small></button>`; };
+    return `<button type="button" class="chip nv-chip${ok ? (pr.length ? ' bad' : ' ok') : ''}" data-t="${esc(x.tw)}" data-k="${esc(k)}"><span>${ok ? (pr.length ? '⚠ ' : '✔ ') : ''}${crown(x.tw, k)}${esc(k)}</span>${(() => { const t = ok ? (pr.length ? `${md(last)} · ${pr.join('·')}` : `${md(last)} 다녀옴`) : last ? `마지막 ${md(last)}` : ''; return t ? `<small>${t}</small>` : ''; })()}</button>`; };
   box.innerHTML = out.map(x => `<div style="font-weight:bold;margin:8px 0 4px;">📍 ${esc(x.tw)} <span class="muted" style="font-weight:normal;">안 감 <b style="color:var(--warning)">${x.miss.length}</b> · 다녀옴 <b style="color:var(--success)">${x.done.length}</b>${x.bad ? ` · 미흡 <b style="color:var(--danger)">${x.bad}</b>` : ''}</span></div>
     <div class="chips">${x.miss.map(k => chip(x, k, false)).join('')}${x.done.map(k => chip(x, k, true)).join('')}</div>`).join('')
     + (out.length && !n ? '<div class="pen-none">✔ 모든 경로당을 다녀왔어요</div>' : '');
