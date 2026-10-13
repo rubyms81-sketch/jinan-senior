@@ -262,6 +262,7 @@
       <div class="grid-2 hidden" id="senior-tools" style="margin:-8px 0 12px;">
         <button class="small secondary" id="btn-rename" onclick="renameSenior()" style="margin:0;">✏️ 이 경로당 이름 바꾸기</button>
         <button class="small" id="btn-best" onclick="toggleBest(lastTown, curSenior)" style="margin:0;"></button>
+        <button class="small" id="btn-map" onclick="siteMapBtn(lastTown, curSenior)" style="margin:0;grid-column:1 / -1;"></button>
       </div>
     </div>
 
@@ -343,7 +344,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-36</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-37</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1111,6 +1112,8 @@ function openZone(id){
           <br>${telBtn(p)}${p.address?`<br><span class="muted" style="font-size:.85rem;">🏠 ${esc(p.address)}</span>`:''}
           <br><button type="button" class="small secondary" data-open="${p.id}">점검 화면 열기 ›</button>
           ${z.leaderId === p.id ? '<span class="badge" style="background:#276749;">👤 팀장</span> <button type="button" class="small secondary" data-unlead="1">팀장 해제</button>' : `<button type="button" class="small" data-lead="${p.id}" style="background:#276749;">👤 팀장으로 정하기</button>`}</div>`; }).join('') : '<div class="muted">어르신이 없습니다.</div>'}
+          <button type="button" class="small" data-map="${esc(siteKey(x.town, x.senior))}" style="margin-top:4px;background:${mapOf(x.town, x.senior)?'#03c75a':'#edf2f7'};color:${mapOf(x.town, x.senior)?'#fff':'#22543d'};">${mapOf(x.town, x.senior) ? '🗺️ 경로당 위치 보기' : '📌 경로당 위치 넣기'}</button>
+          ${mapOf(x.town, x.senior) ? `<button type="button" class="small secondary" data-mapedit="${esc(siteKey(x.town, x.senior))}" style="margin-top:4px;">위치 바꾸기</button>` : ''}
           <button type="button" class="small" data-best="${esc(siteKey(x.town, x.senior))}" style="margin-top:4px;background:${isBest(x.town, x.senior)?'#d69e2e':'#edf2f7'};color:${isBest(x.town, x.senior)?'#fff':'#744210'};">${isBest(x.town, x.senior) ? '👑 우수 경로당 (해제)' : '👑 우수 경로당으로 표시'}</button>
           <button type="button" class="small secondary" data-del="${esc(siteKey(x.town, x.senior))}" style="margin-top:4px;">이 경로당 구역에서 빼기</button>
           <div class="zs-addp" style="margin-top:8px;border-top:1px dashed #e2e8f0;padding-top:8px;">
@@ -1122,6 +1125,9 @@ function openZone(id){
     }).join('') : '';
     bg.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { bg.remove(); openModal(Number(b.dataset.open)); });
     $('#zn-sites-title').textContent = `담당 경로당 (${z.sites.length}곳)${z.sites.filter(x => isBest(x.town, x.senior)).length ? ` · 👑 ${z.sites.filter(x => isBest(x.town, x.senior)).length}` : ''}`;
+    const reopen = (town, senior) => { drawMain(); const det = [...bg.querySelectorAll('#zn-sites details')].find(d => d.querySelector(`[data-map="${CSS.escape(town+'|'+senior)}"]`)); if (det) det.open = true; };
+    bg.querySelectorAll('[data-map]').forEach(b => b.onclick = () => { const [town, senior] = b.dataset.map.split('|'); mapOf(town, senior) ? openSiteMap(town, senior) : editSiteMap(town, senior, () => reopen(town, senior)); });
+    bg.querySelectorAll('[data-mapedit]').forEach(b => b.onclick = () => { const [town, senior] = b.dataset.mapedit.split('|'); editSiteMap(town, senior, () => reopen(town, senior)); });
     bg.querySelectorAll('[data-best]').forEach(b => b.onclick = async () => {
       const [town, senior] = b.dataset.best.split('|'); await toggleBest(town, senior); drawMain();
       const det = [...bg.querySelectorAll('#zn-sites details')].find(d => d.querySelector(`[data-best="${CSS.escape(town+'|'+senior)}"]`)); if (det) det.open = true;
@@ -2040,6 +2046,9 @@ function renameSenior(){
     members.forEach(p => { logEvent('경로당 변경', p, `${old} → ${nn} (경로당 이름 바꾸기)`); p.senior = nn; delete p.guess; });
     // 구역에 들어 있던 경로당이면 새 이름으로 바꿔 둠
     zones.forEach(z => z.sites.forEach(x => { if (x.town===town && x.senior===old) x.senior = nn; }));
+    // 저장해 둔 위치·우수 표시도 새 이름으로 옮김
+    if (maps[town+'|'+old] && !maps[town+'|'+nn]) { maps[town+'|'+nn] = maps[town+'|'+old]; delete maps[town+'|'+old]; saveMaps(); }
+    if (best[town+'|'+old] && !best[town+'|'+nn]) { best[town+'|'+nn] = best[town+'|'+old]; delete best[town+'|'+old]; store('jinan_best', JSON.stringify(best)); }
     zones.forEach(z => z.sites = z.sites.filter((x,i,a) => a.findIndex(y => y.town===x.town && y.senior===x.senior) === i)); saveZones();
     saveData(false); back.remove(); curSenior = nn; renderList();
     notify(`${members.length}명의 경로당이 "${nn}"(으)로 바뀌었습니다.`);
@@ -2124,7 +2133,7 @@ function renderList(){
     document.getElementById('close-sum').innerHTML =
       `<button onclick="showClose('leave')"><b style="color:var(--danger)">${pen?'-'+pen:0}점</b>이탈 감점 ›</button><button onclick="showClose('vest')"><b style="color:var(--warning)">${vest}회</b>조끼 미착용 ›</button><button onclick="showClose('badge')"><b style="color:var(--warning)">${badge}회</b>명찰 미착용 ›</button>`; }
   document.getElementById('export-desc').innerHTML = (all ? (showOthers ? '<b>전체 읍·면</b> 명단을' : `<b>내 담당(${myTowns.join('·')})</b> 명단을`) : `<b>${esc(town)}</b> 명단을`) +
-    ` <b>${curMonth}월</b> 점검 내용을 내려받습니다.<br>엑셀 파일 안에 <b>마감 요약</b>(활동일·출장, 이탈·조끼·명찰 횟수), <b>참여자 현황</b>(어르신별 활동 날짜 · <span style="background:#FFC7CE">감점</span> <span style="background:#FFEB9C">근무일 적음</span> <span style="background:#E2EFDA">경고</span> 색 표시), <b>신규 인원</b>, <b>${curMonth}월 점검 기록</b>, <b>근무일 변경</b>, <b>보충 근무·입원</b>, <b>특이사항</b>, <b>${exYear()}년 참여 제외</b>, <b>변경 이력</b>(그달 바뀐 내용 전부)이 들어 있습니다.`;
+    ` <b>${curMonth}월</b> 점검 내용을 내려받습니다.<br>엑셀 파일 안에 <b>마감 요약</b>(활동일·출장, 이탈·조끼·명찰 횟수), <b>참여자 현황</b>(어르신별 활동 날짜 · <span style="background:#FFC7CE">감점</span> <span style="background:#FFEB9C">근무일 적음</span> <span style="background:#E2EFDA">경고</span> 색 표시), <b>신규 인원</b>, <b>${curMonth}월 점검 기록</b>, <b>근무일 변경</b>, <b>보충 근무·입원</b>, <b>특이사항</b>, <b>경로당 위치</b>, <b>${exYear()}년 참여 제외</b>, <b>변경 이력</b>(그달 바뀐 내용 전부)이 들어 있습니다.`;
 
   // 읍·면 선택칸 (인원 표시)
   const tSel = document.getElementById('filter-town');
@@ -2158,6 +2167,9 @@ function renderList(){
     const bb = document.getElementById('btn-best'), isB = curSenior && isBest(town, curSenior);
     bb.textContent = isB ? '👑 우수 경로당 (누르면 해제)' : '👑 우수 경로당으로 표시';
     bb.style.background = isB ? '#d69e2e' : '#edf2f7'; bb.style.color = isB ? '#fff' : '#744210';
+    const bm = document.getElementById('btn-map'), hasM = curSenior && mapOf(town, curSenior);
+    bm.innerHTML = hasM ? '🗺️ 경로당 위치 보기 (네이버 지도)' : '📌 경로당 위치 넣기 (네이버 지도 링크)';
+    bm.style.background = hasM ? '#03c75a' : '#edf2f7'; bm.style.color = hasM ? '#fff' : '#22543d';
     document.getElementById('btn-rename').textContent = curSenior===NO_SENIOR ? '✏️ 경로당 이름 넣기 (미입력 분 전체)' : '✏️ 이 경로당 이름 바꾸기';
   }
 
@@ -2556,6 +2568,61 @@ async function toggleBest(town, senior){
   }
   store('jinan_best', JSON.stringify(best)); renderList(); renderZones();
 }
+// ---------- 🗺️ 경로당 위치 (네이버 지도 공유 링크) ----------
+// maps = { '면|경로당': { url, label, date } }
+let maps = (() => { try { return JSON.parse(load('jinan_maps')) || {}; } catch(e) { return {}; } })();
+const saveMaps = () => store('jinan_maps', JSON.stringify(maps));
+const mapOf = (town, senior) => maps[town + '|' + senior] || null;
+// 네이버 지도 '공유' 글에서 링크와 장소 이름을 꺼냄 (예: [네이버지도] / 동향 길대근 / https://naver.me/...)
+function parseMapShare(text){
+  const t = String(text || '');
+  const m = t.match(/https?:\/\/[^\s<>"']+/);
+  if (!m) return null;
+  const url = m[0].replace(/[).,]+$/, '');
+  const label = t.replace(m[0], '').replace(/\[[^\]]*\]/g, '').split(/\n/).map(x => x.trim()).filter(Boolean)[0] || '';
+  return { url, label, naver: /naver\.(me|com)/i.test(url) };
+}
+function openSiteMap(town, senior){
+  const m = mapOf(town, senior); if (!m) return;
+  window.open(m.url, '_blank') || (location.href = m.url);
+}
+function siteMapBtn(town, senior){ if (mapOf(town, senior)) openSiteMap(town, senior); else editSiteMap(town, senior); }
+// 위치 넣기·바꾸기 창
+function editSiteMap(town, senior, after){
+  if (!town || town === '전체' || !senior) return;
+  const cur = mapOf(town, senior);
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🗺️ ${esc(senior)} 위치</div>
+    <div class="muted" style="margin-bottom:8px;font-size:.9rem;">네이버 지도에서 경로당을 찾아 <b>공유 → 복사</b>한 뒤, 아래 <b>📋 붙여넣기</b>를 누르세요.<br>(받은 문자·카톡 글을 길게 눌러 복사해도 돼요)</div>
+    ${cur ? `<div class="muted" style="font-size:.85rem;margin-bottom:6px;">지금 저장: ${esc(cur.label || '')} <span style="word-break:break-all;">${esc(cur.url)}</span> (${esc(cur.date || '')})</div>` : ''}
+    <button type="button" class="small" id="mp-paste" style="background:#03c75a;color:#fff;margin:0 0 6px;">📋 붙여넣기</button>
+    <textarea id="mp-text" rows="4" placeholder="[네이버지도]&#10;동향 ○○경로당&#10;https://naver.me/..." style="width:100%;"></textarea>
+    <div id="mp-note" class="muted" style="font-size:.85rem;margin:4px 0 8px;"></div>
+    <div class="grid-2"><button class="secondary" id="mp-cancel">취소</button><button id="mp-save">저장</button></div>
+    ${cur ? '<button type="button" class="small secondary" id="mp-test" style="margin-top:8px;width:100%;">🗺️ 저장된 위치 열어 보기</button><button type="button" class="small secondary" id="mp-del" style="margin-top:6px;width:100%;color:var(--danger);">위치 지우기</button>' : ''}
+  </div>`;
+  document.body.appendChild(back);
+  const $ = q => back.querySelector(q), ta = $('#mp-text');
+  const check = () => { const r = parseMapShare(ta.value);
+    $('#mp-note').innerHTML = !ta.value.trim() ? '' : !r ? '⚠️ 글 안에 링크(https://…)가 없어요.' : `✔ 링크 찾음${r.label ? ` · <b>${esc(r.label)}</b>` : ''}${r.naver ? '' : '<br>⚠️ 네이버 지도 링크가 아닌 것 같아요. 그래도 저장은 돼요.'}`; };
+  ta.oninput = check;
+  $('#mp-paste').onclick = async () => { try { ta.value = await navigator.clipboard.readText(); check(); } catch(e) { ta.focus(); notify('자동 붙여넣기가 안 되는 휴대폰이에요. 빈칸을 길게 눌러 "붙여넣기" 해 주세요.'); } };
+  $('#mp-cancel').onclick = () => back.remove();
+  $('#mp-test')?.addEventListener('click', () => openSiteMap(town, senior));
+  $('#mp-del')?.addEventListener('click', async () => {
+    if (!await ask(`${senior} 경로당 위치를 지울까요?`)) return;
+    delete maps[town + '|' + senior]; saveMaps(); logEvent('경로당 위치 삭제', null, `${town} ${senior}`, today());
+    back.remove(); renderList(); renderZones(); after && after();
+  });
+  $('#mp-save').onclick = () => {
+    const r = parseMapShare(ta.value); if (!r) return notify('네이버 지도에서 공유한 글(링크가 있는 글)을 붙여 넣어 주세요.');
+    maps[town + '|' + senior] = { url: r.url, label: r.label, date: today() }; saveMaps();
+    logEvent(cur ? '경로당 위치 변경' : '경로당 위치', null, `${town} ${senior} → ${r.label ? r.label + ' ' : ''}${r.url}`, today());
+    back.remove(); renderList(); renderZones(); after && after();
+    notify(`🗺️ ${senior} 위치를 저장했어요. 이제 경로당을 고르면 바로 지도를 열 수 있어요.`);
+  };
+}
 // 문자 보낼 그룹: 구역 4개(구역 이름) + 게이트볼 (+ 구역에 안 넣은 분이 있으면 따로)
 function smsGroups(){
   const live = p => !stats(p).dropped && seniorOf(p) !== '개별관리';   // 중도포기·개별관리 인원은 단체 문자에서 뺌
@@ -2770,7 +2837,7 @@ function openModal(id){
   // 전화번호를 누르면 바로 전화 걸기
   const tel = String(p.phone||'').replace(/[^0-9+]/g,'');
   // 동네(면)와 경로당 이름을 크게
-  document.getElementById('modal-sub').innerHTML = `<span class="place">📍 <b>${esc(p.town)}</b> · <b>${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</b></span>${zoneOf(p) ? `<span class="zone">🗺 ${esc(zoneOf(p).name)}${zoneOf(p).leaderId === p.id ? ' · 👤 팀장' : ''}</span>` : ''}` +
+  document.getElementById('modal-sub').innerHTML = `<span class="place">📍 <b>${esc(p.town)}</b> · <b>${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</b>${mapOf(p.town, seniorOf(p)) ? ` <a class="tel-link" href="#" onclick="openSiteMap('${esc(p.town)}', this.dataset.s);return false;" data-s="${esc(seniorOf(p))}">🗺️ 위치</a>` : ''}</span>${zoneOf(p) ? `<span class="zone">🗺 ${esc(zoneOf(p).name)}${zoneOf(p).leaderId === p.id ? ' · 👤 팀장' : ''}</span>` : ''}` +
     (p.phone ? ` ${tel ? `<a class="tel-link" href="tel:${tel}">📞 ${esc(p.phone)}</a>` : esc(p.phone)}` : '');
   document.getElementById('c-memo').value = '';
   renderModal();
@@ -3315,6 +3382,14 @@ function exportExcel(){
   const ws8 = znRows.length ? XLSX.utils.json_to_sheet(znRows) : XLSX.utils.aoa_to_sheet([['구역에 넣은 경로당이 없습니다.']]);
   ws8['!cols'] = [16,10,15,8,14,10,6,15,30,10].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws8, '구역');
+  // 경로당 위치 (네이버 지도 링크)
+  const mpRows = Object.entries(maps).map(([k, m]) => { const [tw, sn] = k.split('|'); return { tw, sn, m }; })
+    .filter(x => list.some(p => p.town===x.tw) || x.tw===town).sort((a,b) => a.tw.localeCompare(b.tw) || seniorRank(a.sn)-seniorRank(b.sn) || a.sn.localeCompare(b.sn))
+    .map(x => ({ '읍면':x.tw, '경로당':x.sn, '지도 이름':x.m.label || '', '네이버 지도 링크':x.m.url, '넣은 날':x.m.date || '' }));
+  const wsM = mpRows.length ? XLSX.utils.json_to_sheet(mpRows) : XLSX.utils.aoa_to_sheet([['위치를 넣은 경로당이 없습니다.']]);
+  if (mpRows.length) mpRows.forEach((r, i) => { const c = wsM[XLSX.utils.encode_cell({ r: i + 1, c: 3 })]; if (c) c.l = { Target: r['네이버 지도 링크'] }; });
+  wsM['!cols'] = [8,14,20,36,12].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, wsM, '경로당 위치');
   // 건강 정보 (이름 눌러 적은 것)
   const hlRows = list.filter(p => p.health && (p.health.conds?.length || p.health.memo)).map(p => ({
     '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '나이':p.age, '아픈 곳':(p.health.conds||[]).join(', '), '자세한 내용':p.health.memo || '', '마지막 수정':p.health.updated || '' }));
