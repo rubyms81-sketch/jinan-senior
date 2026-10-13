@@ -15,7 +15,15 @@
 <style>
   :root { --primary:#2b6cb0; --danger:#e53e3e; --warning:#dd6b20; --success:#38a169; --gray:#718096; --bg:#f7fafc; }
   * { box-sizing:border-box; }
-  html { font-size:18px; }   /* 글씨 전체 크기 (예전 16px → 18px, 사용자 요청 2026-10-14) */
+  html { font-size:18px; }   /* 글씨 전체 크기 기본 18px — 환경 설정에서 1~10단계로 바꿈 */
+  html.fw-thin body { font-weight:300; } html.fw-thin b, html.fw-thin strong, html.fw-thin h3 { font-weight:600; }
+  html.fw-bold body { font-weight:600; } html.fw-bold b, html.fw-bold strong, html.fw-bold h3, html.fw-bold button { font-weight:800; }
+  html[data-font] body, html[data-font] button, html[data-font] input, html[data-font] select, html[data-font] textarea { font-family:var(--app-font); }
+  .ui-row { display:flex; align-items:center; gap:8px; margin:6px 0 12px; }
+  .ui-row button { width:auto; margin:0; padding:8px 14px; font-size:1.1rem; }
+  .ui-opts { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:6px 0 12px; }
+  .ui-opts button { margin:0; padding:10px 4px; background:#edf2f7; color:#2d3748; border:2px solid transparent; }
+  .ui-opts button.on { background:#ebf8ff; border-color:#2b6cb0; color:#2c5282; font-weight:bold; }
   body { font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); margin:0; color:#2d3748; font-size:1rem; -webkit-text-size-adjust:100%; }
   header { background:var(--primary); color:#fff; padding:14px; text-align:center; font-size:1.15rem; font-weight:bold; position:sticky; top:0; z-index:10; }
   .container { padding:12px; max-width:600px; margin:0 auto; }
@@ -391,9 +399,31 @@
       </div>
     </details>
   </div>
+
+  <div class="card" id="ui-card">
+    <details class="chg-box" id="ui-box" style="margin-top:0;border-top:none;padding-top:0;" ontoggle="if(this.open) renderUI()">
+      <summary><h3>🛠️ 환경 설정</h3><span class="chg-arrow"></span></summary>
+      <div style="margin-top:8px;">
+        <label>글씨 크기 <span class="muted" style="font-weight:normal;">(1 작게 ~ 10 크게)</span></label>
+        <div class="ui-row"><button type="button" class="secondary" onclick="uiSize(-1)">－ 작게</button>
+          <b id="ui-size" style="flex:1;text-align:center;font-size:1.4rem;"></b>
+          <button type="button" onclick="uiSize(1)">＋ 크게</button></div>
+        <label>글씨 두께</label>
+        <div class="ui-opts" id="ui-weight"></div>
+        <label>글씨체</label>
+        <div class="ui-opts" id="ui-font" style="grid-template-columns:repeat(2,1fr);"></div>
+        <label>날씨 표시 <span class="muted" style="font-weight:normal;">(맨 위 "진안 ☀️ 맑음 · 14℃")</span></label>
+        <div class="ui-opts" id="ui-wx" style="grid-template-columns:repeat(2,1fr);"></div>
+        <label>날씨 효과 <span class="muted" style="font-weight:normal;">(비·눈 올 때 화면에 내리는 그림)</span></label>
+        <div class="ui-opts" id="ui-wxfx" style="grid-template-columns:repeat(2,1fr);"></div>
+        <div class="notice" id="ui-sample" style="font-size:1rem;">가나다 미리보기 — 동향면 고부 경로당 · 조끼 착용 · 10월 14일(수)</div>
+        <button type="button" class="secondary full" onclick="uiReset()">처음 설정으로 되돌리기</button>
+      </div>
+    </details>
+  </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-4</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-5</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -514,6 +544,26 @@ const AWAY_PT = 0.5; // 잠깐 자리 비움·조끼 미착용·명찰 미착용
 
 // ---------- 저장소 (휴대폰 저장이 막혀도 앱이 멈추지 않게) ----------
 function load(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+// ---------- 🛠️ 환경 설정: 글씨 크기(1~10) · 두께 · 글씨체 (이 휴대폰에만 저장) ----------
+const UI_FONTS = [
+  { k: '', name: '기본 (휴대폰 글씨)' },
+  { k: 'Nanum Gothic', name: '나눔고딕', css: 'Nanum+Gothic:wght@400;700;800' },
+  { k: 'Gowun Dodum', name: '고운돋움', css: 'Gowun+Dodum' },
+  { k: 'Noto Sans KR', name: '본고딕 (노토)', css: 'Noto+Sans+KR:wght@300;400;600;800' },
+];
+let ui = (() => { try { return Object.assign({ size: 5, weight: 'normal', font: '', wx: true, wxfx: true }, JSON.parse(load('jinan_ui')) || {}); } catch(e) { return { size: 5, weight: 'normal', font: '', wx: true, wxfx: true }; } })();
+function applyUI(){
+  const h = document.documentElement;
+  h.style.fontSize = (13 + ui.size) + 'px';            // 5단계 = 18px
+  h.classList.toggle('fw-thin', ui.weight === 'thin'); h.classList.toggle('fw-bold', ui.weight === 'bold');
+  const f = UI_FONTS.find(x => x.k === ui.font) || UI_FONTS[0];
+  if (f.k) {
+    if (!document.getElementById('ui-font-css')) { const l = document.createElement('link'); l.id = 'ui-font-css'; l.rel = 'stylesheet'; document.head.appendChild(l); }
+    document.getElementById('ui-font-css').href = `https://fonts.googleapis.com/css2?family=${f.css}&display=swap`;
+    h.dataset.font = f.k; h.style.setProperty('--app-font', `'${f.k}', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif`);
+  } else { delete h.dataset.font; }
+}
+applyUI();
 function store(k,v){ try { localStorage.setItem(k,v); } catch(e){ notify('이 휴대폰에서는 저장이 되지 않습니다. 인터넷 창의 "비공개(시크릿) 모드"를 끄고 사용해 주세요.'); } }
 
 // ---------- 화면 안 안내창 (팝업이 막힌 환경에서도 보이도록) ----------
@@ -2279,6 +2329,18 @@ function exportDiary(){
   XLSX.writeFile(wb, `활동일지_${date}.xlsx`);
   logEvent('활동일지 내려받기', null, `${date} 경로당 ${rows.length}곳`, date);
 }
+function saveUI(what){ try { localStorage.setItem('jinan_ui', JSON.stringify(ui)); } catch(e) {} applyUI(); renderUI(); logEvent('화면 설정', null, what); }
+function renderUI(){
+  const s = document.getElementById('ui-size'); if (!s) return;
+  s.textContent = `${ui.size} 단계`;
+  document.getElementById('ui-weight').innerHTML = [['thin','얇게'],['normal','보통'],['bold','두껍게']].map(([k, n]) => `<button type="button" class="${ui.weight === k ? 'on' : ''}" onclick="ui.weight='${k}';saveUI('글씨 두께 ${n}')">${n}</button>`).join('');
+  const tg = (k, on, n) => `<button type="button" class="${ui[k] === on ? 'on' : ''}" onclick="ui.${k}=${on};saveUI('${n} ${on ? '켬' : '끔'}');refreshWeather()">${on ? '켜기' : '끄기'}</button>`;
+  document.getElementById('ui-wx').innerHTML = tg('wx', true, '날씨 표시') + tg('wx', false, '날씨 표시');
+  document.getElementById('ui-wxfx').innerHTML = tg('wxfx', true, '날씨 효과') + tg('wxfx', false, '날씨 효과');
+  document.getElementById('ui-font').innerHTML = UI_FONTS.map((f, i) => `<button type="button" class="${ui.font === f.k ? 'on' : ''}" style="${f.k ? `font-family:'${f.k}',sans-serif;` : ''}" onclick="ui.font=UI_FONTS[${i}].k;saveUI('글씨체 ${f.name}')">${f.name}</button>`).join('');
+}
+function uiSize(d){ const n = Math.min(10, Math.max(1, ui.size + d)); if (n === ui.size) return notify(d > 0 ? '가장 큰 글씨예요 (10단계).' : '가장 작은 글씨예요 (1단계).'); ui.size = n; saveUI(`글씨 크기 ${n}단계`); }
+function uiReset(){ ui = { size: 5, weight: 'normal', font: '', wx: true, wxfx: true }; saveUI('처음 설정으로'); }
 // ---------- 👤 현장 점검자 정보 (이 휴대폰에만 저장) ----------
 let me = (() => { try { return JSON.parse(load('jinan_me')) || {}; } catch(e) { return {}; } })();
 const meName = () => me.name || '김장원';
@@ -3578,11 +3640,12 @@ function wxKind(code){
   if ([51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99].includes(code)) return 'rain';
   return code <= 1 ? 'sun' : 'cloud';
 }
+function refreshWeather(){ try { const c = JSON.parse(load('jinan_weather')); showWeather(c ? c.kind : '', c ? c.temp : null); } catch(e) { showWeather('', null); } }
 function showWeather(kind, temp){
   const icon = {rain:'🌧 비', snow:'❄️ 눈', sun:'☀️ 맑음', cloud:'☁️ 흐림'}[kind] || '';
-  document.getElementById('wx-label').textContent = icon ? `진안 ${icon}${temp!=null?` · ${Math.round(temp)}℃`:''}` : '';
+  document.getElementById('wx-label').textContent = (icon && ui.wx) ? `진안 ${icon}${temp!=null?` · ${Math.round(temp)}℃`:''}` : '';   // 환경 설정에서 끌 수 있음
   const layer = document.getElementById('wx-layer'); layer.innerHTML = '';
-  const n = kind==='rain' ? 45 : kind==='snow' ? 35 : 0;
+  const n = !ui.wxfx ? 0 : kind==='rain' ? 45 : kind==='snow' ? 35 : 0;
   for (let i = 0; i < n; i++) {
     const el = document.createElement('span');
     el.className = kind==='rain' ? 'drop' : 'flake';
