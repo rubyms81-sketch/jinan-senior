@@ -279,7 +279,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-12</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-13</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -356,7 +356,7 @@
     <label>성명</label><input type="text" id="m-name">
     <label>경로당 이름</label><input type="text" id="m-senior" class="senior-in" data-town="m-town" list="senior-list" placeholder="예: 지사" autocomplete="off">
     <label>연락처</label><input type="tel" id="m-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off">
-    <label>주소</label><input type="text" id="m-address">
+    <label>주소</label><input type="text" id="m-address" class="addr-in" data-town="m-town" autocomplete="off">
     <button class="full" onclick="saveInfo()">정보 저장</button>
     <button class="warning full" id="btn-quit" onclick="toggleQuit()">중도포기 처리 (본인 사정)</button>
     <button class="danger full" onclick="deleteParticipant()">명단에서 삭제</button>
@@ -372,7 +372,7 @@
   <label>어르신 성명</label><input type="text" id="n-name" placeholder="예: 김영이">
   <label>나이 <span class="muted" style="font-weight:normal;font-size:.85rem;">(태어난 해를 적으면 나이로 바꿔 줘요)</span></label><input type="text" inputmode="numeric" id="n-age" class="age-in" placeholder="예: 1948 또는 78">
   <label>연락처</label><input type="tel" id="n-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off">
-  <label>주소</label><input type="text" id="n-address" placeholder="진안군 동향면 OOO">
+  <label>주소</label><input type="text" id="n-address" class="addr-in" data-town="n-town" placeholder="진안군 동향면 OOO" autocomplete="off">
   <div class="grid-2">
     <button onclick="addParticipant()">등록하기</button>
     <button class="secondary" onclick="closeAdd()">취소</button>
@@ -1976,6 +1976,17 @@ document.addEventListener('input', e => {
 document.addEventListener('focusout', e => {
   const el = e.target; if (!el.classList?.contains('phone-in')) return;
   const d = el.value.replace(/[^0-9]/g, ''); el.value = (d === '010' || !d) ? '' : fmtPhone(el.value);
+});
+// 주소 칸: 누르면 "진안군 ○○면 "이 먼저 들어감 (소속 면을 바꾸면 따라 바뀜)
+const addrPrefix = el => { const t = document.getElementById(el.dataset.town)?.value; return t && TOWNS.includes(t) ? `진안군 ${t} ` : '진안군 '; };
+const isOnlyPrefix = v => /^\s*진안군(\s+\S+[읍면])?\s*$/.test(v || '');
+document.addEventListener('focusin', e => { const el = e.target; if (el.classList?.contains('addr-in') && (!el.value || isOnlyPrefix(el.value))) el.value = addrPrefix(el); });
+document.addEventListener('focusout', e => { const el = e.target; if (el.classList?.contains('addr-in') && isOnlyPrefix(el.value)) el.value = ''; });
+document.addEventListener('change', e => {   // 소속 면을 바꾸면 주소 앞부분도 바꿈
+  const sel = e.target; if (sel.id !== 'n-town' && sel.id !== 'm-town') return;
+  const el = document.querySelector(`.addr-in[data-town="${sel.id}"]`); if (!el || !el.value) return;
+  if (sel.id === 'm-town' && !isOnlyPrefix(el.value)) return;   // 이미 적힌 어르신 주소는 그대로
+  el.value = el.value.replace(/^\s*(전북특별자치도|전라북도)?\s*진안군\s+\S+[읍면]\s*/, `진안군 ${sel.value} `);
 });
 async function addParticipant(){
   const v = id => document.getElementById(id).value.trim();
