@@ -344,7 +344,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-39</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-40</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1065,11 +1065,17 @@ const zoneOfSite = (town, senior) => zones.find(z => z.sites.some(x => x.town===
 const zoneOf = p => zoneOfSite(p.town, seniorOf(p));
 const siteMembers = (town, senior) => participants.filter(p => p.town===town && seniorOf(p)===senior)
   .sort((a,b) => stats(a).dropped - stats(b).dropped || a.name.localeCompare(b.name));
+// 구역 안 경로당을 면별로: "동향면 10곳·15명" (면이 여럿이면 " / "로 이어 붙임)
+function zoneTownText(z){
+  const by = {};
+  z.sites.forEach(x => { const t = (by[x.town] ||= { s: 0, n: 0 }); t.s++; t.n += siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length; });
+  return TOWNS.filter(t => by[t]).map(t => `${t} ${by[t].s}곳·${by[t].n}명`).join(' / ');
+}
 function renderZones(){
   const box = document.getElementById('zone-btns'); if (!box) return;
   box.innerHTML = zones.map(z => {
     const n = z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0);
-    return `<button type="button" class="zone-btn ${z.sites.length?'':'empty'}" onclick="openZone(${z.id})"><b>${esc(z.name)}</b>${z.sites.length ? `<small>경로당 ${z.sites.length}곳 · ${n}명</small>` : ''}</button>`;
+    return `<button type="button" class="zone-btn ${z.sites.length?'':'empty'}" onclick="openZone(${z.id})"><b>${esc(z.name)}</b>${z.sites.length ? `<small>${zoneTownText(z).split(' / ').map(esc).join('<br>')}</small>` : ''}</button>`;
   }).join('');
 }
 function openZone(id){
@@ -1102,7 +1108,7 @@ function openZone(id){
   $('#zn-name').value = z.name; $('#zn-phone').value = z.phone || '';
   const drawMain = () => {
     const total = z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0);
-    $('#zn-title').innerHTML = `🗺 ${esc(z.name)} <span class="muted" style="font-size:.85rem;font-weight:normal;">경로당 ${z.sites.length}곳 · 어르신 ${total}명</span>`;
+    $('#zn-title').innerHTML = `🗺 ${esc(z.name)} <span class="muted" style="font-size:.85rem;font-weight:normal;">${z.sites.length ? esc(zoneTownText(z)) : '경로당 0곳'}</span>`;
     const sorted = [...z.sites].sort((a,b) => a.town.localeCompare(b.town) || seniorRank(a.senior)-seniorRank(b.senior) || a.senior.localeCompare(b.senior));
     $('#zn-sites').innerHTML = sorted.length ? sorted.map(x => {
       const ms = siteMembers(x.town, x.senior);
