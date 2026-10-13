@@ -304,7 +304,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-23</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-24</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1642,7 +1642,7 @@ function addChange(pre){
     saveData(false); back.remove(); renderModal();
     const done = targets.filter(x => (x.changes||[]).some(c => c.from===from && c.to===to));
     showDialog(`${done.length > 1 ? done.length+'명 ' : ''}근무일 변경이 저장되었습니다.\n${dd(from)} → ${dd(to)}\n\n변경 안내 문자를 보낼까요?${done.some(leaderOf) ? '\n(구역 팀장에게도 같이 보낼 수 있어요)' : ''}`, true, ['📩 문자 보내기', '안 보냄']).then(ok => {
-      if (ok) smsBox({ title: '근무일 변경 안내 문자', people: done, text: changeText(done.length === 1 ? done[0] : null, from, to, reason), logType: '근무일 변경 문자', logDetail: `${dd(from)} → ${dd(to)}` });
+      if (ok) smsBox({ title: '근무일 변경 안내 문자', people: done, text: changeText(done.length === 1 ? done[0] : null, from, to, reason, done.every(x => leaderOf(x)?.num === leaderOf(done[0])?.num) ? done[0] : null), logType: '근무일 변경 문자', logDetail: `${dd(from)} → ${dd(to)}` });
     });
   };
 }
@@ -2333,7 +2333,7 @@ function bulkImport(input){
 function leaveText(p, date, nth){
   const d = `${date.slice(0,4)}년 ${Number(date.slice(5,7))}월 ${Number(date.slice(8,10))}일`;
   const head = `[진안군노인회] 근무지 이탈 안내\n\n${p.name} 어르신,\n${d} 현장 점검 때 근무지에 계시지 않아 벌점 -1점이 생겼습니다.`;
-  const tail = `\n\n궁금한 점은 담당자에게 연락 주세요.\n감사합니다.`;
+  const tail = `\n${leaderLine(p, '이 상황을')}\n궁금한 점은 담당자에게 연락 주세요.\n감사합니다.`;
   if (nth >= MAX_LEAVE)
     return head + `\n\n벌점이 -${MAX_LEAVE}점이 되어, 규정에 따라 더 이상 참여하실 수 없게 되었습니다.` + tail;
   return head + `\n(지금까지 벌점: -${nth}점)\n\n이탈한 날은 일당이 나오지 않습니다.\n벌점이 -${MAX_LEAVE}점이 되면 더 이상 일하실 수 없으니, 꼭 근무지를 지켜 주세요.` + tail;
@@ -2365,7 +2365,7 @@ const dayList = days => days.map(d => `${Number(d.slice(8,10))}일(${WEEK[dObj(d
 function workdayText(mk, days, who){
   const m = Number(mk.slice(5,7)), last = days[days.length-1];
   return `[진안군노인회] ${m}월 활동일 안내\n\n${who},\n${mk.slice(0,4)}년 ${m}월 활동일을 알려 드립니다.\n\n▶ 활동일 (${days.length}일)\n${m}월 ${dayList(days)}\n` + (last ? `※ 마지막 날: ${m}월 ${dd(last)}\n` : '') +
-    `\n▶ 꼭 지켜 주세요\n· 근무지를 비우면(이탈) 1번에 -1점, 그날 일당이 나오지 않습니다.\n· 한 해에 -${MAX_LEAVE}점이 되면 중도포기 처리되어 더 이상 일하실 수 없습니다.\n· 날짜를 바꿔야 할 때는 꼭 미리 담당자에게 연락 주세요.\n· 조끼와 명찰을 꼭 착용해 주세요.\n\n감사합니다.\n※ 단체 문자라 답장은 받지 않습니다.`;
+    `\n▶ 꼭 지켜 주세요\n· 근무지를 비우면(이탈) 1번에 -1점, 그날 일당이 나오지 않습니다.\n· 한 해에 -${MAX_LEAVE}점이 되면 중도포기 처리되어 더 이상 일하실 수 없습니다.\n· 날짜를 바꿔야 할 때는 꼭 미리 담당자와 팀장님께 연락 주세요.\n· 조끼와 명찰을 꼭 착용해 주세요.\n\n감사합니다.\n※ 단체 문자라 답장은 받지 않습니다.`;
 }
 // 문자 앱 열기 (여러 명이면 쉼표로)
 function openSmsApp(nums, body){
@@ -2493,10 +2493,16 @@ function smsBox({ title, people, text, logType, logDetail }){
 function smsDialog(p, date, nth){
   return smsBox({ title: '근무지 이탈 안내 문자', people: [p], text: leaveText(p, date, nth), logType: '이탈 안내 문자', logDetail: `${date} 이탈 (-${nth}점)` });
 }
+// 문자 끝에 늘 넣는 "팀장님께 꼭 연락" 문구 (구역 팀장을 알면 이름·번호까지)
+function leaderLine(p, what){
+  const L = p ? leaderOf(p) : null, me = L && p && telOf(p) === L.num;
+  if (me) return '';   // 본인이 팀장이면 뺌
+  return `\n※ ${L ? `${L.name} 팀장님(${fmtPhone(L.num)})` : '팀장님'}께도 꼭 연락하셔서 ${what} 알려 주세요.`;
+}
 // 근무일 변경 안내 문자 (본인 + 팀장)
-function changeText(p, from, to, reason){
+function changeText(p, from, to, reason, lp){
   const ymdK = d => `${Number(d.slice(5,7))}월 ${dd(d)}`;
-  return `[진안군노인회] 근무일 변경 안내\n\n${p ? p.name + ' 어르신' : '어르신'},\n근무일이 아래와 같이 바뀌었습니다.\n\n${ymdK(from)} → ${ymdK(to)}${reason ? `\n(사유: ${reason})` : ''}\n\n바뀐 날짜에 꼭 근무해 주세요.\n감사합니다.`;
+  return `[진안군노인회] 근무일 변경 안내\n\n${p ? p.name + ' 어르신' : '어르신'},\n근무일이 아래와 같이 바뀌었습니다.\n\n${ymdK(from)} → ${ymdK(to)}${reason ? `\n(사유: ${reason})` : ''}\n\n바뀐 날짜에 꼭 근무해 주세요.${leaderLine(p || lp, '근무일이 바뀐 사실을')}\n감사합니다.`;
 }
 
 // ---------- 점검 화면 ----------
