@@ -202,6 +202,8 @@
   .st-tbl th { background:#edf2f7; }
   .nv-chip { display:inline-flex; flex-direction:column; align-items:center; line-height:1.25; background:#fffaf0; color:#7b341e; border:1px solid #fbd38d; cursor:pointer; margin:0; }
   .nv-chip small { font-size:.72rem; color:#a0aec0; font-weight:normal; }
+  .nv-chip.ok { background:#f0fff4; color:#22543d; border-color:#9ae6b4; }
+  .nv-chip.ok small { color:#38a169; }
   .cus-box { background:#fffaf0; border:1px solid #fbd38d; border-radius:10px; padding:8px 10px; margin-bottom:10px; }
   .legend { display:flex; flex-wrap:wrap; gap:10px; font-size:.78rem; color:#4a5568; margin-bottom:4px; }
   .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-1px; margin-right:3px; }
@@ -346,7 +348,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-42</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-43</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2110,16 +2112,18 @@ function renderNotVisited(){
   const out = [];
   visibleTowns().forEach(tw => {
     const sites = [...new Set(participants.filter(p => p.town===tw && !stats(p).dropped).map(seniorOf))];
-    const miss = sites.filter(k => !siteVisits(tw, k).some(d => d >= from && d <= to))
-      .sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
-    if (miss.length) out.push({ tw, miss, all: sites.length });
+    const ord = (a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b);
+    const inRange = k => siteVisits(tw, k).filter(d => d >= from && d <= to);
+    const miss = sites.filter(k => !inRange(k).length).sort(ord), done = sites.filter(k => inRange(k).length).sort(ord);
+    if (sites.length) out.push({ tw, miss, done, inRange });
   });
-  const n = out.reduce((k, x) => k + x.miss.length, 0), all = out.reduce((k, x) => k + x.all, 0);
-  document.getElementById('nv-title').innerHTML = `🚶 아직 안 간 경로당 <span style="color:${n?'var(--warning)':'var(--success)'}">${n}곳</span>`;
-  box.innerHTML = out.length ? out.map(x => `<div style="font-weight:bold;margin:8px 0 4px;">📍 ${esc(x.tw)} <span class="muted" style="font-weight:normal;">${x.miss.length}곳</span></div>
-    <div class="chips">${x.miss.map(k => { const v = siteVisits(x.tw, k), last = v[v.length-1];
-      return `<button type="button" class="chip nv-chip" data-t="${esc(x.tw)}" data-k="${esc(k)}">${crown(x.tw, k)}${esc(k)}<small>${last ? `마지막 ${md(last)}` : '점검 기록 없음'}</small></button>`; }).join('')}</div>`).join('')
-    : '<div class="pen-none">✔ 모든 경로당을 다녀왔어요</div>';
+  const n = out.reduce((k, x) => k + x.miss.length, 0), dn = out.reduce((k, x) => k + x.done.length, 0);
+  document.getElementById('nv-title').innerHTML = `🚶 아직 안 간 경로당 <span style="color:${n?'var(--warning)':'var(--success)'}">${n}곳</span>${dn ? ` <span style="color:var(--success);font-size:.85rem;">· ✔ 다녀옴 ${dn}곳</span>` : ''}`;
+  const chip = (x, k, ok) => { const v = siteVisits(x.tw, k), last = ok ? x.inRange(k).pop() : v[v.length-1];
+    return `<button type="button" class="chip nv-chip${ok ? ' ok' : ''}" data-t="${esc(x.tw)}" data-k="${esc(k)}">${ok ? '✔ ' : ''}${crown(x.tw, k)}${esc(k)}<small>${ok ? `${md(last)} 다녀옴` : last ? `마지막 ${md(last)}` : '점검 기록 없음'}</small></button>`; };
+  box.innerHTML = out.map(x => `<div style="font-weight:bold;margin:8px 0 4px;">📍 ${esc(x.tw)} <span class="muted" style="font-weight:normal;">안 감 <b style="color:var(--warning)">${x.miss.length}</b> · 다녀옴 <b style="color:var(--success)">${x.done.length}</b></span></div>
+    <div class="chips">${x.miss.map(k => chip(x, k, false)).join('')}${x.done.map(k => chip(x, k, true)).join('')}</div>`).join('')
+    + (out.length && !n ? '<div class="pen-none">✔ 모든 경로당을 다녀왔어요</div>' : '');
   box.querySelectorAll('.nv-chip').forEach(b => b.onclick = () => {
     lastTown = b.dataset.t; curSenior = b.dataset.k; document.getElementById('search').value = ''; renderList();
     document.getElementById('sel-person')?.scrollIntoView({ behavior:'smooth', block:'center' });
