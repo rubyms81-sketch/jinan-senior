@@ -390,11 +390,11 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-59</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-60</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
-  <div class="crumb"><button class="secondary small" onclick="closeModal()">← 경로당 선택으로</button></div>
+  <div class="crumb"><button class="secondary small" id="m-crumb" onclick="closeModal()">← 경로당 선택으로</button></div>
   <h3 id="modal-title" class="m-title">참여자 점검</h3>
   <div id="modal-sub" class="m-sub"></div>
   <div id="mate-tabs"></div>
@@ -1976,7 +1976,7 @@ function showPenalty(tw){
     <button class="secondary full" id="pen-close">닫기</button></div>`;
   document.body.appendChild(back);
   back.querySelector('#pen-close').onclick = () => back.remove();
-  back.querySelectorAll('.pen-row').forEach(b => b.onclick = () => { back.remove(); openModal(Number(b.dataset.id)); });
+  back.querySelectorAll('.pen-row').forEach(b => b.onclick = () => { back.remove(); openFrom(Number(b.dataset.id), `${tw} 감점 목록으로`, () => showPenalty(tw)); });
 }
 
 // 마감 칸의 숫자를 누르면: 어느 경로당, 누가, 몇 번인지
@@ -2002,7 +2002,7 @@ function showClose(kind){
     <button class="secondary full" id="close-close">닫기</button></div>`;
   document.body.appendChild(back);
   back.querySelector('#close-close').onclick = () => back.remove();
-  back.querySelectorAll('.pen-row').forEach(b => b.onclick = () => { back.remove(); openModal(Number(b.dataset.id)); });
+  back.querySelectorAll('.pen-row').forEach(b => b.onclick = () => { back.remove(); openFrom(Number(b.dataset.id), '목록으로 돌아가기', () => showClose(kind)); });
 }
 
 // 경로당 순서: 개별관리 → 게이트볼 → 나머지(가나다) → 미입력
@@ -3248,7 +3248,14 @@ function renderModal(){
   }).join('') : '<p class="muted">아직 점검 기록이 없습니다.</p>';
 }
 
-function closeModal(){ document.getElementById('modal').classList.add('hidden'); renderList(); }
+// 통계·감점 목록에서 어르신을 열었으면, 닫을 때 그 목록으로 돌아감
+let modalBack = null;
+function openFrom(id, label, fn){ openModal(id); modalBack = { label, fn }; document.getElementById('m-crumb').textContent = `← ${label}`; }
+function closeModal(){
+  const b = modalBack; modalBack = null; document.getElementById('m-crumb').textContent = '← 경로당 선택으로';
+  document.getElementById('modal').classList.add('hidden'); renderList();
+  if (b) b.fn();
+}
 
 // ---------- 점검 기록 수정 ----------
 let editingLogId = null;
@@ -3651,7 +3658,7 @@ function statGroups(d){
       ps: by(r => r.bad, r => r.bad), cnt: r => r.bad, txt: r => `태도 불량 ${r.bad}회` },
   ];
 }
-function showStats(){
+function showStats(openGroup){
   const d = statsData(), T = k => d.months.reduce((n, x) => n + x[k], 0);
   const gs = statGroups(d);
   const few = d.people.filter(r => r.kind === 'few' && r.score === 0);
@@ -3672,7 +3679,9 @@ function showStats(){
     <div class="grid-2" style="margin-top:8px;"><button class="secondary" id="ss-close">닫기</button><button id="ss-xlsx">통계 엑셀</button></div></div>`;
   document.body.appendChild(back);
   back.querySelector('#ss-close').onclick = () => back.remove();
-  back.querySelectorAll('.pen-row[data-id]').forEach(b => b.onclick = () => { back.remove(); openModal(Number(b.dataset.id)); });
+  back.querySelectorAll('.pen-row[data-id]').forEach(b => b.onclick = () => {
+    const g = b.closest('.sg-list')?.id?.replace('sg-', ''); back.remove();
+    openFrom(Number(b.dataset.id), '통계로 돌아가기', () => showStats(g)); });
   back.querySelector('#ss-xlsx').onclick = () => exportStats();
   // 칸을 누르면 그 항목 명단만 보이기 (한 번 더 누르면 닫기)
   back.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
@@ -3682,6 +3691,7 @@ function showStats(){
     back.querySelector('#sg-hint').classList.toggle('hidden', show);
     if (show) { box.classList.remove('hidden'); b.style.outline = '3px solid #2b6cb0'; box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
   });
+  if (openGroup) back.querySelector(`[data-go="${openGroup}"]`)?.click();
 }
 function exportStats(){
   if (typeof XLSX === 'undefined') return notify('인터넷이 연결될 때 다시 눌러 주세요.');
