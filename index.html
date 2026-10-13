@@ -183,7 +183,9 @@
   .name-tap { cursor:pointer; border-bottom:3px dotted #a0aec0; }
   .hl-dot { font-size:1.1rem; vertical-align:6px; margin-left:2px; }
   .info-tbl { width:100%; border-collapse:collapse; margin-bottom:10px; font-size:.95rem; }
-  .info-tbl th { text-align:left; color:#718096; font-weight:normal; width:84px; padding:5px 4px; vertical-align:top; }
+  .info-tbl th { text-align:left; color:#718096; font-weight:normal; white-space:nowrap; width:1%; padding:5px 8px 5px 4px; vertical-align:top; }
+  .map-link { color:#2b6cb0; text-decoration:underline; cursor:pointer; }
+  .pen-link { cursor:pointer; text-decoration:underline; }
   .info-tbl td { padding:5px 4px; border-bottom:1px solid #edf2f7; }
   .cond-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
   .cond-grid button { margin:0; padding:9px 4px; font-size:.9rem; background:#f7fafc; color:#2d3748; border:1px solid #e2e8f0; }
@@ -302,7 +304,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-22</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-23</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1158,6 +1160,38 @@ let condList = (() => { try { const v = JSON.parse(load('jinan_conds')); if (Arr
 const saveConds = () => store('jinan_conds', JSON.stringify(condList));
 // 글 속 전화번호를 누르면 바로 전화
 const linkTel = t => esc(t).replace(/(0\d{1,2})[-\s]?(\d{3,4})[-\s]?(\d{4})/g, (m, a, b, c) => `<a class="tel-link" href="tel:${a}${b}${c}">📞 ${a}-${b}-${c}</a>`).replace(/\n/g, '<br>');
+// 주소 → 네이버 지도 (앱이 있으면 앱, 없으면 인터넷 지도)
+function openMap(addr){
+  const q = encodeURIComponent(String(addr||'').replace(/^(전북특별자치도|전라북도)\s*/, '전북 '));
+  const web = `https://map.naver.com/p/search/${q}`;
+  if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+    let left = false; const onHide = () => { left = true; };
+    document.addEventListener('visibilitychange', onHide, { once: true });
+    location.href = `nmap://search?query=${q}&appname=jinan-senior.netlify.app`;
+    setTimeout(() => { if (!left && !document.hidden) location.href = web; }, 1200);   // 앱이 없으면 인터넷 지도
+  } else window.open(web, '_blank');
+}
+// 감점 이유: 그해 근무지 이탈 기록(날짜·점검 메모)과 경고
+function showPenReasons(p){
+  const y = String(viewYear());
+  const ls = p.logs.filter(l => l.date.startsWith(y)).sort((a,b) => a.date.localeCompare(b.date));
+  const leaves = ls.filter(l => l.leave === '이탈'), warns = ls.filter(l => l.leave !== '이탈' && (l.vest === '미착용' || l.badge === '미착용' || l.attitude === '불량'));
+  const notes = (p.notes || []).filter(n => leaves.some(l => l.date === n.date));
+  const row = (l, i) => `<div class="log bad"><b>${i != null ? `${i+1}번째 -1점 · ` : ''}${Number(l.date.slice(5,7))}월 ${dd(l.date)}</b>
+    <br><span style="font-size:.9rem;">근무지 이탈${l.vest==='미착용'?' · 조끼 미착용':''}${l.badge==='미착용'?' · 명찰 미착용':''}${l.attitude?` · 태도 ${esc(l.attitude)}`:''}</span>
+    ${l.memo ? `<br>📝 ${esc(l.memo)}` : '<br><span class="muted" style="font-size:.85rem;">적어 둔 메모 없음</span>'}</div>`;
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">⚠️ ${esc(nm(p))} 어르신 감점 이유 (${y}년)</div>
+    <div class="notice" style="margin-bottom:8px;">누적 <b style="color:var(--danger)">-${leaves.length}점</b> · -${MAX_LEAVE}점이면 중도포기</div>
+    ${leaves.length ? leaves.map((l, i) => row(l, i)).join('') : '<p class="muted">근무지 이탈 기록이 없습니다.</p>'}
+    ${notes.length ? `<div style="font-weight:bold;margin:8px 0 4px;">📝 같은 날 특이사항</div>` + notes.map(n => `<div class="log">${Number(n.date.slice(5,7))}월 ${dd(n.date)} ${n.cat?`[${esc(n.cat)}] `:''}${esc(n.text)}</div>`).join('') : ''}
+    ${warns.length ? `<div style="font-weight:bold;margin:8px 0 4px;">🦺 경고 (감점 아님)</div>` + warns.map(l => `<div class="log warn">${Number(l.date.slice(5,7))}월 ${dd(l.date)} · ${[l.vest==='미착용'?'조끼 미착용':'', l.badge==='미착용'?'명찰 미착용':'', l.attitude==='불량'?'태도 불량':''].filter(Boolean).join(' · ')}${l.memo?`<br>📝 ${esc(l.memo)}`:''}</div>`).join('') : ''}
+    <div class="muted" style="font-size:.82rem;margin:6px 0;">이유는 점검할 때 "점검 메모"에 적은 내용이에요.</div>
+    <button class="secondary full" id="pr-close">닫기</button></div>`;
+  document.body.appendChild(back);
+  back.querySelector('#pr-close').onclick = () => back.remove();
+}
 function openInfo(){
   const p = current(); if (!p) return;
   const h = p.health || {}, sel = new Set(h.conds || []);
@@ -1171,8 +1205,8 @@ function openInfo(){
       <tr><th>경로당</th><td><b>${esc(p.town)} · ${esc(seniorOf(p))}</b>${z ? `<br><span class="muted">🗺 ${esc(z.name)}${L ? ` · 팀장 ${esc(L.name)}` : ''}</span>` : ''}</td></tr>
       <tr><th>나이</th><td>${p.age ? esc(p.age)+'세' : '-'}${p.birth ? ` <span class="muted">(${p.birth}년생)</span>` : ''}</td></tr>
       <tr><th>연락처</th><td>${p.phone ? telBtn(p) : '-'}</td></tr>
-      <tr><th>주소</th><td>${esc(p.address || '-')}</td></tr>
-      <tr><th>상태</th><td>${esc(st.status)}${st.penalty ? ` <b style="color:var(--danger)">(${st.penalty}점)</b>` : ''}${inHospNow(p) ? ' <span class="badge bg-hosp">🏥 입원 중</span>' : ''}${startTag(p) ? ` <span class="muted">· ${Number(p.start.slice(5))}월부터 근무</span>` : ''}</td></tr>
+      <tr><th>주소</th><td>${p.address ? `<span class="map-link" id="if-map">🗺️ ${esc(p.address)}</span><br><span class="muted" style="font-size:.8rem;">누르면 네이버 지도</span>` : '-'}</td></tr>
+      <tr><th>상태</th><td>${esc(st.status)}${st.penalty ? ` <b style="color:var(--danger)" class="pen-link" id="if-pen">(${st.penalty}점) 이유 보기 ›</b>` : ''}${inHospNow(p) ? ' <span class="badge bg-hosp">🏥 입원 중</span>' : ''}${startTag(p) ? ` <span class="muted">· ${Number(p.start.slice(5))}월부터 근무</span>` : ''}</td></tr>
     </table>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><label style="margin:0;">🩺 아픈 곳</label><button type="button" class="small secondary" id="if-toggle" style="margin:0;width:auto;"></button></div>
     <div class="cond-grid" id="if-conds"></div>
@@ -1208,6 +1242,8 @@ function openInfo(){
     bg.querySelector('#if-memo-edit')?.addEventListener('click', () => { memoEdit = true; draw(); $('#if-memo').focus(); });
   };
   $('#if-toggle').onclick = () => { open = !open; draw(); };
+  bg.querySelector('#if-map')?.addEventListener('click', () => openMap(p.address));
+  bg.querySelector('#if-pen')?.addEventListener('click', () => showPenReasons(p));
   const addNew = () => { const inp = $('#if-new'); inp.blur(); setTimeout(() => {
     const v = inp.value.trim(); if (!v) return; inp.value = '';
     if (!condList.includes(v)) { condList.push(v); saveConds(); }
@@ -2499,7 +2535,7 @@ function renderModal(){
   if (document.getElementById('c-date').value) setCheckDate(document.getElementById('c-date').value);
   // 이름을 누르면 기본 정보·건강 정보 창
   document.getElementById('modal-title').innerHTML = `<b class="name-tap" onclick="openInfo()">${esc(nm(p))}${p.health && (p.health.conds?.length || p.health.memo) ? '<span class="hl-dot">🩺</span>' : ''}</b> 어르신 점검`;
-  let n = `<div class="notice">${viewYear()}년 누적 감점 <b style="color:var(--danger)">${s.penalty}점</b> (근무지 이탈 1회당 -1점 / -${MAX_LEAVE}점이면 중도포기 · 새해에 0점부터)</div>`;
+  let n = `<div class="notice">${viewYear()}년 누적 감점 <b style="color:var(--danger)" ${s.leaves ? 'class="pen-link" onclick="showPenReasons(current())"' : ''}>${s.penalty}점${s.leaves ? ' 이유 보기 ›' : ''}</b> (근무지 이탈 1회당 -1점 / -${MAX_LEAVE}점이면 중도포기 · 새해에 0점부터)</div>`;
   if (s.dropped) n = `<div class="notice red"><b>${s.status}</b> — 이후 근무할 수 없습니다.</div>` + n;
   if (p.guess) n = `<div class="notice">📍 경로당 <b>"${esc(p.senior)}"</b>은 주소(${esc(p.address||'')})를 보고 자동으로 넣은 <b>추정</b>입니다.<br>맞으면 아래 "어르신 정보 고치기"에서 그대로 <b>정보 저장</b>, 틀리면 경로당 이름을 고쳐서 저장해 주세요.</div>` + n;
   document.getElementById('modal-notice').innerHTML = n;
