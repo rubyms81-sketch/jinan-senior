@@ -357,7 +357,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-51</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-52</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -375,7 +375,7 @@
 
     <label>근무지 이탈 (벌점)</label>
     <input type="hidden" id="c-leave">
-    <div class="seg" data-for="c-leave"><button type="button" data-v="정상">정상 근무</button><button type="button" data-v="이탈" data-bad>이탈 (-1점)</button></div>
+    <div class="seg" data-for="c-leave"><button type="button" data-v="정상">정상 근무</button><button type="button" data-v="자리비움" data-bad>자리 비움 (-0.5점)</button><button type="button" data-v="이탈" data-bad>이탈 (-1점)</button></div>
 
     <label>조끼 착용</label>
     <input type="hidden" id="c-vest">
@@ -465,7 +465,8 @@
 <script>
 const TOWNS = ['진안읍','용담면','안천면','동향면','상전면','백운면','성수면','마령면','부귀면','정천면','주천면'];
 const KEY = 'jinan_participants';
-const MAX_LEAVE = 3; // 이탈 3회(-3점) 누적 시 중도포기
+const MAX_LEAVE = 3; // 감점 -3점 누적 시 중도포기
+const AWAY_PT = 0.5; // 잠깐 자리 비움 1회 = -0.5점 (일당은 지급)
 
 // ---------- 저장소 (휴대폰 저장이 막혀도 앱이 멈추지 않게) ----------
 function load(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
@@ -550,14 +551,16 @@ function stats(p){
   const yl = p.logs.filter(l => l.date.startsWith(y));
   const warnings = yl.reduce((n,l) => n + (l.badge==='미착용') + (l.vest==='미착용'), 0);
   const leaves = yl.filter(l => l.leave==='이탈').length;
-  const penalty = -leaves;
+  const aways = yl.filter(l => l.leave==='자리비움').length;   // 잠깐 자리 비움 = -0.5점
+  const pts = leaves + aways * AWAY_PT;
+  const penalty = -pts;
   const quitNow = p.quit && (p.quitYear || 2026) === viewYear();
   let status = '정상';
-  if (leaves >= MAX_LEAVE) status = '중도포기(감점 누적)';
+  if (pts >= MAX_LEAVE) status = '중도포기(감점 누적)';
   else if (quitNow) status = '중도포기(본인 사정)';
-  else if (warnings > 0 || leaves > 0) status = '경고/감점 있음';
+  else if (warnings > 0 || pts > 0) status = '경고/감점 있음';
   const last = p.logs.map(l => l.date).sort().pop() || '';
-  return { warnings, leaves, penalty, status, last, quitNow, dropped: status.startsWith('중도포기') };
+  return { warnings, leaves, aways, pts, penalty, status, last, quitNow, dropped: status.startsWith('중도포기') };
 }
 
 // ---------- 화면 ----------
@@ -589,7 +592,7 @@ function filtered(){
 
 function badgeOf(s){
   if (s.dropped) return `<span class="badge bg-danger">${s.status}</span>`;
-  if (s.status!=='정상') return `${s.leaves?`<span class="badge bg-warning">${s.penalty}점</span>`:'<span class="badge bg-success">정상</span>'}`;
+  if (s.status!=='정상') return `${s.pts?`<span class="badge bg-warning">${s.penalty}점</span>`:'<span class="badge bg-success">정상</span>'}`;
   return '<span class="badge bg-success">정상</span>';
 }
 function personRow(p, showSite){
@@ -615,7 +618,8 @@ function goThisMonth(){ YEAR = Number(today().slice(0,4)); curMonth = Number(tod
 const mLogs = p => p.logs.filter(l => l.date.startsWith(monthKey()));
 function mstats(p){
   const ls = mLogs(p);
-  return { leaves: ls.filter(l => l.leave==='이탈'), warns: ls.filter(l => l.badge==='미착용' || l.vest==='미착용'),
+  const leaves = ls.filter(l => l.leave==='이탈'), aways = ls.filter(l => l.leave==='자리비움');
+  return { leaves, aways, pts: leaves.length + aways.length * AWAY_PT, warns: ls.filter(l => l.badge==='미착용' || l.vest==='미착용'),
            vest: ls.filter(l => l.vest==='미착용').length, badge: ls.filter(l => l.badge==='미착용').length };
 }
 const md = d => `${Number(d.slice(5,7))}/${Number(d.slice(8,10))}`;
@@ -1288,16 +1292,17 @@ function openMap(addr){
 function showPenReasons(p){
   const y = String(viewYear());
   const ls = p.logs.filter(l => l.date.startsWith(y)).sort((a,b) => a.date.localeCompare(b.date));
-  const leaves = ls.filter(l => l.leave === '이탈'), warns = ls.filter(l => l.leave !== '이탈' && (l.vest === '미착용' || l.badge === '미착용' || l.attitude === '불량'));
+  const leaves = ls.filter(l => l.leave === '이탈' || l.leave === '자리비움'), warns = ls.filter(l => !leaves.includes(l) && (l.vest === '미착용' || l.badge === '미착용' || l.attitude === '불량'));
+  const ptsAll = leaves.reduce((n,l) => n + (l.leave==='자리비움' ? AWAY_PT : 1), 0);
   const notes = (p.notes || []).filter(n => leaves.some(l => l.date === n.date));
-  const row = (l, i) => `<div class="log bad"><b>${i != null ? `${i+1}번째 -1점 · ` : ''}${Number(l.date.slice(5,7))}월 ${dd(l.date)}</b>
-    <br><span style="font-size:.9rem;">근무지 이탈${l.vest==='미착용'?' · 조끼 미착용':''}${l.badge==='미착용'?' · 명찰 미착용':''}${l.attitude?` · 태도 ${esc(l.attitude)}`:''}</span>
+  const row = (l, i) => `<div class="log ${l.leave==='자리비움'?'warn':'bad'}"><b>${l.leave==='자리비움' ? `-${AWAY_PT}점 · ` : '-1점 · '}${Number(l.date.slice(5,7))}월 ${dd(l.date)}</b>
+    <br><span style="font-size:.9rem;">${l.leave==='자리비움' ? '잠깐 자리 비움' : '근무지 이탈'}${l.vest==='미착용'?' · 조끼 미착용':''}${l.badge==='미착용'?' · 명찰 미착용':''}${l.attitude?` · 태도 ${esc(l.attitude)}`:''}</span>
     ${l.memo ? `<br>📝 ${esc(l.memo)}` : '<br><span class="muted" style="font-size:.85rem;">적어 둔 메모 없음</span>'}</div>`;
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">⚠️ ${esc(nm(p))} 어르신 감점 이유 (${y}년)</div>
-    <div class="notice" style="margin-bottom:8px;">누적 <b style="color:var(--danger)">-${leaves.length}점</b> · -${MAX_LEAVE}점이면 중도포기</div>
-    ${leaves.length ? leaves.map((l, i) => row(l, i)).join('') : '<p class="muted">근무지 이탈 기록이 없습니다.</p>'}
+    <div class="notice" style="margin-bottom:8px;">누적 <b style="color:var(--danger)">-${ptsAll}점</b> · -${MAX_LEAVE}점이면 중도포기</div>
+    ${leaves.length ? leaves.map((l, i) => row(l, i)).join('') : '<p class="muted">감점 기록이 없습니다.</p>'}
     ${notes.length ? `<div style="font-weight:bold;margin:8px 0 4px;">📝 같은 날 특이사항</div>` + notes.map(n => `<div class="log">${Number(n.date.slice(5,7))}월 ${dd(n.date)} ${n.cat?`[${esc(n.cat)}] `:''}${esc(n.text)}</div>`).join('') : ''}
     ${warns.length ? `<div style="font-weight:bold;margin:8px 0 4px;">🦺 경고 (감점 아님)</div>` + warns.map(l => `<div class="log warn">${Number(l.date.slice(5,7))}월 ${dd(l.date)} · ${[l.vest==='미착용'?'조끼 미착용':'', l.badge==='미착용'?'명찰 미착용':'', l.attitude==='불량'?'태도 불량':''].filter(Boolean).join(' · ')}${l.memo?`<br>📝 ${esc(l.memo)}`:''}</div>`).join('') : ''}
     <div class="muted" style="font-size:.82rem;margin:6px 0;">이유는 점검할 때 "점검 메모"에 적은 내용이에요.</div>
@@ -1882,7 +1887,7 @@ function renderBoard(){
   document.getElementById('this-month').classList.toggle('hidden', isNow);
   const rows = visibleTowns().map(tw => {
     let pen=0, warn=0;
-    participants.filter(p => p.town===tw).forEach(p => { const m = mstats(p); pen += m.leaves.length; warn += m.warns.length; });
+    participants.filter(p => p.town===tw).forEach(p => { const m = mstats(p); pen += m.pts; warn += m.warns.length; });
     return {tw, pen, warn};
   }).filter(r => r.pen).sort((a,b) => b.pen-a.pen);
   document.getElementById('penalty-board').innerHTML = rows.length ? rows.map(r =>
@@ -1892,14 +1897,14 @@ function renderBoard(){
 
 // 읍·면을 누르면: 어느 경로당, 누가, 감점 몇 건인지
 function showPenalty(tw){
-  const list = participants.filter(p => p.town===tw).map(p => ({p, m: mstats(p)})).filter(x => x.m.leaves.length)
-    .sort((a,b) => seniorRank(seniorOf(a.p))-seniorRank(seniorOf(b.p)) || seniorOf(a.p).localeCompare(seniorOf(b.p)) || b.m.leaves.length-a.m.leaves.length);
+  const list = participants.filter(p => p.town===tw).map(p => ({p, m: mstats(p)})).filter(x => x.m.pts)
+    .sort((a,b) => seniorRank(seniorOf(a.p))-seniorRank(seniorOf(b.p)) || seniorOf(a.p).localeCompare(seniorOf(b.p)) || b.m.pts-a.m.pts);
   const drops = participants.filter(p => p.town===tw && stats(p).dropped);
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">${tw} · ${curMonth}월 감점</div>
     <div class="close-sum" style="grid-template-columns:1fr 1fr;margin-top:0;">
-      <div style="background:#fff5f5;border-radius:6px;padding:8px 2px;text-align:center;font-size:.82rem;"><b style="display:block;font-size:1.2rem;color:var(--danger)">-${list.reduce((n,x)=>n+x.m.leaves.length,0)}점</b>${curMonth}월 감점</div>
+      <div style="background:#fff5f5;border-radius:6px;padding:8px 2px;text-align:center;font-size:.82rem;"><b style="display:block;font-size:1.2rem;color:var(--danger)">-${list.reduce((n,x)=>n+x.m.pts,0)}점</b>${curMonth}월 감점</div>
       <div style="background:#edf2f7;border-radius:6px;padding:8px 2px;text-align:center;font-size:.82rem;"><b style="display:block;font-size:1.2rem;color:#4a5568">${drops.length}명</b>중도포기(누적)</div>
     </div>
     ${drops.length ? `<div class="muted" style="margin:2px 0 8px;">중도포기: ${drops.map(p => `${esc(nm(p))}(${esc(seniorOf(p))})`).join(', ')}</div>` : ''}
@@ -1907,9 +1912,9 @@ function showPenalty(tw){
     ${list.map(({p,m}) => {
       const s = stats(p);
       const warnTxt = m.warns.map(l => `${md(l.date)} ${[l.vest==='미착용'?'조끼':'', l.badge==='미착용'?'명찰':''].filter(Boolean).join('·')}`).join(', ');
-      return `<button class="pen-row ${m.leaves.length?'':'warn'}" data-id="${p.id}">
+      return `<button class="pen-row ${m.pts?'':'warn'}" data-id="${p.id}">
         <span class="muted">🏠 ${esc(seniorOf(p))}</span><br>
-        <b>${esc(nm(p))}</b> ${m.leaves.length?`<b style="color:var(--danger)">-${m.leaves.length}점</b> <span class="muted">(${m.leaves.map(l=>md(l.date)).join(', ')})</span>`:''}
+        <b>${esc(nm(p))}</b> ${m.pts?`<b style="color:var(--danger)">-${m.pts}점</b> <span class="muted">(${[...m.leaves.map(l=>md(l.date)), ...m.aways.map(l=>md(l.date)+' 자리 비움')].join(', ')})</span>`:''}
         <br><span class="muted">누적 ${s.penalty}점${s.dropped?` · <b style="color:var(--danger)">${s.status}</b>`:''}</span></button>`;
     }).join('')}
     <button class="secondary full" id="pen-close">닫기</button></div>`;
@@ -1921,13 +1926,14 @@ function showPenalty(tw){
 // 마감 칸의 숫자를 누르면: 어느 경로당, 누가, 몇 번인지
 function showClose(kind){
   const town = (document.getElementById('filter-town').value || '전체');
-  const KIND = { leave:{title:'근무지 이탈 감점', test:l => l.leave==='이탈'},
+  const KIND = { leave:{title:'감점 (이탈·자리 비움)', test:l => l.leave==='이탈' || l.leave==='자리비움'},
                  vest:{title:'조끼 미착용', test:l => l.vest==='미착용'},
                  badge:{title:'명찰 미착용', test:l => l.badge==='미착용'} }[kind];
   const list = participants.filter(p => town==='전체' ? visibleTowns().includes(p.town) : p.town===town)
     .map(p => ({p, ls: mLogs(p).filter(KIND.test).sort((a,b)=>a.date.localeCompare(b.date))})).filter(x => x.ls.length)
     .sort((a,b) => a.p.town.localeCompare(b.p.town) || seniorRank(seniorOf(a.p))-seniorRank(seniorOf(b.p)) || seniorOf(a.p).localeCompare(seniorOf(b.p)) || a.p.name.localeCompare(b.p.name));
-  const total = list.reduce((n,x) => n + x.ls.length, 0);
+  const ptOf = ls => kind==='leave' ? ls.reduce((n,l) => n + (l.leave==='자리비움' ? AWAY_PT : 1), 0) : ls.length;
+  const total = list.reduce((n,x) => n + ptOf(x.ls), 0);
   const amount = n => kind==='leave' ? `-${n}점` : `${n}회`;
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
@@ -1935,8 +1941,8 @@ function showClose(kind){
     <div class="muted" style="margin-bottom:6px;">${list.length ? '이름을 누르면 그 어르신 점검 화면으로 갑니다.' : `${curMonth}월에는 없습니다.`}</div>
     ${list.map(({p, ls}) => `<button class="pen-row ${kind==='leave'?'':'warn'}" data-id="${p.id}">
         <span class="muted">🏠 ${town==='전체'?esc(p.town)+' · ':''}${esc(seniorOf(p))}</span><br>
-        <b>${esc(nm(p))}</b> <b style="color:${kind==='leave'?'var(--danger)':'var(--warning)'}">${amount(ls.length)}</b>
-        <span class="muted">(${ls.map(l => md(l.date)).join(', ')})</span></button>`).join('')}
+        <b>${esc(nm(p))}</b> <b style="color:${kind==='leave'?'var(--danger)':'var(--warning)'}">${amount(ptOf(ls))}</b>
+        <span class="muted">(${ls.map(l => md(l.date) + (l.leave==='자리비움' ? ' 자리 비움' : '')).join(', ')})</span></button>`).join('')}
     <button class="secondary full" id="close-close">닫기</button></div>`;
   document.body.appendChild(back);
   back.querySelector('#close-close').onclick = () => back.remove();
@@ -2138,6 +2144,7 @@ function renderNotVisited(){
     const probs = k => { const ls = participants.filter(p => p.town===tw && seniorOf(p)===k).flatMap(p => p.logs).filter(l => l.date >= from && l.date <= to);
       const t = []; const n = f => ls.filter(f).length;
       if (n(l => l.leave==='이탈')) t.push(`이탈 ${n(l => l.leave==='이탈')}`);
+      if (n(l => l.leave==='자리비움')) t.push(`자리비움 ${n(l => l.leave==='자리비움')}`);
       if (n(l => l.vest==='미착용')) t.push(`조끼 ${n(l => l.vest==='미착용')}`);
       if (n(l => l.badge==='미착용')) t.push(`명찰 ${n(l => l.badge==='미착용')}`);
       if (n(l => l.attitude==='불량')) t.push('태도 불량');
@@ -2172,9 +2179,9 @@ function renderList(){
   const all = town==='전체';
   const inTown = all ? participants.filter(p => visibleTowns().includes(p.town)) : participants.filter(p => p.town===town);
   { let pen=0, vest=0, badge=0;
-    inTown.forEach(p => { const m = mstats(p); pen += m.leaves.length; vest += m.vest; badge += m.badge; });
+    inTown.forEach(p => { const m = mstats(p); pen += m.pts; vest += m.vest; badge += m.badge; });
     document.getElementById('close-sum').innerHTML =
-      `<button onclick="showClose('leave')"><b style="color:var(--danger)">${pen?'-'+pen:0}점</b>이탈 감점 ›</button><button onclick="showClose('vest')"><b style="color:var(--warning)">${vest}회</b>조끼 미착용 ›</button><button onclick="showClose('badge')"><b style="color:var(--warning)">${badge}회</b>명찰 미착용 ›</button>`; }
+      `<button onclick="showClose('leave')"><b style="color:var(--danger)">${pen?'-'+pen:0}점</b>감점 (이탈·자리 비움) ›</button><button onclick="showClose('vest')"><b style="color:var(--warning)">${vest}회</b>조끼 미착용 ›</button><button onclick="showClose('badge')"><b style="color:var(--warning)">${badge}회</b>명찰 미착용 ›</button>`; }
   document.getElementById('export-desc').innerHTML = (all ? (showOthers ? '<b>전체 읍·면</b> 명단을' : `<b>내 담당(${myTowns.join('·')})</b> 명단을`) : `<b>${esc(town)}</b> 명단을`) +
     ` <b>${curMonth}월</b> 점검 내용을 내려받습니다.<br>엑셀 파일 안에 <b>마감 요약</b>(활동일·출장, 이탈·조끼·명찰 횟수), <b>참여자 현황</b>(어르신별 활동 날짜 · <span style="background:#FFC7CE">감점</span> <span style="background:#FFEB9C">근무일 적음</span> <span style="background:#E2EFDA">경고</span> 색 표시), <b>신규 인원</b>, <b>${curMonth}월 점검 기록</b>, <b>근무일 변경</b>, <b>보충 근무·입원</b>, <b>특이사항</b>, <b>경로당 위치</b>, <b>${exYear()}년 참여 제외</b>, <b>변경 이력</b>(그달 바뀐 내용 전부)이 들어 있습니다.`;
 
@@ -2225,7 +2232,7 @@ function renderList(){
     const s = stats(p);
     let tag = '';
     if (s.dropped) tag = ` - ${s.status}`;
-    else if (s.status!=='정상') tag = s.leaves ? ` - ${s.penalty}점` : '';
+    else if (s.status!=='정상') tag = s.pts ? ` - ${s.penalty}점` : '';
     const chk = p.logs.some(l => l.date===t) ? ' ✔오늘 점검' : '';
     return `<option value="${p.id}">${esc(nm(p))}${p.age?` (${esc(p.age)}세)`:''}${p.guess?' 📍추정':''}${inHospNow(p)?' 🏥입원중':''}${p.linking?' 🔗연계중':''}${tag}${chk}</option>`;
   }).join('');
@@ -3041,7 +3048,7 @@ function renderModal(){
   if (document.getElementById('c-date').value) setCheckDate(document.getElementById('c-date').value);
   // 이름을 누르면 기본 정보·건강 정보 창
   document.getElementById('modal-title').innerHTML = `<b class="name-tap" onclick="openInfo()">${esc(nm(p))}${p.health && (p.health.conds?.length || p.health.memo) ? '<span class="hl-dot">🩺</span>' : ''}</b> 어르신 점검`;
-  let n = `<div class="notice">${viewYear()}년 누적 감점 <b style="color:var(--danger)" ${s.leaves ? 'class="pen-link" onclick="showPenReasons(current())"' : ''}>${s.penalty}점${s.leaves ? ' 이유 보기 ›' : ''}</b> (근무지 이탈 1회당 -1점 / -${MAX_LEAVE}점이면 중도포기 · 새해에 0점부터)</div>`;
+  let n = `<div class="notice">${viewYear()}년 누적 감점 <b style="color:var(--danger)" ${s.pts ? 'class="pen-link" onclick="showPenReasons(current())"' : ''}>${s.penalty}점${s.pts ? ' 이유 보기 ›' : ''}</b> (근무지 이탈 -1점 · 잠깐 자리 비움 -${AWAY_PT}점 / -${MAX_LEAVE}점이면 중도포기 · 새해에 0점부터)</div>`;
   if (s.dropped) n = `<div class="notice red"><b>${s.status}</b> — 이후 근무할 수 없습니다.</div>` + n;
   if (p.guess) n = `<div class="notice">📍 경로당 <b>"${esc(p.senior)}"</b>은 주소(${esc(p.address||'')})를 보고 자동으로 넣은 <b>추정</b>입니다.<br>맞으면 아래 "어르신 정보 고치기"에서 그대로 <b>정보 저장</b>, 틀리면 경로당 이름을 고쳐서 저장해 주세요.</div>` + n;
   document.getElementById('modal-notice').innerHTML = n;
@@ -3050,9 +3057,9 @@ function renderModal(){
 
   const logs = [...p.logs].sort((a,b) => b.date.localeCompare(a.date));
   document.getElementById('log-list').innerHTML = logs.length ? logs.map(l => {
-    const cls = l.leave==='이탈' ? 'bad' : (l.badge==='미착용'||l.vest==='미착용') ? 'warn' : 'ok';
+    const cls = l.leave==='이탈' ? 'bad' : (l.badge==='미착용'||l.vest==='미착용'||l.leave==='자리비움') ? 'warn' : 'ok';
     return `<div class="log ${cls}"><b>${l.date}</b> <br>
-      명찰 ${l.badge} · 조끼 ${l.vest} · 태도 ${l.attitude} · ${l.leave==='이탈'?'<b style="color:var(--danger)">이탈(-1점, 일당 미지급)</b>':'이탈 없음'}
+      명찰 ${l.badge} · 조끼 ${l.vest} · 태도 ${l.attitude} · ${l.leave==='이탈'?'<b style="color:var(--danger)">이탈(-1점, 일당 미지급)</b>':l.leave==='자리비움'?'<b style="color:var(--warning)">잠깐 자리 비움 (-0.5점, 일당 지급)</b>':'이탈 없음'}
       ${l.memo?`<br>📝 ${esc(l.memo)}`:''}
       <br>${l.leave==='이탈'?`<button class="small" onclick="smsForLog(${l.id})">📩 안내 문자</button> `:''}<button class="small warning" onclick="editLog(${l.id})">✏️ 수정</button> <button class="small" onclick="changeLogDate(${l.id})">📅 날짜 바꾸기</button> <button class="small secondary" onclick="deleteLog(${l.id})">이 기록 지우기</button></div>`;
   }).join('') : '<p class="muted">아직 점검 기록이 없습니다.</p>';
@@ -3131,10 +3138,10 @@ async function saveCheck(){
     const s = stats(p);
     editingLogId = null;
     if (!wasLeave && l.leave==='이탈') {
-      await notify(`근무지 이탈로 수정되어 -1점이 생겼습니다. (누적 ${s.penalty}점)` + (s.leaves >= MAX_LEAVE ? `\n\n⚠️ 누적 -${MAX_LEAVE}점으로 중도포기 처리되었습니다.` : ''));
-      await smsDialog(p, date, s.leaves);
+      await notify(`근무지 이탈로 수정되어 -1점이 생겼습니다. (누적 ${s.penalty}점)` + (s.pts >= MAX_LEAVE ? `\n\n⚠️ 누적 -${MAX_LEAVE}점으로 중도포기 처리되었습니다.` : ''));
+      await smsDialog(p, date, s.pts);
     } else {
-      notify('점검 기록이 수정되었습니다.' + (wasLeave && l.leave!=='이탈' ? `\n이탈이 취소되어 감점이 빠졌습니다. (누적 ${s.penalty}점)` : ''));
+      notify('점검 기록이 수정되었습니다.' + (wasLeave && l.leave!=='이탈' ? `\n이탈이 취소되어 감점이 빠졌습니다.` : '') + `\n(${viewYear()}년 누적 감점 ${s.penalty}점)`);
     }
     cancelEdit();
     return;
@@ -3149,19 +3156,21 @@ async function saveCheck(){
   p.phone = g('m-phone').trim();
   saveData(false); playDingDong(log.leave==='이탈');
   const s = stats(p);
-  if (log.leave==='이탈') logEvent('근무지 이탈', p, `감점 -1점 (${viewYear()}년 누적 ${s.penalty}점)` + (s.leaves >= MAX_LEAVE ? ' → 감점 누적 중도포기' : ''), date);
+  if (log.leave==='자리비움') logEvent('잠깐 자리 비움', p, `감점 -${AWAY_PT}점 (${viewYear()}년 누적 ${s.penalty}점)` + (s.pts >= MAX_LEAVE ? ' → 감점 누적 중도포기' : '') + (log.memo ? ` · ${log.memo}` : ''), date);
+  if (log.leave==='이탈') logEvent('근무지 이탈', p, `감점 -1점 (${viewYear()}년 누적 ${s.penalty}점)` + (s.pts >= MAX_LEAVE ? ' → 감점 누적 중도포기' : ''), date);
 
   if (log.leave==='이탈') {
     let msg = `근무지 이탈 -1점 (누적 ${s.penalty}점), 당일 일당 미지급입니다.`;
-    if (s.leaves >= MAX_LEAVE) msg += `\n\n⚠️ 누적 -${MAX_LEAVE}점으로 중도포기 처리되었습니다.`;
+    if (s.pts >= MAX_LEAVE) msg += `\n\n⚠️ 누적 -${MAX_LEAVE}점으로 중도포기 처리되었습니다.`;
     await notify(msg);
-    await smsDialog(p, date, s.leaves);
+    await smsDialog(p, date, s.pts);
   } else {
     const next = matesOf(p).find(q => q.id !== p.id && !stats(q).dropped && !q.logs.some(l => l.date===date));
     document.getElementById('c-memo').value = '';
     renderModal();
-    if (next) { if (await showDialog(`점검 기록이 저장되었습니다.\n\n같은 경로당 ${nm(next)} 어르신도 이어서 점검할까요?`, true, [`${nm(next)} 점검하기`, '여기 있기'])) switchMate(next.id); }
-    else notify('점검 기록이 저장되었습니다.');
+    const head = log.leave==='자리비움' ? `잠깐 자리 비움 -${AWAY_PT}점 (누적 ${s.penalty}점) · 일당은 지급합니다.` + (s.pts >= MAX_LEAVE ? `\n\n⚠️ 누적 -${MAX_LEAVE}점으로 중도포기 처리되었습니다.` : '') : '점검 기록이 저장되었습니다.';
+    if (next) { if (await showDialog(`${head}\n\n같은 경로당 ${nm(next)} 어르신도 이어서 점검할까요?`, true, [`${nm(next)} 점검하기`, '여기 있기'])) switchMate(next.id); }
+    else notify(head);
     return;
   }
   document.getElementById('c-memo').value = '';
@@ -3381,13 +3390,14 @@ function statsData(){
   const people = list.map(p => {
     const r = { p, days:0, leave:0, vest:0, badge:0, checks:0, chg:0, months:0 };
     mks.forEach(mk => { if (!active(p, mk)) return; r.months++; const ls = p.logs.filter(l => l.date.startsWith(mk));
-      r.days += workDays(p, mk).length; r.checks += ls.length; r.leave += ls.filter(l => l.leave==='이탈').length;
+      r.days += workDays(p, mk).length; r.checks += ls.length; r.leave += ls.filter(l => l.leave==='이탈').length; r.away = (r.away || 0) + ls.filter(l => l.leave==='자리비움').length;
       r.vest += ls.filter(l => l.vest==='미착용').length; r.badge += ls.filter(l => l.badge==='미착용').length; r.chg += changesIn(p, mk).length; });
     mks.forEach(mk => { if (active(p, mk)) r.bad = (r.bad || 0) + p.logs.filter(l => l.date.startsWith(mk) && l.attitude === '불량').length; });
     r.bad = r.bad || 0;
     r.paid = r.days - r.leave;
-    r.score = r.leave * 3 + r.vest + r.badge + r.bad;   // 많이 걸린 순서: 이탈은 3배로
-    r.kind = r.leave ? 'pen' : (r.months && r.paid < r.months * WORK_TARGET) ? 'few' : (r.vest || r.badge) ? 'warn' : '';
+    r.away = r.away || 0;
+    r.score = r.leave * 3 + r.away * 1.5 + r.vest + r.badge + r.bad;   // 많이 걸린 순서: 이탈은 3배, 자리 비움은 1.5배
+    r.kind = (r.leave || r.away) ? 'pen' : (r.months && r.paid < r.months * WORK_TARGET) ? 'few' : (r.vest || r.badge) ? 'warn' : '';
     return r;
   });
   return { a, b, y, mks, months, people, list, towns };
@@ -3404,9 +3414,9 @@ function showStats(){
       ${d.months.map(x => `<tr><td>${x.m}월</td><td>${x.n}</td><td>${x.newc}</td><td style="color:${x.leave?'var(--danger)':'inherit'}">${x.leave}</td><td>${x.vest}</td><td>${x.badge}</td><td>${x.checks}</td></tr>`).join('')}
       <tr style="font-weight:bold;background:#f7fafc;"><td>합계</td><td>-</td><td>${T('newc')}</td><td style="color:var(--danger)">${T('leave')}</td><td>${T('vest')}</td><td>${T('badge')}</td><td>${T('checks')}</td></tr></table>
     <div style="font-weight:bold;margin-bottom:4px;">⚠️ 많이 걸린 어르신 ${top.length}명 <span class="muted" style="font-weight:normal;font-size:.82rem;">(이탈·조끼·명찰·태도 불량 많은 순 · 누르면 그 어르신 화면)</span></div>
-    ${top.map((r, i) => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#${FILL[r.kind] || 'f7fafc'};border-left-color:${r.leave?'var(--danger)':'#ecc94b'};">
+    ${top.map((r, i) => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#${FILL[r.kind] || 'f7fafc'};border-left-color:${(r.leave||r.away)?'var(--danger)':'#ecc94b'};">
       <b>${i+1}. ${esc(nm(r.p))}</b> <span class="muted">🏠 ${esc(r.p.town)} · ${esc(seniorOf(r.p))}</span><br>
-      <span style="font-size:.88rem;">${r.leave?`<b style="color:var(--danger)">이탈 ${r.leave}회(-${r.leave}점)</b> · `:''}${r.vest?`조끼 ${r.vest} · `:''}${r.badge?`명찰 ${r.badge} · `:''}${r.bad?`태도 불량 ${r.bad} · `:''}인정 ${r.paid}일</span> <span class="arrow">›</span></button>`).join('') || '<p class="muted">걸린 어르신이 없습니다. 👍</p>'}
+      <span style="font-size:.88rem;">${r.leave?`<b style="color:var(--danger)">이탈 ${r.leave}회(-${r.leave}점)</b> · `:''}${r.away?`<b style="color:var(--danger)">자리 비움 ${r.away}회(-${r.away * AWAY_PT}점)</b> · `:''}${r.vest?`조끼 ${r.vest} · `:''}${r.badge?`명찰 ${r.badge} · `:''}${r.bad?`태도 불량 ${r.bad} · `:''}인정 ${r.paid}일</span> <span class="arrow">›</span></button>`).join('') || '<p class="muted">걸린 어르신이 없습니다. 👍</p>'}
     ${few.length ? `<div style="font-weight:bold;margin:10px 0 4px;">🟨 근무일 적은 어르신 ${few.length}명</div>` + few.map(r => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#${FILL.few};border-left-color:#ecc94b;"><b>${esc(nm(r.p))}</b> <span class="muted">🏠 ${esc(r.p.town)} · ${esc(seniorOf(r.p))}</span><br><span style="font-size:.88rem;">활동일 ${r.days}일 · 인정 ${r.paid}일</span> <span class="arrow">›</span></button>`).join('') : ''}
     <div class="grid-2" style="margin-top:8px;"><button class="secondary" id="ss-close">닫기</button><button id="ss-xlsx">통계 엑셀</button></div></div>`;
   document.body.appendChild(back);
@@ -3425,13 +3435,13 @@ function exportStats(){
   const ws0 = XLSX.utils.aoa_to_sheet(aoa); ws0['!cols'] = [18,8,8,11,11,11,11,10,11,11].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws0, '기간 요약');
   const rows = d.people.map(r => ({ '표시':KIND_TXT[r.kind] || '', '읍면':r.p.town, '경로당':seniorOf(r.p), '성명':r.p.name, '나이':r.p.age,
-    '근무 달 수':r.months, '활동일 합계':r.days, '근무 인정일':r.paid, '이탈 횟수':r.leave, '감점':-r.leave, '조끼 미착용':r.vest, '명찰 미착용':r.badge, '태도 불량':r.bad,
+    '근무 달 수':r.months, '활동일 합계':r.days, '근무 인정일':r.paid, '이탈 횟수':r.leave, '자리 비움':r.away || 0, '감점':-(r.leave + (r.away || 0) * AWAY_PT), '조끼 미착용':r.vest, '명찰 미착용':r.badge, '태도 불량':r.bad,
     '점검 횟수':r.checks, '근무일 변경':r.chg, '상태':stats(r.p).status }));
   const ws1 = XLSX.utils.json_to_sheet(rows); paintSheet(ws1, d.people.map(r => r.kind));
-  ws1['!cols'] = [12,8,14,10,6,9,10,10,9,6,10,10,9,9,10,14].map(w=>({wch:w}));
+  ws1['!cols'] = [12,8,14,10,6,9,10,10,9,9,6,10,10,9,9,10,14].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws1, '어르신별 통계');
   const tops = d.people.filter(r => r.score > 0).sort((a,b) => b.score - a.score || b.leave - a.leave || a.p.name.localeCompare(b.p.name));
-  const wsT = tops.length ? XLSX.utils.json_to_sheet(tops.map((r, i) => ({ '순위':i+1, '읍면':r.p.town, '경로당':seniorOf(r.p), '성명':r.p.name, '이탈(감점)':r.leave, '조끼 미착용':r.vest, '명찰 미착용':r.badge, '태도 불량':r.bad, '근무 인정일':r.paid, '연락처':r.p.phone })))
+  const wsT = tops.length ? XLSX.utils.json_to_sheet(tops.map((r, i) => ({ '순위':i+1, '읍면':r.p.town, '경로당':seniorOf(r.p), '성명':r.p.name, '이탈(감점)':r.leave, '자리 비움':r.away, '조끼 미착용':r.vest, '명찰 미착용':r.badge, '태도 불량':r.bad, '근무 인정일':r.paid, '연락처':r.p.phone })))
     : XLSX.utils.aoa_to_sheet([['걸린 어르신이 없습니다.']]);
   if (tops.length) paintSheet(wsT, tops.map(r => r.kind));
   wsT['!cols'] = [6,8,14,10,10,10,10,9,10,15].map(w=>({wch:w}));
@@ -3473,10 +3483,10 @@ function workDays(p, mk){
 }
 // 그달 이 어르신 표시: 감점 > 근무일 적음 > 경고
 function monthKind(p, mk){
-  const ls = p.logs.filter(l => l.date.startsWith(mk)), leaves = ls.filter(l => l.leave==='이탈').length;
+  const ls = p.logs.filter(l => l.date.startsWith(mk)), leaves = ls.filter(l => l.leave==='이탈').length, aways = ls.filter(l => l.leave==='자리비움').length;
   const warn = ls.some(l => l.vest==='미착용' || l.badge==='미착용');
   const paid = workDays(p, mk).length - leaves;
-  return leaves ? 'pen' : paid < WORK_TARGET ? 'few' : warn ? 'warn' : '';
+  return (leaves || aways) ? 'pen' : paid < WORK_TARGET ? 'few' : warn ? 'warn' : '';
 }
 // 그달 새로 들어온 분 (늦게 시작 / 그달 등록 / 연계 중)
 function newcomers(list, mk){
@@ -3493,7 +3503,7 @@ function exportExcel(){
   const kinds1 = list.map(p => monthKind(p, monthKey()));
   const sheet1 = list.map((p, i) => { const s = stats(p), m = mstats(p); return {
     '표시':KIND_TXT[kinds1[i]] || '', '읍면':p.town, '경로당':p.senior, '우수 경로당':isBest(p.town, seniorOf(p)) ? '👑' : '', '구역':zoneOf(p)?.name || '', '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '근무 시작':startTag(p) ? `${Number(p.start.slice(5))}월부터` : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : '', '나이':p.age, '태어난 해':p.birth || '', '연락처':p.phone, '주소':p.address,
-    [`${curMonth}월 점검 횟수`]:mLogs(p).length, [`${curMonth}월 감점`]:-m.leaves.length, [`${curMonth}월 일당 미지급 일수`]:m.leaves.length,
+    [`${curMonth}월 점검 횟수`]:mLogs(p).length, [`${curMonth}월 감점`]:-m.pts, [`${curMonth}월 자리 비움`]:m.aways.length, [`${curMonth}월 일당 미지급 일수`]:m.leaves.length,
     [`${curMonth}월 조끼 미착용`]:m.vest, [`${curMonth}월 명찰 미착용`]:m.badge, '누적 이탈 횟수':s.leaves, '누적 감점':s.penalty, '상태':s.status, '마지막 점검일':s.last,
     [`${curMonth}월 활동 날짜`]: personDays(p, monthKey()).map(d => Number(d.slice(8,10))).join(', '),
     [`${curMonth}월 활동일 수`]: personDays(p, monthKey()).length,
@@ -3506,7 +3516,7 @@ function exportExcel(){
   const sheet2 = [];
   list.forEach(p => [...mLogs(p)].sort((a,b)=>a.date.localeCompare(b.date)).forEach(l => sheet2.push({
     '점검일':l.date, '읍면':p.town, '경로당':p.senior, '성명':p.name, '명찰':l.badge, '조끼':l.vest,
-    '응대 태도':l.attitude, '근무지 이탈':l.leave, '감점':l.leave==='이탈'?-1:0,
+    '응대 태도':l.attitude, '근무지 이탈':l.leave==='자리비움' ? '잠깐 자리 비움' : l.leave, '감점':l.leave==='이탈'?-1:l.leave==='자리비움'?-AWAY_PT:0,
     '일당':l.leave==='이탈'?'미지급':'지급', '메모':l.memo })));
 
   const fname = `노인일자리_점검_${town==='전체' && !showOthers ? '내담당' : town}_${YEAR}년${curMonth}월`;
@@ -3532,6 +3542,7 @@ function exportExcel(){
     ['입원 중 인원', `${list.filter(p => customOf(p, monthKey())?.inHosp).length}명`],
     ['신규 연계 중', list.filter(p => p.linking).map(p => `${p.name}(${seniorOf(p)}, ${md(p.linking.since)} 등록)`).join(', ') || '없음'],
     ['특이사항', `${list.reduce((n,p) => n + (p.notes||[]).filter(x => x.date.startsWith(monthKey())).length, 0)}건`],
+    [`잠깐 자리 비움 (${curMonth}월, 1회 -${AWAY_PT}점)`, list.flatMap(p => p.logs.filter(l => l.leave==='자리비움' && l.date.startsWith(monthKey())).map(l => `${p.name}(${seniorOf(p)}, ${md(l.date)})`)).join(', ') || '없음'],
     ['활동일 문자', eventLog.filter(h => h.type.startsWith('활동일 문자') && h.at.slice(0,4) >= String(YEAR) && h.detail.includes(`${curMonth}월 `)).map(h => `${h.at.slice(5)} ${h.name ? h.name+'(개인)' : h.detail.split(' · ')[0]}`).join(' / ') || '보낸 기록 없음'],
     [`안 간 경로당 (${curMonth}월)`, visibleTowns().flatMap(tw => [...new Set(list.filter(p => p.town===tw && !stats(p).dropped).map(seniorOf))].filter(k => !siteVisits(tw, k).some(d => d.startsWith(monthKey()))).map(k => `${tw.replace(/[면읍]$/,'')} ${k}`)).join(', ') || '없음 (모두 다녀옴)'],
     ['마지막 백업', load('jinan_last_backup') || '백업한 적 없음'],
