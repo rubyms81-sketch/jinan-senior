@@ -390,7 +390,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-56</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-57</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2220,8 +2220,9 @@ function diaryAuto(site, date){
     (p.notes || []).filter(x => x.date === date).forEach(x => out.push(`특이사항: ${p.name} 어르신 ${endDot(x.text)}${HEALTH_RE.test(x.text) ? ' 건강 상태를 계속 살필 필요가 있음.' : ''}`));
     const cu = customOf(p, mk); if (cu && cu.inHosp) out.push(`${p.name} 어르신 입원 중${cu.reason ? `(${cu.reason})` : ''}.`);
   });
-  return out.join(' ');
+  return [...new Set(out)].join(' ');   // 같은 날 두 번 저장해도 같은 문장은 한 번만
 }
+const townsText = sites => TOWNS.filter(t => sites.some(x => x.town === t)).map(t => `${t} ${sites.filter(x => x.town === t).length}곳`).join(' · ');
 const diaryKey = (date, site) => `${date}|${site.town}|${site.senior}`;
 const diaryText = (date, site) => diaryEdits[diaryKey(date, site)] ?? diaryAuto(site, date);
 const diaryBad = site => site.rows.some(r => logPts(r.l) > 0 || r.l.attitude === '불량');
@@ -2229,7 +2230,7 @@ function diaryDate(){ const el = document.getElementById('dy-date'); if (el && !
 function renderDiary(){
   const box = document.getElementById('dy-list'); if (!box) return;
   const date = diaryDate(), sites = diarySites(date), nb = sites.filter(diaryBad).length;
-  box.innerHTML = sites.length ? `<div class="muted" style="font-size:.88rem;">${md(date)}(${WEEK[dObj(date).getDay()]}) 점검한 경로당 <b>${sites.length}곳</b>${nb ? ` · <span style="color:var(--danger)">미흡 ${nb}곳</span>` : ''}</div>` +
+  box.innerHTML = sites.length ? `<div class="muted" style="font-size:.88rem;">${md(date)}(${WEEK[dObj(date).getDay()]}) <b style="color:#1a365d;">${esc(townsText(sites))}</b> 점검${nb ? ` · <span style="color:var(--danger)">미흡 ${nb}곳</span>` : ''}</div>` +
     sites.map((x, i) => `<div class="dy-site ${diaryBad(x) ? 'bad' : ''}"><b>${i + 1}. ${esc(x.town)} ${esc(x.senior)}</b> <span class="muted" style="font-size:.85rem;">${new Set(x.rows.map(r => r.p.id)).size}명 · ${diaryBad(x) ? '<b style="color:var(--danger)">미흡</b>' : '양호'}</span>
       ${diaryEdits[diaryKey(date, x)] != null ? ` <button type="button" class="small secondary" data-reset="${i}" style="width:auto;margin:0;padding:2px 8px;">자동 글로 되돌리기</button>` : ''}
       <textarea data-i="${i}">${esc(diaryText(date, x))}</textarea></div>`).join('')
@@ -2256,7 +2257,7 @@ function exportDiary(){
   const date = diaryDate(), rows = diaryRows(date);
   if (!rows.length) return notify(`${md(date)}에는 점검한 경로당이 없어요.`);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, diarySheet(`${date.slice(0,4)}년 ${Number(date.slice(5,7))}월 ${dd(date)} 현장 점검 활동일지 (작성: ${meName()})`, rows), '활동일지');
+  XLSX.utils.book_append_sheet(wb, diarySheet(`${date.slice(0,4)}년 ${Number(date.slice(5,7))}월 ${dd(date)} 현장 점검 활동일지 - ${[...new Set(rows.map(r => r['읍면']))].join('·')} (작성: ${meName()})`, rows), '활동일지');
   XLSX.writeFile(wb, `활동일지_${date}.xlsx`);
   logEvent('활동일지 내려받기', null, `${date} 경로당 ${rows.length}곳`, date);
 }
@@ -2278,7 +2279,7 @@ function goMe(){ const b = document.getElementById('me-box'); b.open = true; fil
 async function shareDiary(){
   const date = diaryDate(), rows = diaryRows(date);
   if (!rows.length) return notify(`${md(date)}에는 점검한 경로당이 없어요.`);
-  const title = `${Number(date.slice(5,7))}/${Number(date.slice(8,10))}(${WEEK[dObj(date).getDay()]}) 현장 점검 활동일지`;
+  const title = `${Number(date.slice(5,7))}/${Number(date.slice(8,10))}(${WEEK[dObj(date).getDay()]}) 현장 점검 활동일지 - ${[...new Set(rows.map(r => r['읍면']))].join('·')}`;
   const text = `[${title}]\n\n` + rows.map(r => `${r['번호']}. ${r['읍면']} ${r['경로당']} (${r['점검 인원']}명, ${r['결과']})\n${r['활동 내용']}`).join('\n\n') + `\n\n- 작성: ${meName()}`;
   const tel = String(me.phone || '').replace(/[^0-9]/g, '');
   const back = document.createElement('div'); back.className = 'dlg-back';
