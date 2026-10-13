@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="현장점검">
 <title>현장점검</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';document.head.appendChild(s);"></script>
 <style>
   :root { --primary:#2b6cb0; --danger:#e53e3e; --warning:#dd6b20; --success:#38a169; --gray:#718096; --bg:#f7fafc; }
   * { box-sizing:border-box; }
@@ -193,6 +193,10 @@
   .cond-grid button .x { position:absolute; right:3px; top:50%; transform:translateY(-50%); width:22px; height:22px; line-height:22px; border-radius:50%; background:#e2e8f0; color:#4a5568; font-size:.75rem; font-weight:bold; }
   .cond-grid button.on .x { background:#fed7d7; color:#c53030; }
   .cond-grid button.on { background:#fff5f5; color:#c53030; border:2px solid #fc8181; font-weight:bold; }
+  .stat-box { background:#f7fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; margin-top:12px; }
+  .st-tbl { width:100%; border-collapse:collapse; font-size:.85rem; margin-bottom:10px; }
+  .st-tbl th, .st-tbl td { border:1px solid #e2e8f0; padding:4px 3px; text-align:center; }
+  .st-tbl th { background:#edf2f7; }
   .cus-box { background:#fffaf0; border:1px solid #fbd38d; border-radius:10px; padding:8px 10px; margin-bottom:10px; }
   .legend { display:flex; flex-wrap:wrap; gap:10px; font-size:.78rem; color:#4a5568; margin-bottom:4px; }
   .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-1px; margin-right:3px; }
@@ -304,13 +308,18 @@
         <div class="close-sum" id="close-sum"></div>
         <p class="muted" style="margin-top:0;" id="export-desc"></p>
         <button class="full" onclick="exportExcel()">엑셀 파일로 내려받기</button>
+        <div class="stat-box">
+          <div style="font-weight:bold;margin-bottom:6px;">📊 기간 통계 <span class="muted" style="font-weight:normal;font-size:.85rem;">(예: 1월~12월, 1월~5월)</span></div>
+          <div style="display:flex;gap:6px;align-items:center;"><select id="st-from" style="margin:0;"></select><span>~</span><select id="st-to" style="margin:0;"></select></div>
+          <div class="grid-2" style="margin-top:8px;"><button class="secondary" onclick="showStats()">화면으로 보기</button><button onclick="exportStats()">통계 엑셀</button></div>
+        </div>
         <button class="danger small full" id="btn-reset" onclick="resetMonth()" style="margin-top:14px;"></button>
       </div>
     </details>
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-25</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-26</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2000,6 +2009,7 @@ async function linkDone(id){
   const p = participants.find(x => x.id === id); if (!p || !p.linking) return;
   if (!await ask(`${p.name} 어르신 전산 연계가 끝났나요?\n목록에서 빠지고, 명단에는 그대로 남아요.`)) return;
   logEvent('연계 완료', p, `${p.linking.since}부터 연계 → 끝남`);
+  if (p.start && !(p.startDay && p.startDay > today())) p.startDay = today();   // 연계 끝난 날부터 근무
   delete p.linking; saveData(false); renderList();
 }
 function renderList(){
@@ -2019,7 +2029,7 @@ function renderList(){
     document.getElementById('close-sum').innerHTML =
       `<button onclick="showClose('leave')"><b style="color:var(--danger)">${pen?'-'+pen:0}점</b>이탈 감점 ›</button><button onclick="showClose('vest')"><b style="color:var(--warning)">${vest}회</b>조끼 미착용 ›</button><button onclick="showClose('badge')"><b style="color:var(--warning)">${badge}회</b>명찰 미착용 ›</button>`; }
   document.getElementById('export-desc').innerHTML = (all ? (showOthers ? '<b>전체 읍·면</b> 명단을' : `<b>내 담당(${myTowns.join('·')})</b> 명단을`) : `<b>${esc(town)}</b> 명단을`) +
-    ` <b>${curMonth}월</b> 점검 내용을 내려받습니다.<br>엑셀 파일 안에 <b>마감 요약</b>(활동일·출장, 이탈·조끼·명찰 횟수), <b>참여자 현황</b>(어르신별 활동 날짜), <b>${curMonth}월 점검 기록</b>, <b>근무일 변경</b>, <b>보충 근무·입원</b>, <b>특이사항</b>, <b>${exYear()}년 참여 제외</b>, <b>변경 이력</b>(그달 바뀐 내용 전부)이 들어 있습니다.`;
+    ` <b>${curMonth}월</b> 점검 내용을 내려받습니다.<br>엑셀 파일 안에 <b>마감 요약</b>(활동일·출장, 이탈·조끼·명찰 횟수), <b>참여자 현황</b>(어르신별 활동 날짜 · <span style="background:#FFC7CE">감점</span> <span style="background:#FFEB9C">근무일 적음</span> <span style="background:#E2EFDA">경고</span> 색 표시), <b>신규 인원</b>, <b>${curMonth}월 점검 기록</b>, <b>근무일 변경</b>, <b>보충 근무·입원</b>, <b>특이사항</b>, <b>${exYear()}년 참여 제외</b>, <b>변경 이력</b>(그달 바뀐 내용 전부)이 들어 있습니다.`;
 
   // 읍·면 선택칸 (인원 표시)
   const tSel = document.getElementById('filter-town');
@@ -2197,7 +2207,7 @@ async function addParticipant(){
   const ag = parseAge(v('n-age'));
   participants.push({ id: Date.now(), town:v('n-town'), senior:normSenior(v('n-town'), v('n-senior')), name:v('n-name'), age:ag.age, ...(ag.birth ? { birth: ag.birth } : {}),
     phone:fmtPhone(v('n-phone')), address:v('n-address'), ...(startVal('n-start') ? { start: startVal('n-start') } : {}),
-    ...(document.getElementById('n-link').checked ? { linking: { since: today() } } : {}), quit:false, logs:[] });
+    ...(document.getElementById('n-link').checked ? { linking: { since: today() } } : {}), ...(startVal('n-start') ? { startDay: today() } : {}), quit:false, logs:[] });
   logEvent('신규 등록', participants[participants.length-1], '한 명씩 등록' + (startVal('n-start') ? ` · ${Number(startVal('n-start').slice(5))}월부터 근무` : '') + (document.getElementById('n-link').checked ? ' · 연계 중' : ''));
   saveData();
   ['n-senior','n-name','n-age','n-phone','n-address'].forEach(id => document.getElementById(id).value='');
@@ -2795,6 +2805,112 @@ function cuText(p, mk){
   const off = reg.filter(d => !days.includes(d) && !(cu.hosp||[]).includes(d)), add = days.filter(d => !reg.includes(d));
   return [cu.reason, cu.memo, cu.hosp?.length ? `입원 ${rangeText(cu.hosp)}` : '', cu.inHosp ? '입원 중(복귀일 모름)' : '', cu.back ? `${dd(cu.back)} 복귀` : '', off.length ? `쉰 날 ${off.map(n2).join(', ')}일` : '', add.length ? `보충 ${add.map(n2).join(', ')}일` : ''].filter(Boolean).join(' · ');
 }
+// ---------- 📊 기간 통계 (예: 1월~12월) ----------
+document.querySelectorAll('#st-from, #st-to').forEach(sel => sel.innerHTML = [1,2,3,4,5,6,7,8,9,10,11,12].map(m => `<option value="${m}">${m}월</option>`).join(''));
+const stRange = () => { let a = Number(document.getElementById('st-from').value), b = Number(document.getElementById('st-to').value); if (a > b) [a, b] = [b, a]; return [a, b]; };
+function statsData(){
+  const [a, b] = stRange(), y = YEAR;
+  const list = participants.filter(p => visibleTowns().includes(p.town))
+    .sort((x,z) => x.town.localeCompare(z.town) || seniorRank(seniorOf(x))-seniorRank(seniorOf(z)) || seniorOf(x).localeCompare(seniorOf(z)) || x.name.localeCompare(z.name));
+  const mks = []; for (let m = a; m <= b; m++) mks.push(`${y}-${String(m).padStart(2,'0')}`);
+  const active = (p, mk) => !(p.start && p.start > mk);
+  const months = mks.map(mk => {
+    const ps = list.filter(p => active(p, mk)); let leave=0, vest=0, badge=0, checks=0, days=0, chg=0;
+    ps.forEach(p => { const ls = p.logs.filter(l => l.date.startsWith(mk)); checks += ls.length; leave += ls.filter(l => l.leave==='이탈').length;
+      vest += ls.filter(l => l.vest==='미착용').length; badge += ls.filter(l => l.badge==='미착용').length; days += workDays(p, mk).length; chg += changesIn(p, mk).length; });
+    return { mk, m: Number(mk.slice(5)), n: ps.length, newc: newcomers(list, mk).length, days, leave, vest, badge, checks, chg, set: !!workdays[mk] };
+  });
+  const people = list.map(p => {
+    const r = { p, days:0, leave:0, vest:0, badge:0, checks:0, chg:0, months:0 };
+    mks.forEach(mk => { if (!active(p, mk)) return; r.months++; const ls = p.logs.filter(l => l.date.startsWith(mk));
+      r.days += workDays(p, mk).length; r.checks += ls.length; r.leave += ls.filter(l => l.leave==='이탈').length;
+      r.vest += ls.filter(l => l.vest==='미착용').length; r.badge += ls.filter(l => l.badge==='미착용').length; r.chg += changesIn(p, mk).length; });
+    r.paid = r.days - r.leave;
+    r.kind = r.leave ? 'pen' : (r.months && r.paid < r.months * WORK_TARGET) ? 'few' : (r.vest || r.badge) ? 'warn' : '';
+    return r;
+  });
+  return { a, b, y, mks, months, people, list };
+}
+function showStats(){
+  const d = statsData(), T = k => d.months.reduce((n, x) => n + x[k], 0);
+  const bad = d.people.filter(r => r.kind);
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg" style="max-width:560px;">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📊 ${d.y}년 ${d.a}월~${d.b}월 통계</div>
+    <table class="st-tbl"><tr><th>달</th><th>인원</th><th>신규</th><th>이탈</th><th>조끼</th><th>명찰</th><th>점검</th></tr>
+      ${d.months.map(x => `<tr><td>${x.m}월</td><td>${x.n}</td><td>${x.newc}</td><td style="color:${x.leave?'var(--danger)':'inherit'}">${x.leave}</td><td>${x.vest}</td><td>${x.badge}</td><td>${x.checks}</td></tr>`).join('')}
+      <tr style="font-weight:bold;background:#f7fafc;"><td>합계</td><td>-</td><td>${T('newc')}</td><td style="color:var(--danger)">${T('leave')}</td><td>${T('vest')}</td><td>${T('badge')}</td><td>${T('checks')}</td></tr></table>
+    <div style="font-weight:bold;margin-bottom:4px;">확인할 어르신 ${bad.length}명 <span class="muted" style="font-weight:normal;font-size:.82rem;">(빨강 감점 · 노랑 근무일 적음 · 연두 경고)</span></div>
+    ${bad.map(r => `<div class="log" style="background:#${FILL[r.kind]};border-left-color:#a0aec0;"><b>${esc(r.p.name)}</b> <span class="muted">${esc(r.p.town)} · ${esc(seniorOf(r.p))}</span><br>
+      활동일 ${r.days}일 · 인정 ${r.paid}일${r.leave?` · <b style="color:var(--danger)">이탈 ${r.leave}회(-${r.leave}점)</b>`:''}${r.vest?` · 조끼 ${r.vest}`:''}${r.badge?` · 명찰 ${r.badge}`:''}</div>`).join('') || '<p class="muted">없습니다.</p>'}
+    <div class="grid-2" style="margin-top:8px;"><button class="secondary" id="ss-close">닫기</button><button id="ss-xlsx">통계 엑셀</button></div></div>`;
+  document.body.appendChild(back);
+  back.querySelector('#ss-close').onclick = () => back.remove();
+  back.querySelector('#ss-xlsx').onclick = () => exportStats();
+}
+function exportStats(){
+  if (typeof XLSX === 'undefined') return notify('인터넷이 연결될 때 다시 눌러 주세요.');
+  const d = statsData(), T = k => d.months.reduce((n, x) => n + x[k], 0);
+  const wb = XLSX.utils.book_new();
+  const head = ['달','인원','신규','활동일 합계','이탈(감점)','조끼 미착용','명찰 미착용','점검 횟수','근무일 변경','활동일 확정'];
+  const aoa = [[`${d.y}년 ${d.a}월~${d.b}월 통계 (${myTowns.join('·')})`], ['색 구분 (어르신별)', LEGEND], [], head,
+    ...d.months.map(x => [`${x.m}월`, x.n, x.newc, x.days, x.leave, x.vest, x.badge, x.checks, x.chg, x.set ? '확정' : '추천 날짜']),
+    ['합계', '', T('newc'), T('days'), T('leave'), T('vest'), T('badge'), T('checks'), T('chg'), '']];
+  const ws0 = XLSX.utils.aoa_to_sheet(aoa); ws0['!cols'] = [18,8,8,11,11,11,11,10,11,11].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws0, '기간 요약');
+  const rows = d.people.map(r => ({ '표시':KIND_TXT[r.kind] || '', '읍면':r.p.town, '경로당':seniorOf(r.p), '성명':r.p.name, '나이':r.p.age,
+    '근무 달 수':r.months, '활동일 합계':r.days, '근무 인정일':r.paid, '이탈 횟수':r.leave, '감점':-r.leave, '조끼 미착용':r.vest, '명찰 미착용':r.badge,
+    '점검 횟수':r.checks, '근무일 변경':r.chg, '상태':stats(r.p).status }));
+  const ws1 = XLSX.utils.json_to_sheet(rows); paintSheet(ws1, d.people.map(r => r.kind));
+  ws1['!cols'] = [12,8,14,10,6,9,10,10,9,6,10,10,9,10,14].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws1, '어르신별 통계');
+  const lv = [];
+  d.list.forEach(p => p.logs.filter(l => d.mks.includes(l.date.slice(0,7)) && l.leave==='이탈').forEach(l => lv.push({ '날짜':l.date, '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '감점':-1, '메모(이유)':l.memo || '' })));
+  lv.sort((x,z) => x['날짜'].localeCompare(z['날짜']));
+  const ws2 = lv.length ? XLSX.utils.json_to_sheet(lv) : XLSX.utils.aoa_to_sheet([['감점 기록이 없습니다.']]);
+  ws2['!cols'] = [12,8,14,10,6,40].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws2, '감점 내역');
+  const nc = [];
+  d.mks.forEach(mk => newcomers(d.list, mk).forEach(p => nc.push({ '달':`${Number(mk.slice(5))}월`, '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '연락처':p.phone })));
+  const ws3 = nc.length ? XLSX.utils.json_to_sheet(nc) : XLSX.utils.aoa_to_sheet([['신규 인원이 없습니다.']]);
+  XLSX.utils.book_append_sheet(wb, ws3, '신규 인원');
+  logEvent('기간 통계', null, `${d.y}년 ${d.a}월~${d.b}월 통계 엑셀`);
+  XLSX.writeFile(wb, `노인일자리_통계_${d.y}년${d.a}월-${d.b}월.xlsx`);
+}
+// ---------- 엑셀 색 칠하기 (빨강=감점, 노랑=근무일 적음, 연두=조끼·명찰 경고) ----------
+const FILL = { pen:'FFC7CE', few:'FFEB9C', warn:'E2EFDA', head:'D9E1F2' };
+const KIND_TXT = { pen:'감점', few:'근무일 적음', warn:'경고(조끼·명찰)' };
+const LEGEND = '빨강 = 감점(근무지 이탈) 있음 · 노랑 = 근무 인정일 10일 미만 · 연두 = 조끼·명찰 미착용 경고';
+function paintSheet(ws, kinds){
+  if (!ws['!ref']) return;
+  const R = XLSX.utils.decode_range(ws['!ref']);
+  for (let r = R.s.r; r <= R.e.r; r++) {
+    const k = r === 0 ? 'head' : kinds[r-1]; if (!k) continue;
+    for (let c = R.s.c; c <= R.e.c; c++) {
+      const a = XLSX.utils.encode_cell({ r, c }); ws[a] ||= { t:'s', v:'' };
+      ws[a].s = { fill:{ patternType:'solid', fgColor:{ rgb: FILL[k] } }, ...(r === 0 ? { font:{ bold:true } } : {}) };
+    }
+  }
+}
+// 실제로 근무할 수 있는 날: 늦게 들어온 분은 시작한 날(연계 끝난 날)부터만 셈, 연계 중이면 아직 0일
+function workDays(p, mk){
+  let ds = personDays(p, mk);
+  if (p.linking) return ds.filter(() => false);
+  if (p.startDay && p.startDay.startsWith(mk)) ds = ds.filter(d => d >= p.startDay);
+  return ds;
+}
+// 그달 이 어르신 표시: 감점 > 근무일 적음 > 경고
+function monthKind(p, mk){
+  const ls = p.logs.filter(l => l.date.startsWith(mk)), leaves = ls.filter(l => l.leave==='이탈').length;
+  const warn = ls.some(l => l.vest==='미착용' || l.badge==='미착용');
+  const paid = workDays(p, mk).length - leaves;
+  return leaves ? 'pen' : paid < WORK_TARGET ? 'few' : warn ? 'warn' : '';
+}
+// 그달 새로 들어온 분 (늦게 시작 / 그달 등록 / 연계 중)
+function newcomers(list, mk){
+  const reg = new Set(eventLog.filter(h => h.type==='신규 등록' && h.date.startsWith(mk)).map(h => h.town+'|'+h.name));
+  return list.filter(p => (p.start === mk) || reg.has(p.town+'|'+p.name) || (p.linking && p.linking.since.startsWith(mk)));
+}
 function exportExcel(){
   const town0 = (document.getElementById('filter-town').value || '전체');
   const list = participants.filter(p => town0==='전체' ? visibleTowns().includes(p.town) : p.town===town0)
@@ -2802,12 +2918,14 @@ function exportExcel(){
   if (!list.length) return notify('내려받을 명단이 없습니다.');
   const town = (document.getElementById('filter-town').value || '전체');
 
-  const sheet1 = list.map(p => { const s = stats(p), m = mstats(p); return {
-    '읍면':p.town, '경로당':p.senior, '구역':zoneOf(p)?.name || '', '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '근무 시작':startTag(p) ? `${Number(p.start.slice(5))}월부터` : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : '', '나이':p.age, '태어난 해':p.birth || '', '연락처':p.phone, '주소':p.address,
+  const kinds1 = list.map(p => monthKind(p, monthKey()));
+  const sheet1 = list.map((p, i) => { const s = stats(p), m = mstats(p); return {
+    '표시':KIND_TXT[kinds1[i]] || '', '읍면':p.town, '경로당':p.senior, '구역':zoneOf(p)?.name || '', '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '근무 시작':startTag(p) ? `${Number(p.start.slice(5))}월부터` : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : '', '나이':p.age, '태어난 해':p.birth || '', '연락처':p.phone, '주소':p.address,
     [`${curMonth}월 점검 횟수`]:mLogs(p).length, [`${curMonth}월 감점`]:-m.leaves.length, [`${curMonth}월 일당 미지급 일수`]:m.leaves.length,
     [`${curMonth}월 조끼 미착용`]:m.vest, [`${curMonth}월 명찰 미착용`]:m.badge, '누적 이탈 횟수':s.leaves, '누적 감점':s.penalty, '상태':s.status, '마지막 점검일':s.last,
     [`${curMonth}월 활동 날짜`]: personDays(p, monthKey()).map(d => Number(d.slice(8,10))).join(', '),
     [`${curMonth}월 활동일 수`]: personDays(p, monthKey()).length,
+    [`${curMonth}월 근무 인정일 수`]: workDays(p, monthKey()).length - m.leaves.length,
     '근무일 변경': changesIn(p, monthKey()).map(c => `${dd(c.from)}→${dd(c.to)}${c.reason?` (${c.reason})`:''}`).join(' / '),
     '보충 근무·입원': cuText(p, monthKey()),
     [`${curMonth}월 특이사항`]: (p.notes||[]).filter(n => n.date.startsWith(monthKey())).sort((a,b) => a.date.localeCompare(b.date)).map(n => `${dd(n.date)}${n.cat?` [${n.cat}]`:''} ${n.text}`).join(' / '),
@@ -2831,7 +2949,11 @@ function exportExcel(){
   }
   // 마감 요약: 읍·면, 경로당별 이탈·조끼·명찰 횟수
   const mDays = monthDays(monthKey());
+  const nc = newcomers(list, monthKey());
   const sum = [[`${YEAR}년 ${curMonth}월 마감 요약 (${town})`],
+    ['색 구분 (참여자 현황)', LEGEND],
+    ['확인할 어르신', `감점 ${kinds1.filter(k => k==='pen').length}명 · 근무일 적음 ${kinds1.filter(k => k==='few').length}명 · 경고 ${kinds1.filter(k => k==='warn').length}명`],
+    [`${curMonth}월 신규 인원`, nc.length ? `${nc.length}명: ` + nc.map(p => `${p.name}(${seniorOf(p)})`).join(', ') : '없음'],
     [`${curMonth}월 활동일 (${mDays.length}일)${workdays[monthKey()]?'':' ※ 추천 날짜(확정 전)'}`, mDays.map(dd).join(', ')],
     ['근무일 변경 인원', `${list.filter(p => changesIn(p, monthKey()).length).length}명`],
     ['보충 근무 인원', `${list.filter(p => customOf(p, monthKey()) && !customOf(p, monthKey()).inHosp).length}명`],
@@ -2861,11 +2983,19 @@ function exportExcel(){
   ws0['!cols'] = [22,40,7,11,11,11].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws0, '마감 요약');
   const ws1 = XLSX.utils.json_to_sheet(sheet1);
+  paintSheet(ws1, kinds1);
   const ws2 = sheet2.length ? XLSX.utils.json_to_sheet(sheet2) : XLSX.utils.aoa_to_sheet([['점검 기록이 없습니다.']]);
-  ws1['!cols'] = [8,14,14,10,9,18,6,8,15,22,11,9,15,13,13,11,9,18,13].map(w=>({wch:w}));
+  ws1['!cols'] = [12,8,14,14,10,9,18,6,8,15,22,11,9,15,13,13,11,9,18,13].map(w=>({wch:w}));
   ws2['!cols'] = [12,8,14,10,8,8,9,10,6,7,30].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws1, '참여자 현황');
   XLSX.utils.book_append_sheet(wb, ws2, '점검 기록');
+  // 그달 신규 인원
+  const ncRows = nc.map(p => ({ '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '나이':p.age, '연락처':p.phone,
+    '근무 시작':p.start ? `${Number(p.start.slice(5))}월부터` : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : '연계 끝',
+    [`${curMonth}월 활동일 수`]: personDays(p, monthKey()).length }));
+  const wsN = ncRows.length ? XLSX.utils.json_to_sheet(ncRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 신규 인원이 없습니다.`]]);
+  wsN['!cols'] = [8,14,10,6,15,10,22,12].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, wsN, '신규 인원');
   // 근무일 변경 시트
   const chgRows = [];
   // 한 어르신이 여러 번 바꿨으면 한 줄로 묶음
@@ -2935,6 +3065,7 @@ function exportExcel(){
 eventLog.filter(h => h.type === '신규 등록' && (h.detail || '').startsWith('한 명씩 등록')).forEach(h => {
   const p = participants.find(x => x.name === h.name && x.town === h.town && !x.start); if (p) p.start = h.date.slice(0,7);
 });
+document.getElementById('st-from').value = '1'; document.getElementById('st-to').value = String(curMonth);
 // 태어난 해를 적어 둔 분은 해가 바뀌면 나이도 저절로 바뀜
 participants.forEach(p => { if (p.birth) p.age = String(thisYear() - p.birth); });
 fillTownSelects();

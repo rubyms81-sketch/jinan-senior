@@ -9,6 +9,10 @@
 - `sw.js` — 오프라인용. **배포할 때마다 `hyunjang-vN` 숫자를 1 올립니다.**
 - `manifest.webmanifest`, `icon-*.png` — 홈 화면 설치용.
 
+## 엑셀 라이브러리
+- 색 칠하기 때문에 `xlsx-js-style@1.2.0`(jsdelivr)을 쓰고, 못 불러오면 cdnjs `xlsx 0.18.5`로 대신합니다(색만 빠짐).
+- 마감 엑셀 색: 빨강=감점, 노랑=근무 인정일 10일 미만, 연두=조끼·명찰 경고 (`paintSheet`, `monthKind`).
+
 ## 꼭 지킬 것
 1. **개인정보를 저장소에 넣지 않습니다.** 어르신 이름·연락처·주소·주민번호는 `index.html`에 넣지 말고,
    `const DEFAULT_PARTICIPANTS = []` 를 유지합니다. 명단은 휴대폰에서 "엑셀로 한번에 등록"으로 넣습니다.
