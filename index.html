@@ -321,7 +321,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-32</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-33</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1060,7 +1060,8 @@ function openZone(id){
     <label>팀장 연락처 <span class="muted" style="font-weight:normal;">(문자 보낼 때 팀장도 같이)</span></label>
     <input type="tel" id="zn-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off" style="margin-bottom:12px;">
     <div id="zn-main">
-      <details id="zn-sites-box" class="chg-box" open style="margin-top:0;border-top:none;padding-top:0;">
+      <button type="button" class="full" id="zn-sms" style="margin-bottom:10px;">📩 이 구역 단체 문자 (내용 직접 쓰기)</button>
+      <details id="zn-sites-box" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
         <summary><span id="zn-sites-title" style="font-weight:bold;">담당 경로당</span><span class="chg-arrow"></span></summary>
         <div id="zn-sites"></div>
       </details>
@@ -1098,6 +1099,7 @@ function openZone(id){
     }).join('') : '';
     bg.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { bg.remove(); openModal(Number(b.dataset.open)); });
     $('#zn-sites-title').textContent = `담당 경로당 (${z.sites.length}곳)`;
+    $('#zn-sms').disabled = !z.sites.length;
     // 이 경로당에 어르신 넣기: 이름으로 찾아서 누르면 이 경로당으로 옮김
     bg.querySelectorAll('.zs-q').forEach(inp => inp.oninput = () => {
       const [town, senior] = inp.dataset.site.split('|'), box = inp.nextElementSibling, t = inp.value.replace(/\s+/g,'');
@@ -1198,6 +1200,13 @@ function openZone(id){
   $('#zn-phone').addEventListener('change', saveZoneInfo);
   $('#zn-name').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); $('#zn-rename').click(); } });
   $('#zn-close').onclick = () => bg.remove();
+  // 이 구역 어르신 모두에게 단체 문자 (내용은 직접 씀)
+  $('#zn-sms').onclick = () => {
+    const ps = participants.filter(p => z.sites.some(x => x.town===p.town && x.senior===seniorOf(p)) && !stats(p).dropped && seniorOf(p) !== '개별관리')
+      .sort((a,b) => seniorRank(seniorOf(a))-seniorRank(seniorOf(b)) || seniorOf(a).localeCompare(seniorOf(b)) || a.name.localeCompare(b.name));
+    if (!ps.length) return notify('이 구역에 문자 보낼 어르신이 없어요.');
+    smsBox({ title: `${z.name} 단체 문자 (${ps.length}명)`, people: ps, text: '[진안군노인회]\n\n\n\n※ 단체 문자라 답장은 받지 않습니다.', logType: '구역 단체 문자', logDetail: z.name, free: true });
+  };
   drawMain();
 }
 // ---------- 🩺 어르신 기본 정보·건강 정보 (이름을 누르면) ----------
@@ -2592,7 +2601,7 @@ const leaderOf = p => {
   const num = String((L && L.phone) || z.phone || '').replace(/[^0-9]/g,'');
   return num ? { name: L ? L.name : z.name, num } : null;
 };
-function smsBox({ title, people, text, logType, logDetail }){
+function smsBox({ title, people, text, logType, logDetail, free }){
   return new Promise(resolve => {
     const recips = people.filter(p => telOf(p)).map(p => ({ key: 'p'+p.id, label: `${p.name} 어르신`, num: telOf(p), p }));
     const noTel = people.filter(p => !telOf(p));
@@ -2602,15 +2611,18 @@ function smsBox({ title, people, text, logType, logDetail }){
     const back = document.createElement('div'); back.className = 'dlg-back';
     back.innerHTML = `<div class="dlg">
       <div style="font-weight:bold;margin-bottom:6px;">📩 ${esc(title)}</div>
+      ${recips.length > 5 ? `<details style="margin-bottom:6px;"><summary style="cursor:pointer;font-weight:bold;">받는 분 ${recips.length}명 <span class="muted" style="font-weight:normal;font-size:.85rem;">(누르면 보기·빼기)</span></summary>` : ''}
       <div style="margin-bottom:6px;">${recips.map(r => `<label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin:4px 0;"><input type="checkbox" data-k="${r.key}" checked style="width:22px;height:22px;margin:0;"> <span>${r.leader ? `<b style="color:#276749">${esc(r.label)}</b>` : `<b>${esc(r.label)}</b>`} <span class="muted">${esc(fmtPhone(r.num))}</span></span></label>`).join('')}
         ${noTel.length ? `<div class="muted" style="font-size:.85rem;">연락처 없음: ${noTel.map(p => esc(p.name)).join(', ')}</div>` : ''}
         ${recips.some(r => r.leader) ? '' : '<div class="muted" style="font-size:.82rem;">팀장 연락처는 🗺 구역 창에서 넣으면 여기에 같이 나와요.</div>'}</div>
+      ${recips.length > 5 ? '</details>' : ''}
       <textarea id="sb-text" rows="10" style="font-size:.95rem;"></textarea>
       <div class="grid-2"><button id="sb-copy" class="warning">📋 문구 복사</button><button id="sb-open">💬 문자 앱 열기</button></div>
       <div class="muted" id="sb-help" style="margin:4px 0 8px;">문자 앱이 안 열리면 "문구 복사"를 누른 뒤, 문자 창에 붙여넣기 하세요.</div>
       <button class="secondary full" id="sb-close">닫기</button></div>`;
     document.body.appendChild(back);
     const ta = back.querySelector('#sb-text'); ta.value = text;
+    if (free) { ta.rows = 8; ta.placeholder = '보낼 내용을 적으세요'; setTimeout(() => { const at = ta.value.indexOf('\n\n') + 2; ta.focus(); ta.setSelectionRange(at, at); }, 80); }
     const picked = () => recips.filter(r => back.querySelector(`input[data-k="${r.key}"]`).checked);
     back.querySelector('#sb-copy').onclick = async () => {
       const ok = await copyText(ta.value);
