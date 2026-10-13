@@ -354,7 +354,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-45</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-46</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -3070,6 +3070,22 @@ function cancelEdit(){
   showEditBar(); renderModal();
 }
 
+// 🔔 점검 저장 소리 "띵동" (휴대폰 미디어 소리 크기를 따라감)
+let _ac = null;
+function playDingDong(sad){
+  try {
+    _ac = _ac || new (window.AudioContext || window.webkitAudioContext)();
+    if (_ac.state === 'suspended') _ac.resume();
+    const notes = sad ? [[440, 0], [349, 0.28]] : [[1319, 0], [1047, 0.32]];   // 이탈은 낮은 소리, 보통은 띵동
+    notes.forEach(([f, at]) => {
+      const t = _ac.currentTime + at, o = _ac.createOscillator(), g = _ac.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+      o.connect(g); g.connect(_ac.destination); o.start(t); o.stop(t + 0.95);
+    });
+    if (navigator.vibrate) navigator.vibrate(sad ? [200, 100, 200] : 80);
+  } catch(e) {}
+}
 async function saveCheck(){
   const p = current(); if(!p) return;
   const g = id => document.getElementById(id).value;
@@ -3081,7 +3097,7 @@ async function saveCheck(){
     const before = `${l.date} 명찰 ${l.badge}·조끼 ${l.vest}·태도 ${l.attitude}·${l.leave}`;
     logEvent('점검 기록 수정', p, `${before} → ${date} 명찰 ${g('c-badge')}·조끼 ${g('c-vest')}·태도 ${g('c-attitude')}·${g('c-leave')}`, date);
     Object.assign(l, { date, badge:g('c-badge'), vest:g('c-vest'), attitude:g('c-attitude'), leave:g('c-leave'), memo:g('c-memo').trim() });
-    saveData(false);
+    saveData(false); playDingDong(l.leave==='이탈');
     const s = stats(p);
     editingLogId = null;
     if (!wasLeave && l.leave==='이탈') {
@@ -3101,7 +3117,7 @@ async function saveCheck(){
 
   p.logs.push(log);
   p.phone = g('m-phone').trim();
-  saveData(false);
+  saveData(false); playDingDong(log.leave==='이탈');
   const s = stats(p);
   if (log.leave==='이탈') logEvent('근무지 이탈', p, `감점 -1점 (${viewYear()}년 누적 ${s.penalty}점)` + (s.leaves >= MAX_LEAVE ? ' → 감점 누적 중도포기' : ''), date);
 
