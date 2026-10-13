@@ -209,6 +209,8 @@
   .nv-chip { display:inline-flex; flex-direction:column; align-items:center; line-height:1.25; background:#fffaf0; color:#7b341e; border:1px solid #fbd38d; cursor:pointer; margin:0; }
   .nv-chip small { font-size:.72rem; color:#a0aec0; font-weight:normal; }
   .nv-chip.ok { background:#f0fff4; color:#22543d; border-color:#9ae6b4; }
+  .nv-chip { position:relative; }
+  .nv-no { position:absolute; top:-7px; left:-5px; min-width:20px; height:20px; padding:0 4px; border-radius:10px; background:#2b6cb0; color:#fff; font-size:.72rem; font-weight:bold; line-height:20px; text-align:center; }
   .nv-chip.ok small { color:#38a169; }
   .cus-box { background:#fffaf0; border:1px solid #fbd38d; border-radius:10px; padding:8px 10px; margin-bottom:10px; }
   .legend { display:flex; flex-wrap:wrap; gap:10px; font-size:.78rem; color:#4a5568; margin-bottom:4px; }
@@ -286,6 +288,7 @@
       <summary><h3 id="nv-title"></h3><span class="chg-arrow"></span></summary>
       <div class="muted" style="font-size:.85rem;margin:6px 0;">점검 기록이 하나도 없는 경로당이에요. 누르면 그 경로당으로 가요.
         <span style="white-space:nowrap;">기준: <select id="nv-range" onchange="renderNotVisited()" style="width:auto;display:inline-block;margin:0;padding:4px 6px;font-size:.85rem;"><option value="month">이번 달</option><option value="14">최근 2주</option><option value="7">최근 1주</option></select></span></div>
+      <button type="button" class="small secondary full" id="nv-geo" onclick="calcDistances()" style="margin:0 0 6px;"></button>
       <div id="nv-list"></div>
     </details>
   </div>
@@ -354,7 +357,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-48</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-49</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2114,6 +2117,66 @@ async function linkDone(id){
   if (p.start && !(p.startDay && p.startDay > today())) p.startDay = today();   // 연계 끝난 날부터 근무
   delete p.linking; saveData(false); renderList();
 }
+// ---------- 📏 노인회에서 가까운 순 번호 ----------
+// 경로당 주소(○○리)가 있으면 그 마을, 없으면 그 경로당 어르신들 집 주소(○○길·○○로)로 위치를 찾아 노인회와의 직선거리를 잼.
+// 위치 찾기는 휴대폰에서 OpenStreetMap(무료)으로. 찾은 위치는 휴대폰에 저장해서 다음부터는 바로 씀. (번지·이름은 보내지 않음)
+const OFFICE_Q = '관산2길, 진안읍, 진안군', OFFICE_FALLBACK = [35.7917, 127.4250];   // 대한노인회 진안군지회 (관산2길 19-4) 근처
+let geo = (() => { try { return JSON.parse(load('jinan_geo')) || {}; } catch(e) { return {}; } })();
+const saveGeo = () => store('jinan_geo', JSON.stringify(geo));
+function geoQueries(town, senior){
+  const qs = [], m = mapOf(town, senior);
+  const ri = a => { const x = String(a||'').match(/([가-힣]+[읍면])\s+([가-힣0-9]+리)(?:\s|$)/); return x ? `${x[2]}, ${x[1]}, 진안군` : null; };
+  if (m && m.addr && ri(m.addr)) return { site: [ri(m.addr)], people: [] };
+  const roads = [...new Set(participants.filter(p => p.town===town && seniorOf(p)===senior).map(p => {
+    const a = String(p.address || ''), r = a.match(/([가-힣]+[읍면])\s+([가-힣0-9]+(?:로|길))\s*\d/);
+    return r ? `${r[2]}, ${r[1]}, 진안군` : ri(a); }).filter(Boolean))].slice(0, 4);
+  return { site: [], people: roads };
+}
+const hav = (a, b) => { const R = 6371, r = x => x * Math.PI / 180, dl = r(b[0]-a[0]), dn = r(b[1]-a[1]);
+  const h = Math.sin(dl/2)**2 + Math.cos(r(a[0])) * Math.cos(r(b[0])) * Math.sin(dn/2)**2; return 2 * R * Math.asin(Math.sqrt(h)); };
+function siteCoord(town, senior){
+  const q = geoQueries(town, senior), hits = [...q.site, ...q.people].map(k => geo[k]).filter(Array.isArray);
+  if (!hits.length) return null;
+  const src = q.site.length && Array.isArray(geo[q.site[0]]) ? [geo[q.site[0]]] : hits;
+  return [src.reduce((k, x) => k + x[0], 0) / src.length, src.reduce((k, x) => k + x[1], 0) / src.length];
+}
+const officeCoord = () => Array.isArray(geo[OFFICE_Q]) ? geo[OFFICE_Q] : OFFICE_FALLBACK;
+const rankSites = () => visibleTowns().flatMap(tw => sitesOf(tw).filter(k => k !== '개별관리' && k !== NO_SENIOR).map(k => ({ tw, k })));
+function distRanks(){
+  const o = officeCoord(), out = {};
+  rankSites().map(x => { const c = siteCoord(x.tw, x.k); return c ? { ...x, km: hav(o, c) } : null; }).filter(Boolean)
+    .sort((a,b) => a.km - b.km).forEach((x, i) => { out[x.tw + '|' + x.k] = { no: i + 1, km: x.km }; });
+  return out;
+}
+const kmTxt = km => km < 10 ? km.toFixed(1) : Math.round(km);
+async function geocode(q){
+  const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=kr&accept-language=ko&q=${encodeURIComponent(q)}`);
+  if (!r.ok) throw new Error('http ' + r.status);
+  const j = await r.json();
+  return j && j[0] ? [Number(j[0].lat), Number(j[0].lon)] : 0;
+}
+async function calcDistances(){
+  const todo = [OFFICE_Q, ...new Set(rankSites().flatMap(x => { const q = geoQueries(x.tw, x.k); return [...q.site, ...q.people]; }))].filter(q => !(q in geo));
+  if (!todo.length) { renderNotVisited(); renderList(); return notify('이미 모든 경로당 거리를 계산해 두었어요.\n(경로당 주소를 새로 넣으면 그곳만 다시 계산해요)'); }
+  if (!await ask(`노인회에서 가까운 순으로 번호를 매길게요.\n\n경로당 주소(없으면 어르신 집 주소)로 위치를 찾아요. 인터넷이 필요하고, 약 ${Math.ceil(todo.length * 1.2 / 60) || 1}분 걸려요.\n(번지·이름은 보내지 않아요)`)) return;
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg"><div style="font-weight:bold;margin-bottom:6px;">📏 위치 찾는 중…</div><div id="geo-prog" class="muted">0 / ${todo.length}</div><button type="button" class="secondary full" id="geo-stop" style="margin-top:10px;">그만하기</button></div>`;
+  document.body.appendChild(back);
+  let stop = false, done = 0, fail = 0; back.querySelector('#geo-stop').onclick = () => { stop = true; };
+  for (const q of todo) {
+    if (stop) break;
+    try { geo[q] = await geocode(q); if (!geo[q]) fail++; }
+    catch(e) { back.remove(); saveGeo(); renderList(); return notify('인터넷 연결이 안 돼서 멈췄어요. 와이파이나 데이터를 켜고 다시 눌러 주세요.\n(찾은 곳까지는 저장했어요)'); }
+    done++; back.querySelector('#geo-prog').textContent = `${done} / ${todo.length}${fail ? ` (못 찾음 ${fail})` : ''}`;
+    saveGeo(); await new Promise(r => setTimeout(r, 1100));   // 무료 지도 규칙: 1초에 한 번
+  }
+  back.remove();
+  const rk = distRanks(), n = Object.keys(rk).length, all = rankSites().length;
+  logEvent('경로당 거리 계산', null, `노인회 기준 가까운 순 번호 ${n}곳${all - n ? ` (위치 모름 ${all - n}곳)` : ''}`, today());
+  renderList();
+  notify(`📏 ${n}곳에 노인회에서 가까운 순 번호를 매겼어요.${all - n ? `\n위치를 못 찾은 ${all - n}곳은 번호 없이 맨 뒤에 나와요. (경로당 주소를 넣으면 다시 계산돼요)` : ''}`);
+}
+
 // ---------- 🚶 안 간 경로당 (점검 기록이 없는 곳) ----------
 const visitFrom = () => { const v = document.getElementById('nv-range')?.value || 'month'; return v === 'month' ? monthKey() + '-01' : addDays(today(), -Number(v) + 1); };
 function siteVisits(town, senior){
@@ -2122,10 +2185,13 @@ function siteVisits(town, senior){
 function renderNotVisited(){
   const box = document.getElementById('nv-list'); if (!box) return;
   const from = visitFrom(), to = monthKey() === today().slice(0,7) ? today() : monthKey() + '-31';
-  const out = [];
+  const out = [], rk = distRanks(), hasRk = Object.keys(rk).length;
+  const gb = document.getElementById('nv-geo');
+  if (gb) gb.innerHTML = hasRk ? `📏 번호 = 노인회에서 가까운 순 (직선거리) · <u>다시 계산</u>` : '📏 노인회에서 가까운 순으로 번호 매기기';
   visibleTowns().forEach(tw => {
     const sites = [...new Set(participants.filter(p => p.town===tw && !stats(p).dropped).map(seniorOf))];
-    const ord = (a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b);
+    const R = k => (rk[tw + '|' + k] || {}).no || 9999;
+    const ord = (a,b) => R(a) - R(b) || seniorRank(a)-seniorRank(b) || a.localeCompare(b);
     const inRange = k => siteVisits(tw, k).filter(d => d >= from && d <= to);
     const miss = sites.filter(k => !inRange(k).length).sort(ord), done = sites.filter(k => inRange(k).length).sort(ord);
     if (sites.length) out.push({ tw, miss, done, inRange });
@@ -2133,7 +2199,8 @@ function renderNotVisited(){
   const n = out.reduce((k, x) => k + x.miss.length, 0), dn = out.reduce((k, x) => k + x.done.length, 0);
   document.getElementById('nv-title').innerHTML = `🚶 아직 안 간 경로당 <span style="color:${n?'var(--warning)':'var(--success)'}">${n}곳</span>${dn ? ` <span style="color:var(--success);font-size:.85rem;">· ✔ 다녀옴 ${dn}곳</span>` : ''}`;
   const chip = (x, k, ok) => { const v = siteVisits(x.tw, k), last = ok ? x.inRange(k).pop() : v[v.length-1];
-    return `<button type="button" class="chip nv-chip${ok ? ' ok' : ''}" data-t="${esc(x.tw)}" data-k="${esc(k)}">${ok ? '✔ ' : ''}${crown(x.tw, k)}${esc(k)}<small>${ok ? `${md(last)} 다녀옴` : last ? `마지막 ${md(last)}` : '점검 기록 없음'}</small></button>`; };
+    const r = rk[x.tw + '|' + k];
+    return `<button type="button" class="chip nv-chip${ok ? ' ok' : ''}" data-t="${esc(x.tw)}" data-k="${esc(k)}">${r ? `<span class="nv-no">${r.no}</span>` : ''}${ok ? '✔ ' : ''}${crown(x.tw, k)}${esc(k)}<small>${ok ? `${md(last)} 다녀옴` : last ? `마지막 ${md(last)}` : '점검 기록 없음'}${r ? ` · ${kmTxt(r.km)}km` : ''}</small></button>`; };
   box.innerHTML = out.map(x => `<div style="font-weight:bold;margin:8px 0 4px;">📍 ${esc(x.tw)} <span class="muted" style="font-weight:normal;">안 감 <b style="color:var(--warning)">${x.miss.length}</b> · 다녀옴 <b style="color:var(--success)">${x.done.length}</b></span></div>
     <div class="chips">${x.miss.map(k => chip(x, k, false)).join('')}${x.done.map(k => chip(x, k, true)).join('')}</div>`).join('')
     + (out.length && !n ? '<div class="pen-none">✔ 모든 경로당을 다녀왔어요</div>' : '');
@@ -2181,13 +2248,14 @@ function renderList(){
     const groups = {};
     inTown.forEach(p => (groups[seniorOf(p)] ||= []).push(p));
     // 명단에 있는 경로당 + 그 면 경로당 목록(어르신이 아직 없는 곳은 0명)
+    const distRk = distRanks();
     const keys = [...new Set([...Object.keys(groups), ...sitesOf(town)])].sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
     if (curSenior && !keys.includes(curSenior)) curSenior = null;
     sSel.innerHTML = `<option value="">${keys.length ? `경로당을 선택하세요 (${keys.length}곳)` : '이 면에는 등록된 명단이 없어요'}</option>` + keys.map(k => {
       const ps = groups[k] || [], done = ps.filter(p => p.logs.some(l => l.date===t)).length;
       const gs = ps.filter(p => p.guess).length;
-      const vis = siteVisits(town, k).some(d => d >= visitFrom());
-      return `<option value="${esc(k)}">${ps.length ? (vis ? '✔ ' : '⚪ ') : ''}${gs?'📍 ':''}${isBest(town, k)?'👑 ':''}${esc(k)} (${ps.length}명${gs?`, 추정 ${gs}명`:''}${done?`, 오늘 ${done}명 점검`:''})</option>`;
+      const vis = siteVisits(town, k).some(d => d >= visitFrom()), rno = (distRk[town + '|' + k] || {}).no;
+      return `<option value="${esc(k)}">${ps.length ? (vis ? '✔ ' : '⚪ ') : ''}${rno ? rno + '. ' : ''}${gs?'📍 ':''}${isBest(town, k)?'👑 ':''}${esc(k)} (${ps.length}명${gs?`, 추정 ${gs}명`:''}${done?`, 오늘 ${done}명 점검`:''})</option>`;
     }).join('');
     sSel.value = curSenior || '';
     document.getElementById('senior-tools').classList.toggle('hidden', !curSenior);
@@ -3590,13 +3658,15 @@ function exportExcel(){
   ws8['!cols'] = [16,10,15,8,14,10,6,15,30,10].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws8, '구역');
   // 경로당 위치 (네이버 지도 링크)
-  const mpAll = {}; SITE_ADDR.filter(x => x[3]).forEach(x => { mpAll[x[0] + '|' + x[3]] = mapOf(x[0], x[3]); }); Object.keys(maps).forEach(k => { const [tw, sn] = k.split('|'); mpAll[k] = mapOf(tw, sn); });
+  const xRk = distRanks(), mpAll = {}; SITE_ADDR.filter(x => x[3]).forEach(x => { mpAll[x[0] + '|' + x[3]] = mapOf(x[0], x[3]); }); Object.keys(maps).forEach(k => { const [tw, sn] = k.split('|'); mpAll[k] = mapOf(tw, sn); });
+  Object.keys(xRk).forEach(k => { if (!mpAll[k]) mpAll[k] = { addr: '(경로당 주소 없음 · 어르신 집 주소로 거리 계산)', label: '', builtin: false, date: '' }; });
   const mpRows = Object.entries(mpAll).filter(([k, m]) => m).map(([k, m]) => { const [tw, sn] = k.split('|'); return { tw, sn, m }; })
     .filter(x => list.some(p => p.town===x.tw) || x.tw===town).sort((a,b) => a.tw.localeCompare(b.tw) || seniorRank(a.sn)-seniorRank(b.sn) || a.sn.localeCompare(b.sn))
-    .map(x => ({ '읍면':x.tw, '경로당':x.sn, '지도 이름':x.m.label || '', '주소 / 지도 링크':x.m.url || x.m.addr, '넣은 날':x.m.builtin ? '기본 주소' : (x.m.date || '') }));
+    .map(x => ({ '읍면':x.tw, '경로당':x.sn, '지도 이름':x.m.label || '', '주소 / 지도 링크':x.m.url || x.m.addr, '넣은 날':x.m.builtin ? '기본 주소' : (x.m.date || ''),
+      '노인회에서 가까운 순':(xRk[x.tw + '|' + x.sn] || {}).no || '', '거리(km, 직선)':xRk[x.tw + '|' + x.sn] ? Number(kmTxt(xRk[x.tw + '|' + x.sn].km)) : '' }));
   const wsM = mpRows.length ? XLSX.utils.json_to_sheet(mpRows) : XLSX.utils.aoa_to_sheet([['위치를 넣은 경로당이 없습니다.']]);
   if (mpRows.length) mpRows.forEach((r, i) => { const c = wsM[XLSX.utils.encode_cell({ r: i + 1, c: 3 })]; if (c) c.l = { Target: /^https?:/.test(r['주소 / 지도 링크']) ? r['주소 / 지도 링크'] : 'https://map.naver.com/p/search/' + encodeURIComponent('전북 ' + r['주소 / 지도 링크']) }; });
-  wsM['!cols'] = [8,14,20,36,12].map(w=>({wch:w}));
+  wsM['!cols'] = [8,14,20,36,12,10,10].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, wsM, '경로당 위치');
   // 건강 정보 (이름 눌러 적은 것)
   const hlRows = list.filter(p => p.health && (p.health.conds?.length || p.health.memo)).map(p => ({
