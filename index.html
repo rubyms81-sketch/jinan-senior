@@ -431,7 +431,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-6</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-7</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -480,7 +480,7 @@
   <div id="m-days" class="chips"></div>
   <div id="m-chg"></div>
   <button class="warning full" onclick="addChange()">🔄 근무일 변경 추가</button>
-  <button class="secondary full" id="btn-custom" onclick="openCustom()">🩹 보충 근무 · 🏥 입원 표시</button>
+  <button class="secondary full" id="btn-custom" onclick="openCustom()">🏥 입원 체크</button>
 
   <h4 id="note-title">📝 특이사항 (점검과 별개)</h4>
   <div class="muted" style="margin:-4px 0 6px;font-size:.85rem;">점검하지 않은 날 생긴 일(업무 외 사고·입원, 전화로 들은 소식 등)을 적어 두세요.</div>
@@ -919,7 +919,7 @@ function renderPersonDays(p){
       <br><button class="small secondary" onclick="callDone(${p.id})">✔ 오늘 통화했어요</button></div>` : '')
     + chg.map(c => `<div class="log warn">🔄 <b>${dd(c.from)} → ${dd(c.to)}</b>${c.reason?` <span class="muted">(${esc(c.reason)})</span>`:''}
       <br><button class="small secondary" onclick="delChange(${c.id})">이 변경 지우기</button></div>`).join('');
-  document.getElementById('btn-custom').textContent = cu ? '🩹 보충 근무 · 🏥 입원 고치기' : '🩹 보충 근무 · 🏥 입원 표시';
+  document.getElementById('btn-custom').textContent = cu ? '🏥 입원 체크 고치기' : '🏥 입원 체크';
 }
 
 // ---------- 🩹 보충 근무 (개인 일정) ----------
@@ -1017,18 +1017,14 @@ function openCustom(){
   const td0 = today().startsWith(mk) ? today() : '';
   // 복귀일 기본값: 오늘 다음의 첫 근무일 (이번 달이 아니면 그달 첫 근무일)
   let back = cu?.back || (td0 ? (reg.find(d => d > td0) || td0) : reg[0] || ymd(y,m,1));
-  let hosp = new Set(cu?.hosp || []), inHosp = !!cu?.inHosp, mode = inHosp ? 'hosp' : 'work';
+  let hosp = new Set(cu?.hosp || []), inHosp = !!cu?.inHosp, mode = 'hosp';   // 달력은 입원 체크만 (근무일 넣기·빼기는 뺌)
   // 처음 만들 때: 복귀일 전 근무일은 쉰 것으로 보고, 복귀일부터 10일 채운 날짜로 시작 (복귀 전에 일한 날은 눌러서 넣기)
-  let sel = new Set(cu ? cu.days : fillFromBack(mk, back, [])), reason = cu?.reason || '';
+  let sel = new Set(cu ? cu.days : fillFromBack(mk, back, [])), reason = cu?.reason || '입원·치료';   // 사유 단추는 빼고 입원·치료로
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = `<div class="dlg">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🩹 ${esc(nm(p))} 어르신 보충 근무 · 입원 (${m}월)</div>
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🏥 ${esc(nm(p))} 어르신 입원 체크 (${m}월)</div>
     <div class="muted" style="margin-bottom:8px;">입원해서 못 나오는 날은 <b>🏥 입원 체크</b>로 표시하고, 돌아오면 <b>복귀일</b>을 정해 남은 날을 몰아서 채웁니다.</div>
-    <label>사유</label>
-    <div class="grid-2" id="cu-reasons" style="margin-bottom:10px;">
-      <button type="button" class="reason" data-v="사고·부상">🩹 사고·부상</button><button type="button" class="reason" data-v="입원·치료">🏥 입원·치료</button><button type="button" class="reason" data-v="개인 사정" style="grid-column:1 / -1;">🙋 개인 사정</button>
-    </div>
-    <label>사유 (자세히)</label>
+    <label>입원 사유</label>
     <textarea id="cu-memo" rows="2" placeholder="예: 밭일하다 넘어져 다리 골절, ○○병원 입원"></textarea>
     <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><input type="checkbox" id="cu-inhosp" style="width:22px;height:22px;margin:0;"> 🏥 지금 입원 중 (복귀일 모름)</label>
     <div id="cu-back-wrap">
@@ -1036,8 +1032,7 @@ function openCustom(){
       <button type="button" class="secondary full" id="cu-back" style="margin-bottom:6px;"></button>
       <button type="button" class="warning full" id="cu-fill">⚡ 복귀일부터 ${WORK_TARGET}일 채우기</button>
     </div>
-    <label style="margin-top:8px;">달력을 누르면</label>
-    <div class="grid-2" id="cu-mode" style="margin-bottom:6px;"><button type="button" class="reason" data-v="work">📅 근무일 넣기·빼기</button><button type="button" class="reason" data-v="hosp">🏥 입원 체크</button></div>
+    <label style="margin-top:8px;">🏥 입원 체크 <span class="muted" style="font-weight:normal;">(달력에서 입원한 날을 누르세요)</span></label>
     <div class="muted" id="cu-help" style="margin:2px 0 6px;"></div>
     <div class="legend"><span><i style="background:var(--primary)"></i>근무</span><span><i style="background:var(--warning)"></i>보충한 날</span><span><i style="background:#fed7e2;border:2px solid #d53f8c"></i>입원</span><span><i style="background:#fff;border:2px dashed #a0aec0"></i>쉰 날</span></div>
     <div class="cal" id="cu-cal"></div>
