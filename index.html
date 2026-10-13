@@ -15,7 +15,8 @@
 <style>
   :root { --primary:#2b6cb0; --danger:#e53e3e; --warning:#dd6b20; --success:#38a169; --gray:#718096; --bg:#f7fafc; }
   * { box-sizing:border-box; }
-  body { font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); margin:0; color:#2d3748; font-size:16px; }
+  html { font-size:18px; }   /* 글씨 전체 크기 (예전 16px → 18px, 사용자 요청 2026-10-14) */
+  body { font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); margin:0; color:#2d3748; font-size:1rem; -webkit-text-size-adjust:100%; }
   header { background:var(--primary); color:#fff; padding:14px; text-align:center; font-size:1.15rem; font-weight:bold; position:sticky; top:0; z-index:10; }
   .container { padding:12px; max-width:600px; margin:0 auto; }
   .card { background:#fff; padding:14px; border-radius:10px; box-shadow:0 2px 4px rgba(0,0,0,.08); margin-bottom:12px; }
@@ -392,7 +393,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-2</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-3</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -3717,13 +3718,13 @@ function statsData(){
 function statGroups(d){
   const by = (f, s) => d.people.filter(f).sort((a,b) => s(b) - s(a) || a.p.name.localeCompare(b.p.name));
   return [
-    { key:'leave', icon:'🚨', title:'근무지 이탈', note:'1회 -1점 · 그날 일당 미지급', color:'#c53030', bg:'#fff5f5',
+    { key:'leave', icon:'🚨', title:'근무지 이탈', short:'이탈', note:'1회 -1점 · 그날 일당 미지급', color:'#c53030', bg:'#fff5f5',
       ps: by(r => r.leave, r => r.leave), cnt: r => r.leave, txt: r => `이탈 ${r.leave}회 (-${r.leave}점)` },
-    { key:'wear', icon:'🦺', title:'조끼·명찰 미착용', note:'각 -0.5점', color:'#c05621', bg:'#fffaf0',
+    { key:'wear', icon:'🦺', title:'조끼·명찰 미착용', short:'조끼·명찰', note:'각 -0.5점', color:'#c05621', bg:'#fffaf0',
       ps: by(r => r.vest || r.badge, r => r.vest + r.badge), cnt: r => r.vest + r.badge, txt: r => [r.vest ? `조끼 ${r.vest}회` : '', r.badge ? `명찰 ${r.badge}회` : ''].filter(Boolean).join(' · ') + ` (-${(r.vest + r.badge) * AWAY_PT}점)` },
-    { key:'away', icon:'🚶', title:'잠깐 자리 비움', note:'1회 -0.5점', color:'#b7791f', bg:'#fffff0',
+    { key:'away', icon:'🚶', title:'잠깐 자리 비움', short:'자리 비움', note:'1회 -0.5점', color:'#b7791f', bg:'#fffff0',
       ps: by(r => r.away, r => r.away), cnt: r => r.away, txt: r => `자리 비움 ${r.away}회 (-${r.away * AWAY_PT}점)` },
-    { key:'bad', icon:'😐', title:'응대 태도 불량', note:'감점 없는 경고', color:'#4a5568', bg:'#f7fafc',
+    { key:'bad', icon:'😐', title:'응대 태도 불량', short:'태도 불량', note:'감점 없는 경고', color:'#4a5568', bg:'#f7fafc',
       ps: by(r => r.bad, r => r.bad), cnt: r => r.bad, txt: r => `태도 불량 ${r.bad}회` },
   ];
 }
@@ -3750,7 +3751,7 @@ function showStats(openGroup){
     <table class="st-tbl"><tr><th>달</th><th>인원</th><th>신규</th><th>이탈</th><th>비움</th><th>조끼</th><th>명찰</th><th>점검</th></tr>
       ${d.months.map(x => `<tr><td>${x.m}월</td><td>${x.n}</td><td>${x.newc}</td><td style="color:${x.leave?'var(--danger)':'inherit'}">${x.leave}</td><td>${x.away}</td><td>${x.vest}</td><td>${x.badge}</td><td>${x.checks}</td></tr>`).join('')}
       <tr style="font-weight:bold;background:#f7fafc;"><td>합계</td><td>-</td><td>${T('newc')}</td><td style="color:var(--danger)">${T('leave')}</td><td>${T('away')}</td><td>${T('vest')}</td><td>${T('badge')}</td><td>${T('checks')}</td></tr></table>
-    <div class="close-sum" style="grid-template-columns:repeat(4,1fr);margin:8px 0;">${gs.map(g => `<button type="button" data-go="${g.key}" style="background:${g.bg};border:1px solid ${g.color}33;border-radius:8px;padding:8px 2px;font-size:.8rem;color:#2d3748;"><b style="display:block;font-size:1.25rem;color:${g.color}">${g.ps.length}명</b>${g.icon} ${g.title}</button>`).join('')}</div>
+    <div class="close-sum" style="grid-template-columns:repeat(4,1fr);margin:8px 0;">${gs.map(g => `<button type="button" data-go="${g.key}" style="background:${g.bg};border:1px solid ${g.color}33;border-radius:8px;padding:8px 2px;font-size:.8rem;color:#2d3748;"><b style="display:block;font-size:1.25rem;color:${g.color}">${g.ps.length}명</b>${g.icon}<br>${g.short}</button>`).join('')}</div>
     <div class="muted" id="sg-hint" style="font-size:.85rem;text-align:center;margin:-2px 0 6px;">위 칸을 누르면 그 명단이 나와요</div>
     ${gs.map(g => `<div id="sg-${g.key}" class="sg-list hidden" style="margin-top:6px;"><div style="font-weight:bold;padding:6px 8px;border-radius:8px;background:${g.bg};color:${g.color};border-left:4px solid ${g.color};">${g.icon} ${g.title} <span style="color:#2d3748;">${g.ps.length}명 · ${g.ps.reduce((n, r) => n + g.cnt(r), 0)}회</span> <span class="muted" style="font-weight:normal;font-size:.8rem;">(${g.note})</span></div>
       ${g.ps.length ? g.ps.map((r, i) => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#fff;border-left-color:${g.color};margin-top:4px;">
