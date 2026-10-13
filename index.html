@@ -200,6 +200,8 @@
   .st-tbl { width:100%; border-collapse:collapse; font-size:.85rem; margin-bottom:10px; }
   .st-tbl th, .st-tbl td { border:1px solid #e2e8f0; padding:4px 3px; text-align:center; }
   .st-tbl th { background:#edf2f7; }
+  .nv-chip { display:inline-flex; flex-direction:column; align-items:center; line-height:1.25; background:#fffaf0; color:#7b341e; border:1px solid #fbd38d; cursor:pointer; margin:0; }
+  .nv-chip small { font-size:.72rem; color:#a0aec0; font-weight:normal; }
   .cus-box { background:#fffaf0; border:1px solid #fbd38d; border-radius:10px; padding:8px 10px; margin-bottom:10px; }
   .legend { display:flex; flex-wrap:wrap; gap:10px; font-size:.78rem; color:#4a5568; margin-bottom:4px; }
   .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-1px; margin-right:3px; }
@@ -271,6 +273,15 @@
   </div>
 
   <div class="card">
+    <details id="nv-box" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
+      <summary><h3 id="nv-title"></h3><span class="chg-arrow"></span></summary>
+      <div class="muted" style="font-size:.85rem;margin:6px 0;">점검 기록이 하나도 없는 경로당이에요. 누르면 그 경로당으로 가요.
+        <span style="white-space:nowrap;">기준: <select id="nv-range" onchange="renderNotVisited()" style="width:auto;display:inline-block;margin:0;padding:4px 6px;font-size:.85rem;"><option value="month">이번 달</option><option value="14">최근 2주</option><option value="7">최근 1주</option></select></span></div>
+      <div id="nv-list"></div>
+    </details>
+  </div>
+
+  <div class="card">
     <details id="chg-box" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3 id="chg-title"></h3><span class="chg-arrow"></span></summary>
       <div id="chg-list"></div>
@@ -332,7 +343,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-35</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-36</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2069,8 +2080,35 @@ async function linkDone(id){
   if (p.start && !(p.startDay && p.startDay > today())) p.startDay = today();   // 연계 끝난 날부터 근무
   delete p.linking; saveData(false); renderList();
 }
+// ---------- 🚶 안 간 경로당 (점검 기록이 없는 곳) ----------
+const visitFrom = () => { const v = document.getElementById('nv-range')?.value || 'month'; return v === 'month' ? monthKey() + '-01' : addDays(today(), -Number(v) + 1); };
+function siteVisits(town, senior){
+  return participants.filter(p => p.town===town && seniorOf(p)===senior).flatMap(p => p.logs.map(l => l.date)).sort();
+}
+function renderNotVisited(){
+  const box = document.getElementById('nv-list'); if (!box) return;
+  const from = visitFrom(), to = monthKey() === today().slice(0,7) ? today() : monthKey() + '-31';
+  const out = [];
+  visibleTowns().forEach(tw => {
+    const sites = [...new Set(participants.filter(p => p.town===tw && !stats(p).dropped).map(seniorOf))];
+    const miss = sites.filter(k => !siteVisits(tw, k).some(d => d >= from && d <= to))
+      .sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
+    if (miss.length) out.push({ tw, miss, all: sites.length });
+  });
+  const n = out.reduce((k, x) => k + x.miss.length, 0), all = out.reduce((k, x) => k + x.all, 0);
+  document.getElementById('nv-title').innerHTML = `🚶 아직 안 간 경로당 <span style="color:${n?'var(--warning)':'var(--success)'}">${n}곳</span>`;
+  box.innerHTML = out.length ? out.map(x => `<div style="font-weight:bold;margin:8px 0 4px;">📍 ${esc(x.tw)} <span class="muted" style="font-weight:normal;">${x.miss.length}곳</span></div>
+    <div class="chips">${x.miss.map(k => { const v = siteVisits(x.tw, k), last = v[v.length-1];
+      return `<button type="button" class="chip nv-chip" data-t="${esc(x.tw)}" data-k="${esc(k)}">${crown(x.tw, k)}${esc(k)}<small>${last ? `마지막 ${md(last)}` : '점검 기록 없음'}</small></button>`; }).join('')}</div>`).join('')
+    : '<div class="pen-none">✔ 모든 경로당을 다녀왔어요</div>';
+  box.querySelectorAll('.nv-chip').forEach(b => b.onclick = () => {
+    lastTown = b.dataset.t; curSenior = b.dataset.k; document.getElementById('search').value = ''; renderList();
+    document.getElementById('sel-person')?.scrollIntoView({ behavior:'smooth', block:'center' });
+  });
+}
 function renderList(){
   renderCallAlert();
+  renderNotVisited();
   renderLinking();
   renderZones();
   renderBoard();
@@ -2112,7 +2150,8 @@ function renderList(){
     sSel.innerHTML = `<option value="">${keys.length ? `경로당을 선택하세요 (${keys.length}곳)` : '이 면에는 등록된 명단이 없어요'}</option>` + keys.map(k => {
       const ps = groups[k] || [], done = ps.filter(p => p.logs.some(l => l.date===t)).length;
       const gs = ps.filter(p => p.guess).length;
-      return `<option value="${esc(k)}">${gs?'📍 ':''}${isBest(town, k)?'👑 ':''}${esc(k)} (${ps.length}명${gs?`, 추정 ${gs}명`:''}${done?`, 오늘 ${done}명 점검`:''})</option>`;
+      const vis = siteVisits(town, k).some(d => d >= visitFrom());
+      return `<option value="${esc(k)}">${ps.length ? (vis ? '✔ ' : '⚪ ') : ''}${gs?'📍 ':''}${isBest(town, k)?'👑 ':''}${esc(k)} (${ps.length}명${gs?`, 추정 ${gs}명`:''}${done?`, 오늘 ${done}명 점검`:''})</option>`;
     }).join('');
     sSel.value = curSenior || '';
     document.getElementById('senior-tools').classList.toggle('hidden', !curSenior);
@@ -3204,6 +3243,7 @@ function exportExcel(){
     ['신규 연계 중', list.filter(p => p.linking).map(p => `${p.name}(${seniorOf(p)}, ${md(p.linking.since)} 등록)`).join(', ') || '없음'],
     ['특이사항', `${list.reduce((n,p) => n + (p.notes||[]).filter(x => x.date.startsWith(monthKey())).length, 0)}건`],
     ['활동일 문자', eventLog.filter(h => h.type.startsWith('활동일 문자') && h.at.slice(0,4) >= String(YEAR) && h.detail.includes(`${curMonth}월 `)).map(h => `${h.at.slice(5)} ${h.name ? h.name+'(개인)' : h.detail.split(' · ')[0]}`).join(' / ') || '보낸 기록 없음'],
+    [`안 간 경로당 (${curMonth}월)`, visibleTowns().flatMap(tw => [...new Set(list.filter(p => p.town===tw && !stats(p).dropped).map(seniorOf))].filter(k => !siteVisits(tw, k).some(d => d.startsWith(monthKey()))).map(k => `${tw.replace(/[면읍]$/,'')} ${k}`)).join(', ') || '없음 (모두 다녀옴)'],
     ['마지막 백업', load('jinan_last_backup') || '백업한 적 없음'],
     ['👑 우수 경로당', Object.keys(best).filter(k => list.some(p => p.town === k.split('|')[0])).map(k => k.replace('|', ' ')).join(', ') || '없음'],
     ['구역', zones.map(z => `${z.name}: 경로당 ${z.sites.length}곳 ${z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0)}명`).join(' / ')],
