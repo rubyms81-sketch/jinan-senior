@@ -377,7 +377,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-54</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-55</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -409,10 +409,12 @@
     <input type="hidden" id="c-attitude">
     <div class="seg" data-for="c-attitude"><button type="button" data-v="우수">우수</button><button type="button" data-v="보통">보통</button><button type="button" data-v="불량" data-bad>불량</button></div>
 
-    <label>점검 메모 (이날 점검에서 본 것)</label>
-    <textarea id="c-memo" rows="3" placeholder="예: 경로당 청소 상태 좋음"></textarea>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:6px;margin-top:4px;">
+      <label id="memo-label" style="margin:0;">점검 메모</label>
+      <button type="button" class="small warning" onclick="voiceCheck()" style="width:auto;margin:0;white-space:nowrap;">🎤 말로 점검</button></div>
+    <textarea id="c-memo" rows="3" placeholder="예: 경로당 청소 상태 좋음" style="margin-top:6px;"></textarea>
     <div id="edit-bar" class="notice hidden" style="margin-bottom:6px;"></div>
-    <button class="full" id="btn-save-check" onclick="saveCheck()">점검 저장</button>
+    <button class="full" id="btn-save-check" onmousedown="event.preventDefault()" onclick="saveCheck()">점검 저장</button>
     <button class="secondary full hidden" id="btn-cancel-edit" onclick="cancelEdit()">수정 취소</button>
   </div>
 
@@ -3150,6 +3152,7 @@ function openModal(id){
   document.getElementById('modal-sub').innerHTML = `<span class="place">📍 <b>${esc(p.town)}</b> · <b>${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</b>${mapOf(p.town, seniorOf(p)) ? ` <a class="tel-link" href="#" onclick="openSiteMap('${esc(p.town)}', this.dataset.s);return false;" data-s="${esc(seniorOf(p))}">🗺️ 위치</a>` : ''}</span>${zoneOf(p) ? `<span class="zone">🗺 ${esc(zoneOf(p).name)}${zoneOf(p).leaderId === p.id ? ' · 👤 팀장' : ''}</span>` : ''}` +
     (p.phone ? ` ${tel ? `<a class="tel-link" href="tel:${tel}">📞 ${esc(p.phone)}</a>` : esc(p.phone)}` : '');
   document.getElementById('c-memo').value = '';
+  document.getElementById('memo-label').innerHTML = `점검 메모 · <b style="color:#1a365d;">${esc(nm(p))}</b> 어르신 <span class="muted" style="font-weight:normal;">(${esc(p.town)} ${esc(seniorOf(p))})</span>`;
   renderModal();
   document.getElementById('modal').classList.remove('hidden');
   window.scrollTo(0,0);
@@ -3228,6 +3231,59 @@ function cancelEdit(){
   showEditBar(); renderModal();
 }
 
+// ---------- 🎤 말로 점검 (말한 내용으로 이탈·자리 비움·조끼·명찰·태도를 골라 저장) ----------
+function parseCheckVoice(t){
+  const x = String(t || '').replace(/\s+/g, ' ').replace(/(이상|문제|특이\s?사항|특별한\s?것|별일)\s?(은|이|도)?\s?없(음|어요|습니다|었|다|고)?/g, '양호');
+  // 문장을 "…고 / …는데 / , ." 로 나눠서, 조끼·명찰이 나온 조각에 "안 입음·미착용·없음" 같은 말이 있는지 봄
+  const neg = /(안\s?(입|하|차|달|했|함|하셨|입으|입었|착용)|미착용|없|벗|빠뜨|놓고|두고|깜빡)/;
+  const parts = x.split(/[.,?!]|(?<=[고서])\s|는데|지만|그리고/).map(s => s.trim()).filter(Boolean);
+  const miss = k => parts.some(c => c.includes(k) && neg.test(c.slice(c.indexOf(k))));
+  const r = { leave: '정상', vest: miss('조끼') ? '미착용' : '정상', badge: miss('명찰') ? '미착용' : '정상', attitude: '우수' };
+  if (/이탈/.test(x)) r.leave = '이탈';
+  else if (/(자리\s?(를)?\s?(잠깐|잠시)?\s?비|잠깐\s?비|잠시\s?비|화장실|잠깐\s?나가|잠시\s?나가|잠깐\s?외출)/.test(x)) r.leave = '자리비움';
+  else if (/(근무지에\s?없|자리에\s?없|안\s?계셨|안\s?계심|없으셨|근무\s?안\s?하)/.test(x)) r.leave = '이탈';
+  if (/태도[^.?!]{0,8}(불량|나쁘|나빴|안\s?좋|불친절)|불친절/.test(x)) r.attitude = '불량';
+  else if (/태도[^.?!]{0,8}보통/.test(x)) r.attitude = '보통';
+  return r;
+}
+function voiceCheck(){
+  const p = current(); if (!p) return;
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🎤 말로 점검 · ${esc(nm(p))} 어르신</div>
+    <div class="muted" style="font-size:.88rem;margin-bottom:8px;">예) "조끼 안 입으셨고 명찰은 했어요. 경로당 청소 잘 되어 있음"<br>예) "잠깐 자리 비우셨어요. 화장실 다녀오심"</div>
+    <button type="button" class="full" id="vc-mic">🎤 눌러서 말하기</button>
+    <div class="muted" id="vc-msg" style="font-size:.85rem;margin:4px 0;"></div>
+    <textarea id="vc-text" rows="3" placeholder="여기에 들은 내용이 나와요 (직접 고쳐도 돼요)" style="width:100%;"></textarea>
+    <div id="vc-res" class="notice" style="margin:6px 0;font-size:.92rem;"></div>
+    <div class="grid-2"><button class="secondary" id="vc-close">닫기</button><button id="vc-save">이대로 점검 저장</button></div></div>`;
+  document.body.appendChild(back);
+  const $ = q => back.querySelector(q), ta = $('#vc-text');
+  const show = () => { const r = parseCheckVoice(ta.value), bad = v => `<b style="color:var(--danger)">${v}</b>`;
+    $('#vc-res').innerHTML = `근무: ${r.leave==='정상' ? '정상 근무' : bad(r.leave==='이탈' ? '이탈 (-1점)' : '자리 비움 (-0.5점)')} · 조끼: ${r.vest==='정상' ? '착용' : bad('미착용 (-0.5점)')} · 명찰: ${r.badge==='정상' ? '착용' : bad('미착용 (-0.5점)')} · 태도: ${r.attitude==='불량' ? bad('불량') : r.attitude}<br><span class="muted" style="font-size:.82rem;">틀리면 글을 고치거나, 닫고 화면에서 직접 눌러 주세요.</span>`; };
+  ta.oninput = show; show();
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition; let rec = null, on = false;
+  if (!SR) { $('#vc-mic').disabled = true; $('#vc-mic').textContent = '🎤 이 휴대폰에서는 앱 마이크가 안 돼요'; $('#vc-msg').innerHTML = '글 칸을 누르고 <b>키보드의 마이크</b>로 말해도 돼요.'; }
+  else $('#vc-mic').onclick = () => {
+    if (on) { rec.stop(); return; }
+    rec = new SR(); rec.lang = 'ko-KR'; rec.interimResults = true; rec.continuous = false;
+    const before = ta.value ? ta.value.trim() + ' ' : '';
+    rec.onstart = () => { on = true; $('#vc-mic').textContent = '⏺ 듣고 있어요… (다 말하면 누르세요)'; $('#vc-msg').textContent = ''; };
+    rec.onresult = e => { ta.value = before + [...e.results].map(r => r[0].transcript).join(''); show(); };
+    rec.onerror = e => { $('#vc-msg').innerHTML = e.error === 'not-allowed' || e.error === 'service-not-allowed' ? '마이크 사용이 막혀 있어요. 주소창 왼쪽 <b>자물쇠(또는 ⓘ) → 권한 → 마이크 허용</b>을 눌러 주세요.' : e.error === 'network' ? '음성 인식은 인터넷이 필요해요.' : e.error === 'no-speech' ? '말소리가 들리지 않았어요. 다시 눌러서 말해 주세요.' : '음성 인식이 잘 안 됐어요. 다시 해 보거나 글로 적어 주세요.'; };
+    rec.onend = () => { on = false; $('#vc-mic').textContent = '🎤 눌러서 말하기'; };
+    try { rec.start(); } catch(e) { $('#vc-msg').textContent = '마이크를 켤 수 없어요.'; }
+  };
+  $('#vc-close').onclick = () => { try { rec && rec.abort(); } catch(e) {} back.remove(); };
+  $('#vc-save').onclick = () => {
+    const t = ta.value.trim(); if (!t) return notify('먼저 말하거나 글로 적어 주세요.');
+    try { rec && rec.abort(); } catch(e) {}
+    const r = parseCheckVoice(t);
+    setSeg('c-leave', r.leave); setSeg('c-vest', r.vest); setSeg('c-badge', r.badge); setSeg('c-attitude', r.attitude);
+    const m = document.getElementById('c-memo'); m.value = (m.value.trim() ? m.value.trim() + ' ' : '') + t;
+    back.remove(); saveCheck();
+  };
+}
 // 🔔 점검 저장 소리 "띵동" (휴대폰 미디어 소리 크기를 따라감)
 // 소리 파일(WAV)을 앱 안에서 만들어 <audio>로 틀고, 안 되면 WebAudio로 한 번 더 시도
 const _snd = {};
@@ -3260,6 +3316,7 @@ function playDingDong(sad){
 }
 async function saveCheck(){
   const p = current(); if(!p) return;
+  try { document.activeElement && document.activeElement.blur(); } catch(e) {}
   const g = id => document.getElementById(id).value;
   const date = g('c-date'); if(!date) return notify('점검 날짜를 선택해 주세요.');
   if (editingLogId) {
