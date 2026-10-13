@@ -319,7 +319,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-27</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-28</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2810,8 +2810,11 @@ document.querySelectorAll('#st-from, #st-to').forEach(sel => sel.innerHTML = [1,
 const stRange = () => { let a = Number(document.getElementById('st-from').value), b = Number(document.getElementById('st-to').value); if (a > b) [a, b] = [b, a]; return [a, b]; };
 function statsData(){
   const [a, b] = stRange(), y = YEAR;
-  const list = participants.filter(p => visibleTowns().includes(p.town))
-    .sort((x,z) => x.town.localeCompare(z.town) || seniorRank(seniorOf(x))-seniorRank(seniorOf(z)) || seniorOf(x).localeCompare(seniorOf(z)) || x.name.localeCompare(z.name));
+  // 대상: 내 담당 읍·면 (없으면 명단 전체)
+  let list = participants.filter(p => visibleTowns().includes(p.town));
+  if (!list.length) list = [...participants];
+  list.sort((x,z) => x.town.localeCompare(z.town) || seniorRank(seniorOf(x))-seniorRank(seniorOf(z)) || seniorOf(x).localeCompare(seniorOf(z)) || x.name.localeCompare(z.name));
+  const towns = [...new Set(list.map(p => p.town))];
   const mks = []; for (let m = a; m <= b; m++) mks.push(`${y}-${String(m).padStart(2,'0')}`);
   const active = (p, mk) => !(p.start && p.start > mk);
   const months = mks.map(mk => {
@@ -2832,7 +2835,7 @@ function statsData(){
     r.kind = r.leave ? 'pen' : (r.months && r.paid < r.months * WORK_TARGET) ? 'few' : (r.vest || r.badge) ? 'warn' : '';
     return r;
   });
-  return { a, b, y, mks, months, people, list };
+  return { a, b, y, mks, months, people, list, towns };
 }
 function showStats(){
   const d = statsData(), T = k => d.months.reduce((n, x) => n + x[k], 0);
@@ -2840,7 +2843,8 @@ function showStats(){
   const few = d.people.filter(r => r.kind === 'few' && r.score === 0);
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg" style="max-width:560px;">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📊 ${d.y}년 ${d.a}월~${d.b}월 통계</div>
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:2px;">📊 ${d.y}년 ${d.a}월~${d.b}월 통계</div>
+    <div class="muted" style="font-size:.85rem;margin-bottom:6px;">대상: ${esc(d.towns.join('·'))} ${d.list.length}명</div>
     <table class="st-tbl"><tr><th>달</th><th>인원</th><th>신규</th><th>이탈</th><th>조끼</th><th>명찰</th><th>점검</th></tr>
       ${d.months.map(x => `<tr><td>${x.m}월</td><td>${x.n}</td><td>${x.newc}</td><td style="color:${x.leave?'var(--danger)':'inherit'}">${x.leave}</td><td>${x.vest}</td><td>${x.badge}</td><td>${x.checks}</td></tr>`).join('')}
       <tr style="font-weight:bold;background:#f7fafc;"><td>합계</td><td>-</td><td>${T('newc')}</td><td style="color:var(--danger)">${T('leave')}</td><td>${T('vest')}</td><td>${T('badge')}</td><td>${T('checks')}</td></tr></table>
@@ -2860,7 +2864,7 @@ function exportStats(){
   const d = statsData(), T = k => d.months.reduce((n, x) => n + x[k], 0);
   const wb = XLSX.utils.book_new();
   const head = ['달','인원','신규','활동일 합계','이탈(감점)','조끼 미착용','명찰 미착용','점검 횟수','근무일 변경','활동일 확정'];
-  const aoa = [[`${d.y}년 ${d.a}월~${d.b}월 통계 (${myTowns.join('·')})`], ['색 구분 (어르신별)', LEGEND], [], head,
+  const aoa = [[`${d.y}년 ${d.a}월~${d.b}월 통계 (${d.towns.join('·')})`], ['색 구분 (어르신별)', LEGEND], [], head,
     ...d.months.map(x => [`${x.m}월`, x.n, x.newc, x.days, x.leave, x.vest, x.badge, x.checks, x.chg, x.set ? '확정' : '추천 날짜']),
     ['합계', '', T('newc'), T('days'), T('leave'), T('vest'), T('badge'), T('checks'), T('chg'), '']];
   const ws0 = XLSX.utils.aoa_to_sheet(aoa); ws0['!cols'] = [18,8,8,11,11,11,11,10,11,11].map(w=>({wch:w}));
