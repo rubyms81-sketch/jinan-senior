@@ -279,7 +279,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-7</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-8</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -354,7 +354,7 @@
       <div><label>나이 <span class="muted" style="font-weight:normal;font-size:.8rem;">(태어난 해 가능)</span></label><input type="text" inputmode="numeric" id="m-age" class="age-in" placeholder="예: 1948"></div>
     </div>
     <label>성명</label><input type="text" id="m-name">
-    <label>경로당 이름</label><input type="text" id="m-senior">
+    <label>경로당 이름</label><input type="text" id="m-senior" class="senior-in" data-town="m-town" list="senior-list" placeholder="예: 지사" autocomplete="off">
     <label>연락처</label><input type="tel" id="m-phone">
     <label>주소</label><input type="text" id="m-address">
     <button class="full" onclick="saveInfo()">정보 저장</button>
@@ -368,7 +368,7 @@
 <div id="add-modal" class="modal hidden"><div class="modal-inner">
   <h3>➕ 새로운 어르신 등록</h3>
   <label>소속 면</label><select id="n-town"></select>
-  <label>경로당 이름</label><input type="text" id="n-senior" placeholder="예: 대서경로당">
+  <label>경로당 이름 <span class="muted" style="font-weight:normal;font-size:.85rem;">("지사경로당"이면 "지사"만)</span></label><input type="text" id="n-senior" class="senior-in" data-town="n-town" list="senior-list" placeholder="예: 지사" autocomplete="off"><datalist id="senior-list"></datalist>
   <label>어르신 성명</label><input type="text" id="n-name" placeholder="예: 김영이">
   <label>나이 <span class="muted" style="font-weight:normal;font-size:.85rem;">(태어난 해를 적으면 나이로 바꿔 줘요)</span></label><input type="text" inputmode="numeric" id="n-age" class="age-in" placeholder="예: 1948 또는 78">
   <label>연락처</label><input type="tel" id="n-phone" placeholder="010-0000-0000">
@@ -1921,12 +1921,34 @@ document.addEventListener('focusout', e => {
   if (!e.target.classList?.contains('age-in')) return;
   const r = parseAge(e.target.value); if (r.birth) e.target.value = ageShow(r.age, r.birth);
 });
+// 경로당 이름: "지사"만 적어도 됨. 끝의 "경로당"은 떼고, 그 면에 있는 경로당 이름과 맞으면 그 이름으로
+function normSenior(town, v){
+  let t = String(v||'').trim().replace(/\s*경로당$/, '').trim();
+  if (!t) return '';
+  const names = [...new Set(participants.filter(p => p.town===town && p.senior).map(p => p.senior))];
+  if (names.includes(t)) return t;
+  const parts = k => [k, k.replace(/\s*경로당$/, ''), ...k.split(/[()]/).map(x => x.trim()).filter(x => x.length >= 2)];
+  const hits = names.filter(k => parts(k).includes(t));
+  return hits.length === 1 ? hits[0] : t;
+}
+// 경로당 칸을 누르면 그 면의 경로당 목록을 보여 줌 (골라도 되고 적어도 됨)
+document.addEventListener('focusin', e => {
+  const el = e.target; if (!el.classList?.contains('senior-in')) return;
+  const town = document.getElementById(el.dataset.town)?.value;
+  const names = [...new Set(participants.filter(p => p.town===town && p.senior).map(p => p.senior))].sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
+  document.getElementById('senior-list').innerHTML = names.map(n => `<option value="${esc(n)}">`).join('');
+});
+document.addEventListener('focusout', e => {
+  const el = e.target; if (!el.classList?.contains('senior-in')) return;
+  const town = document.getElementById(el.dataset.town)?.value, v = normSenior(town, el.value);
+  if (v && v !== el.value.trim()) el.value = v;
+});
 async function addParticipant(){
   const v = id => document.getElementById(id).value.trim();
   if (!v('n-name')) return notify('어르신 성명은 꼭 적어 주세요.');
-  if (isDup(participants, v('n-name'), v('n-senior'), v('n-phone')) && !await ask('같은 분이 이미 등록되어 있습니다. 그래도 등록할까요?')) return;
+  if (isDup(participants, v('n-name'), normSenior(v('n-town'), v('n-senior')), v('n-phone')) && !await ask('같은 분이 이미 등록되어 있습니다. 그래도 등록할까요?')) return;
   const ag = parseAge(v('n-age'));
-  participants.push({ id: Date.now(), town:v('n-town'), senior:v('n-senior'), name:v('n-name'), age:ag.age, ...(ag.birth ? { birth: ag.birth } : {}),
+  participants.push({ id: Date.now(), town:v('n-town'), senior:normSenior(v('n-town'), v('n-senior')), name:v('n-name'), age:ag.age, ...(ag.birth ? { birth: ag.birth } : {}),
     phone:v('n-phone'), address:v('n-address'), quit:false, logs:[] });
   logEvent('신규 등록', participants[participants.length-1], '한 명씩 등록');
   saveData();
@@ -2379,7 +2401,7 @@ function saveInfo(){
   if (!g('m-name')) return notify('성명은 비워 둘 수 없습니다.');
   const ag = parseAge(g('m-age'));
   if (ag.birth) p.birth = ag.birth; else if (String(p.age||'') !== ag.age) delete p.birth;
-  const NEWV = { town:g('m-town'), name:g('m-name'), age:ag.age, senior:g('m-senior'), phone:g('m-phone'), address:g('m-address') };
+  const NEWV = { town:g('m-town'), name:g('m-name'), age:ag.age, senior:normSenior(g('m-town'), g('m-senior')), phone:g('m-phone'), address:g('m-address') };
   const LB = { town:'읍면', name:'성명', age:'나이', senior:'경로당', phone:'연락처', address:'주소' };
   const diff = Object.keys(NEWV).filter(k => String(p[k]||'') !== NEWV[k]).map(k => `${LB[k]}: ${p[k]||'(없음)'} → ${NEWV[k]||'(없음)'}`);
   if (diff.length) logEvent('정보 수정', p, diff.join(' / '));
