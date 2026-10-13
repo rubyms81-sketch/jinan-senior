@@ -92,6 +92,9 @@
   .chip.off { background:#edf2f7; color:#a0aec0; text-decoration:line-through; font-weight:normal; }
   .chip.daybtn.sms-chip { flex:1 1 90px; justify-content:center; background:#ebf8ff; color:var(--primary); border:2px solid #90cdf4; }
   .chip.daybtn.sms-chip .trip { color:var(--primary); }
+  .grp-chk { display:flex; align-items:center; gap:10px; padding:11px 12px; margin:6px 0; border:1px solid #e2e8f0; border-radius:10px; background:#fff; font-weight:normal; cursor:pointer; }
+  .grp-chk input { width:22px; height:22px; margin:0; }
+  .grp-chk.off { opacity:.5; }
   .grp-btn { display:flex; justify-content:space-between; align-items:center; width:100%; text-align:left; margin:6px 0; }
   .wd-head { display:flex; justify-content:space-between; align-items:center; gap:8px; }
   .wd-head h3 { margin:0; }
@@ -318,7 +321,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-30</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-31</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2469,11 +2472,16 @@ async function copyText(t){
 }
 // ---------- 📩 활동일 단체 문자 ----------
 const isGate = p => seniorOf(p).includes('게이트볼');
+// 문자 보낼 그룹: 구역 4개(구역 이름) + 게이트볼 (+ 구역에 안 넣은 분이 있으면 따로)
 function smsGroups(){
   const live = p => !stats(p).dropped && seniorOf(p) !== '개별관리';   // 중도포기·개별관리 인원은 단체 문자에서 뺌
-  const gs = myTowns.map(tw => ({ key: tw, label: tw, ps: participants.filter(p => p.town===tw && !isGate(p) && live(p)) }));
-  gs.push({ key: '게이트볼', label: `게이트볼 (${myTowns.map(t => t.replace(/[면읍]$/,'')).join('·')})`, ps: participants.filter(p => myTowns.includes(p.town) && isGate(p) && live(p)) });
-  return gs.filter(g => g.ps.length);
+  const inZone = z => participants.filter(p => z.sites.some(x => x.town===p.town && x.senior===seniorOf(p)));
+  const gs = zones.map(z => ({ key: 'z'+z.id, label: z.name, zone: true, ps: inZone(z).filter(p => !isGate(p) && live(p)) }));
+  const gate = participants.filter(p => isGate(p) && live(p) && (myTowns.includes(p.town) || zoneOf(p)));
+  gs.push({ key: '게이트볼', label: '게이트볼', ps: gate });
+  const rest = participants.filter(p => myTowns.includes(p.town) && !isGate(p) && live(p) && !zoneOf(p));
+  if (rest.length) gs.push({ key: 'rest', label: `구역에 안 넣은 분 (${myTowns.map(t => t.replace(/[면읍]$/,'')).join('·')})`, ps: rest });
+  return gs;
 }
 const dayList = days => days.map(d => `${Number(d.slice(8,10))}일(${WEEK[dObj(d).getDay()]})`).join(', ');
 function workdayText(mk, days, who){
@@ -2494,8 +2502,11 @@ function openGroupSms(){
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">📩 ${curMonth}월 활동일 문자 보내기</div>
     ${workdays[mk] ? '' : '<div class="notice red" style="margin-bottom:8px;">⚠️ 아직 활동일을 정하지 않아 <b>추천 날짜</b>로 문자가 만들어집니다. 먼저 "날짜 정하기"를 해 주세요.</div>'}
-    <div class="muted" style="margin-bottom:4px;">보낼 곳을 누르세요. (<b>개별관리</b>·중도포기한 분은 빠집니다)</div>
-    <div id="gs-groups">${groups.map((g, i) => { const n = g.ps.filter(p => telOf(p)).length; return `<button type="button" class="secondary grp-btn" data-i="${i}"><span><b>${esc(g.label)}</b></span><span>${n}명 ›</span></button>`; }).join('') || '<p class="muted">보낼 명단이 없습니다.</p>'}</div>
+    <div id="gs-groups">
+      <div class="muted" style="margin-bottom:4px;">보낼 그룹을 <b>체크</b>하세요. 여러 개 골라도 돼요. (<b>개별관리</b>·중도포기한 분은 빠집니다)</div>
+      ${groups.map((g, i) => { const n = g.ps.filter(p => telOf(p)).length; return `<label class="grp-chk ${n?'':'off'}"><input type="checkbox" data-i="${i}" ${n?'':'disabled'}> <span style="flex:1;"><b>${g.zone ? '🗺 ' : g.key==='게이트볼' ? '🥎 ' : ''}${esc(g.label)}</b>${g.zone && !n ? ' <span class="muted" style="font-size:.82rem;">(경로당을 넣어 주세요)</span>' : ''}</span><span>${n}명</span></label>`; }).join('')}
+      <button type="button" class="full" id="gs-go" disabled style="margin-top:8px;">선택한 곳으로 문자 쓰기</button>
+    </div>
     <div id="gs-body" class="hidden">
       <div id="gs-who" style="font-weight:bold;margin:6px 0;"></div>
       <textarea id="gs-text" rows="14" style="font-size:.92rem;"></textarea>
@@ -2522,9 +2533,19 @@ function openGroupSms(){
     bg.querySelector('#gs-groups').classList.add('hidden'); bg.querySelector('#gs-body').classList.remove('hidden');
     bg.querySelector('#gs-who').innerHTML = `📩 ${esc(g.label)} · 받는 분 <span style="color:var(--primary)">${main.length}명</span>`
       + (noTel.length ? `<div class="muted" style="font-weight:normal;font-size:.85rem;">연락처 없는 분 ${noTel.length}명: ${noTel.map(p => esc(nm(p))).join(', ')}</div>` : '');
-    ta.value = workdayText(mk, days, g.key === '게이트볼' ? '게이트볼장 관리도우미 어르신' : `${g.label} 경로당지킴이 어르신`);
+    ta.value = workdayText(mk, days, g.whoText || (g.key === '게이트볼' ? '게이트볼장 관리도우미 어르신' : `${g.label} 경로당지킴이 어르신`));
   };
-  bg.querySelectorAll('#gs-groups button[data-i]').forEach(b => b.onclick = () => show(groups[Number(b.dataset.i)]));
+  // 체크한 그룹 합치기 (같은 분은 한 번만)
+  const picked = () => [...bg.querySelectorAll('#gs-groups input:checked')].map(c => groups[Number(c.dataset.i)]);
+  const upd = () => { const gs = picked(), n = new Set(gs.flatMap(g => g.ps.filter(p => telOf(p)).map(p => p.id))).size;
+    const go = bg.querySelector('#gs-go'); go.disabled = !gs.length; go.textContent = gs.length ? `선택한 ${gs.length}곳으로 문자 쓰기 (${n}명)` : '선택한 곳으로 문자 쓰기'; };
+  bg.querySelectorAll('#gs-groups input').forEach(c => c.onchange = upd);
+  bg.querySelector('#gs-go').onclick = () => {
+    const gs = picked(); if (!gs.length) return;
+    const seen = new Set(), ps = gs.flatMap(g => g.ps).filter(p => !seen.has(p.id) && seen.add(p.id));
+    const onlyGate = gs.every(g => g.key === '게이트볼');
+    show({ key: onlyGate ? '게이트볼' : 'mix', label: gs.map(g => g.label).join(' + '), ps, whoText: onlyGate ? '게이트볼장 관리도우미 어르신' : gs.length === 1 && gs[0].zone ? `${gs[0].label} 어르신` : '경로당지킴이 어르신' });
+  };
   bg.querySelector('#gs-back').onclick = () => { bg.querySelector('#gs-body').classList.add('hidden'); bg.querySelector('#gs-groups').classList.remove('hidden'); };
   bg.querySelector('#gs-copy').onclick = async () => { const ok = await copyText(ta.value);
     help.innerHTML = ok ? '<b style="color:var(--success)">✔ 문구를 복사했어요.</b> 문자 창에서 길게 눌러 "붙여넣기" 하세요.' : '복사가 안 되면 위 글을 길게 눌러 "전체 선택 → 복사" 하세요.'; };
