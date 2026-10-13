@@ -180,6 +180,14 @@
   .senior-combo .combo-list { position:absolute; left:0; right:0; top:100%; z-index:50; background:#fff; border:1px solid #cbd5e0; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.18); max-height:260px; overflow-y:auto; margin-top:2px; }
   .senior-combo .combo-list button { display:block; width:100%; margin:0; text-align:left; background:#fff; color:#2d3748; border:none; border-bottom:1px solid #edf2f7; border-radius:0; padding:11px 12px; font-size:1rem; }
   .senior-combo .combo-list button:active { background:#ebf8ff; }
+  .name-tap { cursor:pointer; border-bottom:3px dotted #a0aec0; }
+  .hl-dot { font-size:1.1rem; vertical-align:6px; margin-left:2px; }
+  .info-tbl { width:100%; border-collapse:collapse; margin-bottom:10px; font-size:.95rem; }
+  .info-tbl th { text-align:left; color:#718096; font-weight:normal; width:84px; padding:5px 4px; vertical-align:top; }
+  .info-tbl td { padding:5px 4px; border-bottom:1px solid #edf2f7; }
+  .cond-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
+  .cond-grid button { margin:0; padding:9px 4px; font-size:.9rem; background:#f7fafc; color:#2d3748; border:1px solid #e2e8f0; }
+  .cond-grid button.on { background:#fff5f5; color:#c53030; border:2px solid #fc8181; font-weight:bold; }
   .cus-box { background:#fffaf0; border:1px solid #fbd38d; border-radius:10px; padding:8px 10px; margin-bottom:10px; }
   .legend { display:flex; flex-wrap:wrap; gap:10px; font-size:.78rem; color:#4a5568; margin-bottom:4px; }
   .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-1px; margin-right:3px; }
@@ -291,7 +299,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-19</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-20</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1137,6 +1145,57 @@ function openZone(id){
   $('#zn-name').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); $('#zn-rename').click(); } });
   $('#zn-close').onclick = () => bg.remove();
   drawMain();
+}
+// ---------- 🩺 어르신 기본 정보·건강 정보 (이름을 누르면) ----------
+// p.health = { conds:[병명], memo:'자세한 내용', updated:'YYYY-MM-DD' }  — 이 휴대폰에만 저장
+const CONDS = ['고혈압','당뇨','고지혈증','관절염','허리·디스크','심장질환','뇌졸중(중풍)','치매·기억력','골다공증','청력 약함','시력 약함','호흡기'];
+function openInfo(){
+  const p = current(); if (!p) return;
+  const h = p.health || {}, sel = new Set(h.conds || []);
+  const z = zoneOf(p), L = z && z.leaderId ? participants.find(x => x.id === z.leaderId) : null, st = stats(p);
+  const extra = (h.conds || []).filter(c => !CONDS.includes(c));
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.25rem;margin-bottom:8px;">👤 ${esc(nm(p))} 어르신</div>
+    <table class="info-tbl">
+      <tr><th>경로당</th><td><b>${esc(p.town)} · ${esc(seniorOf(p))}</b>${z ? `<br><span class="muted">🗺 ${esc(z.name)}${L ? ` · 팀장 ${esc(L.name)}` : ''}</span>` : ''}</td></tr>
+      <tr><th>나이</th><td>${p.age ? esc(p.age)+'세' : '-'}${p.birth ? ` <span class="muted">(${p.birth}년생)</span>` : ''}</td></tr>
+      <tr><th>연락처</th><td>${p.phone ? telBtn(p) : '-'}</td></tr>
+      <tr><th>주소</th><td>${esc(p.address || '-')}</td></tr>
+      <tr><th>상태</th><td>${esc(st.status)}${st.penalty ? ` <b style="color:var(--danger)">(${st.penalty}점)</b>` : ''}${inHospNow(p) ? ' <span class="badge bg-hosp">🏥 입원 중</span>' : ''}${startTag(p) ? ` <span class="muted">· ${Number(p.start.slice(5))}월부터 근무</span>` : ''}</td></tr>
+    </table>
+    <label>🩺 아픈 곳 <span class="muted" style="font-weight:normal;">(누르면 표시, 다시 누르면 빠짐)</span></label>
+    <div class="cond-grid" id="if-conds">${[...CONDS, ...extra].map(c => `<button type="button" data-v="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+    <div style="display:flex;gap:6px;margin:-4px 0 10px;"><input type="text" id="if-new" placeholder="다른 병명 적기 (예: 갑상선)" autocomplete="off" style="margin:0;"><button type="button" class="small secondary" id="if-add" style="margin:0;white-space:nowrap;">＋ 넣기</button></div>
+    <label>📝 자세한 내용 <span class="muted" style="font-weight:normal;">(드시는 약, 조심할 점, 보호자 연락처 등)</span></label>
+    <textarea id="if-memo" rows="4" placeholder="예: 혈압약 아침 복용, 무릎이 안 좋아 계단 조심, 아들 010-0000-0000"></textarea>
+    ${h.updated ? `<div class="muted" style="font-size:.82rem;margin:-4px 0 8px;">마지막 수정 ${h.updated}</div>` : ''}
+    <div class="grid-2"><button class="secondary" id="if-close">닫기</button><button id="if-save">저장</button></div></div>`;
+  document.body.appendChild(bg);
+  const $ = q => bg.querySelector(q);
+  $('#if-memo').value = h.memo || '';
+  const bind = () => bg.querySelectorAll('#if-conds button').forEach(b => {
+    b.classList.toggle('on', sel.has(b.dataset.v));
+    b.onclick = () => { sel.has(b.dataset.v) ? sel.delete(b.dataset.v) : sel.add(b.dataset.v); b.classList.toggle('on'); };
+  });
+  bind();
+  const addNew = () => { const inp = $('#if-new'); inp.blur(); setTimeout(() => {
+    const v = inp.value.trim(); if (!v) return; sel.add(v); inp.value = '';
+    if (![...bg.querySelectorAll('#if-conds button')].some(b => b.dataset.v === v)) $('#if-conds').insertAdjacentHTML('beforeend', `<button type="button" data-v="${esc(v)}">${esc(v)}</button>`);
+    bind(); }, 50); };
+  $('#if-add').onclick = addNew;
+  $('#if-new').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addNew(); } });
+  $('#if-close').onclick = () => bg.remove();
+  $('#if-save').onclick = () => {
+    const conds = [...sel], memo = $('#if-memo').value.trim();
+    const before = JSON.stringify([...(h.conds||[])].sort()) + (h.memo||''), after = JSON.stringify([...conds].sort()) + memo;
+    if (before !== after) {
+      if (conds.length || memo) p.health = { conds, memo, updated: today() }; else delete p.health;
+      logEvent('건강 정보 수정', p, conds.length ? conds.join(', ') : '지움');
+      saveData(false);
+    }
+    bg.remove(); renderModal(); notify('저장했어요.');
+  };
 }
 async function delCustom(){
   const p = current(), mk = monthKey(); if (!p || !customOf(p, mk)) return;
@@ -2408,7 +2467,8 @@ function renderModal(){
   renderNotes(p);
   renderExPanel(p);
   if (document.getElementById('c-date').value) setCheckDate(document.getElementById('c-date').value);
-  document.getElementById('modal-title').innerHTML = `<b>${esc(nm(p))}</b> 어르신 점검`;
+  // 이름을 누르면 기본 정보·건강 정보 창
+  document.getElementById('modal-title').innerHTML = `<b class="name-tap" onclick="openInfo()">${esc(nm(p))}${p.health && (p.health.conds?.length || p.health.memo) ? '<span class="hl-dot">🩺</span>' : ''}</b> 어르신 점검`;
   let n = `<div class="notice">${viewYear()}년 누적 감점 <b style="color:var(--danger)">${s.penalty}점</b> (근무지 이탈 1회당 -1점 / -${MAX_LEAVE}점이면 중도포기 · 새해에 0점부터)</div>`;
   if (s.dropped) n = `<div class="notice red"><b>${s.status}</b> — 이후 근무할 수 없습니다.</div>` + n;
   if (p.guess) n = `<div class="notice">📍 경로당 <b>"${esc(p.senior)}"</b>은 주소(${esc(p.address||'')})를 보고 자동으로 넣은 <b>추정</b>입니다.<br>맞으면 아래 "어르신 정보 고치기"에서 그대로 <b>정보 저장</b>, 틀리면 경로당 이름을 고쳐서 저장해 주세요.</div>` + n;
@@ -2734,6 +2794,12 @@ function exportExcel(){
   const ws8 = znRows.length ? XLSX.utils.json_to_sheet(znRows) : XLSX.utils.aoa_to_sheet([['구역에 넣은 경로당이 없습니다.']]);
   ws8['!cols'] = [16,10,15,8,14,10,6,15,30,10].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws8, '구역');
+  // 건강 정보 (이름 눌러 적은 것)
+  const hlRows = list.filter(p => p.health && (p.health.conds?.length || p.health.memo)).map(p => ({
+    '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '나이':p.age, '아픈 곳':(p.health.conds||[]).join(', '), '자세한 내용':p.health.memo || '', '마지막 수정':p.health.updated || '' }));
+  const ws9 = hlRows.length ? XLSX.utils.json_to_sheet(hlRows) : XLSX.utils.aoa_to_sheet([['건강 정보를 적은 어르신이 없습니다.']]);
+  ws9['!cols'] = [8,14,10,6,30,50,12].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws9, '건강 정보');
   // 특이사항 (점검과 별개)
   const ntRows = [];
   list.forEach(p => (p.notes||[]).filter(n => n.date.startsWith(monthKey())).forEach(n => ntRows.push({
