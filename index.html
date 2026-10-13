@@ -375,9 +375,22 @@
       </div>
     </details>
   </div>
+
+  <div class="card" id="me-card">
+    <details class="chg-box" id="me-box" style="margin-top:0;border-top:none;padding-top:0;">
+      <summary><h3>👤 현장 점검자 정보</h3><span class="chg-arrow"></span></summary>
+      <div style="margin-top:8px;">
+        <div class="muted" style="font-size:.88rem;">활동일지를 보낼 때 <b>내 휴대폰·내 이메일</b>로 바로 보내요. 이 휴대폰 안에만 저장돼요.</div>
+        <label style="margin-top:8px;">이름 (활동일지 작성자)</label><input type="text" id="me-name" autocomplete="off" placeholder="예: 김○○">
+        <label>내 휴대폰 번호</label><input type="tel" id="me-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off">
+        <label>내 이메일</label><input type="email" id="me-email" autocomplete="off" placeholder="예: name@naver.com">
+        <button class="full" onclick="saveMe()">저장</button>
+      </div>
+    </details>
+  </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-55</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-56</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2243,19 +2256,49 @@ function exportDiary(){
   const date = diaryDate(), rows = diaryRows(date);
   if (!rows.length) return notify(`${md(date)}에는 점검한 경로당이 없어요.`);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, diarySheet(`${date.slice(0,4)}년 ${Number(date.slice(5,7))}월 ${dd(date)} 현장 점검 활동일지 (작성: 김장원)`, rows), '활동일지');
+  XLSX.utils.book_append_sheet(wb, diarySheet(`${date.slice(0,4)}년 ${Number(date.slice(5,7))}월 ${dd(date)} 현장 점검 활동일지 (작성: ${meName()})`, rows), '활동일지');
   XLSX.writeFile(wb, `활동일지_${date}.xlsx`);
   logEvent('활동일지 내려받기', null, `${date} 경로당 ${rows.length}곳`, date);
 }
+// ---------- 👤 현장 점검자 정보 (이 휴대폰에만 저장) ----------
+let me = (() => { try { return JSON.parse(load('jinan_me')) || {}; } catch(e) { return {}; } })();
+const meName = () => me.name || '김장원';
+function fillMe(){ const g = id => document.getElementById(id); if (!g('me-name')) return; g('me-name').value = me.name || '김장원'; g('me-phone').value = me.phone || ''; g('me-email').value = me.email || ''; }
+function saveMe(){
+  const g = id => document.getElementById(id).value.trim();
+  const email = g('me-email');
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return notify('이메일 주소를 다시 확인해 주세요. (예: name@naver.com)');
+  const phone = g('me-phone');
+  if (phone && phone.replace(/[^0-9]/g, '').length < 10) return notify('휴대폰 번호를 다시 확인해 주세요.');
+  me = { name: g('me-name') || '김장원', phone, email }; store('jinan_me', JSON.stringify(me));
+  logEvent('점검자 정보 변경', null, `이름 ${me.name}${me.phone ? ' · 휴대폰 등록' : ''}${me.email ? ' · 이메일 등록' : ''}`);
+  notify('저장했어요. 이제 활동일지를 내 휴대폰·이메일로 바로 보낼 수 있어요.');
+}
+function goMe(){ const b = document.getElementById('me-box'); b.open = true; fillMe(); b.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 async function shareDiary(){
   const date = diaryDate(), rows = diaryRows(date);
   if (!rows.length) return notify(`${md(date)}에는 점검한 경로당이 없어요.`);
-  const text = `[${Number(date.slice(5,7))}/${Number(date.slice(8,10))}(${WEEK[dObj(date).getDay()]}) 현장 점검 활동일지]\n\n` +
-    rows.map(r => `${r['번호']}. ${r['읍면']} ${r['경로당']} (${r['점검 인원']}명, ${r['결과']})\n${r['활동 내용']}`).join('\n\n') + `\n\n- 작성: 김장원`;
-  logEvent('활동일지 보내기', null, `${date} 경로당 ${rows.length}곳`, date);
-  try { if (navigator.share) { await navigator.share({ title: '현장 점검 활동일지', text }); return; } } catch(e) { if (e && e.name === 'AbortError') return; }
-  if (await copyText(text)) notify('활동일지 글을 복사했어요.\n카톡이나 문자 창에 붙여 넣어 보내세요.');
-  else notify(text);
+  const title = `${Number(date.slice(5,7))}/${Number(date.slice(8,10))}(${WEEK[dObj(date).getDay()]}) 현장 점검 활동일지`;
+  const text = `[${title}]\n\n` + rows.map(r => `${r['번호']}. ${r['읍면']} ${r['경로당']} (${r['점검 인원']}명, ${r['결과']})\n${r['활동 내용']}`).join('\n\n') + `\n\n- 작성: ${meName()}`;
+  const tel = String(me.phone || '').replace(/[^0-9]/g, '');
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📤 활동일지 보내기 <span class="muted" style="font-weight:normal;font-size:.85rem;">(경로당 ${rows.length}곳)</span></div>
+    <button class="full" id="sd-sms" style="text-align:left;">📱 <b>내 휴대폰으로 문자</b><br><span style="font-size:.85rem;font-weight:normal;">${tel ? esc(me.phone) : '번호를 아직 안 넣었어요 → 누르면 넣는 곳으로'}</span></button>
+    <button class="full" id="sd-mail" style="text-align:left;background:#2f855a;">✉️ <b>내 이메일로</b><br><span style="font-size:.85rem;font-weight:normal;">${me.email ? esc(me.email) : '이메일을 아직 안 넣었어요 → 누르면 넣는 곳으로'}</span></button>
+    <button class="warning full" id="sd-share" style="text-align:left;">💬 <b>카톡·다른 앱으로 보내기</b><br><span style="font-size:.85rem;font-weight:normal;">카톡 "나와의 채팅"을 고르면 내 카톡으로 와요</span></button>
+    <button class="secondary full" id="sd-copy">📋 글만 복사하기</button>
+    <button class="secondary full" id="sd-close">닫기</button></div>`;
+  document.body.appendChild(back);
+  const $ = q => back.querySelector(q), done = how => { logEvent('활동일지 보내기', null, `${date} 경로당 ${rows.length}곳 → ${how}`, date); back.remove(); };
+  $('#sd-close').onclick = () => back.remove();
+  $('#sd-sms').onclick = () => { if (!tel) { back.remove(); return goMe(); } done('내 휴대폰 문자'); openSmsApp([tel], text); };
+  $('#sd-mail').onclick = () => { if (!me.email) { back.remove(); return goMe(); } done('내 이메일'); location.href = `mailto:${encodeURIComponent(me.email)}?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text)}`; };
+  $('#sd-share').onclick = async () => {
+    try { if (navigator.share) { await navigator.share({ title, text }); done('카톡·다른 앱'); return; } } catch(e) { if (e && e.name === 'AbortError') return; }
+    if (await copyText(text)) { done('글 복사'); notify('이 휴대폰은 바로 보내기가 안 돼서 글을 복사했어요.\n카톡 "나와의 채팅"에 붙여 넣어 보내세요.'); }
+  };
+  $('#sd-copy').onclick = async () => { if (await copyText(text)) { done('글 복사'); notify('활동일지 글을 복사했어요. 원하는 곳에 붙여 넣으세요.'); } else notify(text); };
 }
 
 // 안 간 경로당 칸 순서: 면별 게이트볼 → 나머지 가나다순 (개별관리 제외)
@@ -2458,6 +2501,7 @@ function fmtPhone(v){
   let d = String(v||'').replace(/[^0-9]/g, '');
   if (!d) return '';
   if (d[0] !== '0') d = '010' + d;                       // 뒷자리만 적었으면 010 붙이기
+  if (/^0100(1[0-9]|10)/.test(d) && d.length > 11) d = d.slice(3);   // 010- 뒤에 010부터 다시 적은 경우
   if (d.startsWith('02')) return d.length <= 2 ? d : d.length <= 5 ? `${d.slice(0,2)}-${d.slice(2)}` : d.length <= 9 ? `${d.slice(0,2)}-${d.slice(2,5)}-${d.slice(5)}` : `${d.slice(0,2)}-${d.slice(2,6)}-${d.slice(6,10)}`;
   if (d.length <= 3) return d;
   if (d.length <= 6) return `${d.slice(0,3)}-${d.slice(3)}`;
@@ -3833,7 +3877,7 @@ function exportExcel(){
   // 그달 활동일지 (점검한 날마다 경로당별 보고용 글)
   { const tws = [...new Set(list.map(p => p.town))], ds = [...new Set(list.flatMap(p => mLogs(p).map(l => l.date)))].sort();
     const dRows = ds.flatMap(d => diaryRows(d, tws)).map((r, i) => ({ ...r, '번호': i + 1 }));
-    XLSX.utils.book_append_sheet(wb, diarySheet(`${YEAR}년 ${curMonth}월 현장 점검 활동일지 (작성: 김장원)`, dRows), `${curMonth}월 활동일지`); }
+    XLSX.utils.book_append_sheet(wb, diarySheet(`${YEAR}년 ${curMonth}월 현장 점검 활동일지 (작성: ${meName()})`, dRows), `${curMonth}월 활동일지`); }
   // 내년도 참여 제외 대상
   const exRows = list.filter(p => exOf(p)).map(p => ({ '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '나이':p.age, '연락처':p.phone,
     '제외 사유':exOf(p).reason, '자세한 사유':exOf(p).memo, '지정일':exOf(p).date }));
@@ -3863,6 +3907,7 @@ renderList();
 loadWeather();
 if (!participants.length) notify('처음 사용하시는군요!\n\n아래 "명단 관리"의 "📂 엑셀로 한번에 등록"을 눌러, 담당자에게 받은 명단 엑셀 파일을 한 번만 넣어 주세요.\n\n명단은 이 휴대폰에만 저장됩니다.');
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
+fillMe();
 renderBackup(); setTimeout(checkRestore, 900);
 if (!participants.length) document.getElementById('tools-box').open = true;
 // 앱을 열 때: 오늘 안부 전화할 입원 어르신 알림
