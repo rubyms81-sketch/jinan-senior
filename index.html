@@ -187,6 +187,9 @@
   .info-tbl td { padding:5px 4px; border-bottom:1px solid #edf2f7; }
   .cond-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px; }
   .cond-grid button { margin:0; padding:9px 4px; font-size:.9rem; background:#f7fafc; color:#2d3748; border:1px solid #e2e8f0; }
+  .cond-grid button.custom { position:relative; padding-right:26px; }
+  .cond-grid button .x { position:absolute; right:3px; top:50%; transform:translateY(-50%); width:22px; height:22px; line-height:22px; border-radius:50%; background:#e2e8f0; color:#4a5568; font-size:.75rem; font-weight:bold; }
+  .cond-grid button.on .x { background:#fed7d7; color:#c53030; }
   .cond-grid button.on { background:#fff5f5; color:#c53030; border:2px solid #fc8181; font-weight:bold; }
   .cus-box { background:#fffaf0; border:1px solid #fbd38d; border-radius:10px; padding:8px 10px; margin-bottom:10px; }
   .legend { display:flex; flex-wrap:wrap; gap:10px; font-size:.78rem; color:#4a5568; margin-bottom:4px; }
@@ -299,7 +302,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-20</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-21</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1149,6 +1152,8 @@ function openZone(id){
 // ---------- 🩺 어르신 기본 정보·건강 정보 (이름을 누르면) ----------
 // p.health = { conds:[병명], memo:'자세한 내용', updated:'YYYY-MM-DD' }  — 이 휴대폰에만 저장
 const CONDS = ['고혈압','당뇨','고지혈증','관절염','허리·디스크','심장질환','뇌졸중(중풍)','치매·기억력','골다공증','청력 약함','시력 약함','호흡기'];
+// 직접 넣은 병명 단추: 오른쪽 ✕를 누르면 빠짐
+const customBtn = c => `<button type="button" data-v="${esc(c)}" class="custom">${esc(c)}<span class="x" data-x="1">✕</span></button>`;
 function openInfo(){
   const p = current(); if (!p) return;
   const h = p.health || {}, sel = new Set(h.conds || []);
@@ -1165,7 +1170,7 @@ function openInfo(){
       <tr><th>상태</th><td>${esc(st.status)}${st.penalty ? ` <b style="color:var(--danger)">(${st.penalty}점)</b>` : ''}${inHospNow(p) ? ' <span class="badge bg-hosp">🏥 입원 중</span>' : ''}${startTag(p) ? ` <span class="muted">· ${Number(p.start.slice(5))}월부터 근무</span>` : ''}</td></tr>
     </table>
     <label>🩺 아픈 곳 <span class="muted" style="font-weight:normal;">(누르면 표시, 다시 누르면 빠짐)</span></label>
-    <div class="cond-grid" id="if-conds">${[...CONDS, ...extra].map(c => `<button type="button" data-v="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+    <div class="cond-grid" id="if-conds">${CONDS.map(c => `<button type="button" data-v="${esc(c)}">${esc(c)}</button>`).join('')}${extra.map(c => customBtn(c)).join('')}</div>
     <div style="display:flex;gap:6px;margin:-4px 0 10px;"><input type="text" id="if-new" placeholder="다른 병명 적기 (예: 갑상선)" autocomplete="off" style="margin:0;"><button type="button" class="small secondary" id="if-add" style="margin:0;white-space:nowrap;">＋ 넣기</button></div>
     <label>📝 자세한 내용 <span class="muted" style="font-weight:normal;">(드시는 약, 조심할 점, 보호자 연락처 등)</span></label>
     <textarea id="if-memo" rows="4" placeholder="예: 혈압약 아침 복용, 무릎이 안 좋아 계단 조심, 아들 010-0000-0000"></textarea>
@@ -1176,12 +1181,15 @@ function openInfo(){
   $('#if-memo').value = h.memo || '';
   const bind = () => bg.querySelectorAll('#if-conds button').forEach(b => {
     b.classList.toggle('on', sel.has(b.dataset.v));
-    b.onclick = () => { sel.has(b.dataset.v) ? sel.delete(b.dataset.v) : sel.add(b.dataset.v); b.classList.toggle('on'); };
+    b.onclick = e => {
+      if (e.target.dataset.x) { sel.delete(b.dataset.v); b.remove(); return; }   // ✕ = 빼기
+      sel.has(b.dataset.v) ? sel.delete(b.dataset.v) : sel.add(b.dataset.v); b.classList.toggle('on');
+    };
   });
   bind();
   const addNew = () => { const inp = $('#if-new'); inp.blur(); setTimeout(() => {
     const v = inp.value.trim(); if (!v) return; sel.add(v); inp.value = '';
-    if (![...bg.querySelectorAll('#if-conds button')].some(b => b.dataset.v === v)) $('#if-conds').insertAdjacentHTML('beforeend', `<button type="button" data-v="${esc(v)}">${esc(v)}</button>`);
+    if (![...bg.querySelectorAll('#if-conds button')].some(b => b.dataset.v === v)) $('#if-conds').insertAdjacentHTML('beforeend', customBtn(v));
     bind(); }, 50); };
   $('#if-add').onclick = addNew;
   $('#if-new').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addNew(); } });
