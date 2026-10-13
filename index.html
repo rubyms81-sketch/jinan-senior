@@ -291,7 +291,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-17</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-18</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -403,11 +403,11 @@ function load(k){ try { return localStorage.getItem(k); } catch(e){ return null;
 function store(k,v){ try { localStorage.setItem(k,v); } catch(e){ notify('이 휴대폰에서는 저장이 되지 않습니다. 인터넷 창의 "비공개(시크릿) 모드"를 끄고 사용해 주세요.'); } }
 
 // ---------- 화면 안 안내창 (팝업이 막힌 환경에서도 보이도록) ----------
-function showDialog(msg, withCancel){
+function showDialog(msg, withCancel, labels){
   return new Promise(resolve => {
     const back = document.createElement('div'); back.className = 'dlg-back';
     back.innerHTML = `<div class="dlg"><div class="dlg-msg"></div>
-      <div class="${withCancel?'grid-2':''}">${withCancel?'<button class="secondary" data-v="0">취소</button>':''}<button class="${withCancel?'':'full'}" data-v="1">확인</button></div></div>`;
+      <div class="${withCancel?'grid-2':''}">${withCancel?`<button class="secondary" data-v="0">${labels ? labels[1] : '취소'}</button>`:''}<button class="${withCancel?'':'full'}" data-v="1">${labels ? labels[0] : '확인'}</button></div></div>`;
     back.querySelector('.dlg-msg').textContent = msg;
     back.querySelectorAll('button').forEach(b => b.onclick = () => { back.remove(); resolve(b.dataset.v==='1'); });
     document.body.appendChild(back);
@@ -1023,7 +1023,9 @@ function openZone(id){
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.15rem;margin-bottom:8px;" id="zn-title"></div>
     <label>구역 이름 <span class="muted" style="font-weight:normal;">(예: 길대금 팀장)</span></label>
-    <div style="display:flex;gap:6px;margin-bottom:12px;"><input type="text" id="zn-name" autocomplete="off" style="margin:0;"><button type="button" class="small" id="zn-rename" style="margin:0;white-space:nowrap;">이름 저장</button></div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;"><input type="text" id="zn-name" autocomplete="off" style="margin:0;"><button type="button" class="small" id="zn-rename" style="margin:0;white-space:nowrap;">저장</button></div>
+    <label>팀장 연락처 <span class="muted" style="font-weight:normal;">(문자 보낼 때 팀장도 같이)</span></label>
+    <input type="tel" id="zn-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off" style="margin-bottom:12px;">
     <div id="zn-main">
       <label>담당 경로당</label>
       <div id="zn-sites"></div>
@@ -1038,7 +1040,7 @@ function openZone(id){
     <button type="button" class="secondary full" id="zn-close" style="margin-top:8px;">닫기</button></div>`;
   document.body.appendChild(bg);
   const $ = q => bg.querySelector(q);
-  $('#zn-name').value = z.name;
+  $('#zn-name').value = z.name; $('#zn-phone').value = z.phone || '';
   const drawMain = () => {
     const total = z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0);
     $('#zn-title').innerHTML = `🗺 ${esc(z.name)} <span class="muted" style="font-size:.85rem;font-weight:normal;">경로당 ${z.sites.length}곳 · 어르신 ${total}명</span>`;
@@ -1105,15 +1107,19 @@ function openZone(id){
     saveZones(); renderZones();
     $('#zn-pick').classList.add('hidden'); $('#zn-main').classList.remove('hidden'); drawMain();
   };
-  $('#zn-rename').onclick = () => {
-    const inp = $('#zn-name'); inp.blur();
+  const saveZoneInfo = () => {
+    const inp = $('#zn-name'); inp.blur(); $('#zn-phone').blur();
     setTimeout(() => {
-      const v = inp.value.trim(); if (!v) return notify('구역 이름을 적어 주세요.');
-      if (v === z.name) return;
-      logEvent('구역 이름 바꾸기', null, `${z.name} → ${v}`); z.name = v; saveZones(); drawMain(); renderZones();
-      notify(`구역 이름을 "${v}"(으)로 바꿨어요.`);
+      const v = inp.value.trim(), ph = fmtPhone($('#zn-phone').value); if (!v) return notify('구역 이름을 적어 주세요.');
+      const msg = [];
+      if (v !== z.name) { logEvent('구역 이름 바꾸기', null, `${z.name} → ${v}`); z.name = v; msg.push(`이름: ${v}`); }
+      if (ph !== (z.phone || '')) { logEvent('구역 팀장 연락처', null, `${z.name}: ${ph || '지움'}`); z.phone = ph; msg.push(`팀장 연락처: ${ph || '없음'}`); }
+      if (!msg.length) return;
+      saveZones(); drawMain(); renderZones(); notify('저장했어요.\n' + msg.join('\n'));
     }, 50);
   };
+  $('#zn-rename').onclick = saveZoneInfo;
+  $('#zn-phone').addEventListener('change', saveZoneInfo);
   $('#zn-name').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); $('#zn-rename').click(); } });
   $('#zn-close').onclick = () => bg.remove();
   drawMain();
@@ -1495,7 +1501,10 @@ function addChange(pre){
       logEvent('근무일 변경', x, `${dd(from)} → ${dd(to)}${reason?` (${reason})`:''}`, from);
     });
     saveData(false); back.remove(); renderModal();
-    notify(`${targets.length > 1 ? targets.length+'명 ' : ''}근무일 변경이 저장되었습니다.\n${dd(from)} → ${dd(to)}`);
+    const done = targets.filter(x => (x.changes||[]).some(c => c.from===from && c.to===to));
+    showDialog(`${done.length > 1 ? done.length+'명 ' : ''}근무일 변경이 저장되었습니다.\n${dd(from)} → ${dd(to)}\n\n변경 안내 문자를 보낼까요?${done.some(leaderOf) ? '\n(구역 팀장에게도 같이 보낼 수 있어요)' : ''}`, true, ['📩 문자 보내기', '안 보냄']).then(ok => {
+      if (ok) smsBox({ title: '근무일 변경 안내 문자', people: done, text: changeText(done.length === 1 ? done[0] : null, from, to, reason), logType: '근무일 변경 문자', logDetail: `${dd(from)} → ${dd(to)}` });
+    });
   };
 }
 function delChange(cid){
@@ -2301,36 +2310,48 @@ function openGroupSms(){
   };
   bg.querySelector('#gs-close').onclick = () => { if (imgView.src) URL.revokeObjectURL(imgView.src); bg.remove(); };
 }
-function smsDialog(p, date, nth){
+// 문자 보내기 창: 받는 사람(어르신들 + 구역 팀장)을 체크해서 한 번에 보냄
+const leaderOf = p => { const z = zoneOf(p); return z && z.phone ? { name: z.name, num: z.phone.replace(/[^0-9]/g,'') } : null; };
+function smsBox({ title, people, text, logType, logDetail }){
   return new Promise(resolve => {
-    const text = leaveText(p, date, nth);
-    const num = String(p.phone||'').replace(/[^0-9]/g,'');
-    const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const recips = people.filter(p => telOf(p)).map(p => ({ key: 'p'+p.id, label: `${p.name} 어르신`, num: telOf(p), p }));
+    const noTel = people.filter(p => !telOf(p));
+    // 같은 구역 팀장은 한 번만
+    const seen = new Set();
+    people.forEach(p => { const L = leaderOf(p); if (L && !seen.has(L.num) && !recips.some(r => r.num === L.num)) { seen.add(L.num); recips.push({ key: 'L'+L.num, label: `👤 팀장 (${L.name})`, num: L.num, leader: true }); } });
     const back = document.createElement('div'); back.className = 'dlg-back';
     back.innerHTML = `<div class="dlg">
-      <div style="font-weight:bold;margin-bottom:6px;">📩 근무지 이탈 안내 문자</div>
-      <div class="muted" style="margin-bottom:6px;">받는 분: ${esc(nm(p))} ${num?`(${esc(p.phone)})`:'(연락처 없음)'}</div>
-      <textarea id="sms-text" rows="11" style="font-size:.95rem;"></textarea>
-      <div class="grid-2">
-        <button id="sms-copy" class="warning">📋 문구 복사</button>
-        <button id="sms-open" ${num?'':'disabled style="opacity:.5"'}>💬 문자 앱 열기</button>
-      </div>
-      <div class="muted" id="sms-help" style="margin:4px 0 8px;">문자 앱이 안 열리면 "문구 복사"를 누른 뒤, 문자 창에 붙여넣기 하세요.</div>
-      <button class="secondary full" id="sms-close">닫기</button></div>`;
+      <div style="font-weight:bold;margin-bottom:6px;">📩 ${esc(title)}</div>
+      <div style="margin-bottom:6px;">${recips.map(r => `<label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin:4px 0;"><input type="checkbox" data-k="${r.key}" checked style="width:22px;height:22px;margin:0;"> <span>${r.leader ? `<b style="color:#276749">${esc(r.label)}</b>` : `<b>${esc(r.label)}</b>`} <span class="muted">${esc(fmtPhone(r.num))}</span></span></label>`).join('')}
+        ${noTel.length ? `<div class="muted" style="font-size:.85rem;">연락처 없음: ${noTel.map(p => esc(p.name)).join(', ')}</div>` : ''}
+        ${recips.some(r => r.leader) ? '' : '<div class="muted" style="font-size:.82rem;">팀장 연락처는 🗺 구역 창에서 넣으면 여기에 같이 나와요.</div>'}</div>
+      <textarea id="sb-text" rows="10" style="font-size:.95rem;"></textarea>
+      <div class="grid-2"><button id="sb-copy" class="warning">📋 문구 복사</button><button id="sb-open">💬 문자 앱 열기</button></div>
+      <div class="muted" id="sb-help" style="margin:4px 0 8px;">문자 앱이 안 열리면 "문구 복사"를 누른 뒤, 문자 창에 붙여넣기 하세요.</div>
+      <button class="secondary full" id="sb-close">닫기</button></div>`;
     document.body.appendChild(back);
-    const ta = back.querySelector('#sms-text'); ta.value = text;
-    back.querySelector('#sms-copy').onclick = async () => {
+    const ta = back.querySelector('#sb-text'); ta.value = text;
+    const picked = () => recips.filter(r => back.querySelector(`input[data-k="${r.key}"]`).checked);
+    back.querySelector('#sb-copy').onclick = async () => {
       const ok = await copyText(ta.value);
-      back.querySelector('#sms-help').innerHTML = ok ? '<b style="color:var(--success)">✔ 복사되었습니다.</b> 문자 창에서 길게 눌러 "붙여넣기" 하세요.'
-        : '복사가 안 되면 위 글을 길게 눌러 "전체 선택 → 복사" 하세요.';
+      back.querySelector('#sb-help').innerHTML = ok ? '<b style="color:var(--success)">✔ 복사되었습니다.</b> 문자 창에서 길게 눌러 "붙여넣기" 하세요.' : '복사가 안 되면 위 글을 길게 눌러 "전체 선택 → 복사" 하세요.';
       if (!ok) { ta.focus(); ta.select(); }
     };
-    back.querySelector('#sms-open').onclick = async () => {
-      await copyText(ta.value); // 문자 앱이 글을 못 받아도 바로 붙여넣을 수 있게 미리 복사
-      location.href = `sms:${num}${ios?'&':'?'}body=${encodeURIComponent(ta.value)}`;
+    back.querySelector('#sb-open').onclick = async () => {
+      const rs = picked(); if (!rs.length) return notify('받는 사람을 골라 주세요.');
+      if (logType) logEvent(logType, people.length === 1 ? people[0] : null, `${logDetail || ''} → ${rs.map(r => r.leader ? '팀장' : r.p.name).join(', ')}`);
+      await copyText(ta.value); openSmsApp(rs.map(r => r.num), ta.value);
     };
-    back.querySelector('#sms-close').onclick = () => { back.remove(); resolve(); };
+    back.querySelector('#sb-close').onclick = () => { back.remove(); resolve(); };
   });
+}
+function smsDialog(p, date, nth){
+  return smsBox({ title: '근무지 이탈 안내 문자', people: [p], text: leaveText(p, date, nth), logType: '이탈 안내 문자', logDetail: `${date} 이탈 (-${nth}점)` });
+}
+// 근무일 변경 안내 문자 (본인 + 팀장)
+function changeText(p, from, to, reason){
+  const ymdK = d => `${Number(d.slice(5,7))}월 ${dd(d)}`;
+  return `[진안군노인회] 근무일 변경 안내\n\n${p ? p.name + ' 어르신' : '어르신'},\n근무일이 아래와 같이 바뀌었습니다.\n\n${ymdK(from)} → ${ymdK(to)}${reason ? `\n(사유: ${reason})` : ''}\n\n바뀐 날짜에 꼭 근무해 주세요.\n감사합니다.`;
 }
 
 // ---------- 점검 화면 ----------
@@ -2688,10 +2709,10 @@ function exportExcel(){
   const znRows = [];
   zones.forEach(z => [...z.sites].sort((a,b) => a.town.localeCompare(b.town) || a.senior.localeCompare(b.senior)).forEach(x => {
     if (!list.some(p => p.town===x.town)) return;
-    siteMembers(x.town, x.senior).forEach(p => znRows.push({ '구역':z.name, '읍면':x.town, '경로당':x.senior, '성명':p.name, '나이':p.age, '연락처':p.phone, '주소':p.address, '상태':stats(p).status }));
+    siteMembers(x.town, x.senior).forEach(p => znRows.push({ '구역':z.name, '팀장 연락처':z.phone || '', '읍면':x.town, '경로당':x.senior, '성명':p.name, '나이':p.age, '연락처':p.phone, '주소':p.address, '상태':stats(p).status }));
   }));
   const ws8 = znRows.length ? XLSX.utils.json_to_sheet(znRows) : XLSX.utils.aoa_to_sheet([['구역에 넣은 경로당이 없습니다.']]);
-  ws8['!cols'] = [16,8,14,10,6,15,30,10].map(w=>({wch:w}));
+  ws8['!cols'] = [16,15,8,14,10,6,15,30,10].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws8, '구역');
   // 특이사항 (점검과 별개)
   const ntRows = [];
