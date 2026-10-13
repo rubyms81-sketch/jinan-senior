@@ -279,7 +279,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-8</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-9</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1049,7 +1049,7 @@ function openZone(id){
   const townsWith = [...TOWNS].sort((a,b) => myTowns.includes(b) - myTowns.includes(a));   // 11개 읍·면 모두 (내 담당 먼저)
   const drawList = () => {
     // 명단에 있는 경로당 + 직접 적어 넣은 경로당
-    const sites = [...new Set([...participants.filter(p => p.town===curTown).map(seniorOf),
+    const sites = [...new Set([...participants.filter(p => p.town===curTown).map(seniorOf), ...sitesOf(curTown),
       ...[...pick].filter(k => k.startsWith(curTown+'|')).map(k => k.split('|')[1])])].sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
     $('#zn-pick-title').textContent = `${curTown} 경로당을 누르세요 (여러 곳)`;
     $('#zn-list').innerHTML = sites.map(k => {
@@ -1847,10 +1847,11 @@ function renderList(){
   if (!all) {
     const groups = {};
     inTown.forEach(p => (groups[seniorOf(p)] ||= []).push(p));
-    const keys = Object.keys(groups).sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
-    if (curSenior && !groups[curSenior]) curSenior = null;
+    // 명단에 있는 경로당 + 그 면 경로당 목록(어르신이 아직 없는 곳은 0명)
+    const keys = [...new Set([...Object.keys(groups), ...sitesOf(town)])].sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
+    if (curSenior && !keys.includes(curSenior)) curSenior = null;
     sSel.innerHTML = `<option value="">${keys.length ? `경로당을 선택하세요 (${keys.length}곳)` : '이 면에는 등록된 명단이 없어요'}</option>` + keys.map(k => {
-      const ps = groups[k], done = ps.filter(p => p.logs.some(l => l.date===t)).length;
+      const ps = groups[k] || [], done = ps.filter(p => p.logs.some(l => l.date===t)).length;
       const gs = ps.filter(p => p.guess).length;
       return `<option value="${esc(k)}">${gs?'📍 ':''}${esc(k)} (${ps.length}명${gs?`, 추정 ${gs}명`:''}${done?`, 오늘 ${done}명 점검`:''})</option>`;
     }).join('');
@@ -1921,11 +1922,22 @@ document.addEventListener('focusout', e => {
   if (!e.target.classList?.contains('age-in')) return;
   const r = parseAge(e.target.value); if (r.birth) e.target.value = ageShow(r.age, r.birth);
 });
+// ---------- 11개 읍·면 경로당 목록 (2026년 경로당지킴이 참여 현황·노인체육시설 기준) ----------
+const KNOWN_SENIORS = {"진안읍":["개실(개곡)","검북","고향마을@","관산1","관산2","구운","궁동","금마","남광@ (우화5)","내사양","내오천","내후사","노계1","노계2","대광1","대광1 경모정","대성(군하리)","대성경모정","대성(연장리)","대연장","부곡","사인동(사옥)","산암","상가막","상도치","상평","새마을","석곡","선인","소토실","송대","신흥","암곡","양지","어은","언건","에코르","연구1","연구2(상림)","예리","외기","외사양","외오천","외후사","용지","우화1","우화2","우화3","우화4","원가림","원단양","원물곡","원반월","원연장","월랑@","월랑@ 경모정","유산","은천","정주동(우무실)","종평","주공1@","주공1 경모정","주공2 (노계3)","주공2 경모정","중리","중앙","중평","탄곡","평촌","하가막","하도치","하평","학천1","학천2","학천2 경모정","학천3","활인동(개활곡)","개별관리","진안게이트볼","마이게이트볼","그라운드골프장","파크골프장"],"용담면":["감동","노온","문화","방화","번덕","새마을","옥거","옥수","와룡","중앙","회룡1","회룡1경모정","회룡2","용담게이트볼"],"안천면":["괴정","교동","구곡","구례","노산","노채경모정","대덕(지사)","도라곡","보한","상리","샛담","시장","안기","율현","장등","중리","직동","하리","안천게이트볼"],"동향면":["고부","금곡(외금)","노은(하노)","대량경모정","보촌(보말)","봉곡","봉곡경모정","사미대(대야)","사미대경모정","상노","상능길","상향","성은(하향)","송학(내유)","수월(새울)","양지","양지경모정","옥천(창촌)","외유","용암","용암경모정","원금곡(내금)","을곡","장전","중노","추동","하노경모정","하능길","하향경모정","호천","후고산","대량게이트볼","대야게이트볼","하노게이트볼"],"상전면":["교동","금당","금지","금지경모정","내송","대구평","문화","세동","신연(용평)","양지","외송","원가막","원주평","중기","지사","회사","후가막","원수동","상전게이트볼"],"백운면":["경친(원촌)","남퇴","내봉","대유","동산","동신","두원","무등","미비","반송","백운동","번덕","번암","상동","상서","상운(상백)","서촌","석전(석무)","신마","신전","오정","원노","원산","원상서","원운","윤기","은번","임신","주천","중백","평장","하미","화산","정송","백운게이트볼"],"성수면":["가수","광음(음수동)","내좌","달길","반용","봉좌","산수동","산주","상기","상달","상촌","송기","송촌","신고","신기","안평","양화","염북","오암","원구신","원도통","원신기","원외궁","원좌","원좌산","장성","중군","중마(만덕)","중평","증자","지동","포동","성수게이트볼"],"마령면":["솔안","솔안경모정","평산","사곡","석교","원평지","원평지경모정","마평","방화","계남","오동","서산(서비산)","원동촌","서금(서촌)","원강정","원강정경모정","월운","신덕","대동","신동","장재","안방","널티(판치)","전원","추동","마령게이트볼","덕천게이트볼"],"부귀면":["가정","가치","거석","금계곡","금마(금평)","대곡","대동","두봉(원두남)","미곡","방곡(방각)","봉황골","부암","부천","사인암","삼봉","상거석","서판","석정","소태정","승각(장승)","신거석","신궁","신기","신덕","신리","신해오름","야곡","오복","오산","우정","운장","원봉암","원세동","적천","중궁","중수항","진상","큰터골(수원)","하곡(하수항)","하금(하거석)","회신","부귀게이트볼","운장게이트볼"],"정천면":["갈거","갈두","마조","무거","상조림(상항)","상조림경모정","상초","수암(조포)","신양","용정","원월평","정자동","정천","조림","하초","학동","항가동","정천게이트볼"],"주천면":["괴정","괴정경모정","양지","양지경모정","광석","성암","금평","금평경모정","봉소","구암","구암경모정","안정","(상)양명","미적","도촌","대촌","대촌경모정","산제","어자(무릉)","어자경모정","강촌","삼거","장등","장등경모정","중리","개화","개화경모정","신기","학선","중산","처사(중사)","하양명","주천게이트볼"]};
+// 그 면의 경로당 이름: 명단에 있는 이름 + 위 목록 (같은 경로당이 "성은(하향)"/"하향(성은)"처럼 달리 적혀 있으면 명단 쪽 이름만)
+const seniorParts = k => k.split(/[()\s]+/).map(x => x.trim()).filter(Boolean);
+// 한쪽 이름 조각이 다른 쪽에 모두 들어 있으면 같은 경로당 (예: "수월" = "수월(새울)")
+const sameSenior = (a, b) => { if (a.includes('경모정') !== b.includes('경모정')) return false; const A = seniorParts(a), B = seniorParts(b); return A.every(x => B.includes(x)) || B.every(x => A.includes(x)); };
+function sitesOf(town){
+  const have = [...new Set(participants.filter(p => p.town===town && p.senior).map(p => p.senior))];
+  (KNOWN_SENIORS[town] || []).forEach(k => { if (!have.some(e => sameSenior(e, k))) have.push(k); });
+  return have.sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
+}
 // 경로당 이름: "지사"만 적어도 됨. 끝의 "경로당"은 떼고, 그 면에 있는 경로당 이름과 맞으면 그 이름으로
 function normSenior(town, v){
   let t = String(v||'').trim().replace(/\s*경로당$/, '').trim();
   if (!t) return '';
-  const names = [...new Set(participants.filter(p => p.town===town && p.senior).map(p => p.senior))];
+  const names = sitesOf(town);
   if (names.includes(t)) return t;
   const parts = k => [k, k.replace(/\s*경로당$/, ''), ...k.split(/[()]/).map(x => x.trim()).filter(x => x.length >= 2)];
   const hits = names.filter(k => parts(k).includes(t));
@@ -1935,7 +1947,7 @@ function normSenior(town, v){
 document.addEventListener('focusin', e => {
   const el = e.target; if (!el.classList?.contains('senior-in')) return;
   const town = document.getElementById(el.dataset.town)?.value;
-  const names = [...new Set(participants.filter(p => p.town===town && p.senior).map(p => p.senior))].sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
+  const names = sitesOf(town);
   document.getElementById('senior-list').innerHTML = names.map(n => `<option value="${esc(n)}">`).join('');
 });
 document.addEventListener('focusout', e => {
