@@ -175,8 +175,6 @@
   .m-title b { font-size:1.75rem; color:#1a202c; font-weight:800; letter-spacing:-.5px; margin-right:2px; }
   .m-sub { margin:0 0 12px; line-height:1.9; }
   .m-head { display:flex; gap:10px; align-items:flex-start; }
-  .m-photo { flex:none; width:84px; height:112px; margin:4px 0 0; padding:0; border:2px dashed #cbd5e0; border-radius:8px; background:#f7fafc center/cover no-repeat; color:#718096; font-size:.78rem; line-height:1.3; }
-  .m-photo.has { border:2px solid #cbd5e0; color:transparent; }
   .m-sub .tel-row { display:block; margin-top:4px; }
   #mate-tabs .mt-wrap { display:flex; flex-wrap:wrap; gap:6px; margin:-4px 0 12px; padding:8px; background:#f7fafc; border:1px solid #e2e8f0; border-radius:10px; }
   #mate-tabs .mt-lbl { width:100%; font-size:.82rem; color:#718096; }
@@ -394,7 +392,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-1</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-2</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -402,7 +400,6 @@
   <div class="m-head">
     <div style="flex:1;min-width:0;"><h3 id="modal-title" class="m-title">참여자 점검</h3>
     <div id="modal-sub" class="m-sub"></div></div>
-    <button type="button" id="m-photo" class="m-photo" onclick="photoMenu()"></button>
   </div>
   <input type="file" id="photo-cam" accept="image/*" capture="environment" class="hidden" onchange="photoPicked(this)">
   <input type="file" id="photo-file" accept="image/*" class="hidden" onchange="photoPicked(this)">
@@ -1384,6 +1381,11 @@ function openInfo(){
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.25rem;margin-bottom:8px;">👤 ${esc(nm(p))} 어르신</div>
+    ${photoOf(p) ? `<img id="if-photo" src="${photoOf(p)}" alt="" style="display:block;width:100%;max-height:62vh;object-fit:contain;border-radius:10px;background:#f7fafc;margin-bottom:6px;cursor:zoom-in;">
+      <div style="display:flex;gap:6px;margin-bottom:10px;"><button type="button" class="small secondary" id="if-ph-cam" style="margin:0;">📸 다시 찍기</button><button type="button" class="small secondary" id="if-ph-file" style="margin:0;">🖼️ 바꾸기</button><button type="button" class="small secondary" id="if-ph-del" style="margin:0;color:var(--danger);">지우기</button></div>`
+    : `<div style="border:2px dashed #cbd5e0;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center;background:#f7fafc;">
+      <div style="font-weight:bold;margin-bottom:8px;">📷 사진 넣기</div>
+      <div class="grid-2"><button type="button" id="if-ph-cam" style="margin:0;">📸 사진 찍기</button><button type="button" class="warning" id="if-ph-file" style="margin:0;">🖼️ 사진 불러오기</button></div></div>`}
     <table class="info-tbl">
       <tr><th>경로당</th><td><b>${esc(p.town)} · ${esc(seniorOf(p))}</b>${z ? `<br><span class="muted">🗺 ${esc(z.name)}${L ? ` · 팀장 ${esc(L.name)}` : ''}</span>` : ''}</td></tr>
       <tr><th>나이</th><td>${p.age ? esc(p.age)+'세' : '-'}${p.birth ? ` <span class="muted">(${p.birth}년생)</span>` : ''}</td></tr>
@@ -1426,6 +1428,12 @@ function openInfo(){
   };
   $('#if-toggle').onclick = () => { open = !open; draw(); };
   bg.querySelector('#if-map')?.addEventListener('click', () => openMap(p.address));
+  const reInfo = () => { bg.remove(); openInfo(); };
+  bg.querySelector('#if-photo')?.addEventListener('click', () => photoFull(p));
+  bg.querySelector('#if-ph-cam')?.addEventListener('click', () => pickPhoto(true, reInfo));
+  bg.querySelector('#if-ph-file')?.addEventListener('click', () => pickPhoto(false, reInfo));
+  bg.querySelector('#if-ph-del')?.addEventListener('click', async () => { if (!await ask(`${p.name} 어르신 사진을 지울까요?`)) return;
+    try { await photoPut(p.id, null); } catch(e) {} logEvent('사진 삭제', p, ''); renderModal(); reInfo(); });
   bg.querySelector('#if-pen')?.addEventListener('click', () => showPenReasons(p));
   const addNew = () => { const inp = $('#if-new'); inp.blur(); setTimeout(() => {
     const v = inp.value.trim(); if (!v) return; inp.value = '';
@@ -3237,10 +3245,9 @@ function renderModal(){
   renderExPanel(p);
   if (document.getElementById('c-date').value) setCheckDate(document.getElementById('c-date').value);
   // 이름을 누르면 기본 정보·건강 정보 창
-  document.getElementById('modal-title').innerHTML = `<b class="name-tap" onclick="openInfo()">${esc(nm(p))}${p.health && (p.health.conds?.length || p.health.memo) ? '<span class="hl-dot">🩺</span>' : ''}</b>`;
+  document.getElementById('modal-title').innerHTML = `<b class="name-tap" onclick="openInfo()">${esc(nm(p))}${p.health && (p.health.conds?.length || p.health.memo) ? '<span class="hl-dot">🩺</span>' : ''}${photoOf(p) ? '<span class="hl-dot">📷</span>' : ''}</b>`;
   // 올해 감점이 있을 때만 짧게 표시 (누르면 이유)
   let n = s.pts ? `<div class="notice">${viewYear()}년 누적 감점 <b style="color:var(--danger)" class="pen-link" onclick="showPenReasons(current())">${s.penalty}점 이유 보기 ›</b>${s.unpaid ? ` · 일당 미지급 ${s.unpaid}일` : ''}</div>` : '';
-  renderPhoto(p);
   if (s.dropped) n = `<div class="notice red"><b>${s.status}</b> — 이후 근무할 수 없습니다.</div>` + n;
   if (p.guess) n = `<div class="notice">📍 경로당 <b>"${esc(p.senior)}"</b>은 주소(${esc(p.address||'')})를 보고 자동으로 넣은 <b>추정</b>입니다.<br>맞으면 아래 "어르신 정보 고치기"에서 그대로 <b>정보 저장</b>, 틀리면 경로당 이름을 고쳐서 저장해 주세요.</div>` + n;
   document.getElementById('modal-notice').innerHTML = n;
@@ -3259,46 +3266,54 @@ function renderModal(){
   }).join('') : '<p class="muted">아직 점검 기록이 없습니다.</p>';
 }
 
-// ---------- 📷 어르신 사진 (증명사진처럼, 이 휴대폰에만 저장: jinan_photos) ----------
-let photos = (() => { try { return JSON.parse(load('jinan_photos')) || {}; } catch(e) { return {}; } })();
-const photoOf = p => p && photos[p.id] || '';
-function savePhotos(){ try { localStorage.setItem('jinan_photos', JSON.stringify(photos)); return true; } catch(e) { return false; } }
-function renderPhoto(p){
-  const b = document.getElementById('m-photo'); if (!b) return; const ph = photoOf(p);
-  b.classList.toggle('has', !!ph); b.style.backgroundImage = ph ? `url("${ph}")` : ''; b.innerHTML = ph ? '' : '📷<br>사진<br>넣기';
+// ---------- 📷 어르신 사진 (이름을 누르면 크게, 이 휴대폰 IndexedDB에만 저장 · 백업 파일에는 같이 들어감) ----------
+let photos = {};
+function photoDB(){ return new Promise((res, rej) => { try { const r = indexedDB.open('jinan-photos', 1); r.onupgradeneeded = () => r.result.createObjectStore('p'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch(e) { rej(e); } }); }
+async function photoPut(id, url){
+  const db = await photoDB();
+  await new Promise((res, rej) => { const tx = db.transaction('p', 'readwrite'), st = tx.objectStore('p'); url ? st.put(url, String(id)) : st.delete(String(id)); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+  if (url) photos[id] = url; else delete photos[id];
 }
-function photoMenu(){
-  const p = current(); if (!p) return; const ph = photoOf(p);
-  const back = document.createElement('div'); back.className = 'dlg-back';
-  back.innerHTML = `<div class="dlg"><div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">📷 ${esc(nm(p))} 어르신 사진</div>
-    ${ph ? `<img src="${ph}" alt="" style="display:block;width:150px;height:200px;object-fit:cover;border-radius:8px;margin:0 auto 10px;border:1px solid #e2e8f0;">` : ''}
-    <div class="grid-2"><button id="ph-cam">📸 사진 찍기</button><button class="warning" id="ph-file">🖼️ 사진 불러오기</button></div>
-    ${ph ? '<button class="secondary full" id="ph-del" style="color:var(--danger);">사진 지우기</button>' : ''}
-    <div class="muted" style="font-size:.8rem;margin:6px 0;">사진은 이 휴대폰 안에만 저장되고, 백업 파일에 같이 들어가요.</div>
-    <button class="secondary full" id="ph-close">닫기</button></div>`;
-  document.body.appendChild(back);
-  const $ = q => back.querySelector(q);
-  $('#ph-close').onclick = () => back.remove();
-  $('#ph-cam').onclick = () => { back.remove(); document.getElementById('photo-cam').click(); };
-  $('#ph-file').onclick = () => { back.remove(); document.getElementById('photo-file').click(); };
-  $('#ph-del')?.addEventListener('click', async () => { if (!await ask(`${p.name} 어르신 사진을 지울까요?`)) return;
-    delete photos[p.id]; savePhotos(); logEvent('사진 삭제', p, ''); back.remove(); renderPhoto(p); });
+async function photoReplaceAll(obj){
+  const db = await photoDB();
+  await new Promise((res, rej) => { const tx = db.transaction('p', 'readwrite'), st = tx.objectStore('p'); st.clear(); Object.entries(obj || {}).forEach(([k, v]) => st.put(v, String(k))); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
 }
-// 고른 사진을 3:4 증명사진 크기(180×240)로 줄여서 저장
+async function loadPhotos(){
+  try {
+    const old = load('jinan_photos');   // 예전 미리보기에서 휴대폰 저장소에 넣은 사진은 옮김
+    if (old) { const o = JSON.parse(old) || {}; for (const [k, v] of Object.entries(o)) await photoPut(k, v); localStorage.removeItem('jinan_photos'); }
+    const db = await photoDB();
+    await new Promise(res => { const st = db.transaction('p').objectStore('p'), q = st.openCursor();
+      q.onsuccess = () => { const c = q.result; if (c) { photos[c.key] = c.value; c.continue(); } else res(); }; q.onerror = res; });
+  } catch(e) {}
+}
+const photoOf = p => (p && photos[p.id]) || '';
+let afterPhoto = null;
+function pickPhoto(cam, done){ afterPhoto = done; document.getElementById(cam ? 'photo-cam' : 'photo-file').click(); }
+// 고른 사진을 3:4 비율(480×640)로 줄여서 저장 — 크게 봐도 또렷하게
 function photoPicked(input){
   const f = input.files && input.files[0]; input.value = ''; const p = current(); if (!f || !p) return;
   const url = URL.createObjectURL(f), img = new Image();
-  img.onload = () => {
-    const W = 180, H = 240, c = document.createElement('canvas'); c.width = W; c.height = H;
+  img.onload = async () => {
+    const W = 480, H = 640, c = document.createElement('canvas'); c.width = W; c.height = H;
     const r = Math.max(W / img.width, H / img.height), w = img.width * r, h = img.height * r;
-    c.getContext('2d').drawImage(img, (W - w) / 2, (H - h) / 2.6, w, h);   // 얼굴이 위쪽에 오도록 살짝 위로
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); g.drawImage(img, (W - w) / 2, (H - h) / 2.6, w, h);
     URL.revokeObjectURL(url);
-    const had = !!photos[p.id]; photos[p.id] = c.toDataURL('image/jpeg', 0.75);
-    if (!savePhotos()) { if (had) {} else delete photos[p.id]; return notify('휴대폰 저장 공간이 부족해서 사진을 저장하지 못했어요.'); }
-    logEvent(had ? '사진 바꿈' : '사진 등록', p, ''); renderPhoto(p);
+    const had = !!photos[p.id];
+    try { await photoPut(p.id, c.toDataURL('image/jpeg', 0.8)); } catch(e) { return notify('휴대폰 저장 공간이 부족해서 사진을 저장하지 못했어요.'); }
+    logEvent(had ? '사진 바꿈' : '사진 등록', p, ''); renderModal();
+    const cb = afterPhoto; afterPhoto = null; cb && cb();
   };
   img.onerror = () => { URL.revokeObjectURL(url); notify('사진을 열 수 없어요. 다른 사진으로 해 주세요.'); };
   img.src = url;
+}
+// 사진을 화면 가득
+function photoFull(p){
+  const ph = photoOf(p); if (!ph) return;
+  const v = document.createElement('div');
+  v.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+  v.innerHTML = `<img src="${ph}" alt="" style="max-width:100vw;max-height:88vh;object-fit:contain;"><div style="color:#fff;font-size:1.3rem;font-weight:bold;margin-top:10px;">${esc(nm(p))} 어르신</div><div style="color:#a0aec0;font-size:.85rem;">누르면 닫혀요</div>`;
+  v.onclick = () => v.remove(); document.body.appendChild(v);
 }
 // 통계·감점 목록에서 어르신을 열었으면, 닫을 때 그 목록으로 돌아감
 let modalBack = null;
@@ -3610,7 +3625,7 @@ function backupData(){
   return { app: 'jinan-senior', at: nowHM(), count: participants.length, data };
 }
 const bkName = () => `현장점검_백업_${today()}.json`;
-const bkFile = () => new File([JSON.stringify(backupData())], bkName(), { type: 'application/json' });
+const bkFile = () => { const b = backupData(); if (Object.keys(photos).length) b.data.jinan_photos = JSON.stringify(photos); return new File([JSON.stringify(b)], bkName(), { type: 'application/json' }); };
 function idb(){ return new Promise((res, rej) => { try { const r = indexedDB.open('jinan-backup', 1); r.onupgradeneeded = () => r.result.createObjectStore('snaps'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch(e) { rej(e); } }); }
 async function snapSave(){   // 이 휴대폰 안에 백업 남기기 (최근 7개)
   try { const db = await idb(), b = backupData(); if (!b.count) return;
@@ -3621,10 +3636,12 @@ async function snapSave(){   // 이 휴대폰 안에 백업 남기기 (최근 7�
 async function snapLatest(){ try { const db = await idb(); return await new Promise(r => { const q = db.transaction('snaps').objectStore('snaps').getAll(); q.onsuccess = () => r(q.result.filter(x => x && x.count).sort((a,b) => a.at.localeCompare(b.at)).pop() || null); q.onerror = () => r(null); }); } catch(e) { return null; } }
 function restoreFrom(b){
   if (!b || b.app !== 'jinan-senior' || !b.data) return notify('현장점검 앱 백업 파일이 아니에요.');
+  const ph = b.data.jinan_photos; b = { ...b, data: { ...b.data } }; delete b.data.jinan_photos;   // 사진은 IndexedDB로
   try { Object.keys(localStorage).filter(k => k.startsWith('jinan_') && !BK_SKIP.includes(k)).forEach(k => localStorage.removeItem(k));
     Object.entries(b.data).forEach(([k, v]) => localStorage.setItem(k, v)); } catch(e) { return notify('복원하지 못했어요. 저장 공간을 확인해 주세요.'); }
+  let phDone = Promise.resolve(); if (ph) { try { phDone = photoReplaceAll(JSON.parse(ph)).catch(() => {}); } catch(e) {} }
   try { const h = JSON.parse(localStorage.getItem('jinan_history') || '[]'); h.push({ at: nowHM(), date: today(), type: '백업 복원', town:'', senior:'', name:'', detail: `${b.at} 백업 (어르신 ${b.count}명)` }); localStorage.setItem('jinan_history', JSON.stringify(h)); } catch(e) {}
-  notify(`복원했어요. (${b.at} 백업, 어르신 ${b.count}명)\n앱을 다시 불러옵니다.`).then(() => location.reload());
+  notify(`복원했어요. (${b.at} 백업, 어르신 ${b.count}명)\n앱을 다시 불러옵니다.`).then(() => phDone).then(() => location.reload());
 }
 async function saveBackup(){
   const a = document.createElement('a'); a.href = URL.createObjectURL(bkFile()); a.download = bkName(); a.click();
@@ -4036,6 +4053,7 @@ loadWeather();
 if (!participants.length) notify('처음 사용하시는군요!\n\n아래 "명단 관리"의 "📂 엑셀로 한번에 등록"을 눌러, 담당자에게 받은 명단 엑셀 파일을 한 번만 넣어 주세요.\n\n명단은 이 휴대폰에만 저장됩니다.');
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
 fillMe();
+loadPhotos();
 renderBackup(); setTimeout(checkRestore, 900);
 if (!participants.length) document.getElementById('tools-box').open = true;
 // 앱을 열 때: 오늘 안부 전화할 입원 어르신 알림
