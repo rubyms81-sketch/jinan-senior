@@ -166,6 +166,7 @@
   .cal button.from { background:#fffaf0; color:var(--warning); border:2px dashed var(--warning); opacity:1; }
   .cal button.pick { background:var(--warning); color:#fff; border-color:var(--warning); font-weight:bold; }
   .cal button.skip { background:#fff; color:#a0aec0; border:2px dashed #a0aec0; text-decoration:line-through; }
+  #cg-cal button:disabled.work { opacity:.4; }   /* 지난 근무일은 흐리게 (못 바꿈) */
   .cal button.hosp { background:#fed7e2; color:#97266d; border:2px solid #d53f8c; font-weight:bold; }
   .chip.hosp { background:#fed7e2; color:#97266d; }
   .bg-hosp { background:#d53f8c; }
@@ -433,7 +434,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-12</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-13</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1808,19 +1809,19 @@ function addChange(pre){
   pre = pre || {};
   const mk = monthKey(), days = personDays(p, mk), cuH = customOf(p, mk), hospD = new Set(cuH?.hosp || []), inH = !!(cuH && (cuH.inHosp || inHospNow(p)));
   const mates = participants.filter(x => x.id!==p.id && x.town===p.town && seniorOf(x)===seniorOf(p) && !stats(x).dropped);
-  const defFrom = days.find(d => d >= today()) || days[0];   // 앞으로 다가올 첫 근무일
+  const td = today(), end = endDay(mk);
+  // 여러 날짜를 한 번에: pairs = [{from, to}]  · 지난 날짜(오늘 전)는 바꿀 수 없음
+  let pairs = [], from = null;
+  const canFrom = k => days.includes(k) && k >= td && !pairs.some(x => x.from === k);
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">🔄 ${esc(nm(p))} 어르신 근무일 변경${inH ? ` <button type="button" id="cg-inhosp" class="small" style="width:auto;margin:0 0 0 4px;padding:3px 10px;background:#d53f8c;vertical-align:2px;">🏥 현재 입원중 ›</button>` : ''}</div>
     ${hospD.size || inH ? `<div class="notice" style="background:#fff5f7;border-color:#fbb6ce;margin-bottom:8px;font-size:.9rem;">🏥 ${inH ? '<b>지금 입원 중</b>이에요' : '입원 기록이 있어요'}${hospD.size ? ` · 입원한 날 ${[...hospD].sort().map(dd).join(', ')}` : ''}${cuH?.memo ? ` · ${esc(cuH.memo)}` : ''}<br><span class="muted">달력의 분홍 칸이 입원한 날이에요.</span></div>` : ''}
-    <label>원래 근무일</label>
-    <select id="cg-from">${days.map(d => `<option value="${d}" ${d===defFrom?'selected':''}>${dd(d)}</option>`).join('')}</select>
-    <label>달력에서 고르기</label>
-    <div class="muted" style="margin:-2px 0 6px;">① 파란 근무일을 누르면 <b>원래 날짜</b> ② 빈 날짜를 누르면 <b>바꾼 날짜</b></div>
-    <div class="legend"><span><i style="background:var(--primary);opacity:.55"></i>이미 근무일</span><span><i style="background:#fffaf0;border:2px dashed var(--warning)"></i>원래 날짜</span><span><i style="background:var(--warning)"></i>바꾼 날짜</span><span><i style="background:#edf2f7"></i>마감 이후</span></div>
+    <div class="muted" style="margin:0 0 6px;">① 파란 근무일을 누르고 ② 옮길 빈 날짜를 누르세요. <b>여러 날을 한 번에</b> 바꿀 수 있어요. (지난 날짜는 못 바꿔요)</div>
+    <div class="legend"><span><i style="background:var(--primary);opacity:.55"></i>근무일</span><span><i style="background:#fffaf0;border:2px dashed var(--warning)"></i>원래 날짜</span><span><i style="background:var(--warning)"></i>바꾼 날짜</span><span><i style="background:#edf2f7"></i>지난 날·마감 이후</span></div>
     <div class="cal" id="cg-cal"></div>
-    <div id="cg-picked" style="text-align:center;margin-bottom:10px;" class="muted">원래 날짜 <b>${defFrom?dd(defFrom):''}</b> — 이제 옮길 빈 날짜를 누르세요</div>
-    <input type="hidden" id="cg-to">
+    <div id="cg-picked" style="text-align:center;margin-bottom:6px;" class="muted"></div>
+    <div id="cg-list" style="margin-bottom:10px;"></div>
     <label>사유</label>
     <input type="hidden" id="cg-type">
     <div class="grid-2" id="cg-types" style="margin-bottom:12px;">
@@ -1831,75 +1832,71 @@ function addChange(pre){
     ${mates.length ? `<label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-bottom:12px;"><input type="checkbox" id="cg-all" style="width:22px;height:22px;margin:0;"> 같은 경로당(${esc(seniorOf(p))}) ${mates.length}명도 똑같이 변경</label>` : ''}
     <div class="grid-2"><button class="secondary" id="cg-cancel">취소</button><button id="cg-save">저장</button></div></div>`;
   document.body.appendChild(back);
-  back.querySelector('#cg-hosp').onclick = () => { back.remove(); openCustom(); };
-  back.querySelector('#cg-inhosp')?.addEventListener('click', () => { back.remove(); openCustom(); });
-  if (!days.length) back.querySelector('#cg-from').outerHTML = '<p class="muted">이달 근무일이 없습니다. 먼저 활동일을 정해 주세요.</p>';
-  // 달력: 이미 근무일·마감 이후는 못 고름
-  const y = YEAR, m = curMonth, lastD = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay(), end = endDay(mk);
+  const $ = q => back.querySelector(q);
+  $('#cg-hosp').onclick = () => { back.remove(); openCustom(); };
+  $('#cg-inhosp')?.addEventListener('click', () => { back.remove(); openCustom(); });
+  const y = YEAR, m = curMonth, lastD = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
+  const showList = () => {
+    $('#cg-picked').innerHTML = !days.length ? '이달 근무일이 없습니다. 먼저 활동일을 정해 주세요.'
+      : from ? `원래 날짜 <b>${dd(from)}</b> — 이제 옮길 빈 날짜를 누르세요` : pairs.length ? '더 바꿀 날이 있으면 근무일을 또 누르세요' : '바꿀 근무일(파란 날짜)을 누르세요';
+    $('#cg-list').innerHTML = pairs.map((x, i) => `<div style="display:flex;align-items:center;justify-content:space-between;background:#fffaf0;border:1px solid #fbd38d;border-radius:8px;padding:6px 10px;margin-top:4px;">
+      <b>${dd(x.from)} → <span style="color:var(--warning)">${dd(x.to)}</span></b><button type="button" class="small secondary" data-del="${i}" style="width:auto;margin:0;padding:2px 10px;">✕ 빼기</button></div>`).join('');
+    back.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { pairs.splice(+b.dataset.del, 1); drawCal(); });
+  };
   const drawCal = () => {
-    const from = back.querySelector('#cg-from')?.value, to = back.querySelector('#cg-to').value;
+    const fromSet = new Map(pairs.map(x => [x.from, x.to])), toSet = new Map(pairs.map(x => [x.to, x.from]));
     let h = WEEK.map(w => `<div class="h">${w}</div>`).join('') + '<div></div>'.repeat(first);
     for (let d = 1; d <= lastD; d++) {
       const k = ymd(y,m,d), w = new Date(y, m-1, d).getDay();
-      const after = end && k > end, isWork = days.includes(k), isFrom = k===from, isEnd = k===end;
-      const isH = hospD.has(k);
-      const cls = [isFrom?'from':(isWork?'work':isH?'hosp':''), k===to?'pick':'', (w===0 || HOLIDAYS.has(k))?'red':''].join(' ');
-      const tag = isFrom ? '원래' : k===to ? '바꿈' : isH ? '입원' : isEnd ? '마감' : '';
-      h += `<button data-k="${k}" class="${cls}" ${after ? 'disabled' : ''}>${d}${tag?`<small>${tag}</small>`:''}</button>`;
+      const past = k < td, after = end && k > end, isWork = days.includes(k), isH = hospD.has(k);
+      const isFrom = k === from || fromSet.has(k), isTo = toSet.has(k);
+      const cls = [isFrom ? 'from' : isTo ? 'pick' : (isWork ? 'work' : isH ? 'hosp' : ''), (w===0 || HOLIDAYS.has(k)) ? 'red' : ''].join(' ');
+      const tag = fromSet.has(k) ? `→${dd(fromSet.get(k)).replace(/\(.*/, '')}` : k === from ? '원래' : isTo ? '바꿈' : isH ? '입원' : k === end ? '마감' : '';
+      const off = (past || after) && !isFrom && !isTo;
+      h += `<button data-k="${k}" class="${cls}" ${off ? 'disabled' : ''}>${d}${tag ? `<small>${tag}</small>` : ''}</button>`;
     }
-    back.querySelector('#cg-cal').innerHTML = h;
+    $('#cg-cal').innerHTML = h;
     back.querySelectorAll('#cg-cal button:not(:disabled)').forEach(b => b.onclick = () => {
-      if (b.dataset.k === back.querySelector('#cg-from')?.value) return;
-      // 근무일을 누르면 "원래 날짜"로, 빈 날을 누르면 "바꾼 날짜"로
-      if (days.includes(b.dataset.k)) {
-        back.querySelector('#cg-from').value = b.dataset.k; back.querySelector('#cg-to').value = '';
-        back.querySelector('#cg-picked').innerHTML = `원래 날짜 <b>${dd(b.dataset.k)}</b> — 이제 옮길 빈 날짜를 누르세요`;
-        return drawCal();
-      }
-      back.querySelector('#cg-to').value = b.dataset.k;
-      back.querySelector('#cg-picked').innerHTML = `<b>${dd(back.querySelector('#cg-from').value)} → <span style="color:var(--warning)">${dd(b.dataset.k)}</span></b>`;
-      drawCal();
+      const k = b.dataset.k, pi = pairs.findIndex(x => x.from === k || x.to === k);
+      if (pi >= 0) { pairs.splice(pi, 1); return drawCal(); }          // 이미 고른 날을 다시 누르면 빼기
+      if (k === from) { from = null; return drawCal(); }
+      if (canFrom(k)) { from = k; return drawCal(); }
+      if (days.includes(k)) return notify(`${dd(k)}은 이미 근무일이에요. 바꿀 근무일을 먼저 누르세요.`);
+      if (!from) return notify('먼저 바꿀 근무일(파란 날짜)을 누르세요.');
+      pairs.push({ from, to: k }); pairs.sort((a, b) => a.from.localeCompare(b.from)); from = null; drawCal();
     });
+    showList();
   };
-  back.querySelector('#cg-from')?.addEventListener('change', () => { back.querySelector('#cg-to').value=''; back.querySelector('#cg-picked').innerHTML=`원래 날짜 <b>${dd(back.querySelector('#cg-from').value)}</b> — 이제 옮길 빈 날짜를 누르세요`; drawCal(); });
-  // 말로 변경에서 넘어온 값 미리 채우기
-  if (pre.from && days.includes(pre.from)) { back.querySelector('#cg-from').value = pre.from; back.querySelector('#cg-picked').innerHTML = `원래 날짜 <b>${dd(pre.from)}</b> — 이제 옮길 빈 날짜를 누르세요`; }
-  if (pre.to) {
-    back.querySelector('#cg-to').value = pre.to;
-    back.querySelector('#cg-picked').innerHTML = `<b>${dd(back.querySelector('#cg-from').value)} → <span style="color:var(--warning)">${dd(pre.to)}</span></b>`;
-  }
+  // 말로 변경·날짜 칸에서 넘어온 값 미리 채우기
+  if (pre.from && canFrom(pre.from)) { if (pre.to && !days.includes(pre.to) && pre.to >= td && !(end && pre.to > end)) pairs.push({ from: pre.from, to: pre.to }); else from = pre.from; }
+  else if (pre.from && pre.from < td) setTimeout(() => notify(`${dd(pre.from)}은 지난 날짜라서 바꿀 수 없어요.`), 50);
   drawCal();
-  // 사유 단추: 누르면 선택, 다시 누르면 해제
   back.querySelectorAll('#cg-types button').forEach(b => b.onclick = () => {
     const on = !b.classList.contains('on');
     back.querySelectorAll('#cg-types button').forEach(x => x.classList.remove('on'));
     if (on) b.classList.add('on');
-    back.querySelector('#cg-type').value = on ? b.dataset.v : '';
+    $('#cg-type').value = on ? b.dataset.v : '';
   });
-  if (pre.reason) back.querySelector(`#cg-types button[data-v="${pre.reason}"]`)?.click();
-  if (pre.all && back.querySelector('#cg-all')) back.querySelector('#cg-all').checked = true;
-  if (pre.note) back.querySelector('.dlg').insertAdjacentHTML('afterbegin', `<div class="notice" style="margin-bottom:8px;">${pre.note}</div>`);
-  back.querySelector('#cg-cancel').onclick = () => back.remove();
-  back.querySelector('#cg-save').onclick = () => {
-    const reason = back.querySelector('#cg-type').value;
-    const from = back.querySelector('#cg-from')?.value, to = back.querySelector('#cg-to').value;
-    if (!from) return;
-    if (!to) return notify('바꾼 날짜를 골라 주세요.');
-    if (to === from) return notify('원래 날짜와 같습니다.');
-    if (days.includes(to)) return notify(`${dd(to)}은 이미 근무일입니다.`);
-    if (endDay(mk) && to > endDay(mk)) return notify(`마감일(${dd(endDay(mk))}) 이후로는 옮길 수 없습니다.`);
-    const targets = [p, ...((back.querySelector('#cg-all')?.checked) ? mates : [])];
-    let seq = 0;
-    targets.forEach(x => {
+  if (pre.reason) $(`#cg-types button[data-v="${pre.reason}"]`)?.click();
+  if (pre.all && $('#cg-all')) $('#cg-all').checked = true;
+  if (pre.note) $('.dlg').insertAdjacentHTML('afterbegin', `<div class="notice" style="margin-bottom:8px;">${pre.note}</div>`);
+  $('#cg-cancel').onclick = () => back.remove();
+  $('#cg-save').onclick = () => {
+    const reason = $('#cg-type').value;
+    if (!pairs.length) return notify(from ? `${dd(from)}을 옮길 빈 날짜를 눌러 주세요.` : '바꿀 근무일을 골라 주세요.');
+    const targets = [p, ...(($('#cg-all')?.checked) ? mates : [])];
+    let seq = 0; const done = new Set();
+    targets.forEach(x => pairs.forEach(({ from: f, to: t }) => {
       const xd = personDays(x, mk);
-      if (!xd.includes(from) || xd.includes(to)) return;
-      (x.changes ||= []).push({ id: Date.now() + (seq++), from, to, reason });
-      logEvent('근무일 변경', x, `${dd(from)} → ${dd(to)}${reason?` (${reason})`:''}`, from);
-    });
+      if (!xd.includes(f) || xd.includes(t)) return;
+      (x.changes ||= []).push({ id: Date.now() + (seq++), from: f, to: t, reason });
+      logEvent('근무일 변경', x, `${dd(f)} → ${dd(t)}${reason?` (${reason})`:''}`, f); done.add(x);
+    }));
     saveData(false); back.remove(); renderModal();
-    const done = targets.filter(x => (x.changes||[]).some(c => c.from===from && c.to===to));
-    showDialog(`${done.length > 1 ? done.length+'명 ' : ''}근무일 변경이 저장되었습니다.\n${dd(from)} → ${dd(to)}\n\n변경 안내 문자를 보낼까요?${done.some(leaderOf) ? '\n(구역 팀장에게도 같이 보낼 수 있어요)' : ''}`, true, ['📩 문자 보내기', '안 보냄']).then(ok => {
-      if (ok) smsBox({ title: '근무일 변경 안내 문자', people: done, text: changeText(done.length === 1 ? done[0] : null, from, to, reason, done.every(x => leaderOf(x)?.num === leaderOf(done[0])?.num) ? done[0] : null), logType: '근무일 변경 문자', logDetail: `${dd(from)} → ${dd(to)}` });
+    const dl = [...done], txt = pairs.map(x => `${dd(x.from)} → ${dd(x.to)}`).join('\n');
+    if (!dl.length) return notify('바꿀 수 있는 날짜가 없었어요.');
+    showDialog(`${dl.length > 1 ? dl.length+'명 ' : ''}근무일 변경이 저장되었습니다.\n${txt}\n\n변경 안내 문자를 보낼까요?${dl.some(leaderOf) ? '\n(구역 팀장에게도 같이 보낼 수 있어요)' : ''}`, true, ['문자 보내기', '나중에']).then(ok => {
+      if (ok) smsBox({ title: '근무일 변경 안내 문자', people: dl, text: changeText(dl.length === 1 ? dl[0] : null, pairs, null, reason, dl.every(x => leaderOf(x)?.num === leaderOf(dl[0])?.num) ? dl[0] : null), logType: '근무일 변경 문자', logDetail: pairs.map(x => `${dd(x.from)} → ${dd(x.to)}`).join(', ') });
     });
   };
 }
@@ -3265,7 +3262,8 @@ function leaderLine(p, what){
 // 근무일 변경 안내 문자 (본인 + 팀장)
 function changeText(p, from, to, reason, lp){
   const ymdK = d => `${Number(d.slice(5,7))}월 ${dd(d)}`;
-  return `[진안군노인회] 근무일 변경 안내\n\n${p ? p.name + ' 어르신' : '어르신'},\n근무일이 아래와 같이 바뀌었습니다.\n\n${ymdK(from)} → ${ymdK(to)}${reason ? `\n(사유: ${reason})` : ''}\n\n바뀐 날짜에 꼭 근무해 주세요.${leaderLine(p || lp, '근무일이 바뀐 사실을')}\n감사합니다.`;
+  const lines = Array.isArray(from) ? from.map(x => `${ymdK(x.from)} → ${ymdK(x.to)}`).join('\n') : `${ymdK(from)} → ${ymdK(to)}`;
+  return `[진안군노인회] 근무일 변경 안내\n\n${p ? p.name + ' 어르신' : '어르신'},\n근무일이 아래와 같이 바뀌었습니다.\n\n${lines}${reason ? `\n(사유: ${reason})` : ''}\n\n바뀐 날짜에 꼭 근무해 주세요.${leaderLine(p || lp, '근무일이 바뀐 사실을')}\n감사합니다.`;
 }
 
 // ---------- 점검 화면 ----------
