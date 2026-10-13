@@ -346,7 +346,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-41</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-42</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1087,16 +1087,18 @@ function openZone(id){
     <div style="font-weight:bold;font-size:1.15rem;margin-bottom:8px;" id="zn-title"></div>
     <label>구역 이름 <span class="muted" style="font-weight:normal;">(예: 김○○ 팀장)</span></label>
     <div style="display:flex;gap:6px;margin-bottom:8px;"><input type="text" id="zn-name" autocomplete="off" style="margin:0;"><button type="button" class="small" id="zn-rename" style="margin:0;white-space:nowrap;">저장</button></div>
-    <div id="zn-leader" style="margin-bottom:6px;font-size:.92rem;"></div>
-    <label>팀장 연락처 <span class="muted" style="font-weight:normal;">(문자 보낼 때 팀장도 같이)</span></label>
-    <input type="tel" id="zn-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off" style="margin-bottom:12px;">
     <div id="zn-main">
-      <button type="button" class="full" id="zn-sms" style="margin-bottom:10px;">📩 이 구역 단체 문자 (내용 직접 쓰기)</button>
+      <button type="button" class="warning full" id="zn-add" style="margin-bottom:8px;">＋ 경로당 고르기</button>
       <details id="zn-sites-box" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
         <summary><span id="zn-sites-title" style="font-weight:bold;">담당 경로당</span><span class="chg-arrow"></span></summary>
         <div id="zn-sites"></div>
       </details>
-      <button type="button" class="warning full" id="zn-add">＋ 경로당 고르기</button>
+      <div style="border-top:1px solid #e2e8f0;margin-top:10px;padding-top:10px;">
+        <div id="zn-leader" style="margin-bottom:6px;font-size:.92rem;"></div>
+        <label>팀장 연락처 <span class="muted" style="font-weight:normal;">(문자 보낼 때 팀장도 같이)</span></label>
+        <input type="tel" id="zn-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off" style="margin-bottom:10px;">
+        <button type="button" class="full" id="zn-sms" style="margin:0;">📩 이 구역 단체 문자 (내용 직접 쓰기)</button>
+      </div>
     </div>
     <div id="zn-pick" class="hidden">
       <label id="zn-pick-title">면을 고르세요</label>
@@ -1173,7 +1175,7 @@ function openZone(id){
       const p = participants.find(x => x.id === z.leaderId);
       logEvent('구역 팀장 해제', p || null, z.name); delete z.leaderId; saveZones(); drawMain(); renderZones();
     });
-    $('#zn-leader').innerHTML = (() => { const L = participants.find(x => x.id === z.leaderId); return L ? `👤 팀장: <b>${esc(L.name)}</b> <span class="muted">(${esc(L.town)} · ${esc(seniorOf(L))})</span>` : '<span class="muted">팀장은 아래 경로당을 눌러 어르신 이름 밑 "👤 팀장으로 정하기"로 고르거나, 번호를 직접 적으세요.</span>'; })();
+    $('#zn-leader').innerHTML = (() => { const L = participants.find(x => x.id === z.leaderId); return L ? `👤 팀장: <b>${esc(L.name)}</b> <span class="muted">(${esc(L.town)} · ${esc(seniorOf(L))})</span>` : '<span class="muted">팀장은 위 담당 경로당을 눌러 어르신 이름 밑 "👤 팀장으로 정하기"로 고르거나, 번호를 직접 적으세요.</span>'; })();
     bg.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
       const [town, senior] = b.dataset.del.split('|');
       if (!await ask(`${town} ${senior} 경로당을 ${z.name}에서 뺄까요?`)) return;
