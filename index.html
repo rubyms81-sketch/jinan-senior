@@ -101,6 +101,8 @@
   button.pick2.delmode { background:#fff5f5; color:var(--danger); border-color:#feb2b2; }
   button.pick2.on { background:#f0fff4; border-color:#38a169; color:#276749; font-weight:bold; }
   .pick-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:4px 0 12px; }
+  .chip.wd { cursor:pointer; }
+  .chip.past { background:transparent; color:#a0aec0; border:2px dotted #a0aec0; border-radius:4px; }
   .chip { background:var(--tint); color:var(--primary); border-radius:14px; padding:5px 10px; font-size:.9rem; font-weight:bold; }
   .chip.gray { background:#edf2f7; color:#718096; font-weight:normal; }
   .chip.moved { background:#fffaf0; color:var(--warning); }
@@ -431,7 +433,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-8</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-9</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -903,12 +905,14 @@ function renderPersonDays(p){
     // 보충 근무: 원래 근무일 중 쉰 날(줄 긋기) + 실제 근무일(보충한 날은 주황)
     const all = [...new Set([...days, ...reg, ...hosp])].sort();
     document.getElementById('m-days').innerHTML = all.map(d => hosp.has(d) ? `<span class="chip hosp">${dd(d)} 입원</span>` : days.includes(d)
-      ? `<span class="chip ${(!reg.includes(d) || moved.has(d))?'moved':''}">${dd(d)}${moved.has(d)?' 변경':!reg.includes(d)?' 보충':''}</span>`
+      ? `<span class="chip wd ${(!reg.includes(d) || moved.has(d))?'moved':''} ${d < today()?'past':''}" data-d="${d}">${dd(d)}${moved.has(d)?' 변경':!reg.includes(d)?' 보충':''}</span>`
       : `<span class="chip off">${dd(d)} 쉼</span>`).join('');
   } else {
-    document.getElementById('m-days').innerHTML = days.map(d => `<span class="chip ${moved.has(d)?'moved':''}">${dd(d)}${moved.has(d)?' 변경':''}</span>`).join('')
+    document.getElementById('m-days').innerHTML = days.map(d => `<span class="chip wd ${moved.has(d)?'moved':''} ${d < today()?'past':''}" data-d="${d}">${dd(d)}${moved.has(d)?' 변경':''}</span>`).join('')
       + chg.filter(c => !days.includes(c.from)).map(c => `<span class="chip off">${dd(c.from)}</span>`).join('');
   }
+  // 근무일을 누르면 그 날짜로 근무일 변경 창
+  document.querySelectorAll('#m-days .chip.wd').forEach(c => c.onclick = () => addChange({ from: c.dataset.d }));
   document.getElementById('m-chg').innerHTML = (cu ? `<div class="log warn">${cu.inHosp ? '🏥 <b>입원 중</b>' : '🩹 <b>보충 근무 (개인 일정)</b>'}${cu.reason?` <span class="muted">· ${esc(cu.reason)}</span>`:''}${cu.back?` <span class="muted">· ${dd(cu.back)} 복귀</span>`:''}
       ${cu.memo ? `<br>📝 ${esc(cu.memo)}` : ''}
       ${hosp.size ? `<br><b style="color:#97266d">🏥 입원 ${rangeText([...hosp])}</b>` : ''}
@@ -1856,7 +1860,7 @@ function addChange(pre){
   };
   back.querySelector('#cg-from')?.addEventListener('change', () => { back.querySelector('#cg-to').value=''; back.querySelector('#cg-picked').innerHTML=`원래 날짜 <b>${dd(back.querySelector('#cg-from').value)}</b> — 이제 옮길 빈 날짜를 누르세요`; drawCal(); });
   // 말로 변경에서 넘어온 값 미리 채우기
-  if (pre.from && days.includes(pre.from)) back.querySelector('#cg-from').value = pre.from;
+  if (pre.from && days.includes(pre.from)) { back.querySelector('#cg-from').value = pre.from; back.querySelector('#cg-picked').innerHTML = `원래 날짜 <b>${dd(pre.from)}</b> — 이제 옮길 빈 날짜를 누르세요`; }
   if (pre.to) {
     back.querySelector('#cg-to').value = pre.to;
     back.querySelector('#cg-picked').innerHTML = `<b>${dd(back.querySelector('#cg-from').value)} → <span style="color:var(--warning)">${dd(pre.to)}</span></b>`;
