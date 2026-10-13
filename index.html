@@ -344,7 +344,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-38</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-39</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -436,7 +436,7 @@
   <h3>➕ 새로운 어르신 등록</h3>
   <label>소속 면</label><select id="n-town"></select>
   <label>경로당 이름 <span class="muted" style="font-weight:normal;font-size:.85rem;">("지사경로당"이면 "지사"만)</span></label><div class="senior-combo"><input type="text" id="n-senior" class="senior-in" data-town="n-town" placeholder="예: 지사" autocomplete="off"><button type="button" class="combo-btn" data-for="n-senior" aria-label="경로당 목록">▼</button><div class="combo-list hidden"></div></div>
-  <label>어르신 성명</label><input type="text" id="n-name" placeholder="예: 김영이">
+  <label>어르신 성명</label><input type="text" id="n-name" placeholder="예: 김진안">
   <label>나이 <span class="muted" style="font-weight:normal;font-size:.85rem;">(태어난 해를 적으면 나이로 바꿔 줘요)</span></label><input type="text" inputmode="numeric" id="n-age" class="age-in" placeholder="예: 1948 또는 78">
   <label>연락처</label><input type="tel" id="n-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off">
   <label>주소</label><input type="text" id="n-address" class="addr-in" data-town="n-town" placeholder="진안군 동향면 OOO" autocomplete="off">
@@ -2364,7 +2364,7 @@ const COLS = { town:['읍면','면','소속면','읍·면','읍면동'], senior:
 // 등록 양식 (앱 안에 들어 있음: 인터넷이 안 되면 CSV로 내려받아도 엑셀에서 열림)
 const TEMPLATE = [['읍면','경로당','성명','나이','연락처','주소'],
   ['동향면','고부','홍길동',78,'010-1234-5678','진안군 동향면 OO길 1'],
-  ['상전면','지사','김영이',1948,'010-0000-0000','진안군 상전면 OO로 2']];
+  ['상전면','지사','김진안',1948,'010-0000-0000','진안군 상전면 OO로 2']];
 function downloadTemplate(){
   if (typeof XLSX === 'undefined') {
     const csv = '\uFEFF' + TEMPLATE.map(r => r.map(c => `"${c}"`).join(',')).join('\r\n');
@@ -2380,7 +2380,7 @@ function downloadTemplate(){
     ['3. 읍면: 동향면, 상전면처럼 (면 이름만 적어도 됨). 경로당: "지사경로당"이면 "지사"만'],
     ['4. 나이: 78처럼 나이, 또는 1948처럼 태어난 해 (태어난 해를 적으면 나이로 바꿔 줍니다)'],
     ['5. 연락처: 010-1234-5678 (줄 없이 01012345678도 됨)'],
-    ['6. 예시 줄(홍길동, 김영이)은 지우고 적어 주세요.'],
+    ['6. 예시 줄(홍길동, 김진안)은 지우고 적어 주세요.'],
     [''],
     ['※ 나눠서 올려도 됩니다: 앱에서 "추가 정보만 넣기"를 고르면 이미 있는 분의 빈 칸만 채워요.']]);
   help['!cols'] = [{wch:80}];
@@ -2570,20 +2570,44 @@ async function toggleBest(town, senior){
 }
 // ---------- 🗺️ 경로당 위치 (네이버 지도 공유 링크) ----------
 // maps = { '면|경로당': { url, label, date } }
+// 네이버 지도 목록에서 받은 경로당·마을회관 주소 (공공시설). [면, 지도 이름, 주소, 앱 경로당 이름(확실한 것만)]
+const SITE_ADDR = [
+  ['동향면','용암회관','동향면 자산리 977-5','용암'], ['동향면','동향면게이트볼장','동향면 자산리 710-3',''], ['동향면','하노게이트볼장','동향면 자산리 302-4','하노게이트볼'],
+  ['동향면','외유곡마을회관','동향면 신송리 1051-1','외유'], ['동향면','후고산마을회관','동향면 자산리 471-2','후고산'], ['동향면','호천마을회관','동향면 신송리 1645-1','호천'],
+  ['동향면','중노마을경로당','동향면 자산리 241-1','중노'], ['동향면','내유곡회관','동향면 신송리 1162-1','송학(내유)'], ['동향면','하향경로당','동향면 성산리 75-1','하향(성은)'],
+  ['동향면','상향경로당','동향면 성산리 455-2','상향'], ['동향면','상노마을회관','동향면 자산리 38','상노'], ['동향면','대야마을회관','동향면 자산리 613-1','사미대(대야)'],
+  ['동향면','하노마을회관','동향면 자산리 366-1','하노(노은)'], ['동향면','고무정회관','동향면 신송리 788',''], ['동향면','창촌마을회관','동향면 대량리 179-1','옥천'],
+  ['동향면','중하신마을회관','동향면 학선리 693-1',''], ['동향면','양지경로당 (대량리 649-5)','동향면 대량리 649-5',''], ['동향면','양지경로당 (대량리 706-1)','동향면 대량리 706-1',''],
+  ['동향면','추동경로당','동향면 능금리 1879-1','추동'], ['동향면','을곡마을회관','동향면 학선리 108-1','을곡'], ['동향면','내금마을회관','동향면 능금리 898','원금곡(내금)'],
+  ['동향면','상능길마을회관','동향면 능금리 448-3','상능길'], ['동향면','봉곡경로당','동향면 학선리 268-1','봉곡'], ['동향면','보촌회관','동향면 대량리 259-3','보촌(보말)'],
+  ['동향면','금곡노인당','동향면 능금리 2062','금곡(외금)'], ['동향면','섬계마을회관','동향면 성산리 660','섬계'], ['동향면','장전새마을회관','동향면 성산리 924-3','장전'],
+  ['상전면','내송경로당','상전면 수동리 132-1','내송'], ['상전면','상전면게이트볼장','상전면 주평리 1045-5','상전게이트볼'], ['상전면','회사마을회관','상전면 주평리 1113-1','회사'],
+  ['상전면','중기마을회관','상전면 갈현리 792','중기'], ['상전면','후가막마을회관','상전면 주평리 636','후가막'], ['상전면','원가막마을회관','상전면 주평리 593-1','원가막'],
+  ['상전면','지사마을회관','상전면 주평리 849-1','지사'], ['상전면','교동마을회관','상전면 주평리 71-18','교동'], ['상전면','외송마을회관','상전면 수동리 398-14','외송'],
+  ['상전면','상전문화마을회관','상전면 주평리 1475-8','문화'], ['상전면','원주평마을회관','상전면 주평리 933-8','원주평'], ['상전면','세동마을회관','상전면 구룡리 652-4','세동'],
+  ['상전면','대구평마을회관','상전면 용평리 140-8','대구평'], ['상전면','금지마을회관','상전면 월포리 1566-8','금지'], ['상전면','금당마을회관','상전면 구룡리 254-6','금당'],
+  ['상전면','신연천문대','상전면 용평리 182-6',''], ['상전면','원수동마을회관','상전면 수동리 1088-28','원수동'], ['상전면','양지마을회관','상전면 월포리 1237-58','양지'],
+  ['진안읍','운산리 1322-2 (주소만)','진안읍 운산리 1322-2',''], ['진안읍','언건마을회관','진안읍 운산리 103-2','언건'], ['진안읍','신흥경로당','진안읍 운산리 1059-4','신흥'],
+  ['진안읍','송대회관','진안읍 운산리 387-1','송대'], ['진안읍','후사마을회관','진안읍 운산리 1403-1',''],
+];
+const siteCore = n => String(n||'').replace(/\s/g,'').split(/[()]/).filter(Boolean).sort().join('|');
+const builtinMap = (town, senior) => { const r = SITE_ADDR.find(x => x[0]===town && x[3]===senior) || SITE_ADDR.find(x => x[0]===town && x[3] && siteCore(x[3])===siteCore(senior)); return r ? { addr: '진안군 ' + r[2], label: r[1], builtin: true } : null; };
 let maps = (() => { try { return JSON.parse(load('jinan_maps')) || {}; } catch(e) { return {}; } })();
 const saveMaps = () => store('jinan_maps', JSON.stringify(maps));
-const mapOf = (town, senior) => maps[town + '|' + senior] || null;
+const mapOf = (town, senior) => { const m = maps[town + '|' + senior]; return m ? (m.none ? null : m) : builtinMap(town, senior); };
 // 네이버 지도 '공유' 글에서 링크와 장소 이름을 꺼냄 (예: [네이버지도] / 동향 ○○경로당 / https://naver.me/...)
 function parseMapShare(text){
   const t = String(text || '');
   const m = t.match(/https?:\/\/[^\s<>"']+/);
-  if (!m) return null;
+  if (!m) { const a = t.split(/\n/).map(x => x.trim()).find(x => /[리동로길]\s*\d/.test(x));
+    return a ? { addr: /진안/.test(a) ? a.replace(/^.*?(진안군)/, '$1') : '진안군 ' + a, label: '', naver: true } : null; }
   const url = m[0].replace(/[).,]+$/, '');
   const label = t.replace(m[0], '').replace(/\[[^\]]*\]/g, '').split(/\n/).map(x => x.trim()).filter(Boolean)[0] || '';
   return { url, label, naver: /naver\.(me|com)/i.test(url) };
 }
 function openSiteMap(town, senior){
   const m = mapOf(town, senior); if (!m) return;
+  if (!m.url) return openMap('전북 ' + m.addr);
   window.open(m.url, '_blank') || (location.href = m.url);
 }
 function siteMapBtn(town, senior){ if (mapOf(town, senior)) openSiteMap(town, senior); else editSiteMap(town, senior); }
@@ -2595,7 +2619,10 @@ function editSiteMap(town, senior, after){
   back.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🗺️ ${esc(senior)} 위치</div>
     <div class="muted" style="margin-bottom:8px;font-size:.9rem;">네이버 지도에서 경로당을 찾아 <b>공유 → 복사</b>한 뒤, 아래 <b>📋 붙여넣기</b>를 누르세요.<br>(받은 문자·카톡 글을 길게 눌러 복사해도 돼요)</div>
-    ${cur ? `<div class="muted" style="font-size:.85rem;margin-bottom:6px;">지금 저장: ${esc(cur.label || '')} <span style="word-break:break-all;">${esc(cur.url)}</span> (${esc(cur.date || '')})</div>` : ''}
+    ${cur ? `<div class="muted" style="font-size:.85rem;margin-bottom:6px;">지금: <b>${esc(cur.label || '')}</b> <span style="word-break:break-all;">${esc(cur.url || cur.addr)}</span>${cur.builtin ? ' (기본 주소)' : ` (${esc(cur.date || '')})`}</div>` : ''}
+    <details id="mp-book" ${cur ? '' : 'open'} style="margin-bottom:8px;"><summary style="font-weight:bold;cursor:pointer;">📍 주소록에서 고르기 (${esc(town)})</summary>
+      <div id="mp-list" style="max-height:220px;overflow:auto;margin-top:6px;"></div></details>
+    <div style="font-weight:bold;font-size:.9rem;margin-bottom:4px;">또는 네이버 지도 링크·주소 붙여넣기</div>
     <button type="button" class="small" id="mp-paste" style="background:#03c75a;color:#fff;margin:0 0 6px;">📋 붙여넣기</button>
     <textarea id="mp-text" rows="4" placeholder="[네이버지도]&#10;동향 ○○경로당&#10;https://naver.me/..." style="width:100%;"></textarea>
     <div id="mp-note" class="muted" style="font-size:.85rem;margin:4px 0 8px;"></div>
@@ -2604,21 +2631,27 @@ function editSiteMap(town, senior, after){
   </div>`;
   document.body.appendChild(back);
   const $ = q => back.querySelector(q), ta = $('#mp-text');
+  const book = SITE_ADDR.filter(x => x[0] === town).sort((a, b) => (a[3] ? 1 : 0) - (b[3] ? 1 : 0));   // 아직 경로당이 안 정해진 주소부터
+  $('#mp-list').innerHTML = book.length ? book.map((x, i) => `<button type="button" class="small secondary" data-bk="${SITE_ADDR.indexOf(x)}" style="display:block;width:100%;text-align:left;margin:0 0 4px;${x[3] && x[3] !== senior ? 'opacity:.6;' : ''}"><b>${esc(x[1])}</b><br><span style="font-size:.8rem;">${esc(x[2])}${x[3] ? ` · ${esc(x[3])}` : ''}</span></button>`).join('') : '<div class="muted">이 면은 주소록이 아직 없어요. 아래에 붙여 넣어 주세요.</div>';
+  back.querySelectorAll('[data-bk]').forEach(b => b.onclick = () => { const x = SITE_ADDR[+b.dataset.bk];
+    maps[town + '|' + senior] = { addr: '진안군 ' + x[2], label: x[1], date: today() }; saveMaps();
+    logEvent(cur ? '경로당 위치 변경' : '경로당 위치', null, `${town} ${senior} → ${x[1]} (${x[2]})`, today());
+    back.remove(); renderList(); renderZones(); after && after(); notify(`🗺️ ${senior} 위치를 "${x[1]}"(으)로 저장했어요.`); });
   const check = () => { const r = parseMapShare(ta.value);
-    $('#mp-note').innerHTML = !ta.value.trim() ? '' : !r ? '⚠️ 글 안에 링크(https://…)가 없어요.' : `✔ 링크 찾음${r.label ? ` · <b>${esc(r.label)}</b>` : ''}${r.naver ? '' : '<br>⚠️ 네이버 지도 링크가 아닌 것 같아요. 그래도 저장은 돼요.'}`; };
+    $('#mp-note').innerHTML = !ta.value.trim() ? '' : !r ? '⚠️ 링크(https://…)나 주소(예: 동향면 자산리 977-5)가 없어요.' : r.addr ? `✔ 주소 찾음 · <b>${esc(r.addr)}</b>` : `✔ 링크 찾음${r.label ? ` · <b>${esc(r.label)}</b>` : ''}${r.naver ? '' : '<br>⚠️ 네이버 지도 링크가 아닌 것 같아요. 그래도 저장은 돼요.'}`; };
   ta.oninput = check;
   $('#mp-paste').onclick = async () => { try { ta.value = await navigator.clipboard.readText(); check(); } catch(e) { ta.focus(); notify('자동 붙여넣기가 안 되는 휴대폰이에요. 빈칸을 길게 눌러 "붙여넣기" 해 주세요.'); } };
   $('#mp-cancel').onclick = () => back.remove();
   $('#mp-test')?.addEventListener('click', () => openSiteMap(town, senior));
   $('#mp-del')?.addEventListener('click', async () => {
     if (!await ask(`${senior} 경로당 위치를 지울까요?`)) return;
-    delete maps[town + '|' + senior]; saveMaps(); logEvent('경로당 위치 삭제', null, `${town} ${senior}`, today());
+    if (cur.builtin) maps[town + '|' + senior] = { none: true, date: today() }; else delete maps[town + '|' + senior]; saveMaps(); logEvent('경로당 위치 삭제', null, `${town} ${senior}`, today());
     back.remove(); renderList(); renderZones(); after && after();
   });
   $('#mp-save').onclick = () => {
     const r = parseMapShare(ta.value); if (!r) return notify('네이버 지도에서 공유한 글(링크가 있는 글)을 붙여 넣어 주세요.');
-    maps[town + '|' + senior] = { url: r.url, label: r.label, date: today() }; saveMaps();
-    logEvent(cur ? '경로당 위치 변경' : '경로당 위치', null, `${town} ${senior} → ${r.label ? r.label + ' ' : ''}${r.url}`, today());
+    maps[town + '|' + senior] = r.addr ? { addr: r.addr, label: '', date: today() } : { url: r.url, label: r.label, date: today() }; saveMaps();
+    logEvent(cur ? '경로당 위치 변경' : '경로당 위치', null, `${town} ${senior} → ${r.label ? r.label + ' ' : ''}${r.addr || r.url}`, today());
     back.remove(); renderList(); renderZones(); after && after();
     notify(`🗺️ ${senior} 위치를 저장했어요. 이제 경로당을 고르면 바로 지도를 열 수 있어요.`);
   };
@@ -3383,11 +3416,12 @@ function exportExcel(){
   ws8['!cols'] = [16,10,15,8,14,10,6,15,30,10].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws8, '구역');
   // 경로당 위치 (네이버 지도 링크)
-  const mpRows = Object.entries(maps).map(([k, m]) => { const [tw, sn] = k.split('|'); return { tw, sn, m }; })
+  const mpAll = {}; SITE_ADDR.filter(x => x[3]).forEach(x => { mpAll[x[0] + '|' + x[3]] = mapOf(x[0], x[3]); }); Object.keys(maps).forEach(k => { const [tw, sn] = k.split('|'); mpAll[k] = mapOf(tw, sn); });
+  const mpRows = Object.entries(mpAll).filter(([k, m]) => m).map(([k, m]) => { const [tw, sn] = k.split('|'); return { tw, sn, m }; })
     .filter(x => list.some(p => p.town===x.tw) || x.tw===town).sort((a,b) => a.tw.localeCompare(b.tw) || seniorRank(a.sn)-seniorRank(b.sn) || a.sn.localeCompare(b.sn))
-    .map(x => ({ '읍면':x.tw, '경로당':x.sn, '지도 이름':x.m.label || '', '네이버 지도 링크':x.m.url, '넣은 날':x.m.date || '' }));
+    .map(x => ({ '읍면':x.tw, '경로당':x.sn, '지도 이름':x.m.label || '', '주소 / 지도 링크':x.m.url || x.m.addr, '넣은 날':x.m.builtin ? '기본 주소' : (x.m.date || '') }));
   const wsM = mpRows.length ? XLSX.utils.json_to_sheet(mpRows) : XLSX.utils.aoa_to_sheet([['위치를 넣은 경로당이 없습니다.']]);
-  if (mpRows.length) mpRows.forEach((r, i) => { const c = wsM[XLSX.utils.encode_cell({ r: i + 1, c: 3 })]; if (c) c.l = { Target: r['네이버 지도 링크'] }; });
+  if (mpRows.length) mpRows.forEach((r, i) => { const c = wsM[XLSX.utils.encode_cell({ r: i + 1, c: 3 })]; if (c) c.l = { Target: /^https?:/.test(r['주소 / 지도 링크']) ? r['주소 / 지도 링크'] : 'https://map.naver.com/p/search/' + encodeURIComponent('전북 ' + r['주소 / 지도 링크']) }; });
   wsM['!cols'] = [8,14,20,36,12].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, wsM, '경로당 위치');
   // 건강 정보 (이름 눌러 적은 것)
