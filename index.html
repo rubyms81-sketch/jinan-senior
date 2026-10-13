@@ -126,7 +126,7 @@
   .chg-box > summary::-webkit-details-marker { display:none; }
   .chg-box > summary h3 { margin:0; }
   .chg-arrow { background:#edf2f7; color:#4a5568; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; transition:transform .2s; }
-  .chg-box[open] .chg-arrow { transform:rotate(180deg); }
+  .chg-box[open] > summary .chg-arrow { transform:rotate(180deg); }
   .chg-arrow::before { content:''; width:9px; height:9px; border-right:2.5px solid #4a5568; border-bottom:2.5px solid #4a5568; transform:translateY(-2px) rotate(45deg); }
   .chg-group { background:#fffaf0; border-left:4px solid var(--warning); border-radius:4px; margin:6px 0; padding:0 10px; }
   .chg-group summary { list-style:none; display:flex; justify-content:space-between; align-items:center; gap:8px; padding:11px 0; cursor:pointer; font-size:.98rem; }
@@ -203,6 +203,11 @@
   .cond-grid button.on .x { background:#fed7d7; color:#c53030; }
   .cond-grid button.on { background:#fff5f5; color:#c53030; border:2px solid #fc8181; font-weight:bold; }
   .stat-box { background:#f7fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; margin-top:12px; }
+  details.stat-box.chg-box { border-top:1px solid #e2e8f0; padding-top:6px; padding-bottom:6px; }
+  details.stat-box .chg-arrow { width:28px; height:28px; flex:none; }
+  .dy-site { border:1px solid #e2e8f0; border-radius:10px; padding:8px 10px; margin-top:8px; background:#fff; }
+  .dy-site.bad { border-color:#feb2b2; background:#fff5f5; }
+  .dy-site textarea { width:100%; min-height:76px; margin:6px 0 0; font-size:.95rem; }
   .st-tbl { width:100%; border-collapse:collapse; font-size:.85rem; margin-bottom:10px; }
   .st-tbl th, .st-tbl td { border:1px solid #e2e8f0; padding:4px 3px; text-align:center; }
   .st-tbl th { background:#edf2f7; }
@@ -315,6 +320,19 @@
     </details>
   </div>
 
+  <div class="card" id="diary-card">
+    <details class="chg-box" id="diary-box" style="margin-top:0;border-top:none;padding-top:0;" ontoggle="if(this.open) renderDiary()">
+      <summary><h3>📝 활동일지</h3><span class="chg-arrow"></span></summary>
+      <div style="margin-top:8px;">
+        <div class="muted" style="font-size:.88rem;">그날 점검한 경로당마다 보고용 글을 자동으로 만들어요. 글은 고쳐 쓸 수 있어요.</div>
+        <label style="margin-top:8px;">날짜</label>
+        <input type="date" id="dy-date" onchange="renderDiary()" style="margin-bottom:6px;">
+        <div id="dy-list"></div>
+        <div class="grid-2" style="margin-top:10px;"><button onclick="exportDiary()">📥 엑셀로 내려받기</button><button class="warning" onclick="shareDiary()">📤 문자·카톡으로 보내기</button></div>
+      </div>
+    </details>
+  </div>
+
   <div class="card" id="tools-card">
     <details class="chg-box" id="tools-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3>⚙️ 명단 관리</h3><span class="chg-arrow"></span></summary>
@@ -338,26 +356,28 @@
         <div class="close-sum" id="close-sum"></div>
         <p class="muted" style="margin-top:0;" id="export-desc"></p>
         <button class="full" onclick="exportExcel()">엑셀 파일로 내려받기</button>
-        <div class="stat-box">
-          <div style="font-weight:bold;margin-bottom:6px;">📊 기간 통계 <span class="muted" style="font-weight:normal;font-size:.85rem;">(예: 1월~12월, 1월~5월)</span></div>
-          <div style="display:flex;gap:6px;align-items:center;"><select id="st-from" style="margin:0;"></select><span>~</span><select id="st-to" style="margin:0;"></select></div>
+        <details class="stat-box chg-box">
+          <summary><span style="font-weight:bold;">📊 기간 통계 <span class="muted" style="font-weight:normal;font-size:.85rem;">(예: 1월~12월, 1월~5월)</span></span><span class="chg-arrow"></span></summary>
+          <div style="display:flex;margin-top:6px;gap:6px;align-items:center;"><select id="st-from" style="margin:0;"></select><span>~</span><select id="st-to" style="margin:0;"></select></div>
           <div class="grid-2" style="margin-top:8px;"><button class="secondary" onclick="showStats()">화면으로 보기</button><button onclick="exportStats()">통계 엑셀</button></div>
-        </div>
-        <div class="stat-box" id="bk-box">
-          <div style="font-weight:bold;margin-bottom:4px;">💾 백업 <span class="muted" style="font-weight:normal;font-size:.85rem;">(앱 기록 전부 · 한 달에 한 번 권장)</span></div>
+        </details>
+        <details class="stat-box chg-box" id="bk-box">
+          <summary><span style="font-weight:bold;">💾 백업 · 기록 초기화 <span class="muted" style="font-weight:normal;font-size:.85rem;">(한 달에 한 번 백업 권장)</span></span><span class="chg-arrow"></span></summary>
+          <div style="margin-top:6px;"></div>
           <div class="muted" id="bk-info" style="font-size:.85rem;margin-bottom:6px;"></div>
           <div class="grid-2"><button onclick="saveBackup()">💾 백업 파일 저장</button><button class="warning" onclick="shareBackup()">📤 문자·카톡으로 보내기</button></div>
           <button class="secondary full" onclick="document.getElementById('bk-file').click()">📂 백업 파일 불러오기 (복원)</button>
           <input type="file" id="bk-file" accept=".json,application/json" class="hidden" onchange="loadBackupFile(this)">
           <div id="bk-snap"></div>
-        </div>
-        <button class="danger small full" id="btn-reset" onclick="resetMonth()" style="margin-top:14px;"></button>
+          <div class="muted" style="font-size:.82rem;margin-top:12px;border-top:1px dashed #e2e8f0;padding-top:8px;">초기화하기 전에 꼭 위에서 백업해 두세요.</div>
+          <button class="danger small full" id="btn-reset" onclick="resetMonth()" style="margin-top:6px;"></button>
+        </details>
       </div>
     </details>
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-53</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-54</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2144,6 +2164,98 @@ async function linkDone(id){
   if (p.start && !(p.startDay && p.startDay > today())) p.startDay = today();   // 연계 끝난 날부터 근무
   delete p.linking; saveData(false); renderList();
 }
+// ---------- 📝 활동일지 (그날 점검한 경로당별 보고용 글) ----------
+// 고쳐 쓴 글은 jinan_diary 에 저장 { '날짜|면|경로당': 글 }
+let diaryEdits = (() => { try { return JSON.parse(load('jinan_diary')) || {}; } catch(e) { return {}; } })();
+const saveDiary = () => store('jinan_diary', JSON.stringify(diaryEdits));
+const HEALTH_RE = /(병원|다치|다쳐|다친|아프|아파|입원|수술|통증|진료|넘어|골절|약)/;
+const endDot = t => { t = String(t || '').trim(); return /[.!?다함음됨요)]$/.test(t) ? t : t + '.'; };
+// 그날 점검한 경로당 목록 [{town, senior, rows:[{p,l}]}]
+function diarySites(date, towns){
+  const map = {};
+  participants.filter(p => (towns || visibleTowns()).includes(p.town)).forEach(p => p.logs.filter(l => l.date === date).forEach(l => {
+    const k = p.town + '|' + seniorOf(p); (map[k] ||= { town: p.town, senior: seniorOf(p), rows: [] }).rows.push({ p, l }); }));
+  return Object.values(map).sort((a,b) => TOWNS.indexOf(a.town) - TOWNS.indexOf(b.town) || seniorRank(a.senior) - seniorRank(b.senior) || a.senior.localeCompare(b.senior));
+}
+function diaryAuto(site, date){
+  const n = new Set(site.rows.map(r => r.p.id)).size;
+  const sent = p => eventLog.some(h => /안내 문자$/.test(h.type) && h.name === p.name && String(h.detail).startsWith(date));
+  const bad = site.rows.filter(r => logPts(r.l) > 0 || r.l.attitude === '불량');
+  const out = [];
+  if (!bad.length) {
+    const T = [`참여자 ${n}명 모두 조끼·명찰을 바르게 착용하고 맡은 활동을 성실히 수행함.`,
+      `어르신 ${n}명 조끼·명찰 착용 상태가 양호하며 근무 시간을 잘 지켜 활동함.`,
+      `참여자 ${n}명 근무지를 잘 지키고 복장(조끼·명찰)도 바르게 갖추어 활동함.`,
+      `${n}명 모두 활동 시간을 성실히 지키고 조끼·명찰 착용 등 활동 태도가 훌륭함.`];
+    const h = [...(site.senior + date)].reduce((a, c) => a + c.charCodeAt(0), 0);
+    out.push(T[h % T.length]);
+  } else {
+    out.push(`참여자 ${n}명 점검.`);
+    bad.forEach(({ p, l }) => {
+      const pt = logPts(l), its = logItems(l).map(x => x.replace(/ -[\d.]+점$/, ''));
+      if (pt) out.push(`${p.name} 어르신 ${its.join('·')} 확인(벌점 -${pt}점${unpaidOf(p, l) ? ', 일당 미지급' : ''})${sent(p) ? ', 본인 및 팀장에게 안내 문자 발송함' : ''}.`);
+      if (l.attitude === '불량') out.push(`${p.name} 어르신 응대 태도가 불량하여 주의가 필요함.`);
+    });
+    const okN = n - new Set(bad.map(r => r.p.id)).size;
+    if (okN > 0) out.push(`나머지 ${okN}명은 조끼·명찰 착용 및 근무 상태 양호함.`);
+  }
+  site.rows.filter(r => r.l.memo).forEach(({ p, l }) => out.push(`${p.name} 어르신: ${endDot(l.memo)}`));
+  const mk = date.slice(0, 7);
+  site.rows.map(r => r.p).filter((p, i, a) => a.indexOf(p) === i).forEach(p => {
+    (p.notes || []).filter(x => x.date === date).forEach(x => out.push(`특이사항: ${p.name} 어르신 ${endDot(x.text)}${HEALTH_RE.test(x.text) ? ' 건강 상태를 계속 살필 필요가 있음.' : ''}`));
+    const cu = customOf(p, mk); if (cu && cu.inHosp) out.push(`${p.name} 어르신 입원 중${cu.reason ? `(${cu.reason})` : ''}.`);
+  });
+  return out.join(' ');
+}
+const diaryKey = (date, site) => `${date}|${site.town}|${site.senior}`;
+const diaryText = (date, site) => diaryEdits[diaryKey(date, site)] ?? diaryAuto(site, date);
+const diaryBad = site => site.rows.some(r => logPts(r.l) > 0 || r.l.attitude === '불량');
+function diaryDate(){ const el = document.getElementById('dy-date'); if (el && !el.value) el.value = today(); return (el && el.value) || today(); }
+function renderDiary(){
+  const box = document.getElementById('dy-list'); if (!box) return;
+  const date = diaryDate(), sites = diarySites(date), nb = sites.filter(diaryBad).length;
+  box.innerHTML = sites.length ? `<div class="muted" style="font-size:.88rem;">${md(date)}(${WEEK[dObj(date).getDay()]}) 점검한 경로당 <b>${sites.length}곳</b>${nb ? ` · <span style="color:var(--danger)">미흡 ${nb}곳</span>` : ''}</div>` +
+    sites.map((x, i) => `<div class="dy-site ${diaryBad(x) ? 'bad' : ''}"><b>${i + 1}. ${esc(x.town)} ${esc(x.senior)}</b> <span class="muted" style="font-size:.85rem;">${new Set(x.rows.map(r => r.p.id)).size}명 · ${diaryBad(x) ? '<b style="color:var(--danger)">미흡</b>' : '양호'}</span>
+      ${diaryEdits[diaryKey(date, x)] != null ? ` <button type="button" class="small secondary" data-reset="${i}" style="width:auto;margin:0;padding:2px 8px;">자동 글로 되돌리기</button>` : ''}
+      <textarea data-i="${i}">${esc(diaryText(date, x))}</textarea></div>`).join('')
+    : `<div class="pen-none">${md(date)}에는 점검한 경로당이 없어요.</div>`;
+  box.querySelectorAll('textarea').forEach(t => { const fit = () => { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 4) + 'px'; }; fit(); t.oninput = fit; });
+  box.querySelectorAll('textarea').forEach(t => t.onchange = () => { const x = sites[+t.dataset.i]; diaryEdits[diaryKey(date, x)] = t.value.trim(); saveDiary(); logEvent('활동일지 고침', null, `${date} ${x.town} ${x.senior}`, date); renderDiary(); });
+  box.querySelectorAll('[data-reset]').forEach(b => b.onclick = () => { delete diaryEdits[diaryKey(date, sites[+b.dataset.reset])]; saveDiary(); renderDiary(); });
+}
+function diaryRows(date, towns){
+  return diarySites(date, towns).map((x, i) => ({ '번호': i + 1, '날짜': date, '읍면': x.town, '경로당': x.senior, '점검 인원': new Set(x.rows.map(r => r.p.id)).size,
+    '결과': diaryBad(x) ? '미흡' : '양호', '활동 내용': diaryText(date, x) }));
+}
+function diarySheet(title, rows){
+  const ws = XLSX.utils.aoa_to_sheet([[title]]);
+  if (rows.length) XLSX.utils.sheet_add_json(ws, rows, { origin: 'A3' }); else XLSX.utils.sheet_add_aoa(ws, [['점검한 경로당이 없습니다.']], { origin: 'A3' });
+  ws['!cols'] = [6, 11, 8, 14, 8, 7, 70].map(w => ({ wch: w }));
+  rows.forEach((r, i) => { const R = i + 3;
+    for (let c = 0; c < 7; c++) { const cell = ws[XLSX.utils.encode_cell({ r: R, c })]; if (!cell) continue;
+      cell.s = Object.assign({ alignment: { wrapText: c === 6, vertical: 'top' } }, r['결과'] === '미흡' ? { fill: { fgColor: { rgb: FILL.pen } } } : {}); } });
+  return ws;
+}
+function exportDiary(){
+  if (typeof XLSX === 'undefined') return notify('엑셀 기능을 불러오지 못했습니다.\n인터넷 연결을 확인한 뒤 앱을 새로고침해 주세요.');
+  const date = diaryDate(), rows = diaryRows(date);
+  if (!rows.length) return notify(`${md(date)}에는 점검한 경로당이 없어요.`);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, diarySheet(`${date.slice(0,4)}년 ${Number(date.slice(5,7))}월 ${dd(date)} 현장 점검 활동일지 (작성: 김장원)`, rows), '활동일지');
+  XLSX.writeFile(wb, `활동일지_${date}.xlsx`);
+  logEvent('활동일지 내려받기', null, `${date} 경로당 ${rows.length}곳`, date);
+}
+async function shareDiary(){
+  const date = diaryDate(), rows = diaryRows(date);
+  if (!rows.length) return notify(`${md(date)}에는 점검한 경로당이 없어요.`);
+  const text = `[${Number(date.slice(5,7))}/${Number(date.slice(8,10))}(${WEEK[dObj(date).getDay()]}) 현장 점검 활동일지]\n\n` +
+    rows.map(r => `${r['번호']}. ${r['읍면']} ${r['경로당']} (${r['점검 인원']}명, ${r['결과']})\n${r['활동 내용']}`).join('\n\n') + `\n\n- 작성: 김장원`;
+  logEvent('활동일지 보내기', null, `${date} 경로당 ${rows.length}곳`, date);
+  try { if (navigator.share) { await navigator.share({ title: '현장 점검 활동일지', text }); return; } } catch(e) { if (e && e.name === 'AbortError') return; }
+  if (await copyText(text)) notify('활동일지 글을 복사했어요.\n카톡이나 문자 창에 붙여 넣어 보내세요.');
+  else notify(text);
+}
+
 // 안 간 경로당 칸 순서: 면별 게이트볼 → 나머지 가나다순 (개별관리 제외)
 const siteNoList = tw => sitesOf(tw).filter(k => k !== '개별관리' && k !== NO_SENIOR);
 const siteNo = (tw, k) => { const i = siteNoList(tw).indexOf(k); return i >= 0 ? i + 1 : 0; };
@@ -2204,7 +2316,7 @@ function renderList(){
     document.getElementById('close-sum').innerHTML =
       `<button onclick="showClose('leave')"><b style="color:var(--danger)">${pen?'-'+pen:0}점</b>벌점 ›</button><button onclick="showClose('vest')"><b style="color:var(--warning)">${vest}회</b>조끼 미착용(-0.5) ›</button><button onclick="showClose('badge')"><b style="color:var(--warning)">${badge}회</b>명찰 미착용(-0.5) ›</button>`; }
   document.getElementById('export-desc').innerHTML = (all ? (showOthers ? '<b>전체 읍·면</b> 명단을' : `<b>내 담당(${myTowns.join('·')})</b> 명단을`) : `<b>${esc(town)}</b> 명단을`) +
-    ` <b>${curMonth}월</b> 점검 내용을 내려받습니다.<br>엑셀 파일 안에 <b>마감 요약</b>(활동일·출장, 이탈·조끼·명찰 횟수), <b>참여자 현황</b>(어르신별 활동 날짜 · <span style="background:#FFC7CE">감점</span> <span style="background:#FFEB9C">근무일 적음</span> <span style="background:#E2EFDA">경고</span> 색 표시), <b>신규 인원</b>, <b>${curMonth}월 점검 기록</b>, <b>근무일 변경</b>, <b>보충 근무·입원</b>, <b>특이사항</b>, <b>경로당 위치</b>, <b>${exYear()}년 참여 제외</b>, <b>변경 이력</b>(그달 바뀐 내용 전부)이 들어 있습니다.`;
+    ` <b>${curMonth}월</b> 점검 내용을 내려받습니다.<br>엑셀 파일 안에 <b>마감 요약</b>(활동일·출장, 이탈·조끼·명찰 횟수), <b>참여자 현황</b>(어르신별 활동 날짜 · <span style="background:#FFC7CE">감점</span> <span style="background:#FFEB9C">근무일 적음</span> <span style="background:#E2EFDA">경고</span> 색 표시), <b>신규 인원</b>, <b>${curMonth}월 점검 기록</b>, <b>근무일 변경</b>, <b>보충 근무·입원</b>, <b>특이사항</b>, <b>활동일지</b>, <b>경로당 위치</b>, <b>${exYear()}년 참여 제외</b>, <b>변경 이력</b>(그달 바뀐 내용 전부)이 들어 있습니다.`;
 
   // 읍·면 선택칸 (인원 표시)
   const tSel = document.getElementById('filter-town');
@@ -3661,6 +3773,10 @@ function exportExcel(){
   const ws7 = ntRows.length ? XLSX.utils.json_to_sheet(ntRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 특이사항이 없습니다.`]]);
   ws7['!cols'] = [12,8,14,10,14,60].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws7, '특이사항');
+  // 그달 활동일지 (점검한 날마다 경로당별 보고용 글)
+  { const tws = [...new Set(list.map(p => p.town))], ds = [...new Set(list.flatMap(p => mLogs(p).map(l => l.date)))].sort();
+    const dRows = ds.flatMap(d => diaryRows(d, tws)).map((r, i) => ({ ...r, '번호': i + 1 }));
+    XLSX.utils.book_append_sheet(wb, diarySheet(`${YEAR}년 ${curMonth}월 현장 점검 활동일지 (작성: 김장원)`, dRows), `${curMonth}월 활동일지`); }
   // 내년도 참여 제외 대상
   const exRows = list.filter(p => exOf(p)).map(p => ({ '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '나이':p.age, '연락처':p.phone,
     '제외 사유':exOf(p).reason, '자세한 사유':exOf(p).memo, '지정일':exOf(p).date }));
