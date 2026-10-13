@@ -291,7 +291,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-18</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-19</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1024,6 +1024,7 @@ function openZone(id){
     <div style="font-weight:bold;font-size:1.15rem;margin-bottom:8px;" id="zn-title"></div>
     <label>구역 이름 <span class="muted" style="font-weight:normal;">(예: 길대금 팀장)</span></label>
     <div style="display:flex;gap:6px;margin-bottom:8px;"><input type="text" id="zn-name" autocomplete="off" style="margin:0;"><button type="button" class="small" id="zn-rename" style="margin:0;white-space:nowrap;">저장</button></div>
+    <div id="zn-leader" style="margin-bottom:6px;font-size:.92rem;"></div>
     <label>팀장 연락처 <span class="muted" style="font-weight:normal;">(문자 보낼 때 팀장도 같이)</span></label>
     <input type="tel" id="zn-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off" style="margin-bottom:12px;">
     <div id="zn-main">
@@ -1051,10 +1052,23 @@ function openZone(id){
         <div class="zs-people">${ms.length ? ms.map(p => { const st = stats(p); return `<div class="zs-person">
           <b>${esc(nm(p))}</b> ${p.age?`<span class="muted">(${esc(p.age)}세)</span>`:''} ${st.dropped?`<span class="badge bg-danger">${esc(st.status)}</span>`:badgeOf(st)}${inHospNow(p)?' <span class="badge bg-hosp">🏥 입원 중</span>':''}
           <br>${telBtn(p)}${p.address?`<br><span class="muted" style="font-size:.85rem;">🏠 ${esc(p.address)}</span>`:''}
-          <br><button type="button" class="small secondary" data-open="${p.id}">점검 화면 열기 ›</button></div>`; }).join('') : '<div class="muted">어르신이 없습니다.</div>'}
+          <br><button type="button" class="small secondary" data-open="${p.id}">점검 화면 열기 ›</button>
+          ${z.leaderId === p.id ? '<span class="badge" style="background:#276749;">👤 팀장</span> <button type="button" class="small secondary" data-unlead="1">팀장 해제</button>' : `<button type="button" class="small" data-lead="${p.id}" style="background:#276749;">👤 팀장으로 정하기</button>`}</div>`; }).join('') : '<div class="muted">어르신이 없습니다.</div>'}
           <button type="button" class="small secondary" data-del="${esc(siteKey(x.town, x.senior))}" style="margin-top:4px;">이 경로당 구역에서 빼기</button></div></details>`;
     }).join('') : '';
     bg.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { bg.remove(); openModal(Number(b.dataset.open)); });
+    // 이 구역 어르신 중에서 팀장 고르기 → 팀장 연락처도 자동으로
+    bg.querySelectorAll('[data-lead]').forEach(b => b.onclick = () => {
+      const p = participants.find(x => x.id === Number(b.dataset.lead)); if (!p) return;
+      z.leaderId = p.id; z.phone = fmtPhone(p.phone || ''); $('#zn-phone').value = z.phone;
+      logEvent('구역 팀장 정하기', p, `${z.name} 팀장${z.phone ? ' · ' + z.phone : ''}`);
+      saveZones(); drawMain(); renderZones(); notify(`${p.name} 어르신을 ${z.name} 팀장으로 정했어요.${z.phone ? '\n연락처 ' + z.phone : '\n(연락처가 없어요)'}`);
+    });
+    bg.querySelectorAll('[data-unlead]').forEach(b => b.onclick = () => {
+      const p = participants.find(x => x.id === z.leaderId);
+      logEvent('구역 팀장 해제', p || null, z.name); delete z.leaderId; saveZones(); drawMain(); renderZones();
+    });
+    $('#zn-leader').innerHTML = (() => { const L = participants.find(x => x.id === z.leaderId); return L ? `👤 팀장: <b>${esc(L.name)}</b> <span class="muted">(${esc(L.town)} · ${esc(seniorOf(L))})</span>` : '<span class="muted">팀장은 아래 경로당을 눌러 어르신 이름 밑 "👤 팀장으로 정하기"로 고르거나, 번호를 직접 적으세요.</span>'; })();
     bg.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
       const [town, senior] = b.dataset.del.split('|');
       if (!await ask(`${town} ${senior} 경로당을 ${z.name}에서 뺄까요?`)) return;
@@ -2311,14 +2325,20 @@ function openGroupSms(){
   bg.querySelector('#gs-close').onclick = () => { if (imgView.src) URL.revokeObjectURL(imgView.src); bg.remove(); };
 }
 // 문자 보내기 창: 받는 사람(어르신들 + 구역 팀장)을 체크해서 한 번에 보냄
-const leaderOf = p => { const z = zoneOf(p); return z && z.phone ? { name: z.name, num: z.phone.replace(/[^0-9]/g,'') } : null; };
+// 그 어르신 구역의 팀장 (구역에서 고른 팀장 어르신 → 그 번호, 아니면 직접 적은 번호)
+const leaderOf = p => {
+  const z = zoneOf(p); if (!z) return null;
+  const L = z.leaderId ? participants.find(x => x.id === z.leaderId) : null;
+  const num = String((L && L.phone) || z.phone || '').replace(/[^0-9]/g,'');
+  return num ? { name: L ? L.name : z.name, num } : null;
+};
 function smsBox({ title, people, text, logType, logDetail }){
   return new Promise(resolve => {
     const recips = people.filter(p => telOf(p)).map(p => ({ key: 'p'+p.id, label: `${p.name} 어르신`, num: telOf(p), p }));
     const noTel = people.filter(p => !telOf(p));
     // 같은 구역 팀장은 한 번만
     const seen = new Set();
-    people.forEach(p => { const L = leaderOf(p); if (L && !seen.has(L.num) && !recips.some(r => r.num === L.num)) { seen.add(L.num); recips.push({ key: 'L'+L.num, label: `👤 팀장 (${L.name})`, num: L.num, leader: true }); } });
+    people.forEach(p => { const L = leaderOf(p); if (L && !seen.has(L.num) && !recips.some(r => r.num === L.num)) { seen.add(L.num); recips.push({ key: 'L'+L.num, label: `👤 팀장 ${L.name}`, num: L.num, leader: true }); } });
     const back = document.createElement('div'); back.className = 'dlg-back';
     back.innerHTML = `<div class="dlg">
       <div style="font-weight:bold;margin-bottom:6px;">📩 ${esc(title)}</div>
@@ -2374,7 +2394,7 @@ function openModal(id){
   // 전화번호를 누르면 바로 전화 걸기
   const tel = String(p.phone||'').replace(/[^0-9+]/g,'');
   // 동네(면)와 경로당 이름을 크게
-  document.getElementById('modal-sub').innerHTML = `<span class="place">📍 <b>${esc(p.town)}</b> · <b>${esc(seniorOf(p))}</b></span>${zoneOf(p) ? `<span class="zone">🗺 ${esc(zoneOf(p).name)}</span>` : ''}` +
+  document.getElementById('modal-sub').innerHTML = `<span class="place">📍 <b>${esc(p.town)}</b> · <b>${esc(seniorOf(p))}</b></span>${zoneOf(p) ? `<span class="zone">🗺 ${esc(zoneOf(p).name)}${zoneOf(p).leaderId === p.id ? ' · 👤 팀장' : ''}</span>` : ''}` +
     (p.phone ? ` ${tel ? `<a class="tel-link" href="tel:${tel}">📞 ${esc(p.phone)}</a>` : esc(p.phone)}` : '');
   document.getElementById('c-memo').value = '';
   renderModal();
@@ -2709,10 +2729,10 @@ function exportExcel(){
   const znRows = [];
   zones.forEach(z => [...z.sites].sort((a,b) => a.town.localeCompare(b.town) || a.senior.localeCompare(b.senior)).forEach(x => {
     if (!list.some(p => p.town===x.town)) return;
-    siteMembers(x.town, x.senior).forEach(p => znRows.push({ '구역':z.name, '팀장 연락처':z.phone || '', '읍면':x.town, '경로당':x.senior, '성명':p.name, '나이':p.age, '연락처':p.phone, '주소':p.address, '상태':stats(p).status }));
+    siteMembers(x.town, x.senior).forEach(p => znRows.push({ '구역':z.name, '팀장':(participants.find(q => q.id === z.leaderId) || {}).name || '', '팀장 연락처':z.phone || '', '읍면':x.town, '경로당':x.senior, '성명':p.name, '나이':p.age, '연락처':p.phone, '주소':p.address, '상태':stats(p).status }));
   }));
   const ws8 = znRows.length ? XLSX.utils.json_to_sheet(znRows) : XLSX.utils.aoa_to_sheet([['구역에 넣은 경로당이 없습니다.']]);
-  ws8['!cols'] = [16,15,8,14,10,6,15,30,10].map(w=>({wch:w}));
+  ws8['!cols'] = [16,10,15,8,14,10,6,15,30,10].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws8, '구역');
   // 특이사항 (점검과 별개)
   const ntRows = [];
