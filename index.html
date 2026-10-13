@@ -312,9 +312,11 @@
           <button onclick="openAdd()">+ 참여자 신규 등록</button>
           <button type="button" class="filebtn" onclick="openBulkGuide()" style="margin:0;">📂 엑셀로 한번에 등록</button>
         </div>
+        <button type="button" class="secondary full" onclick="openAddrGuide()" style="margin-top:8px;">🗺️ 경로당 주소 엑셀로 넣기</button>
         <button class="warning full hidden" id="btn-guess" onclick="openGuessFix()"></button>
       </div>
     </details>
+    <input type="file" id="addr-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="sr-only" onchange="addrImport(this)">
     <input type="file" id="bulk-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="sr-only" onchange="bulkImport(this)">
   </div>
 
@@ -344,7 +346,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-40</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-41</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2413,6 +2415,99 @@ function openBulkGuide(){
   bg.querySelector('#bk-full').onclick = () => { bulkMode = 'full'; bg.remove(); document.getElementById('bulk-file').click(); };
   bg.querySelector('#bk-fill').onclick = () => { bulkMode = 'fill'; bg.remove(); document.getElementById('bulk-file').click(); };
   bg.querySelector('#bk-close').onclick = () => bg.remove();
+}
+
+// ---------- 🗺️ 경로당 주소 엑셀로 넣기 ----------
+// 양식: 읍면 | 경로당 | 주소 (또는 네이버 지도 링크). 내 담당 면 경로당 이름을 미리 채워서 내려받음
+function addrTemplateRows(){
+  const rows = [['읍면', '경로당', '주소 또는 네이버 지도 링크']];
+  visibleTowns().forEach(tw => sitesOf(tw).filter(k => k !== '개별관리' && k !== NO_SENIOR).forEach(k => {
+    const m = mapOf(tw, k); rows.push([tw, k, m ? (m.url || String(m.addr || '').replace(/^진안군\s*/, '')) : '']); }));
+  if (rows.length === 1) rows.push(['동향면', '용암', '동향면 자산리 977-5']);
+  return rows;
+}
+function downloadAddrTemplate(){
+  const rows = addrTemplateRows();
+  if (typeof XLSX === 'undefined') {
+    const csv = '\uFEFF' + rows.map(r => r.map(c => `"${c}"`).join(',')).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+    a.download = '경로당_주소_양식.csv'; a.click(); return;
+  }
+  const ws = XLSX.utils.aoa_to_sheet(rows); ws['!cols'] = [10,16,40].map(w=>({wch:w}));
+  const help = XLSX.utils.aoa_to_sheet([['작성 방법'],
+    ['1. 첫 줄(제목 줄)은 지우지 마세요.'],
+    ['2. 내 담당 면 경로당 이름이 미리 들어 있어요. 빈 주소 칸만 채우면 돼요. (이미 들어간 주소도 고칠 수 있어요)'],
+    ['3. 주소: "동향면 자산리 977-5"처럼 (진안군은 안 적어도 됨). 네이버 지도 링크(https://naver.me/...)를 넣어도 돼요.'],
+    ['4. 경로당: "지사경로당", "지사마을회관"이라고 적어도 앱의 "지사"로 맞춰 넣어요.'],
+    ['5. 다른 면 경로당도 줄을 더 만들어 적으면 같이 들어가요.']]);
+  help['!cols'] = [{wch:90}];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '경로당 주소'); XLSX.utils.book_append_sheet(wb, help, '작성 방법');
+  XLSX.writeFile(wb, '경로당_주소_양식.xlsx');
+}
+function openAddrGuide(){
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  const have = visibleTowns().reduce((n, tw) => n + sitesOf(tw).filter(k => mapOf(tw, k)).length, 0);
+  const all = visibleTowns().reduce((n, tw) => n + sitesOf(tw).filter(k => k !== '개별관리').length, 0);
+  bg.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">🗺️ 경로당 주소 엑셀로 넣기</div>
+    <div class="notice" style="margin-bottom:8px;font-size:.92rem;">
+      <b>이런 양식으로 올려 주세요</b> (첫 줄 = 제목)
+      <table class="st-tbl" style="margin:6px 0 4px;background:#fff;"><tr><th>읍면</th><th>경로당</th><th>주소 또는 네이버 지도 링크</th></tr><tr><td>동향면</td><td>용암</td><td>동향면 자산리 977-5</td></tr><tr><td>상전면</td><td>지사</td><td>https://naver.me/…</td></tr></table>
+      · 넣고 나면 경로당을 고를 때 <b>🗺️ 위치 보기</b>로 바로 지도가 열려요<br>· 지금 내 담당 경로당 <b>${all}곳 중 ${have}곳</b>에 주소가 있어요</div>
+    <button type="button" class="secondary full" id="ad-tpl">⬇️ <b>양식 내려받기</b><br><span style="font-size:.85rem;">내 담당 면 경로당 이름이 미리 들어 있어요. 빈 주소만 채우세요</span></button>
+    <button type="button" class="full" id="ad-up">📂 <b>엑셀 파일 올리기</b></button>
+    <button type="button" class="secondary full" id="ad-close">닫기</button></div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('#ad-tpl').onclick = () => downloadAddrTemplate();
+  bg.querySelector('#ad-up').onclick = () => { bg.remove(); document.getElementById('addr-file').click(); };
+  bg.querySelector('#ad-close').onclick = () => bg.remove();
+}
+function addrImport(input){
+  const file = input.files && input.files[0]; if (!file) return;
+  if (typeof XLSX === 'undefined') { input.value = ''; return notify('엑셀을 읽는 기능을 불러오지 못했습니다.\n인터넷 연결을 확인한 뒤 앱을 새로고침하고 다시 시도해 주세요.'); }
+  const reader = new FileReader();
+  reader.onerror = () => notify('파일을 열 수 없습니다. 다시 시도해 주세요.');
+  reader.onload = async e => {
+    input.value = '';
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      let grid = null, h = -1, cT = -1, cS = -1, cA = -1;
+      for (const sn of wb.SheetNames) {
+        const g = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:'', raw:false});
+        for (let i = 0; i < Math.min(g.length, 15); i++) {
+          const r = g[i].map(c => String(c).replace(/\s/g,''));
+          const s1 = r.findIndex(c => /경로당|시설명|장소/.test(c)), a1 = r.findIndex(c => /주소|위치|지도|링크/.test(c));
+          if (s1 >= 0 && a1 >= 0 && s1 !== a1) { grid = g; h = i; cS = s1; cA = a1; cT = r.findIndex(c => /읍면|읍·면|소속면|면$/.test(c)); break; }
+        }
+        if (grid) break;
+      }
+      if (!grid) return notify('엑셀에서 "경로당"과 "주소" 칸을 찾지 못했어요.\n"양식 내려받기"로 받은 양식을 써 주세요.');
+      const ok = [], same = [], bad = [];
+      grid.slice(h + 1).forEach((r, i) => {
+        const raw = String(r[cS] || '').trim(), val = String(r[cA] || '').trim();
+        if (!raw && !val) return;
+        if (!val) return;   // 주소 빈 줄은 건너뜀
+        const town = normTown(cT >= 0 ? r[cT] : '') || normTown(val);
+        if (!town || !raw) { bad.push(`${i + h + 2}번째 줄 ${raw || '(경로당 이름 없음)'}${town ? '' : ' - 읍면을 모름'}`); return; }
+        const senior = normSenior(town, raw.replace(/\s*(마을)?(회관|경로당|노인당|노인정)$/, '').trim() || raw);
+        const url = (val.match(/https?:\/\/[^\s<>"']+/) || [])[0];
+        const v = url ? { url, label: '', date: today() } : { addr: /진안/.test(val) ? val.replace(/^.*?(진안군)/, '$1') : '진안군 ' + (TOWNS.some(t => val.includes(t)) ? val : town + ' ' + val), label: '', date: today() };
+        const cur = mapOf(town, senior);
+        if (cur && (cur.url || cur.addr) === (v.url || v.addr)) { same.push(senior); return; }
+        ok.push({ town, senior, v, cur, known: sitesOf(town).includes(senior) });
+      });
+      if (!ok.length) return notify(`새로 넣을 주소가 없어요.${same.length ? `\n(이미 같은 주소 ${same.length}곳)` : ''}${bad.length ? `\n\n못 넣은 줄:\n${bad.slice(0, 8).join('\n')}` : ''}`);
+      const unk = ok.filter(x => !x.known);
+      const msg = `경로당 주소 ${ok.length}곳을 넣을까요?\n(새로 ${ok.filter(x => !x.cur).length}곳 · 바뀜 ${ok.filter(x => x.cur).length}곳${same.length ? ` · 이미 같음 ${same.length}곳` : ''})`
+        + (unk.length ? `\n\n※ 명단에 아직 없는 경로당 ${unk.length}곳: ${unk.slice(0, 6).map(x => x.senior).join(', ')}${unk.length > 6 ? ' …' : ''}\n(그 경로당에 어르신이 생기면 바로 쓰여요)` : '')
+        + (bad.length ? `\n\n못 넣는 줄 ${bad.length}개:\n${bad.slice(0, 5).join('\n')}` : '');
+      if (!await ask(msg)) return;
+      ok.forEach(x => { maps[x.town + '|' + x.senior] = x.v; logEvent(x.cur ? '경로당 위치 변경' : '경로당 위치', null, `${x.town} ${x.senior} → ${x.v.addr || x.v.url} (엑셀)`, today()); });
+      saveMaps(); renderList(); renderZones();
+      notify(`🗺️ 경로당 주소 ${ok.length}곳을 넣었어요.`);
+    } catch(err) { notify('엑셀 파일을 읽지 못했어요. 양식을 확인해 주세요.'); }
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 function normTown(t){
