@@ -354,7 +354,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-46</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-47</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -3071,20 +3071,34 @@ function cancelEdit(){
 }
 
 // 🔔 점검 저장 소리 "띵동" (휴대폰 미디어 소리 크기를 따라감)
+// 소리 파일(WAV)을 앱 안에서 만들어 <audio>로 틀고, 안 되면 WebAudio로 한 번 더 시도
+const _snd = {};
+function makeChime(notes){
+  const rate = 22050, len = Math.floor(rate * 1.4), buf = new ArrayBuffer(44 + len * 2), v = new DataView(buf);
+  const w = (o, str) => [...str].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0,'RIFF'); v.setUint32(4, 36 + len*2, true); w(8,'WAVE'); w(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,rate,true); v.setUint32(28,rate*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,'data'); v.setUint32(40,len*2,true);
+  for (let i = 0; i < len; i++) { const t = i / rate; let x = 0;
+    notes.forEach(([f, at]) => { const u = t - at; if (u >= 0) x += Math.sin(2*Math.PI*f*u) * Math.exp(-u*4) * Math.min(1, u*60) * 0.45; });
+    v.setInt16(44 + i*2, Math.max(-1, Math.min(1, x)) * 32767, true); }
+  let bin = ''; const b = new Uint8Array(buf); for (let i = 0; i < b.length; i += 8192) bin += String.fromCharCode.apply(null, b.subarray(i, i + 8192));
+  return 'data:audio/wav;base64,' + btoa(bin);
+}
 let _ac = null;
+function chimeWebAudio(notes){
+  try { _ac = _ac || new (window.AudioContext || window.webkitAudioContext)(); if (_ac.state === 'suspended') _ac.resume();
+    notes.forEach(([f, at]) => { const t = _ac.currentTime + at, o = _ac.createOscillator(), g = _ac.createGain();
+      o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+      o.connect(g); g.connect(_ac.destination); o.start(t); o.stop(t + 0.95); }); } catch(e) {}
+}
 function playDingDong(sad){
+  const notes = sad ? [[440, 0], [349, 0.28]] : [[1319, 0], [1047, 0.32]];   // 이탈은 낮은 소리, 보통은 띵동
   try {
-    _ac = _ac || new (window.AudioContext || window.webkitAudioContext)();
-    if (_ac.state === 'suspended') _ac.resume();
-    const notes = sad ? [[440, 0], [349, 0.28]] : [[1319, 0], [1047, 0.32]];   // 이탈은 낮은 소리, 보통은 띵동
-    notes.forEach(([f, at]) => {
-      const t = _ac.currentTime + at, o = _ac.createOscillator(), g = _ac.createGain();
-      o.type = 'sine'; o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
-      o.connect(g); g.connect(_ac.destination); o.start(t); o.stop(t + 0.95);
-    });
-    if (navigator.vibrate) navigator.vibrate(sad ? [200, 100, 200] : 80);
-  } catch(e) {}
+    const k = sad ? 'sad' : 'ok'; _snd[k] = _snd[k] || makeChime(notes);
+    const a = new Audio(_snd[k]); a.volume = 1;
+    const pr = a.play(); if (pr && pr.catch) pr.catch(() => chimeWebAudio(notes));
+  } catch(e) { chimeWebAudio(notes); }
+  try { if (navigator.vibrate) navigator.vibrate(sad ? [200, 100, 200] : 80); } catch(e) {}
 }
 async function saveCheck(){
   const p = current(); if(!p) return;
