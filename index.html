@@ -319,7 +319,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-28</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-29</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1058,8 +1058,10 @@ function openZone(id){
     <label>팀장 연락처 <span class="muted" style="font-weight:normal;">(문자 보낼 때 팀장도 같이)</span></label>
     <input type="tel" id="zn-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off" style="margin-bottom:12px;">
     <div id="zn-main">
-      <label>담당 경로당</label>
-      <div id="zn-sites"></div>
+      <details id="zn-sites-box" class="chg-box" open style="margin-top:0;border-top:none;padding-top:0;">
+        <summary><span id="zn-sites-title" style="font-weight:bold;">담당 경로당</span><span class="chg-arrow"></span></summary>
+        <div id="zn-sites"></div>
+      </details>
       <button type="button" class="warning full" id="zn-add">＋ 경로당 고르기</button>
     </div>
     <div id="zn-pick" class="hidden">
@@ -1084,9 +1086,37 @@ function openZone(id){
           <br>${telBtn(p)}${p.address?`<br><span class="muted" style="font-size:.85rem;">🏠 ${esc(p.address)}</span>`:''}
           <br><button type="button" class="small secondary" data-open="${p.id}">점검 화면 열기 ›</button>
           ${z.leaderId === p.id ? '<span class="badge" style="background:#276749;">👤 팀장</span> <button type="button" class="small secondary" data-unlead="1">팀장 해제</button>' : `<button type="button" class="small" data-lead="${p.id}" style="background:#276749;">👤 팀장으로 정하기</button>`}</div>`; }).join('') : '<div class="muted">어르신이 없습니다.</div>'}
-          <button type="button" class="small secondary" data-del="${esc(siteKey(x.town, x.senior))}" style="margin-top:4px;">이 경로당 구역에서 빼기</button></div></details>`;
+          <button type="button" class="small secondary" data-del="${esc(siteKey(x.town, x.senior))}" style="margin-top:4px;">이 경로당 구역에서 빼기</button>
+          <div class="zs-addp" style="margin-top:8px;border-top:1px dashed #e2e8f0;padding-top:8px;">
+            <div style="font-weight:bold;font-size:.9rem;margin-bottom:4px;">＋ 이 경로당에 어르신 넣기</div>
+            <input type="search" class="zs-q" data-site="${esc(siteKey(x.town, x.senior))}" placeholder="🔍 이름으로 찾기 (예: 김영)" autocomplete="off" style="margin:0 0 4px;">
+            <div class="zs-found"></div>
+            <button type="button" class="small secondary" data-new="${esc(siteKey(x.town, x.senior))}">명단에 없으면 신규 등록</button>
+          </div></div></details>`;
     }).join('') : '';
     bg.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { bg.remove(); openModal(Number(b.dataset.open)); });
+    $('#zn-sites-title').textContent = `담당 경로당 (${z.sites.length}곳)`;
+    // 이 경로당에 어르신 넣기: 이름으로 찾아서 누르면 이 경로당으로 옮김
+    bg.querySelectorAll('.zs-q').forEach(inp => inp.oninput = () => {
+      const [town, senior] = inp.dataset.site.split('|'), box = inp.nextElementSibling, t = inp.value.replace(/\s+/g,'');
+      if (!t) { box.innerHTML = ''; return; }
+      const hits = participants.filter(p => p.name.includes(t)).sort((a,b) => a.name.localeCompare(b.name)).slice(0, 20);
+      box.innerHTML = hits.length ? hits.map(p => { const here = p.town===town && seniorOf(p)===senior; return `<button type="button" class="site" data-mv="${p.id}" ${here?'disabled':''} style="padding:8px 10px;margin:3px 0;${here?'opacity:.5;':''}">
+        <div><b>${esc(nm(p))}</b> ${p.age?`<span class="muted">(${esc(p.age)}세)</span>`:''}<br><span class="muted" style="font-size:.85rem;">🏠 ${esc(p.town)} · ${esc(seniorOf(p))}${p.phone?` · ${esc(p.phone)}`:''}</span></div><span class="arrow">${here?'✔':'＋'}</span></button>`; }).join('')
+        : '<div class="muted" style="font-size:.88rem;padding:4px 0;">찾는 어르신이 없어요.</div>';
+      box.querySelectorAll('button[data-mv]:not([disabled])').forEach(b => b.onclick = async () => {
+        const p = participants.find(x => x.id === Number(b.dataset.mv)); if (!p) return;
+        if (!await ask(`${p.name} 어르신을 ${town} ${senior} 경로당으로 넣을까요?\n(지금: ${p.town} · ${seniorOf(p)})`)) return;
+        logEvent('경로당 변경', p, `${p.town} ${seniorOf(p)} → ${town} ${senior} (구역에서 넣기)`);
+        p.town = town; p.senior = senior; delete p.guess;
+        saveData(false); renderZones(); drawMain();
+        const det = [...bg.querySelectorAll('#zn-sites details')].find(d => d.querySelector(`.zs-q[data-site="${CSS.escape(town+'|'+senior)}"]`)); if (det) det.open = true;
+      });
+    });
+    bg.querySelectorAll('[data-new]').forEach(b => b.onclick = () => {
+      const [town, senior] = b.dataset.new.split('|'); bg.remove(); openAdd();
+      document.getElementById('n-town').value = town; document.getElementById('n-senior').value = senior;
+    });
     // 이 구역 어르신 중에서 팀장 고르기 → 팀장 연락처도 자동으로
     bg.querySelectorAll('[data-lead]').forEach(b => b.onclick = () => {
       const p = participants.find(x => x.id === Number(b.dataset.lead)); if (!p) return;
