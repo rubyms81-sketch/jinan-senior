@@ -390,7 +390,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-60</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-61</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -3658,9 +3658,21 @@ function statGroups(d){
       ps: by(r => r.bad, r => r.bad), cnt: r => r.bad, txt: r => `태도 불량 ${r.bad}회` },
   ];
 }
+// 내년도 재참여 심사 대상: 검토 점수(벌점 + 태도 불량 0.5)가 1점 이상인 분, 점수 높은 순
+const REVIEW_MIN = 1;
+function reviewList(d){
+  return d.people.map(r => ({ ...r, rv: r.pts + r.bad * 0.5, dropped: stats(r.p).dropped }))
+    .filter(r => r.rv >= REVIEW_MIN || r.dropped).sort((a,b) => b.dropped - a.dropped || b.rv - a.rv || b.leave - a.leave || a.p.name.localeCompare(b.p.name));
+}
+function reviewText(r, d){
+  const it = [r.leave ? `근무지 이탈 ${r.leave}회` : '', r.away ? `잠깐 자리 비움 ${r.away}회` : '', r.vest ? `조끼 미착용 ${r.vest}회` : '', r.badge ? `명찰 미착용 ${r.badge}회` : '', r.bad ? `응대 태도 불량 ${r.bad}회` : ''].filter(Boolean);
+  return (r.dropped ? `벌점 누적으로 중도포기 처리되었습니다. ` : '') + `${d.y}년 ${d.a}월~${d.b}월 현장 점검에서 ${it.join(', ')}가 확인되었습니다` +
+    (r.pts ? `(벌점 -${r.pts}점${r.unpaid ? `, 일당 미지급 ${r.unpaid}일` : ''})` : '') + `. ` +
+    (r.leave ? '근무지를 지키지 않은 일이 있어 ' : r.bad ? '응대 태도에 문제가 있어 ' : '복장·근무 규칙을 지키지 않은 일이 있어 ') + `내년도 일자리 사업 참여 여부에 대한 검토를 바랍니다.`;
+}
 function showStats(openGroup){
   const d = statsData(), T = k => d.months.reduce((n, x) => n + x[k], 0);
-  const gs = statGroups(d);
+  const gs = statGroups(d), rv = reviewList(d);
   const few = d.people.filter(r => r.kind === 'few' && r.score === 0);
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg" style="max-width:560px;">
@@ -3676,8 +3688,26 @@ function showStats(openGroup){
         <b>${i+1}. ${esc(nm(r.p))}</b> <span class="muted">🏠 ${esc(r.p.town)} · ${esc(seniorOf(r.p))}</span><br>
         <span style="font-size:.88rem;"><b style="color:${g.color}">${g.txt(r)}</b>${g.key === 'leave' && r.unpaid ? ` · 일당 미지급 ${r.unpaid}일` : ''}${r.pts ? ` · 누적 벌점 -${r.pts}점` : ''}</span> <span class="arrow">›</span></button>`).join('') : '<div class="muted" style="padding:6px 8px;font-size:.88rem;">없어요 👍</div>'}</div>`).join('')}
     ${few.length ? `<div style="font-weight:bold;margin:10px 0 4px;">🟨 근무일 적은 어르신 ${few.length}명</div>` + few.map(r => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#${FILL.few};border-left-color:#ecc94b;"><b>${esc(nm(r.p))}</b> <span class="muted">🏠 ${esc(r.p.town)} · ${esc(seniorOf(r.p))}</span><br><span style="font-size:.88rem;">활동일 ${r.days}일 · 인정 ${r.paid}일</span> <span class="arrow">›</span></button>`).join('') : ''}
+    <div style="margin-top:14px;padding:10px;border:2px solid #805ad5;border-radius:10px;background:#faf5ff;">
+      <div style="font-weight:bold;color:#553c9a;">📋 ${exYear()}년 재참여 심사 대상 ${rv.length}명</div>
+      <div class="muted" style="font-size:.8rem;margin:2px 0 6px;">벌점(이탈·자리 비움·조끼·명찰)과 응대 태도 불량(0.5)을 더한 <b>검토 점수 ${REVIEW_MIN}점 이상</b>인 분 · 점수 높은 순</div>
+      ${rv.length ? rv.map((r, i) => `<div class="pen-row" style="background:#fff;border-left-color:#805ad5;margin-top:4px;cursor:default;">
+        <b>${i+1}. ${esc(nm(r.p))}</b> <span class="muted">🏠 ${esc(r.p.town)} · ${esc(seniorOf(r.p))}</span> <b style="color:#553c9a;">검토 ${r.rv}점</b>${exOf(r.p) ? ' <span class="badge bg-danger">제외 지정됨</span>' : ''}
+        <div style="font-size:.86rem;margin:4px 0;">${esc(reviewText(r, d))}</div>
+        <button type="button" class="small secondary" data-rvopen="${r.p.id}" style="width:auto;margin:0;">어르신 화면</button>
+        ${exOf(r.p) ? '' : `<button type="button" class="small" data-rvex="${r.p.id}" style="width:auto;margin:0;background:#805ad5;">🚫 ${exYear()}년 참여 제외로 지정</button>`}</div>`).join('')
+        : '<div class="muted" style="font-size:.88rem;">심사할 분이 없어요 👍</div>'}
+    </div>
     <div class="grid-2" style="margin-top:8px;"><button class="secondary" id="ss-close">닫기</button><button id="ss-xlsx">통계 엑셀</button></div></div>`;
   document.body.appendChild(back);
+  back.querySelectorAll('[data-rvopen]').forEach(b => b.onclick = () => { back.remove(); openFrom(Number(b.dataset.rvopen), '통계로 돌아가기', () => showStats()); });
+  back.querySelectorAll('[data-rvex]').forEach(b => b.onclick = async () => {
+    const r = rv.find(x => x.p.id === Number(b.dataset.rvex)); if (!r) return;
+    if (!await ask(`${r.p.name} 어르신을 ${exYear()}년 참여 제외 대상으로 지정할까요?\n\n사유: 근무 태도 미흡\n${reviewText(r, d)}`)) return;
+    r.p.exclude = { year: exYear(), reason: '근무 태도 미흡', memo: reviewText(r, d), date: today() };
+    logEvent('참여 제외 지정', r.p, `${exYear()}년 · 재참여 심사(검토 ${r.rv}점)`); saveData(false);
+    back.remove(); showStats(); notify(`${r.p.name} 어르신을 ${exYear()}년 참여 제외 대상으로 저장했어요.\n(마감 엑셀 "${exYear()}년 참여 제외" 시트에도 나와요)`);
+  });
   back.querySelector('#ss-close').onclick = () => back.remove();
   back.querySelectorAll('.pen-row[data-id]').forEach(b => b.onclick = () => {
     const g = b.closest('.sg-list')?.id?.replace('sg-', ''); back.remove();
@@ -3707,6 +3737,13 @@ function exportStats(){
       : [{ '구분': `${g.icon} ${g.title}`, '순번': '', '읍면': '', '경로당': '', '성명': '없음', '내용': '', '누적 벌점': '', '일당 미지급 일수': '', '연락처': '' }]);
     const wsG = XLSX.utils.json_to_sheet(gRows); wsG['!cols'] = [18,6,8,14,10,30,10,12,15].map(w=>({wch:w}));
     XLSX.utils.book_append_sheet(wb, wsG, '항목별 명단'); }
+  { const rv = reviewList(d), rRows = rv.map((r, i) => ({ '순위': i + 1, '읍면': r.p.town, '경로당': seniorOf(r.p), '성명': r.p.name, '나이': r.p.age, '검토 점수': r.rv, '벌점': -r.pts,
+      '이탈': r.leave, '자리 비움': r.away, '조끼 미착용': r.vest, '명찰 미착용': r.badge, '태도 불량': r.bad, '일당 미지급 일수': r.unpaid, '상태': stats(r.p).status, '검토 의견': reviewText(r, d), [`${exYear()}년 제외 지정`]: exOf(r.p) ? '지정됨' : '' }));
+    const wsR = XLSX.utils.aoa_to_sheet([[`${exYear()}년 재참여 심사 대상 (${d.y}년 ${d.a}월~${d.b}월 현장 점검 · 검토 점수 = 벌점 + 태도 불량 0.5, ${REVIEW_MIN}점 이상)`]]);
+    if (rRows.length) XLSX.utils.sheet_add_json(wsR, rRows, { origin: 'A3' }); else XLSX.utils.sheet_add_aoa(wsR, [['심사할 분이 없습니다.']], { origin: 'A3' });
+    rRows.forEach((r, i) => { const c = wsR[XLSX.utils.encode_cell({ r: i + 3, c: 14 })]; if (c) c.s = { alignment: { wrapText: true, vertical: 'top' } }; });
+    wsR['!cols'] = [6,8,14,10,6,9,7,6,8,10,10,8,12,14,70,12].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb, wsR, '재참여 심사 대상'); }
   const rows = d.people.map(r => ({ '표시':KIND_TXT[r.kind] || '', '읍면':r.p.town, '경로당':seniorOf(r.p), '성명':r.p.name, '나이':r.p.age,
     '근무 달 수':r.months, '활동일 합계':r.days, '근무 인정일':r.paid, '이탈 횟수':r.leave, '자리 비움':r.away || 0, '감점':-r.pts, '일당 미지급 일수':r.unpaid, '조끼 미착용':r.vest, '명찰 미착용':r.badge, '태도 불량':r.bad,
     '점검 횟수':r.checks, '근무일 변경':r.chg, '상태':stats(r.p).status }));
