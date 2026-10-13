@@ -302,7 +302,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-21</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.13-22</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1153,12 +1153,17 @@ function openZone(id){
 // p.health = { conds:[병명], memo:'자세한 내용', updated:'YYYY-MM-DD' }  — 이 휴대폰에만 저장
 const CONDS = ['고혈압','당뇨','고지혈증','관절염','허리·디스크','심장질환','뇌졸중(중풍)','치매·기억력','골다공증','청력 약함','시력 약함','호흡기'];
 // 직접 넣은 병명 단추: 오른쪽 ✕를 누르면 빠짐
-const customBtn = c => `<button type="button" data-v="${esc(c)}" class="custom">${esc(c)}<span class="x" data-x="1">✕</span></button>`;
+// 아픈 곳 목록 (모든 어르신 공통). 기본 목록에서 시작하고, 지우거나 새로 넣을 수 있음
+let condList = (() => { try { const v = JSON.parse(load('jinan_conds')); if (Array.isArray(v)) return v; } catch(e) {} return [...CONDS]; })();
+const saveConds = () => store('jinan_conds', JSON.stringify(condList));
+// 글 속 전화번호를 누르면 바로 전화
+const linkTel = t => esc(t).replace(/(0\d{1,2})[-\s]?(\d{3,4})[-\s]?(\d{4})/g, (m, a, b, c) => `<a class="tel-link" href="tel:${a}${b}${c}">📞 ${a}-${b}-${c}</a>`).replace(/\n/g, '<br>');
 function openInfo(){
   const p = current(); if (!p) return;
   const h = p.health || {}, sel = new Set(h.conds || []);
+  const saved = !!(h.conds?.length || h.memo);   // 한 번이라도 저장했으면 고른 것만 보여 줌
+  let open = !saved, memoEdit = !h.memo;
   const z = zoneOf(p), L = z && z.leaderId ? participants.find(x => x.id === z.leaderId) : null, st = stats(p);
-  const extra = (h.conds || []).filter(c => !CONDS.includes(c));
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.25rem;margin-bottom:8px;">👤 ${esc(nm(p))} 어르신</div>
@@ -1169,28 +1174,44 @@ function openInfo(){
       <tr><th>주소</th><td>${esc(p.address || '-')}</td></tr>
       <tr><th>상태</th><td>${esc(st.status)}${st.penalty ? ` <b style="color:var(--danger)">(${st.penalty}점)</b>` : ''}${inHospNow(p) ? ' <span class="badge bg-hosp">🏥 입원 중</span>' : ''}${startTag(p) ? ` <span class="muted">· ${Number(p.start.slice(5))}월부터 근무</span>` : ''}</td></tr>
     </table>
-    <label>🩺 아픈 곳 <span class="muted" style="font-weight:normal;">(누르면 표시, 다시 누르면 빠짐)</span></label>
-    <div class="cond-grid" id="if-conds">${CONDS.map(c => `<button type="button" data-v="${esc(c)}">${esc(c)}</button>`).join('')}${extra.map(c => customBtn(c)).join('')}</div>
-    <div style="display:flex;gap:6px;margin:-4px 0 10px;"><input type="text" id="if-new" placeholder="다른 병명 적기 (예: 갑상선)" autocomplete="off" style="margin:0;"><button type="button" class="small secondary" id="if-add" style="margin:0;white-space:nowrap;">＋ 넣기</button></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><label style="margin:0;">🩺 아픈 곳</label><button type="button" class="small secondary" id="if-toggle" style="margin:0;width:auto;"></button></div>
+    <div class="cond-grid" id="if-conds"></div>
+    <div id="if-addrow" style="display:flex;gap:6px;margin:-4px 0 10px;"><input type="text" id="if-new" placeholder="다른 병명 적기 (예: 갑상선)" autocomplete="off" style="margin:0;"><button type="button" class="small secondary" id="if-add" style="margin:0;white-space:nowrap;">＋ 넣기</button></div>
     <label>📝 자세한 내용 <span class="muted" style="font-weight:normal;">(드시는 약, 조심할 점, 보호자 연락처 등)</span></label>
+    <div id="if-memo-view" class="log" style="font-size:.95rem;line-height:1.7;"></div>
     <textarea id="if-memo" rows="4" placeholder="예: 혈압약 아침 복용, 무릎이 안 좋아 계단 조심, 아들 010-0000-0000"></textarea>
     ${h.updated ? `<div class="muted" style="font-size:.82rem;margin:-4px 0 8px;">마지막 수정 ${h.updated}</div>` : ''}
     <div class="grid-2"><button class="secondary" id="if-close">닫기</button><button id="if-save">저장</button></div></div>`;
   document.body.appendChild(bg);
   const $ = q => bg.querySelector(q);
   $('#if-memo').value = h.memo || '';
-  const bind = () => bg.querySelectorAll('#if-conds button').forEach(b => {
-    b.classList.toggle('on', sel.has(b.dataset.v));
-    b.onclick = e => {
-      if (e.target.dataset.x) { sel.delete(b.dataset.v); b.remove(); return; }   // ✕ = 빼기
-      sel.has(b.dataset.v) ? sel.delete(b.dataset.v) : sel.add(b.dataset.v); b.classList.toggle('on');
-    };
-  });
-  bind();
+  const draw = () => {
+    // 접혀 있으면 고른 것만, 펼치면 전체 목록(✕로 목록에서 지우기)
+    const all = [...condList, ...[...sel].filter(c => !condList.includes(c))];
+    const show = open ? all : all.filter(c => sel.has(c));
+    $('#if-conds').innerHTML = show.length ? show.map(c => `<button type="button" data-v="${esc(c)}" class="${sel.has(c)?'on':''} ${open?'custom':''}">${esc(c)}${open ? '<span class="x" data-x="1">✕</span>' : ''}</button>`).join('')
+      : '<div class="muted" style="grid-column:1/-1;">고른 것이 없어요. ▼를 눌러 고르세요.</div>';
+    $('#if-toggle').textContent = open ? '▲ 접기' : `▼ 목록 펼치기 (${all.length})`;
+    $('#if-addrow').style.display = open ? 'flex' : 'none';
+    bg.querySelectorAll('#if-conds button').forEach(b => b.onclick = async e => {
+      const v = b.dataset.v;
+      if (e.target.dataset.x) {
+        if (!await ask(`"${v}"을(를) 아픈 곳 목록에서 지울까요?\n(이미 표시해 둔 어르신은 그대로 남아요)`)) return;
+        condList = condList.filter(c => c !== v); saveConds(); sel.delete(v); return draw();
+      }
+      sel.has(v) ? sel.delete(v) : sel.add(v); draw();
+    });
+    // 자세한 내용: 저장된 글은 보기(번호 누르면 전화) + 고치기
+    $('#if-memo').style.display = memoEdit ? '' : 'none';
+    $('#if-memo-view').style.display = memoEdit ? 'none' : '';
+    if (!memoEdit) $('#if-memo-view').innerHTML = linkTel($('#if-memo').value) + `<br><button type="button" class="small secondary" id="if-memo-edit" style="margin-top:6px;">✏️ 고치기</button>`;
+    bg.querySelector('#if-memo-edit')?.addEventListener('click', () => { memoEdit = true; draw(); $('#if-memo').focus(); });
+  };
+  $('#if-toggle').onclick = () => { open = !open; draw(); };
   const addNew = () => { const inp = $('#if-new'); inp.blur(); setTimeout(() => {
-    const v = inp.value.trim(); if (!v) return; sel.add(v); inp.value = '';
-    if (![...bg.querySelectorAll('#if-conds button')].some(b => b.dataset.v === v)) $('#if-conds').insertAdjacentHTML('beforeend', customBtn(v));
-    bind(); }, 50); };
+    const v = inp.value.trim(); if (!v) return; inp.value = '';
+    if (!condList.includes(v)) { condList.push(v); saveConds(); }
+    sel.add(v); draw(); }, 50); };
   $('#if-add').onclick = addNew;
   $('#if-new').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addNew(); } });
   $('#if-close').onclick = () => bg.remove();
@@ -1204,6 +1225,7 @@ function openInfo(){
     }
     bg.remove(); renderModal(); notify('저장했어요.');
   };
+  draw();
 }
 async function delCustom(){
   const p = current(), mk = monthKey(); if (!p || !customOf(p, mk)) return;
