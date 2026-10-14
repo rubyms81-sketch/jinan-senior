@@ -428,7 +428,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-27</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-28</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -926,7 +926,7 @@ function renderWork(){
 // 📅 달력 편집 (활동일 정하기 · 팀장님 일정 같이 씀): 근무일 + 교육(여러 개, 이름별)
 function schedEditor({ title, mk, days, edu, note, onSave, nav }){
   const y = Number(mk.slice(0,4)), m = Number(mk.slice(5,7)), last = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
-  let sel = new Set(days), ed = new Map((edu || []).map(e => [e.date, e.name])), mode = 'work', curEdu = [...new Set((edu || []).map(e => e.name))][0] || '';
+  let sel = new Set(days), ed = new Map((edu || []).map(e => [e.date, e.name])), curEdu = '';   // '' = 근무일, 이름 = 그 교육·행사
   const snap = () => [...sel].sort().join() + '|' + [...ed].sort().join();
   const s0 = snap();
   const back = document.createElement('div'); back.className = 'dlg-back';
@@ -935,9 +935,8 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav }){
       ${nav ? '<button type="button" class="small" id="sc-prev" style="width:auto;margin:0;padding:6px 12px;">◀</button>' : ''}
       <div style="flex:1;text-align:center;font-weight:bold;font-size:1.1rem;">${title} <span class="muted" style="font-size:.8rem;font-weight:normal;">${y}년</span></div>
       ${nav ? '<button type="button" class="small" id="sc-next" style="width:auto;margin:0;padding:6px 12px;">▶</button>' : ''}</div>
-    <div class="grid-2" id="sc-mode" style="margin:4px 0 6px;"><button type="button" class="reason" data-v="work">📅 근무일 고르기</button><button type="button" class="reason" data-v="edu">🎓 교육 및 행사 날짜 넣기</button></div>
-    <div id="sc-edu" class="hidden" style="background:#faf5ff;border:1px solid #d6bcfa;border-radius:10px;padding:8px;margin-bottom:6px;">
-      <div style="font-size:.88rem;margin-bottom:4px;">① 교육·행사를 고르고 ② 달력에서 그날을 누르세요. <b>여러 개</b>를 같이 넣을 수 있어요. 교육·행사 날도 <b>근무 ${WORK_TARGET}일 안에 들어가요.</b></div>
+    <div id="sc-edu" style="background:#f7fafc;border:1px solid #cbd5e0;border-radius:10px;padding:8px;margin:4px 0 6px;">
+      <div style="font-size:.9rem;margin-bottom:4px;"><b>① 넣을 것을 고르고 ② 달력에서 날짜를 누르세요.</b><br><span class="muted" style="font-size:.84rem;">근무일과 교육·행사를 한 달력에서 같이 넣어요. 교육·행사 날도 근무 ${WORK_TARGET}일 안에 들어가요.</span></div>
       <div id="sc-edu-names" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;"></div>
       <div style="display:flex;gap:4px;"><input type="text" id="sc-edu-new" placeholder="새 이름 (예: 문화활동 행사, 소양교육)" autocomplete="off" style="margin:0;"><button type="button" class="small" id="sc-edu-add" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button></div>
     </div>
@@ -945,19 +944,17 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav }){
     <div class="cal" id="sc-cal"></div>
     <div style="text-align:center;margin-bottom:6px;">총 근무 <b id="sc-t"></b>일 / ${WORK_TARGET}일 <span class="muted">(근무 <span id="sc-n"></span>일 + 교육·행사 <span id="sc-e"></span>일)</span></div>
     <div id="sc-list" style="margin-bottom:8px;"></div>
-    <button class="secondary full" id="sc-clear">근무일 모두 지우기</button>
+    <button class="secondary full" id="sc-clear">모두 지우기 (근무일·교육·행사)</button>
     <div class="grid-2"><button class="secondary" id="sc-cancel">취소</button><button id="sc-save">저장</button></div></div>`;
   document.body.appendChild(back);
   const $ = q => back.querySelector(q);
   const PRESET = EDU_NAMES;
   const draw = () => {
-    back.querySelectorAll('#sc-mode button').forEach(b => b.classList.toggle('on', b.dataset.v === mode));
-    $('#sc-edu').classList.toggle('hidden', mode !== 'edu');
     const names = [...new Set([...PRESET, ...ed.values(), ...(curEdu ? [curEdu] : [])])];
-    $('#sc-edu-names').innerHTML = names.map(n => `<button type="button" class="small ${n === curEdu ? '' : 'secondary'}" data-n="${esc(n)}" style="width:auto;margin:0;${n === curEdu ? 'background:#805ad5;' : ''}">${esc(n)}</button>`).join('');
+    $('#sc-edu-names').innerHTML = `<button type="button" class="small ${curEdu ? 'secondary' : ''}" data-n="" style="width:auto;margin:0;${curEdu ? '' : 'background:#2b6cb0;'}">📅 근무일</button>` + names.map(n => `<button type="button" class="small ${n === curEdu ? '' : 'secondary'}" data-n="${esc(n)}" style="width:auto;margin:0;${n === curEdu ? 'background:#805ad5;' : ''}">🎓 ${esc(n)}</button>`).join('');
     back.querySelectorAll('#sc-edu-names button').forEach(b => b.onclick = () => { curEdu = b.dataset.n; draw(); });
-    $('#sc-help').innerHTML = mode === 'work' ? `근무하는 날을 누르세요. 다시 누르면 빠집니다. 교육·행사 날까지 합쳐 <b>${WORK_TARGET}일</b>이고, 마지막 날이 <b>마감일</b>이에요. (빨간 글씨: 일요일·공휴일)`
-      : curEdu ? `지금 고른 것: <b style="color:#553c9a">🎓 ${esc(curEdu)}</b> — 달력에서 날짜를 누르세요. 다시 누르면 빠져요. 근무일을 누르면 그날이 교육·행사 날로 바뀌어요.` : '먼저 위에서 교육·행사를 고르세요.';
+    $('#sc-help').innerHTML = (curEdu ? `지금 넣는 것: <b style="color:#553c9a">🎓 ${esc(curEdu)}</b> — 날짜를 누르면 이 교육·행사 날이 돼요.` : `지금 넣는 것: <b style="color:#2b6cb0">📅 근무일</b> — 날짜를 누르면 근무일이 돼요.`)
+      + ` 같은 것을 다시 누르면 빠져요. 합쳐서 <b>${WORK_TARGET}일</b>, 마지막 날이 <b>마감일</b>. (빨간 글씨: 일요일·공휴일)`;
     let h = WEEK.map(w => `<div class="h">${w}</div>`).join('') + '<div></div>'.repeat(first);
     const endD = [...sel, ...ed.keys()].sort().pop();
     for (let d = 1; d <= last; d++) {
@@ -976,24 +973,25 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav }){
     back.querySelectorAll('[data-delname]').forEach(b => b.onclick = () => { [...ed].forEach(([d, n]) => { if (n === b.dataset.delname) ed.delete(d); }); draw(); });
     back.querySelectorAll('#sc-cal button').forEach(b => b.onclick = () => {
       const k = b.dataset.k;
-      if (mode === 'edu') {
-        if (ed.has(k)) { ed.delete(k); return draw(); }
-        if (!curEdu) return notify('먼저 위에서 교육·행사를 고르거나 새 이름을 추가해 주세요.');
-        if (!sel.has(k) && sel.size + ed.size >= WORK_TARGET) return notify(`근무일이 이미 ${WORK_TARGET}일이에요. (교육·행사 포함)\n근무일을 누르면 그날이 교육·행사 날로 바뀌어요.\n다른 날에 넣으려면 📅 근무일 고르기에서 하루를 먼저 빼 주세요.`);
-        ed.set(k, curEdu); sel.delete(k); return draw();
+      const full = () => notify(`이미 ${WORK_TARGET}일이에요. (근무 + 교육·행사)\n다른 날을 먼저 눌러서 빼 주세요.\n(이미 고른 날을 누르면 그날이 바로 바뀌어요)`);
+      if (curEdu) {   // 🎓 교육·행사 넣기
+        if (ed.get(k) === curEdu) ed.delete(k);                 // 같은 것 → 빼기
+        else if (ed.has(k) || sel.has(k)) { ed.set(k, curEdu); sel.delete(k); }   // 근무일·다른 교육 → 바꾸기
+        else if (sel.size + ed.size >= WORK_TARGET) return full();
+        else ed.set(k, curEdu);
+      } else {        // 📅 근무일 넣기
+        if (sel.has(k)) sel.delete(k);
+        else if (ed.has(k)) { ed.delete(k); sel.add(k); }    // 교육·행사 날 → 근무일로 바꾸기
+        else if (sel.size + ed.size >= WORK_TARGET) return full();
+        else sel.add(k);
       }
-      if (ed.has(k)) return notify(`${dd(k)}은 교육·행사 날이에요. 🎓 교육 및 행사 날짜 넣기에서 빼 주세요.`);
-      if (sel.has(k)) sel.delete(k);
-      else if (sel.size + ed.size >= WORK_TARGET) return notify(`근무일은 교육·행사 날까지 합쳐 ${WORK_TARGET}일입니다.\n다른 날을 먼저 눌러서 빼 주세요.`);
-      else sel.add(k);
       draw();
     });
   };
-  back.querySelectorAll('#sc-mode button').forEach(b => b.onclick = () => { mode = b.dataset.v; draw(); });
   const addName = () => { const v = $('#sc-edu-new').value.trim(); if (!v) return; curEdu = v; $('#sc-edu-new').value = ''; draw(); };
   $('#sc-edu-add').onclick = addName;
   $('#sc-edu-new').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addName(); } });
-  $('#sc-clear').onclick = () => { sel = new Set(); draw(); };
+  $('#sc-clear').onclick = async () => { if (!await ask('달력에 고른 근무일과 교육·행사를 모두 지울까요?\n(저장을 눌러야 바뀌어요)')) return; sel = new Set(); ed = new Map(); draw(); };
   $('#sc-cancel').onclick = () => back.remove();
   const go = async d => { if (snap() !== s0 && !await ask('고친 내용이 아직 저장되지 않았어요.\n저장하지 않고 다른 달로 넘어갈까요?')) return; back.remove(); nav(d); };
   $('#sc-prev')?.addEventListener('click', () => go(-1)); $('#sc-next')?.addEventListener('click', () => go(1));
