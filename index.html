@@ -434,7 +434,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-21</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-22</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -856,10 +856,13 @@ function renderWork(){
 // 활동일 정하기 (달력)
 function openWorkdays(){
   const mk = monthKey(), y = YEAR, m = curMonth, last = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
-  let sel = new Set(monthDays(mk));
+  let sel = new Set(monthDays(mk)); const sel0 = [...sel].sort().join();
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
-    <div style="font-weight:bold;font-size:1.1rem;">📅 ${m}월 활동일 정하기</div>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+      <button type="button" class="small" id="cal-prev" style="width:auto;margin:0;padding:6px 12px;">◀</button>
+      <div style="flex:1;text-align:center;font-weight:bold;font-size:1.1rem;">📅 ${m}월 활동일 <span class="muted" style="font-size:.8rem;font-weight:normal;">${y}년</span></div>
+      <button type="button" class="small" id="cal-next" style="width:auto;margin:0;padding:6px 12px;">▶</button></div>
     <div class="muted">근무하는 날을 누르세요. 다시 누르면 빠집니다. (빨간 글씨: 일요일·공휴일)<br>"월·수·금 자동"은 공휴일과 겹치면 그다음 날로 옮겨 줍니다.<br>마지막 날(${WORK_TARGET}일째)이 <b>마감일</b>이 됩니다.</div>
     <div class="cal" id="cal"></div>
     <div style="text-align:center;margin-bottom:8px;">선택한 날: <b id="cal-n"></b>일 <span class="muted">(보통 ${WORK_TARGET}일)</span></div>
@@ -888,6 +891,13 @@ function openWorkdays(){
   back.querySelector('#cal-auto').onclick = () => { sel = new Set(suggestDays(mk)); draw(); };
   back.querySelector('#cal-clear').onclick = () => { sel = new Set(); draw(); };
   back.querySelector('#cal-cancel').onclick = () => back.remove();
+  // ◀ ▶ 지난달·다음달로 (고친 게 있으면 먼저 물어봄)
+  const go = async d => {
+    if ([...sel].sort().join() !== sel0 && !await ask('고른 날짜가 아직 저장되지 않았어요.\n저장하지 않고 다른 달로 넘어갈까요?')) return;
+    back.remove(); moveMonth(d); openWorkdays();
+  };
+  back.querySelector('#cal-prev').onclick = () => go(-1);
+  back.querySelector('#cal-next').onclick = () => go(1);
   back.querySelector('#cal-save').onclick = () => {
     if (!sel.size) return notify('활동일을 하루 이상 골라 주세요.');
     workdays[mk] = [...sel].sort(); store('jinan_workdays', JSON.stringify(workdays));
