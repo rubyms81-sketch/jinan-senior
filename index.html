@@ -269,6 +269,7 @@
       <button id="m-next" onclick="moveMonth(1)">▶</button>
     </div>
   </div>
+  <div id="new-alert"></div>
   <div id="call-alert"></div>
   <button class="warning full" onclick="openQuickChange()" style="margin:0 0 12px;">🎤 말로 근무일 변경</button>
   <div class="card" id="zone-card" style="padding:12px 14px;">
@@ -429,7 +430,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-32</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-33</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1085,7 +1086,18 @@ function chgOn(k){
   return out.sort((a,b) => !!dayCalled(a.p, k) - !!dayCalled(b.p, k) || seniorRank(seniorOf(a.p))-seniorRank(seniorOf(b.p)) || seniorOf(a.p).localeCompare(seniorOf(b.p)) || a.p.name.localeCompare(b.p.name));
 }
 const dayCalled = (p, k) => (p.dayCalls || []).includes(k);
+// 🆕 그달 새로 들어온 어르신 (2월 이후 근무 시작으로 등록한 분) — 그 달에만 간단히 보여 줌
+function renderNewAlert(){
+  const box = document.getElementById('new-alert'); if (!box) return;
+  const mk = monthKey(), ps = participants.filter(p => p.start === mk && visibleTowns().includes(p.town))
+    .sort((a,b) => TOWNS.indexOf(a.town) - TOWNS.indexOf(b.town) || seniorRank(seniorOf(a)) - seniorRank(seniorOf(b)) || a.name.localeCompare(b.name));
+  box.innerHTML = ps.length ? `<div class="call-card" style="background:#f0fff4;border-color:#38a169;padding:8px 12px;">
+    <b style="color:#276749;">🆕 ${Number(mk.slice(5))}월 새로 온 어르신 ${ps.length}명</b>
+    <div style="font-size:.9rem;margin-top:2px;">${ps.map(p => `<a href="#" data-new="${p.id}" style="color:#22543d;white-space:nowrap;">${esc(p.name)}<span class="muted" style="font-size:.82rem;">(${esc(p.town.replace(/[면읍]$/,''))} ${esc(seniorOf(p))})</span></a>`).join(', ')}</div></div>` : '';
+  box.querySelectorAll('[data-new]').forEach(a => a.onclick = e => { e.preventDefault(); openModal(Number(a.dataset.new)); });
+}
 function renderCallAlert(){
+  renderNewAlert();
   const box = document.getElementById('call-alert'), td = today();
   const all = participants.filter(p => p.hospCall), due = callDue();
   const chg = chgOn(td), tmr = chgOn(addDays(td, 1));
