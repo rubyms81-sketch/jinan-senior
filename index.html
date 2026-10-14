@@ -428,7 +428,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-40</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.15-1</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2728,15 +2728,23 @@ function isDup(list, name, senior, phone){
 
 // 나이 칸: 태어난 해(예: 1948)를 적으면 "1948 (78세)"로 바꿔 보여 주고, 나이는 올해 기준으로 계산
 const thisYear = () => Number(today().slice(0,4));
+// 나이 칸: 태어난 해(1948) · 두 자리 해(48 → 1948) · 나이(78). 말이 안 되는 값(148세 등)은 bad
+const AGE_MIN = 50, AGE_MAX = 110;
 function parseAge(v){
-  const t = String(v||'').trim(), m = t.match(/^(19\d{2}|20\d{2})/);
-  if (m) { const y = Number(m[1]); if (y <= thisYear()) return { age: String(thisYear() - y), birth: y }; }
-  const n = t.match(/^\d{1,3}/); return { age: n ? n[0] : '', birth: null };
+  const t = String(v||'').trim(); if (!t) return { age: '', birth: null };
+  const ok = a => a >= AGE_MIN && a <= AGE_MAX;
+  const m = t.match(/^(\d{4})/);
+  if (m) { const y = Number(m[1]), a = thisYear() - y; return ok(a) ? { age: String(a), birth: y } : { age: '', birth: null, bad: true }; }
+  const n = t.match(/^\d{1,3}/); if (!n) return { age: '', birth: null, bad: true };
+  const x = Number(n[0]);
+  if (n[0].length === 2 && x < AGE_MIN) { const y = 1900 + x, a = thisYear() - y; if (ok(a)) return { age: String(a), birth: y }; }   // 48 → 1948년생
+  return ok(x) ? { age: String(x), birth: null } : { age: '', birth: null, bad: true };
 }
+const AGE_BAD = '나이를 다시 확인해 주세요.\n태어난 해(예: 1948) 또는 나이(예: 78)로 적어 주세요.';
 const ageShow = (age, birth) => birth ? `${birth} (${age}세)` : (age || '');
 document.addEventListener('focusout', e => {
   if (!e.target.classList?.contains('age-in')) return;
-  const r = parseAge(e.target.value); if (r.birth) e.target.value = ageShow(r.age, r.birth);
+  const r = parseAge(e.target.value); if (r.birth) e.target.value = ageShow(r.age, r.birth); else if (r.bad) notify(AGE_BAD);
 });
 // ---------- 11개 읍·면 경로당 목록 (2026년 경로당지킴이 참여 현황·노인체육시설 기준) ----------
 const KNOWN_SENIORS = {"진안읍":["개실(개곡)","검북","고향마을@","관산1","관산2","구운","궁동","금마","남광@ (우화5)","내사양","내오천","내후사","노계1","노계2","대광1","대광1 경모정","대성(군하리)","대성경모정","대성(연장리)","대연장","부곡","사인동(사옥)","산암","상가막","상도치","상평","새마을","석곡","선인","소토실","송대","신흥","암곡","양지","어은","언건","에코르","연구1","연구2(상림)","예리","외기","외사양","외오천","외후사","용지","우화1","우화2","우화3","우화4","원가림","원단양","원물곡","원반월","원연장","월랑@","월랑@ 경모정","유산","은천","정주동(우무실)","종평","주공1@","주공1 경모정","주공2 (노계3)","주공2 경모정","중리","중앙","중평","탄곡","평촌","하가막","하도치","하평","학천1","학천2","학천2 경모정","학천3","활인동(개활곡)","개별관리","진안게이트볼","마이게이트볼","그라운드골프장","파크골프장"],"용담면":["감동","노온","문화","방화","번덕","새마을","옥거","옥수","와룡","중앙","회룡1","회룡1경모정","회룡2","용담게이트볼"],"안천면":["괴정","교동","구곡","구례","노산","노채경모정","대덕(지사)","도라곡","보한","상리","샛담","시장","안기","율현","장등","중리","직동","하리","안천게이트볼"],"동향면":["고부","금곡(외금)","노은(하노)","대량경모정","보촌(보말)","봉곡","봉곡경모정","사미대(대야)","사미대경모정","상노","상능길","상향","성은(하향)","송학(내유)","수월(새울)","양지","양지경모정","옥천(창촌)","외유","용암","용암경모정","원금곡(내금)","을곡","장전","중노","추동","하노경모정","하능길","하향경모정","호천","후고산","대량게이트볼","대야게이트볼","하노게이트볼"],"상전면":["교동","금당","금지","금지경모정","내송","대구평","문화","세동","신연(용평)","양지","외송","원가막","원주평","중기","지사","회사","후가막","원수동","상전게이트볼"],"백운면":["경친(원촌)","남퇴","내봉","대유","동산","동신","두원","무등","미비","반송","백운동","번덕","번암","상동","상서","상운(상백)","서촌","석전(석무)","신마","신전","오정","원노","원산","원상서","원운","윤기","은번","임신","주천","중백","평장","하미","화산","정송","백운게이트볼"],"성수면":["가수","광음(음수동)","내좌","달길","반용","봉좌","산수동","산주","상기","상달","상촌","송기","송촌","신고","신기","안평","양화","염북","오암","원구신","원도통","원신기","원외궁","원좌","원좌산","장성","중군","중마(만덕)","중평","증자","지동","포동","성수게이트볼"],"마령면":["솔안","솔안경모정","평산","사곡","석교","원평지","원평지경모정","마평","방화","계남","오동","서산(서비산)","원동촌","서금(서촌)","원강정","원강정경모정","월운","신덕","대동","신동","장재","안방","널티(판치)","전원","추동","마령게이트볼","덕천게이트볼"],"부귀면":["가정","가치","거석","금계곡","금마(금평)","대곡","대동","두봉(원두남)","미곡","방곡(방각)","봉황골","부암","부천","사인암","삼봉","상거석","서판","석정","소태정","승각(장승)","신거석","신궁","신기","신덕","신리","신해오름","야곡","오복","오산","우정","운장","원봉암","원세동","적천","중궁","중수항","진상","큰터골(수원)","하곡(하수항)","하금(하거석)","회신","부귀게이트볼","운장게이트볼"],"정천면":["갈거","갈두","마조","무거","상조림(상항)","상조림경모정","상초","수암(조포)","신양","용정","원월평","정자동","정천","조림","하초","학동","항가동","정천게이트볼"],"주천면":["괴정","괴정경모정","양지","양지경모정","광석","성암","금평","금평경모정","봉소","구암","구암경모정","안정","(상)양명","미적","도촌","대촌","대촌경모정","산제","어자(무릉)","어자경모정","강촌","삼거","장등","장등경모정","중리","개화","개화경모정","신기","학선","중산","처사(중사)","하양명","주천게이트볼"]};
@@ -2817,7 +2825,7 @@ async function addParticipant(){
   const v = id => document.getElementById(id).value.trim();
   if (!v('n-name')) return notify('어르신 성명은 꼭 적어 주세요.');
   if (isDup(participants, v('n-name'), normSenior(v('n-town'), v('n-senior')), v('n-phone')) && !await ask('같은 분이 이미 등록되어 있습니다. 그래도 등록할까요?')) return;
-  const ag = parseAge(v('n-age'));
+  const ag = parseAge(v('n-age')); if (ag.bad) return notify(AGE_BAD);
   participants.push({ id: Date.now(), town:v('n-town'), senior:normSenior(v('n-town'), v('n-senior')), name:v('n-name'), ...(normSex(v('n-sex')) ? { sex: normSex(v('n-sex')) } : {}), age:ag.age, ...(ag.birth ? { birth: ag.birth } : {}),
     phone:fmtPhone(v('n-phone')), address:v('n-address'), ...(startVal('n-start') ? { start: startVal('n-start') } : {}),
     ...(document.getElementById('n-link').checked ? { linking: { since: today() } } : {}), ...(startVal('n-start') ? { startDay: today() } : {}), regDay: today(), quit:false, logs:[] });
@@ -3786,7 +3794,7 @@ async function deleteLog(logId){
 function saveInfo(){
   const p = current(); const g = id => document.getElementById(id).value.trim();
   if (!g('m-name')) return notify('성명은 비워 둘 수 없습니다.');
-  const ag = parseAge(g('m-age'));
+  const ag = parseAge(g('m-age')); if (ag.bad) return notify(AGE_BAD);
   if (ag.birth) p.birth = ag.birth; else if (String(p.age||'') !== ag.age) delete p.birth;
   const lk = document.getElementById('m-link').checked;
   if (lk && !p.linking) { p.linking = { since: today() }; logEvent('신규 연계 중', p, '연계 중으로 표시'); }
