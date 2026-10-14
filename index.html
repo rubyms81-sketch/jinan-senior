@@ -428,7 +428,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-28</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-29</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -809,7 +809,7 @@ function personDays(p, mk){
   eduOf(p, mk).forEach(e => set.add(e.date));   // 교육 날은 근무일로 침
   return [...set].sort();
 }
-const EDU_NAMES = ['의무교육', '안전교육', '직무교육', '역량강화교육', '문화활동 행사'];
+const EDU_NAMES = ['의무교육', '안전교육', '소양교육', '직무교육', '역량강화교육', '문화활동 행사'];
 // 교육 날짜 고르기 창: 달력에서 날짜(여러 날) + 교육 이름 → onSave([{date, name}])
 function pickEdu({ title, mk, sub, onSave }){
   const y = Number(mk.slice(0,4)), m = Number(mk.slice(5,7)), last = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
