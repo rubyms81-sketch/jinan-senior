@@ -434,7 +434,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-14</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-15</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2479,12 +2479,24 @@ function renderList(){
     // 명단에 있는 경로당 + 그 면 경로당 목록(어르신이 아직 없는 곳은 0명)
     const keys = [...new Set([...Object.keys(groups), ...sitesOf(town)])].sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
     if (curSenior && !keys.includes(curSenior)) curSenior = null;
-    sSel.innerHTML = `<option value="">${keys.length ? `경로당을 선택하세요 (${keys.length}곳)` : '이 면에는 등록된 명단이 없어요'}</option>` + keys.map(k => {
+    const optOf = k => {
       const ps = groups[k] || [], done = ps.filter(p => p.logs.some(l => l.date===t)).length;
       const gs = ps.filter(p => p.guess).length;
       const vis = siteVisits(town, k).some(d => d >= visitFrom());
       return `<option value="${esc(k)}">${ps.length ? (vis ? '✔ ' : '⚪ ') : ''}${gs?'📍 ':''}${isBest(town, k)?'👑 ':''}${esc(k)} (${ps.length}명${gs?`, 추정 ${gs}명`:''}${done?`, 오늘 ${done}명 점검`:''})</option>`;
-    }).join('');
+    };
+    // 구역(그룹)이 정해져 있으면 구역별로 나눠서 보여 줌 (개별관리는 맨 위, 구역에 안 넣은 곳은 맨 아래)
+    const zoneOfSite = k => zones.find(z => z.sites.some(x => x.town === town && x.senior === k));
+    const zs = zones.filter(z => keys.some(k => zoneOfSite(k) === z));
+    let body;
+    if (!zs.length) body = keys.map(optOf).join('');
+    else {
+      const top = keys.filter(k => k === '개별관리' && !zoneOfSite(k)), rest = keys.filter(k => !zoneOfSite(k) && !top.includes(k));
+      body = top.map(optOf).join('') + zs.map(z => { const ks = keys.filter(k => zoneOfSite(k) === z);
+        return `<optgroup label="🗺 ${esc(z.name)} (${ks.length}곳)">${ks.map(optOf).join('')}</optgroup>`; }).join('')
+        + (rest.length ? `<optgroup label="구역에 안 넣은 경로당 (${rest.length}곳)">${rest.map(optOf).join('')}</optgroup>` : '');
+    }
+    sSel.innerHTML = `<option value="">${keys.length ? `경로당을 선택하세요 (${keys.length}곳)` : '이 면에는 등록된 명단이 없어요'}</option>` + body;
     sSel.value = curSenior || '';
     document.getElementById('senior-tools').classList.toggle('hidden', !curSenior);
     const bb = document.getElementById('btn-best'), isB = curSenior && isBest(town, curSenior);
