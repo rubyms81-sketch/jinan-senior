@@ -434,7 +434,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-17</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-18</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1330,8 +1330,10 @@ function openZone(id){
     // 명단에 있는 경로당 + 직접 적어 넣은 경로당
     const sites = [...new Set([...participants.filter(p => p.town===curTown).map(seniorOf), ...sitesOf(curTown),
       ...[...pick].filter(k => k.startsWith(curTown+'|')).map(k => k.split('|')[1])])].sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
-    $('#zn-pick-title').textContent = `${curTown} 경로당을 누르세요 (여러 곳)`;
-    $('#zn-list').innerHTML = sites.map(k => {
+    // 다른 구역에 이미 들어간 경로당은 안 보이게 (이 구역에 넣은 것만 남김)
+    const taken = sites.filter(k => { const o = zoneOfSite(curTown, k); return o && o.id !== z.id && !pick.has(siteKey(curTown, k)); });
+    $('#zn-pick-title').textContent = `${curTown} 경로당을 누르세요 (여러 곳)${taken.length ? ` · 다른 구역 ${taken.length}곳은 숨김` : ''}`;
+    $('#zn-list').innerHTML = sites.filter(k => !taken.includes(k)).map(k => {
       const other = zoneOfSite(curTown, k), mine = pick.has(siteKey(curTown, k));
       const n = siteMembers(curTown, k).filter(p => !stats(p).dropped).length;
       return `<button type="button" class="site ${mine?'zs-on':''}" data-k="${esc(k)}" style="padding:9px 12px;margin:4px 0;${mine?'background:#c6f6d5;border-color:#38a169;':''}">
