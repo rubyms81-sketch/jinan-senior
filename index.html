@@ -324,15 +324,8 @@
   <div class="card">
     <details class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3 id="board-title">⚠️ 감점 현황</h3><span class="chg-arrow"></span></summary>
+      <div class="close-sum" id="close-sum"></div>
       <div id="penalty-board"></div>
-    </details>
-  </div>
-
-  <div class="card">
-    <details id="ex-box" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
-      <summary><h3 id="ex-title">🚫 내년도 참여 제외 대상</h3><span class="chg-arrow"></span></summary>
-      <button class="danger full" onclick="openAddExclude()" style="margin:8px 0 4px;">＋ 제외 대상 추가</button>
-      <div id="ex-list"></div>
     </details>
   </div>
 
@@ -366,17 +359,21 @@
 
   <div class="card">
     <details class="chg-box" id="close-box" style="margin-top:0;border-top:none;padding-top:0;">
-      <summary><h3>📥 마감 · 엑셀 내려받기</h3><span class="chg-arrow"></span></summary>
+      <summary><h3>📊 통계</h3><span class="chg-arrow"></span></summary>
       <div style="margin-top:8px;">
-        <div class="close-sum" id="close-sum"></div>
         <p class="muted hidden" style="margin-top:0;" id="export-desc"></p>
-        <button class="full" onclick="exportExcel()">엑셀 파일로 내려받기</button>
         <details class="stat-box chg-box">
           <summary><span style="font-weight:bold;">📊 기간 통계</span><span class="chg-arrow"></span></summary>
           <div style="display:flex;margin-top:6px;gap:6px;align-items:center;"><select id="st-from" style="margin:0;"></select><span>~</span><select id="st-to" style="margin:0;"></select></div>
           <div class="grid-2" style="margin-top:8px;"><button class="secondary" onclick="showStats()">화면으로 보기</button><button onclick="exportStats()">통계 엑셀</button></div>
           <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #cbd5e0;font-weight:bold;">📉 근무 미달 인원 <span class="muted" style="font-weight:normal;font-size:.85rem;">(1월 1일 ~ 11월 30일)</span></div>
           <div class="grid-2" style="margin-top:6px;"><button class="secondary" onclick="showShort()">화면으로 보기</button><button onclick="exportShort()" style="background:#b7791f;">미달 엑셀</button></div>
+          <button class="full" id="btn-close-xls" onclick="exportExcel()" style="margin-top:12px;">📥 마감 엑셀 파일로 내려받기</button>
+        </details>
+        <details id="ex-box" class="stat-box chg-box">
+          <summary><span style="font-weight:bold;" id="ex-title">🚫 내년도 참여 제외 대상</span><span class="chg-arrow"></span></summary>
+          <button class="danger full" onclick="openAddExclude()" style="margin:8px 0 4px;">＋ 제외 대상 추가</button>
+          <div id="ex-list"></div>
         </details>
         <details class="stat-box chg-box" id="bk-box">
           <summary><span style="font-weight:bold;">💾 백업 · 기록 초기화</span><span class="chg-arrow"></span></summary>
@@ -429,7 +426,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-38</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-39</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2117,7 +2114,7 @@ function renderExList(){
   document.getElementById('ex-list').innerHTML = list.length ? list.map(p => { const ex = exOf(p); return `
     <button class="pen-row" onclick="openModal(${p.id})"><span class="muted">🏠 ${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
       <b>${esc(nm(p))}</b> ${ex.reason?`<b style="color:var(--danger)">${esc(ex.reason)}</b>`:''}${ex.memo?`<br><span class="muted">📝 ${esc(ex.memo)}</span>`:''}</button>`; }).join('')
-    : '<div class="muted">제외 대상이 없어요. 위의 "＋ 제외 대상 추가"를 눌러 넣어 주세요.</div>';
+    : '<div class="muted">제외 대상이 없어요.</div>';
 }
 // 목록에서 바로 사람 고르고 제외 지정
 function openAddExclude(){
@@ -2169,7 +2166,7 @@ function openAddExclude(){
     picked.exclude = { year: exYear(), reason, memo, date: today() };
     logEvent('참여 제외 지정', picked, `${exYear()}년 · ${[reason, memo].filter(Boolean).join(' - ')}`);
     saveData(false); back.remove(); renderList();
-    document.getElementById('ex-box').open = true;
+    document.getElementById('close-box').open = true; document.getElementById('ex-box').open = true;
     notify(`${picked.name} 어르신을 ${exYear()}년 참여 제외 대상으로 저장했어요.`);
   };
 }
