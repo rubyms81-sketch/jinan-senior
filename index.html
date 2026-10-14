@@ -376,6 +376,7 @@
           <summary><span style="font-weight:bold;">📊 기간 통계 <span class="muted" style="font-weight:normal;font-size:.85rem;">(예: 1월~12월, 1월~5월)</span></span><span class="chg-arrow"></span></summary>
           <div style="display:flex;margin-top:6px;gap:6px;align-items:center;"><select id="st-from" style="margin:0;"></select><span>~</span><select id="st-to" style="margin:0;"></select></div>
           <div class="grid-2" style="margin-top:8px;"><button class="secondary" onclick="showStats()">화면으로 보기</button><button onclick="exportStats()">통계 엑셀</button></div>
+          <button class="full" onclick="showShort()" style="margin-top:8px;background:#b7791f;">📉 근무 미달 인원 <span style="font-weight:normal;font-size:.85rem;">(1월 1일 ~ 11월 30일)</span></button>
         </details>
         <details class="stat-box chg-box" id="bk-box">
           <summary><span style="font-weight:bold;">💾 백업 · 기록 초기화 <span class="muted" style="font-weight:normal;font-size:.85rem;">(한 달에 한 번 백업 권장)</span></span><span class="chg-arrow"></span></summary>
@@ -430,7 +431,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-35</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-36</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -3976,8 +3977,8 @@ async function checkRestore(){
 // ---------- 📊 기간 통계 (예: 1월~12월) ----------
 document.querySelectorAll('#st-from, #st-to').forEach(sel => sel.innerHTML = [1,2,3,4,5,6,7,8,9,10,11,12].map(m => `<option value="${m}">${m}월</option>`).join(''));
 const stRange = () => { let a = Number(document.getElementById('st-from').value), b = Number(document.getElementById('st-to').value); if (a > b) [a, b] = [b, a]; return [a, b]; };
-function statsData(){
-  const [a, b] = stRange(), y = YEAR;
+function statsData(a0, b0){
+  let [a, b] = stRange(), y = YEAR; if (a0) { a = a0; b = b0; }
   // 대상: 내 담당 읍·면 (없으면 명단 전체)
   let list = participants.filter(p => visibleTowns().includes(p.town));
   if (!list.length) list = [...participants];
@@ -4034,6 +4035,54 @@ function reviewText(r, d){
   return (r.dropped ? `벌점 누적으로 중도포기 처리되었습니다. ` : '') + `${d.y}년 ${d.a}월~${d.b}월 현장 점검에서 ${it.join(', ')}가 확인되었습니다` +
     (r.pts ? `(벌점 -${r.pts}점${r.unpaid ? `, 일당 미지급 ${r.unpaid}일` : ''})` : '') + `. ` +
     (r.leave ? '근무지를 지키지 않은 일이 있어 ' : r.bad ? '응대 태도에 문제가 있어 ' : '복장·근무 규칙을 지키지 않은 일이 있어 ') + `내년도 일자리 사업 참여 여부에 대한 검토를 바랍니다.`;
+}
+// 📉 근무 미달: 1월~11월 근무 인정일(활동일 - 일당 미지급)이 필요한 날(근무한 달 × 10일)보다 적은 분
+const SHORT_TO = 11;
+function shortData(){
+  const d = statsData(1, SHORT_TO);
+  const rows = d.people.filter(r => !stats(r.p).dropped && !r.p.quit && r.months).map(r => {
+    const need = r.months * WORK_TARGET, lack = need - r.paid;
+    const pi = payInfo(r.p, String(d.y));
+    const byM = d.mks.filter(mk => !(r.p.start && r.p.start > mk)).map(mk => {
+      const un = r.p.logs.filter(l => l.date.startsWith(mk)).reduce((n, l) => n + (pi[l.id] || 0), 0), got = workDays(r.p, mk).length - un;
+      return { m: Number(mk.slice(5)), got, lack: WORK_TARGET - got };
+    }).filter(x => x.lack > 0);
+    return { ...r, need, lack, byM };
+  }).filter(r => r.lack > 0).sort((a, b) => b.lack - a.lack || a.p.town.localeCompare(b.p.town) || a.p.name.localeCompare(b.p.name));
+  return { d, rows };
+}
+const shortMonths = r => r.byM.map(x => `${x.m}월 ${x.got}일(-${x.lack})`).join(', ');
+function showShort(){
+  const { d, rows } = shortData(), tot = rows.reduce((n, r) => n + r.lack, 0);
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg" style="max-width:560px;">
+    <div style="font-weight:bold;font-size:1.1rem;">📉 ${d.y}년 근무 미달 인원 <span style="color:#b7791f;">${rows.length}명</span></div>
+    <div class="muted" style="font-size:.84rem;margin:2px 0 8px;">1월 1일 ~ ${SHORT_TO}월 30일 · 대상 ${esc(d.towns.join('·'))} · 필요한 날 = 근무한 달 × ${WORK_TARGET}일 · 인정일 = 활동일(교육·행사 포함) − 일당 미지급 · 중도포기 제외${rows.length ? ` · 모자란 날 합계 <b>${tot}일</b>` : ''}</div>
+    ${rows.length ? rows.map((r, i) => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#fffff0;border-left-color:#d69e2e;margin-top:4px;">
+      <b>${i + 1}. ${esc(nm(r.p))}</b> <span class="muted">🏠 ${esc(r.p.town)} · ${esc(seniorOf(r.p))}</span> <b style="color:var(--danger);">${r.lack}일 모자람</b><br>
+      <span style="font-size:.86rem;">인정 ${r.paid}일 / 필요 ${r.need}일${r.unpaid ? ` (일당 미지급 ${r.unpaid}일)` : ''}${r.byM.length ? ` · ${shortMonths(r)}` : ''}</span> <span class="arrow">›</span></button>`).join('')
+      : '<div class="pen-none">✔ 근무일이 모자란 어르신이 없어요</div>'}
+    <div class="grid-2" style="margin-top:10px;"><button class="secondary" id="sh-close">닫기</button><button id="sh-xls">엑셀로 내려받기</button></div></div>`;
+  document.body.appendChild(back);
+  back.querySelector('#sh-close').onclick = () => back.remove();
+  back.querySelector('#sh-xls').onclick = () => exportShort();
+  back.querySelectorAll('[data-id]').forEach(b => b.onclick = () => { back.remove(); openModal(Number(b.dataset.id)); });
+}
+function shortSheet(){
+  const { d, rows } = shortData();
+  const ws = XLSX.utils.aoa_to_sheet([[`${d.y}년 근무 미달 인원 (1월 1일 ~ ${SHORT_TO}월 30일, ${d.towns.join('·')}) ${rows.length}명`], ['필요한 날 = 근무한 달 × ' + WORK_TARGET + '일 · 인정일 = 활동일(교육·행사 포함) − 일당 미지급 · 중도포기 제외']]);
+  const data = rows.map((r, i) => ({ '순위': i + 1, '읍면': r.p.town, '경로당': seniorOf(r.p), '성명': r.p.name, '성별': r.p.sex || '', '나이': r.p.age, '근무 시작': r.p.start ? `${Number(r.p.start.slice(5))}월부터` : '',
+    '근무한 달 수': r.months, '필요한 날': r.need, '활동일': r.days, '일당 미지급': r.unpaid, '인정일': r.paid, '모자란 날': r.lack, '달별로 모자란 날': shortMonths(r) }));
+  if (data.length) XLSX.utils.sheet_add_json(ws, data, { origin: 'A4' }); else XLSX.utils.sheet_add_aoa(ws, [['근무일이 모자란 어르신이 없습니다.']], { origin: 'A4' });
+  ws['!cols'] = [6,8,12,9,6,6,10,10,9,8,10,8,9,50].map(w => ({ wch: w }));
+  return { ws, d, rows };
+}
+function exportShort(){
+  if (typeof XLSX === 'undefined') return notify('인터넷이 연결될 때 다시 눌러 주세요.');
+  const { ws, d, rows } = shortSheet(), wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '근무 미달');
+  XLSX.writeFile(wb, `근무미달_${d.y}년_1-${SHORT_TO}월.xlsx`);
+  logEvent('근무 미달 엑셀', null, `${d.y}년 1~${SHORT_TO}월 ${rows.length}명`);
 }
 function showStats(openGroup){
   const d = statsData(), T = k => d.months.reduce((n, x) => n + x[k], 0);
@@ -4132,6 +4181,7 @@ function exportStats(){
   const ws3 = nc.length ? XLSX.utils.json_to_sheet(nc) : XLSX.utils.aoa_to_sheet([['신규 인원이 없습니다.']]);
   XLSX.utils.book_append_sheet(wb, ws3, '신규 인원');
   logEvent('기간 통계', null, `${d.y}년 ${d.a}월~${d.b}월 통계 엑셀`);
+  XLSX.utils.book_append_sheet(wb, shortSheet().ws, '근무 미달(1~11월)');
   XLSX.writeFile(wb, `노인일자리_통계_${d.y}년${d.a}월-${d.b}월.xlsx`);
 }
 // ---------- 엑셀 색 칠하기 (빨강=벌점, 노랑=근무일 적음, 연두=태도 불량 경고) ----------
@@ -4333,6 +4383,7 @@ function exportExcel(){
     .map(h => ({ '기록 시각':h.at, '해당 날짜':h.date, '구분':h.type, '읍면':h.town, '경로당':h.senior, '성명':h.name, '내용':h.detail }));
   const ws5 = hRows.length ? XLSX.utils.json_to_sheet(hRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 변경 이력이 없습니다.`]]);
   ws5['!cols'] = [17,11,14,8,14,10,60].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, shortSheet().ws, '근무 미달(1~11월)');
   XLSX.utils.book_append_sheet(wb, ws5, '변경 이력');
   XLSX.writeFile(wb, fname + '.xlsx');
 }
