@@ -289,7 +289,7 @@
   <div class="card">
     <input type="search" id="search" placeholder="🔍 어르신 이름으로 바로 찾기 (모든 면)" oninput="renderList()" autocomplete="off" style="margin:0 0 4px;">
     <div id="participant-list"></div>
-    <div id="town-wrap"><label style="margin-top:10px;">📍 읍·면 선택</label>
+    <div id="town-wrap" class="hidden"><label style="margin-top:10px;">📍 읍·면 선택</label>
     <select id="filter-town" onchange="onTown()"></select></div>
 
     <div id="senior-wrap" class="hidden">
@@ -434,7 +434,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-18</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-19</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1256,6 +1256,7 @@ function openZone(id){
     $('#zn-sites').innerHTML = sorted.length ? sorted.map(x => {
       const ms = siteMembers(x.town, x.senior);
       return `<details class="zs-site"><summary><span><span class="muted">${esc(x.town)}</span> <b>${crown(x.town, x.senior)}${esc(x.senior)}</b></span><span class="muted">${ms.filter(p => !stats(p).dropped).length}명 ▾</span></summary>
+        <button type="button" class="small full" data-gosite="${esc(siteKey(x.town, x.senior))}" style="margin:6px 0 4px;">▶ 이 경로당 점검하기</button>
         <div class="zs-people">${ms.length ? ms.map(p => { const st = stats(p); return `<div class="zs-person">
           <b>${esc(nm(p))}</b> ${p.age?`<span class="muted">(${esc(p.age)}세)</span>`:''} ${st.dropped?`<span class="badge bg-danger">${esc(st.status)}</span>`:badgeOf(st)}${inHospNow(p)?' <span class="badge bg-hosp">🏥 입원 중</span>':''}
           <br>${telBtn(p)}${p.address?`<br><span class="muted" style="font-size:.85rem;">🏠 ${esc(p.address)}</span>`:''}
@@ -1273,6 +1274,7 @@ function openZone(id){
           </div></div></details>`;
     }).join('') : '';
     bg.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { bg.remove(); openModal(Number(b.dataset.open)); });
+    bg.querySelectorAll('[data-gosite]').forEach(b => b.onclick = () => { const [town, senior] = b.dataset.gosite.split('|'); bg.remove(); lastTown = town; curSenior = senior; document.getElementById('search').value = ''; renderList(); openSiteCheck(); });
     $('#zn-sites-title').textContent = `담당 경로당 (${z.sites.length}곳)${z.sites.filter(x => isBest(x.town, x.senior)).length ? ` · 👑 ${z.sites.filter(x => isBest(x.town, x.senior)).length}` : ''}`;
     const reopen = (town, senior) => { drawMain(); const det = [...bg.querySelectorAll('#zn-sites details')].find(d => d.querySelector(`[data-map="${CSS.escape(town+'|'+senior)}"]`)); if (det) det.open = true; };
     bg.querySelectorAll('[data-map]').forEach(b => b.onclick = () => { const [town, senior] = b.dataset.map.split('|'); mapOf(town, senior) ? openSiteMap(town, senior) : editSiteMap(town, senior, () => reopen(town, senior)); });
