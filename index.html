@@ -436,7 +436,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-25</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-26</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -796,11 +796,23 @@ const changesIn = (p, mk) => (p.changes || []).filter(c => c.from.startsWith(mk)
 const customOf = (p, mk) => (p.custom && p.custom[mk]) || null;
 // 이 어르신의 실제 근무일 (보충 근무·변경 반영)
 // 🎓 교육 날짜 (의무교육·안전교육 등) — 일한 날로 쳐서 그날 일당에 들어감. p.edu = [{id, date, name}]
-const eduOf = (p, mk) => (p.edu || []).filter(e => !mk || e.date.startsWith(mk)).sort((a,b) => a.date.localeCompare(b.date));
-const eduOn = (p, d) => (p.edu || []).find(e => e.date === d);
+// 모든 어르신 교육(활동일 정하기에서): eduAll = { '2026-10': [{date, name}] }
+// 팀장님 일정(문자 보내기 → 팀장): leaderPlan = { '2026-10': { days:[...], edu:[{date, name}] } }
+let eduAll = (() => { try { return JSON.parse(load('jinan_edu')) || {}; } catch(e) { return {}; } })();
+let leaderPlan = (() => { try { return JSON.parse(load('jinan_leaders')) || {}; } catch(e) { return {}; } })();
+const isLeader = p => zones.some(z => z.leaderId === p.id);
+function eduOf(p, mk){
+  const mks = mk ? [mk] : [...new Set([...Object.keys(eduAll), ...Object.keys(leaderPlan)])];
+  const all = [...(p.edu || []).filter(e => !mk || e.date.startsWith(mk)).map(e => ({ ...e, own: true })),
+    ...mks.flatMap(k => (eduAll[k] || []).map(e => ({ ...e, all: true }))),
+    ...(isLeader(p) ? mks.flatMap(k => (leaderPlan[k]?.edu || []).map(e => ({ ...e, leader: true }))) : [])];
+  const seen = new Set(); return all.filter(e => !seen.has(e.date) && seen.add(e.date)).sort((a,b) => a.date.localeCompare(b.date));
+}
+const eduOn = (p, d) => eduOf(p, d.slice(0,7)).find(e => e.date === d);
 function personDays(p, mk){
   const cu = customOf(p, mk);
-  const set = new Set(cu ? cu.days : monthDays(mk));
+  const lp = isLeader(p) && leaderPlan[mk]?.days?.length ? leaderPlan[mk].days : null;   // 팀장은 팀장 일정
+  const set = new Set(cu ? cu.days : lp || monthDays(mk));
   changesIn(p, mk).forEach(c => { set.delete(c.from); if (c.to.startsWith(mk)) set.add(c.to); });
   eduOf(p, mk).forEach(e => set.add(e.date));   // 교육 날은 근무일로 침
   return [...set].sort();
@@ -852,7 +864,8 @@ function addEdu(){
   }});
 }
 async function delEdu(id){
-  const p = current(); const e = (p?.edu || []).find(x => x.id == id); if (!e) return;
+  const p = current(); const e = (p?.edu || []).find(x => x.id == id);
+  if (!e) return notify('모든 어르신(또는 팀장님) 교육 일정이에요.\n고치려면 "날짜 정하기"(또는 문자 보내기 → 팀장) 달력에서 고쳐 주세요.');
   if (!await ask(`${dd(e.date)} ${e.name} 교육 날짜를 지울까요?`)) return;
   p.edu = p.edu.filter(x => x !== e); logEvent('교육 날짜 삭제', p, `${dd(e.date)} ${e.name}`, e.date); saveData(false); renderModal(); renderList();
 }
@@ -868,7 +881,8 @@ function renderWork(){
     const label = `${dd(d)}${isShifted(d)?' 대체':''}${d===td?' 오늘':''}${d===end?' 마감':''}`;
     const tr = tripShort(d);
     return `<button type="button" class="chip daybtn ${cls} ${d===end?'end':''} ${set?'':'unset'}" onclick="openTrip('${d}')">${label}<span class="trip ${tr?'':'empty'}">${tr || '+ 출장'}</span></button>`;
-  }).join('') + `<button type="button" class="chip daybtn sms-chip" onclick="openGroupSms()">📩 문자 보내기<span class="trip">활동일 안내</span></button>`;
+  }).join('') + (eduAll[mk] || []).map(e => `<button type="button" class="chip daybtn" style="background:#e9d8fd;color:#553c9a;border:2px solid #b794f4;" onclick="openWorkdays()">🎓 ${dd(e.date)}<span class="trip">${esc(e.name)}</span></button>`).join('')
+    + `<button type="button" class="chip daybtn sms-chip" onclick="openGroupSms()">📩 문자 보내기<span class="trip">활동일 안내</span></button>`;
   document.getElementById('wd-note').innerHTML = (set ? '' : '아직 정하지 않아서 <b>월·수·금 기준 추천 날짜</b>를 보여 드려요. "날짜 정하기"에서 확정해 주세요.<br>') + '날짜를 누르면 <b>출장 지역·직원</b>을 적을 수 있어요.';
   // 근무일 변경한 어르신
   const town = lastTown;
@@ -912,59 +926,97 @@ function renderWork(){
 }
 
 // 활동일 정하기 (달력)
-function openWorkdays(){
-  const mk = monthKey(), y = YEAR, m = curMonth, last = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
-  let sel = new Set(monthDays(mk)); const sel0 = [...sel].sort().join();
+// 📅 달력 편집 (활동일 정하기 · 팀장님 일정 같이 씀): 근무일 + 교육(여러 개, 이름별)
+function schedEditor({ title, mk, days, edu, note, onSave, nav }){
+  const y = Number(mk.slice(0,4)), m = Number(mk.slice(5,7)), last = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
+  let sel = new Set(days), ed = new Map((edu || []).map(e => [e.date, e.name])), mode = 'work', curEdu = [...new Set((edu || []).map(e => e.name))][0] || '';
+  const snap = () => [...sel].sort().join() + '|' + [...ed].sort().join();
+  const s0 = snap();
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-      <button type="button" class="small" id="cal-prev" style="width:auto;margin:0;padding:6px 12px;">◀</button>
-      <div style="flex:1;text-align:center;font-weight:bold;font-size:1.1rem;">📅 ${m}월 활동일 <span class="muted" style="font-size:.8rem;font-weight:normal;">${y}년</span></div>
-      <button type="button" class="small" id="cal-next" style="width:auto;margin:0;padding:6px 12px;">▶</button></div>
-    <div class="muted">근무하는 날을 누르세요. 다시 누르면 빠집니다. (빨간 글씨: 일요일·공휴일)<br>"월·수·금 자동"은 공휴일과 겹치면 그다음 날로 옮겨 줍니다.<br>마지막 날(${WORK_TARGET}일째)이 <b>마감일</b>이 됩니다.</div>
-    <div class="cal" id="cal"></div>
-    <div style="text-align:center;margin-bottom:8px;">선택한 날: <b id="cal-n"></b>일 <span class="muted">(보통 ${WORK_TARGET}일)</span></div>
-    <div class="grid-2"><button class="secondary" id="cal-auto">월·수·금 자동</button><button class="secondary" id="cal-clear">모두 지우기</button></div>
-    <div class="grid-2"><button class="secondary" id="cal-cancel">취소</button><button id="cal-save">저장</button></div></div>`;
+      ${nav ? '<button type="button" class="small" id="sc-prev" style="width:auto;margin:0;padding:6px 12px;">◀</button>' : ''}
+      <div style="flex:1;text-align:center;font-weight:bold;font-size:1.1rem;">${title} <span class="muted" style="font-size:.8rem;font-weight:normal;">${y}년</span></div>
+      ${nav ? '<button type="button" class="small" id="sc-next" style="width:auto;margin:0;padding:6px 12px;">▶</button>' : ''}</div>
+    <div class="grid-2" id="sc-mode" style="margin:4px 0 6px;"><button type="button" class="reason" data-v="work">📅 근무일 고르기</button><button type="button" class="reason" data-v="edu">🎓 교육 날짜 넣기</button></div>
+    <div id="sc-edu" class="hidden" style="background:#faf5ff;border:1px solid #d6bcfa;border-radius:10px;padding:8px;margin-bottom:6px;">
+      <div style="font-size:.88rem;margin-bottom:4px;">① 교육을 고르고 ② 달력에서 그 교육 날을 누르세요. <b>교육 여러 개</b>를 같이 넣을 수 있어요.</div>
+      <div id="sc-edu-names" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;"></div>
+      <div style="display:flex;gap:4px;"><input type="text" id="sc-edu-new" placeholder="새 교육 이름 (예: 소양교육 오후 2시)" autocomplete="off" style="margin:0;"><button type="button" class="small" id="sc-edu-add" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button></div>
+    </div>
+    <div class="muted" id="sc-help" style="font-size:.86rem;margin-bottom:4px;"></div>
+    <div class="cal" id="sc-cal"></div>
+    <div style="text-align:center;margin-bottom:6px;">근무일 <b id="sc-n"></b>일 <span class="muted">(보통 ${WORK_TARGET}일)</span> · 교육 <b id="sc-e"></b>일</div>
+    <div id="sc-list" style="margin-bottom:8px;"></div>
+    <button class="secondary full" id="sc-clear">근무일 모두 지우기</button>
+    <div class="grid-2"><button class="secondary" id="sc-cancel">취소</button><button id="sc-save">저장</button></div></div>`;
   document.body.appendChild(back);
+  const $ = q => back.querySelector(q);
+  const PRESET = EDU_NAMES;
   const draw = () => {
+    back.querySelectorAll('#sc-mode button').forEach(b => b.classList.toggle('on', b.dataset.v === mode));
+    $('#sc-edu').classList.toggle('hidden', mode !== 'edu');
+    const names = [...new Set([...PRESET, ...ed.values(), ...(curEdu ? [curEdu] : [])])];
+    $('#sc-edu-names').innerHTML = names.map(n => `<button type="button" class="small ${n === curEdu ? '' : 'secondary'}" data-n="${esc(n)}" style="width:auto;margin:0;${n === curEdu ? 'background:#805ad5;' : ''}">${esc(n)}</button>`).join('');
+    back.querySelectorAll('#sc-edu-names button').forEach(b => b.onclick = () => { curEdu = b.dataset.n; draw(); });
+    $('#sc-help').innerHTML = mode === 'work' ? '근무하는 날을 누르세요. 다시 누르면 빠집니다. 마지막 근무일이 <b>마감일</b>이에요. (빨간 글씨: 일요일·공휴일)'
+      : curEdu ? `지금 고른 교육: <b style="color:#553c9a">🎓 ${esc(curEdu)}</b> — 달력에서 날짜를 누르세요. 교육 날을 다시 누르면 빠져요.` : '먼저 위에서 교육을 고르세요.';
     let h = WEEK.map(w => `<div class="h">${w}</div>`).join('') + '<div></div>'.repeat(first);
+    const endD = [...sel].sort().pop();
     for (let d = 1; d <= last; d++) {
-      const k = ymd(y,m,d), w = new Date(y, m-1, d).getDay();
-      const isEnd = sel.size && k === [...sel].sort().pop();
+      const k = ymd(y,m,d), w = new Date(y, m-1, d).getDay(), en2 = ed.get(k);
       const hn = HOLIDAY_NAMES[k] ? HOLIDAY_NAMES[k].replace('대체공휴일','대체휴일').slice(0,4) : '';
-      h += `<button data-k="${k}" class="${sel.has(k)?'on':''} ${(w===0 || HOLIDAYS.has(k))?'red':''} ${isEnd?'end':''}">${d}${isEnd?'<small>마감</small>':hn?`<small>${hn}</small>`:''}</button>`;
+      const tag = en2 ? en2.slice(0,4) : k === endD ? '마감' : hn;
+      h += `<button data-k="${k}" class="${en2 ? 'edu' : sel.has(k) ? 'on' : ''} ${(w===0 || HOLIDAYS.has(k)) ? 'red' : ''} ${k === endD && !en2 ? 'end' : ''}">${d}${tag ? `<small>${esc(tag)}</small>` : ''}</button>`;
     }
-    back.querySelector('#cal').innerHTML = h;
-    back.querySelector('#cal-n').textContent = sel.size;
-    back.querySelectorAll('#cal button').forEach(b => b.onclick = () => {
+    $('#sc-cal').innerHTML = h;
+    $('#sc-n').textContent = sel.size; $('#sc-e').textContent = ed.size;
+    const byName = {}; [...ed].sort().forEach(([d, n]) => (byName[n] ||= []).push(d));
+    $('#sc-list').innerHTML = Object.keys(byName).length ? Object.entries(byName).map(([n, ds]) => `<div style="display:flex;align-items:center;gap:6px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:5px 8px;margin-top:4px;">
+      <span style="flex:1;">🎓 <b>${esc(n)}</b> <span class="muted">${ds.map(dd).join(', ')}</span></span>
+      <button type="button" class="small secondary" data-ren="${esc(n)}" style="width:auto;margin:0;padding:2px 8px;">이름</button><button type="button" class="small secondary" data-delname="${esc(n)}" style="width:auto;margin:0;padding:2px 8px;">✕</button></div>`).join('') : '';
+    back.querySelectorAll('[data-ren]').forEach(b => b.onclick = () => { const o = b.dataset.ren, v = prompt('교육 이름을 고쳐 주세요', o); if (!v || !v.trim()) return; [...ed].forEach(([d, n]) => { if (n === o) ed.set(d, v.trim()); }); if (curEdu === o) curEdu = v.trim(); draw(); });
+    back.querySelectorAll('[data-delname]').forEach(b => b.onclick = () => { [...ed].forEach(([d, n]) => { if (n === b.dataset.delname) ed.delete(d); }); draw(); });
+    back.querySelectorAll('#sc-cal button').forEach(b => b.onclick = () => {
       const k = b.dataset.k;
+      if (mode === 'edu') {
+        if (ed.has(k)) { ed.delete(k); return draw(); }
+        if (!curEdu) return notify('먼저 위에서 교육을 고르거나 새 교육 이름을 추가해 주세요.');
+        ed.set(k, curEdu); sel.delete(k); return draw();
+      }
+      if (ed.has(k)) return notify(`${dd(k)}은 교육 날이에요. 🎓 교육 날짜 넣기에서 빼 주세요.`);
       if (sel.has(k)) sel.delete(k);
-      else if (sel.size >= WORK_TARGET) return notify(`활동일은 ${WORK_TARGET}일까지입니다.\n다른 날을 먼저 눌러서 빼 주세요.`);
+      else if (sel.size >= WORK_TARGET) return notify(`근무일은 ${WORK_TARGET}일까지입니다.\n다른 날을 먼저 눌러서 빼 주세요.\n(교육 날은 따로라 이 수에 안 들어가요)`);
       else sel.add(k);
       draw();
     });
   };
+  back.querySelectorAll('#sc-mode button').forEach(b => b.onclick = () => { mode = b.dataset.v; draw(); });
+  const addName = () => { const v = $('#sc-edu-new').value.trim(); if (!v) return; curEdu = v; $('#sc-edu-new').value = ''; draw(); };
+  $('#sc-edu-add').onclick = addName;
+  $('#sc-edu-new').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addName(); } });
+  $('#sc-clear').onclick = () => { sel = new Set(); draw(); };
+  $('#sc-cancel').onclick = () => back.remove();
+  const go = async d => { if (snap() !== s0 && !await ask('고친 내용이 아직 저장되지 않았어요.\n저장하지 않고 다른 달로 넘어갈까요?')) return; back.remove(); nav(d); };
+  $('#sc-prev')?.addEventListener('click', () => go(-1)); $('#sc-next')?.addEventListener('click', () => go(1));
+  $('#sc-save').onclick = () => {
+    if (!sel.size) return notify('근무일을 하루 이상 골라 주세요.');
+    back.remove(); onSave({ days: [...sel].sort(), edu: [...ed].sort().map(([date, name]) => ({ date, name })) });
+  };
   draw();
-  back.querySelector('#cal-auto').onclick = () => { sel = new Set(suggestDays(mk)); draw(); };
-  back.querySelector('#cal-clear').onclick = () => { sel = new Set(); draw(); };
-  back.querySelector('#cal-cancel').onclick = () => back.remove();
-  // ◀ ▶ 지난달·다음달로 (고친 게 있으면 먼저 물어봄)
-  const go = async d => {
-    if ([...sel].sort().join() !== sel0 && !await ask('고른 날짜가 아직 저장되지 않았어요.\n저장하지 않고 다른 달로 넘어갈까요?')) return;
-    back.remove(); moveMonth(d); openWorkdays();
-  };
-  back.querySelector('#cal-prev').onclick = () => go(-1);
-  back.querySelector('#cal-next').onclick = () => go(1);
-  back.querySelector('#cal-save').onclick = () => {
-    if (!sel.size) return notify('활동일을 하루 이상 골라 주세요.');
-    workdays[mk] = [...sel].sort(); store('jinan_workdays', JSON.stringify(workdays));
-    logEvent('활동일 설정', null, `${m}월: ${workdays[mk].map(d => Number(d.slice(8,10))).join(', ')}일`, workdays[mk][0]);
-    back.remove(); renderList();
-  };
 }
-
-// 이 어르신 근무일 표시 (점검 화면)
+function openWorkdays(){
+  const mk = monthKey(), m = curMonth;
+  schedEditor({ title: `📅 ${m}월 활동일 정하기`, mk, days: monthDays(mk), edu: eduAll[mk] || [], nav: d => { moveMonth(d); openWorkdays(); },
+    onSave: ({ days, edu }) => {
+      workdays[mk] = days; store('jinan_workdays', JSON.stringify(workdays));
+      logEvent('활동일 설정', null, `${m}월: ${days.map(d => Number(d.slice(8,10))).join(', ')}일`, days[0]);
+      const before = JSON.stringify(eduAll[mk] || []);
+      if (edu.length) eduAll[mk] = edu; else delete eduAll[mk];
+      if (JSON.stringify(eduAll[mk] || []) !== before) logEvent('교육 일정(모든 어르신)', null, `${m}월: ${edu.map(e => `${dd(e.date)} ${e.name}`).join(', ') || '없음'} (일한 날로 인정)`, days[0]);
+      store('jinan_edu', JSON.stringify(eduAll)); renderList();
+    } });
+}
 function renderPersonDays(p){
   const mk = monthKey(), days = personDays(p, mk), chg = changesIn(p, mk), cu = customOf(p, mk), reg = monthDays(mk);
   const moved = new Set(chg.map(c => c.to));
@@ -982,7 +1034,7 @@ function renderPersonDays(p){
   }
   // 교육 날은 보라색 🎓 (누르면 지우기)
   document.querySelectorAll('#m-days .chip.wd').forEach(c => { const e = eduOn(p, c.dataset.d); if (!e) return;
-    c.classList.add('edu'); c.classList.remove('wd'); c.innerHTML = `🎓 ${dd(c.dataset.d)} ${esc(e.name)}`; c.onclick = () => delEdu(e.id); });
+    c.classList.add('edu'); c.classList.remove('wd'); c.innerHTML = `🎓 ${dd(c.dataset.d)} ${esc(e.name)}`; c.onclick = () => delEdu(e.id || 0); });
   // 근무일을 누르면 그 날짜로 근무일 변경 창
   document.querySelectorAll('#m-days .chip.wd').forEach(c => c.onclick = () => addChange({ from: c.dataset.d }));
   document.getElementById('m-chg').innerHTML = (cu ? `<div class="log warn">${cu.inHosp ? '🏥 <b>입원 중</b>' : '🩹 <b>보충 근무 (개인 일정)</b>'}${cu.reason?` <span class="muted">· ${esc(cu.reason)}</span>`:''}${cu.back?` <span class="muted">· ${dd(cu.back)} 복귀</span>`:''}
@@ -3199,7 +3251,7 @@ function openGroupSms(){
     </div>
     <div id="gs-body" class="hidden">
       <div id="gs-who" style="font-weight:bold;margin:6px 0;"></div>
-      <button type="button" class="full hidden" id="gs-edu" style="background:#805ad5;margin:0 0 6px;">🎓 팀장님 교육 일정 넣기 <span style="font-weight:normal;font-size:.85rem;">(달력에서 고르면 문자에 들어가요)</span></button>
+      <button type="button" class="full hidden" id="gs-edu" style="background:#805ad5;margin:0 0 6px;">📅 팀장님 근무일·교육 일정 <span style="font-weight:normal;font-size:.85rem;">(달력에서 고치면 문자에 들어가요)</span></button>
       <textarea id="gs-text" rows="14" style="font-size:.92rem;"></textarea>
       <label style="margin-top:6px;">🖼 사진 함께 보내기 (선택)</label>
       <input type="file" id="gs-img" accept="image/*" class="hidden">
@@ -3226,21 +3278,19 @@ function openGroupSms(){
       + (noTel.length ? `<div class="muted" style="font-weight:normal;font-size:.85rem;">연락처 없는 분 ${noTel.length}명: ${noTel.map(p => esc(nm(p))).join(', ')}</div>` : '');
     ta.value = workdayText(mk, days, g.whoText || (g.key === '게이트볼' ? '게이트볼장 관리도우미 어르신' : `${g.label} 경로당지킴이 어르신`));
     bg.querySelector('#gs-edu').classList.toggle('hidden', g.key !== 'leaders');
+    if (g.key === 'leaders' && leaderPlan[mk]) ta.value = leaderText();
   };
-  // 팀장님 교육 일정: 문자에 넣고, 팀장으로 정한 어르신 근무일에도 교육 날로 넣음(일한 날로 인정)
-  bg.querySelector('#gs-edu').onclick = () => pickEdu({ title: `${curMonth}월 팀장님 교육 일정`, mk,
-    sub: '교육 날을 누르세요 (여러 날 가능). 문자에 들어가고, 팀장으로 정한 어르신은 근무일에도 <b>교육(일한 날로 인정)</b>으로 들어가요.',
-    onSave: list => {
-      const ymdK = d => `${Number(d.slice(5,7))}월 ${dd(d)}`;
-      const block = `▶ 교육 일정 (일한 날로 인정됩니다)\n${list.map(e => `· ${ymdK(e.date)} ${e.name}`).join('\n')}\n\n`;
-      const i = ta.value.indexOf('▶ 꼭 지켜 주세요');
-      ta.value = i >= 0 ? ta.value.slice(0, i) + block + ta.value.slice(i) : ta.value + '\n\n' + block;
-      let n = 0;
-      zones.forEach(z => { const L = z.leaderId ? participants.find(x => x.id === z.leaderId) : null; if (!L) return;
-        list.forEach(e => { if (eduOn(L, e.date)) return; (L.edu ||= []).push({ id: Date.now() + Math.random(), ...e }); n++;
-          logEvent('교육 날짜', L, `${dd(e.date)} ${e.name} (팀장 교육 · 일한 날로 인정)`, e.date); }); });
-      if (n) { saveData(false); renderList(); }
-      help.innerHTML = `<b style="color:#553c9a">🎓 교육 일정 ${list.length}개를 문자에 넣었어요.</b>${n ? ' 팀장 어르신 근무일에도 넣었어요.' : ''}`;
+  // 팀장님 일정: 활동일 정하기와 같은 달력으로 근무일·교육(여러 개)을 고치면 문자에 바로 반영
+  const leaderText = () => { const pl = leaderPlan[mk], ds = pl?.days?.length ? pl.days : days;
+    let t = workdayText(mk, ds, '구역장(팀장)님'); const ed2 = pl?.edu || [];
+    if (ed2.length) { const ymdK = d => `${Number(d.slice(5,7))}월 ${dd(d)}`, block = `▶ 교육 일정 (일한 날로 인정됩니다)\n${ed2.map(e => `· ${ymdK(e.date)} ${e.name}`).join('\n')}\n\n`, i = t.indexOf('▶ 꼭 지켜 주세요'); t = i >= 0 ? t.slice(0, i) + block + t.slice(i) : t + '\n\n' + block; }
+    return t; };
+  bg.querySelector('#gs-edu').onclick = () => schedEditor({ title: `👤 ${curMonth}월 팀장님 일정`, mk, days: leaderPlan[mk]?.days?.length ? leaderPlan[mk].days : days, edu: leaderPlan[mk]?.edu || [],
+    onSave: ({ days: ds, edu: ed2 }) => {
+      leaderPlan[mk] = { days: ds, edu: ed2 }; store('jinan_leaders', JSON.stringify(leaderPlan));
+      logEvent('팀장 일정', null, `${curMonth}월 근무 ${ds.map(d => Number(d.slice(8,10))).join(', ')}일${ed2.length ? ` · 교육 ${ed2.map(e => `${dd(e.date)} ${e.name}`).join(', ')}` : ''}`, ds[0]);
+      ta.value = leaderText(); renderList();
+      help.innerHTML = `<b style="color:#553c9a">📅 팀장님 일정을 저장하고 문자에 넣었어요.</b> (근무 ${ds.length}일${ed2.length ? ` · 교육 ${ed2.length}일` : ''})`;
     } });
   // 체크한 그룹 합치기 (같은 분은 한 번만)
   const picked = () => [...bg.querySelectorAll('#gs-groups input:checked')].map(c => groups[Number(c.dataset.i)]);
