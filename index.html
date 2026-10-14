@@ -311,14 +311,6 @@
 
   </div>
 
-  <div class="card">
-    <details id="nv-box" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
-      <summary><h3 id="nv-title"></h3><span class="chg-arrow"></span></summary>
-      <div class="muted" style="font-size:.85rem;margin:6px 0;">점검 기록이 하나도 없는 경로당이에요. 누르면 그 경로당으로 가요.
-        <span style="white-space:nowrap;">기준: <select id="nv-range" onchange="renderNotVisited()" style="width:auto;display:inline-block;margin:0;padding:4px 6px;font-size:.85rem;"><option value="month">이번 달</option><option value="14">최근 2주</option><option value="7">최근 1주</option></select></span></div>
-      <div id="nv-list"></div>
-    </details>
-  </div>
 
   <div class="card">
     <details id="chg-box" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
@@ -436,7 +428,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-26</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-27</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -483,7 +475,7 @@
 
   <h4 id="m-days-title">📅 이달 근무일</h4>
   <div id="m-days" class="chips"></div>
-  <button type="button" class="small full" onclick="addEdu()" style="background:#805ad5;margin:6px 0 4px;">🎓 교육 날짜 넣기 <span style="font-weight:normal;font-size:.85rem;">(의무·안전교육 등 · 일한 날로 인정)</span></button>
+  <button type="button" class="small full" onclick="addEdu()" style="background:#805ad5;margin:6px 0 4px;">🎓 교육 및 행사 날짜 넣기 <span style="font-weight:normal;font-size:.85rem;">(교육·문화활동 행사 · 일한 날로 인정)</span></button>
   <div id="m-chg"></div>
   <button class="warning full hidden" id="btn-addchg" onclick="addChange()">🔄 근무일 변경 추가</button>
   <button class="secondary full hidden" id="btn-custom" onclick="openCustom()">🏥 입원 체크</button>
@@ -789,7 +781,7 @@ function suggestDays(mk){
 }
 const isShifted = d => ![1,3,5].includes(dObj(d).getDay());   // 월·수·금이 아닌 날 = 옮긴 날
 const monthDays = mk => workdays[mk] || suggestDays(mk);
-const endDay = mk => { const d = monthDays(mk); return d[d.length-1] || ''; };   // 열흘째 = 마감일
+const endDay = mk => { const d = [...monthDays(mk), ...((typeof eduAll !== 'undefined' && eduAll[mk]) || []).map(e => e.date)].sort(); return d[d.length-1] || ''; };   // 열흘째 = 마감일
 const changesIn = (p, mk) => (p.changes || []).filter(c => c.from.startsWith(mk) || c.to.startsWith(mk));
 // 🩹 보충 근무(개인 일정): 사고·입원 등으로 쉬다가 돌아와 남은 날을 몰아서 일할 때
 // p.custom = { 'YYYY-MM': { days:[...], reason, back:'YYYY-MM-DD', date } }
@@ -817,7 +809,7 @@ function personDays(p, mk){
   eduOf(p, mk).forEach(e => set.add(e.date));   // 교육 날은 근무일로 침
   return [...set].sort();
 }
-const EDU_NAMES = ['의무교육', '안전교육', '직무교육', '역량강화교육'];
+const EDU_NAMES = ['의무교육', '안전교육', '직무교육', '역량강화교육', '문화활동 행사'];
 // 교육 날짜 고르기 창: 달력에서 날짜(여러 날) + 교육 이름 → onSave([{date, name}])
 function pickEdu({ title, mk, sub, onSave }){
   const y = Number(mk.slice(0,4)), m = Number(mk.slice(5,7)), last = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
@@ -860,28 +852,33 @@ function addEdu(){
     targets.forEach(x => list.forEach(e => { if (eduOn(x, e.date)) return; (x.edu ||= []).push({ id: Date.now() + Math.random(), ...e });
       logEvent('교육 날짜', x, `${dd(e.date)} ${e.name} (일한 날로 인정)`, e.date); }));
     saveData(false); renderModal(); renderList();
-    notify(`🎓 교육 날짜를 넣었어요.\n${list.map(e => `${dd(e.date)} ${e.name}`).join('\n')}${targets.length > 1 ? `\n(${targets.length}명)` : ''}`);
+    const over = targets.filter(x => personDays(x, monthKey()).length > WORK_TARGET);
+    notify(`🎓 교육·행사 날짜를 넣었어요.\n${list.map(e => `${dd(e.date)} ${e.name}`).join('\n')}${targets.length > 1 ? `\n(${targets.length}명)` : ''}` +
+      (over.length ? `\n\n⚠ 교육·행사 날도 근무일에 들어가서 ${over.map(x => x.name).join(', ')} 어르신 근무일이 ${WORK_TARGET}일을 넘었어요.\n"🔄 근무일 변경"에서 근무일 하루를 빼 주세요.` : ''));
   }});
 }
 async function delEdu(id){
   const p = current(); const e = (p?.edu || []).find(x => x.id == id);
-  if (!e) return notify('모든 어르신(또는 팀장님) 교육 일정이에요.\n고치려면 "날짜 정하기"(또는 문자 보내기 → 팀장) 달력에서 고쳐 주세요.');
+  if (!e) return notify('모든 어르신(또는 팀장님) 교육·행사 일정이에요.\n고치려면 "날짜 정하기"(또는 문자 보내기 → 팀장) 달력에서 고쳐 주세요.');
   if (!await ask(`${dd(e.date)} ${e.name} 교육 날짜를 지울까요?`)) return;
   p.edu = p.edu.filter(x => x !== e); logEvent('교육 날짜 삭제', p, `${dd(e.date)} ${e.name}`, e.date); saveData(false); renderModal(); renderList();
 }
 
 function renderWork(){
   const mk = monthKey(), set = !!workdays[mk], days = monthDays(mk);
-  document.getElementById('wd-title').textContent = `📅 ${curMonth}월 활동일 (${days.length}일)`;
+  const eds = eduAll[mk] || [];
+  document.getElementById('wd-title').textContent = `📅 ${curMonth}월 활동일 (${days.length + eds.length}일${eds.length ? ` · 교육·행사 ${eds.length}일 포함` : ''})`;
   const end = endDay(mk);
   const td = today();
   // 지난 날은 흐리게, 오늘·앞으로 다가올 날은 주황색, 마지막 날은 마감
-  document.getElementById('wd-chips').innerHTML = days.map(d => {
+  const eduChip = e => `<button type="button" class="chip daybtn" style="background:#e9d8fd;color:#553c9a;border:2px solid #b794f4;" onclick="openWorkdays()">🎓 ${dd(e.date)}${e.date===end?' 마감':''}<span class="trip">${esc(e.name)}</span></button>`;
+  document.getElementById('wd-chips').innerHTML = [...days, ...eds.map(e => e.date)].sort().map(d => {
+    const e = eds.find(x => x.date === d); if (e) return eduChip(e);
     const cls = d < td ? 'past' : 'up';
     const label = `${dd(d)}${isShifted(d)?' 대체':''}${d===td?' 오늘':''}${d===end?' 마감':''}`;
     const tr = tripShort(d);
     return `<button type="button" class="chip daybtn ${cls} ${d===end?'end':''} ${set?'':'unset'}" onclick="openTrip('${d}')">${label}<span class="trip ${tr?'':'empty'}">${tr || '+ 출장'}</span></button>`;
-  }).join('') + (eduAll[mk] || []).map(e => `<button type="button" class="chip daybtn" style="background:#e9d8fd;color:#553c9a;border:2px solid #b794f4;" onclick="openWorkdays()">🎓 ${dd(e.date)}<span class="trip">${esc(e.name)}</span></button>`).join('')
+  }).join('')
     + `<button type="button" class="chip daybtn sms-chip" onclick="openGroupSms()">📩 문자 보내기<span class="trip">활동일 안내</span></button>`;
   document.getElementById('wd-note').innerHTML = (set ? '' : '아직 정하지 않아서 <b>월·수·금 기준 추천 날짜</b>를 보여 드려요. "날짜 정하기"에서 확정해 주세요.<br>') + '날짜를 누르면 <b>출장 지역·직원</b>을 적을 수 있어요.';
   // 근무일 변경한 어르신
@@ -938,15 +935,15 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav }){
       ${nav ? '<button type="button" class="small" id="sc-prev" style="width:auto;margin:0;padding:6px 12px;">◀</button>' : ''}
       <div style="flex:1;text-align:center;font-weight:bold;font-size:1.1rem;">${title} <span class="muted" style="font-size:.8rem;font-weight:normal;">${y}년</span></div>
       ${nav ? '<button type="button" class="small" id="sc-next" style="width:auto;margin:0;padding:6px 12px;">▶</button>' : ''}</div>
-    <div class="grid-2" id="sc-mode" style="margin:4px 0 6px;"><button type="button" class="reason" data-v="work">📅 근무일 고르기</button><button type="button" class="reason" data-v="edu">🎓 교육 날짜 넣기</button></div>
+    <div class="grid-2" id="sc-mode" style="margin:4px 0 6px;"><button type="button" class="reason" data-v="work">📅 근무일 고르기</button><button type="button" class="reason" data-v="edu">🎓 교육 및 행사 날짜 넣기</button></div>
     <div id="sc-edu" class="hidden" style="background:#faf5ff;border:1px solid #d6bcfa;border-radius:10px;padding:8px;margin-bottom:6px;">
-      <div style="font-size:.88rem;margin-bottom:4px;">① 교육을 고르고 ② 달력에서 그 교육 날을 누르세요. <b>교육 여러 개</b>를 같이 넣을 수 있어요.</div>
+      <div style="font-size:.88rem;margin-bottom:4px;">① 교육·행사를 고르고 ② 달력에서 그날을 누르세요. <b>여러 개</b>를 같이 넣을 수 있어요. 교육·행사 날도 <b>근무 ${WORK_TARGET}일 안에 들어가요.</b></div>
       <div id="sc-edu-names" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;"></div>
-      <div style="display:flex;gap:4px;"><input type="text" id="sc-edu-new" placeholder="새 교육 이름 (예: 소양교육 오후 2시)" autocomplete="off" style="margin:0;"><button type="button" class="small" id="sc-edu-add" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button></div>
+      <div style="display:flex;gap:4px;"><input type="text" id="sc-edu-new" placeholder="새 이름 (예: 문화활동 행사, 소양교육)" autocomplete="off" style="margin:0;"><button type="button" class="small" id="sc-edu-add" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button></div>
     </div>
     <div class="muted" id="sc-help" style="font-size:.86rem;margin-bottom:4px;"></div>
     <div class="cal" id="sc-cal"></div>
-    <div style="text-align:center;margin-bottom:6px;">근무일 <b id="sc-n"></b>일 <span class="muted">(보통 ${WORK_TARGET}일)</span> · 교육 <b id="sc-e"></b>일</div>
+    <div style="text-align:center;margin-bottom:6px;">총 근무 <b id="sc-t"></b>일 / ${WORK_TARGET}일 <span class="muted">(근무 <span id="sc-n"></span>일 + 교육·행사 <span id="sc-e"></span>일)</span></div>
     <div id="sc-list" style="margin-bottom:8px;"></div>
     <button class="secondary full" id="sc-clear">근무일 모두 지우기</button>
     <div class="grid-2"><button class="secondary" id="sc-cancel">취소</button><button id="sc-save">저장</button></div></div>`;
@@ -959,18 +956,18 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav }){
     const names = [...new Set([...PRESET, ...ed.values(), ...(curEdu ? [curEdu] : [])])];
     $('#sc-edu-names').innerHTML = names.map(n => `<button type="button" class="small ${n === curEdu ? '' : 'secondary'}" data-n="${esc(n)}" style="width:auto;margin:0;${n === curEdu ? 'background:#805ad5;' : ''}">${esc(n)}</button>`).join('');
     back.querySelectorAll('#sc-edu-names button').forEach(b => b.onclick = () => { curEdu = b.dataset.n; draw(); });
-    $('#sc-help').innerHTML = mode === 'work' ? '근무하는 날을 누르세요. 다시 누르면 빠집니다. 마지막 근무일이 <b>마감일</b>이에요. (빨간 글씨: 일요일·공휴일)'
-      : curEdu ? `지금 고른 교육: <b style="color:#553c9a">🎓 ${esc(curEdu)}</b> — 달력에서 날짜를 누르세요. 교육 날을 다시 누르면 빠져요.` : '먼저 위에서 교육을 고르세요.';
+    $('#sc-help').innerHTML = mode === 'work' ? `근무하는 날을 누르세요. 다시 누르면 빠집니다. 교육·행사 날까지 합쳐 <b>${WORK_TARGET}일</b>이고, 마지막 날이 <b>마감일</b>이에요. (빨간 글씨: 일요일·공휴일)`
+      : curEdu ? `지금 고른 것: <b style="color:#553c9a">🎓 ${esc(curEdu)}</b> — 달력에서 날짜를 누르세요. 다시 누르면 빠져요. 근무일을 누르면 그날이 교육·행사 날로 바뀌어요.` : '먼저 위에서 교육·행사를 고르세요.';
     let h = WEEK.map(w => `<div class="h">${w}</div>`).join('') + '<div></div>'.repeat(first);
-    const endD = [...sel].sort().pop();
+    const endD = [...sel, ...ed.keys()].sort().pop();
     for (let d = 1; d <= last; d++) {
       const k = ymd(y,m,d), w = new Date(y, m-1, d).getDay(), en2 = ed.get(k);
       const hn = HOLIDAY_NAMES[k] ? HOLIDAY_NAMES[k].replace('대체공휴일','대체휴일').slice(0,4) : '';
-      const tag = en2 ? en2.slice(0,4) : k === endD ? '마감' : hn;
-      h += `<button data-k="${k}" class="${en2 ? 'edu' : sel.has(k) ? 'on' : ''} ${(w===0 || HOLIDAYS.has(k)) ? 'red' : ''} ${k === endD && !en2 ? 'end' : ''}">${d}${tag ? `<small>${esc(tag)}</small>` : ''}</button>`;
+      const tag = k === endD ? '마감' : en2 ? en2.slice(0,4) : hn;
+      h += `<button data-k="${k}" class="${en2 ? 'edu' : sel.has(k) ? 'on' : ''} ${(w===0 || HOLIDAYS.has(k)) ? 'red' : ''} ${k === endD ? 'end' : ''}">${d}${tag ? `<small>${esc(tag)}</small>` : ''}</button>`;
     }
     $('#sc-cal').innerHTML = h;
-    $('#sc-n').textContent = sel.size; $('#sc-e').textContent = ed.size;
+    $('#sc-n').textContent = sel.size; $('#sc-e').textContent = ed.size; $('#sc-t').textContent = sel.size + ed.size;
     const byName = {}; [...ed].sort().forEach(([d, n]) => (byName[n] ||= []).push(d));
     $('#sc-list').innerHTML = Object.keys(byName).length ? Object.entries(byName).map(([n, ds]) => `<div style="display:flex;align-items:center;gap:6px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:5px 8px;margin-top:4px;">
       <span style="flex:1;">🎓 <b>${esc(n)}</b> <span class="muted">${ds.map(dd).join(', ')}</span></span>
@@ -981,12 +978,13 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav }){
       const k = b.dataset.k;
       if (mode === 'edu') {
         if (ed.has(k)) { ed.delete(k); return draw(); }
-        if (!curEdu) return notify('먼저 위에서 교육을 고르거나 새 교육 이름을 추가해 주세요.');
+        if (!curEdu) return notify('먼저 위에서 교육·행사를 고르거나 새 이름을 추가해 주세요.');
+        if (!sel.has(k) && sel.size + ed.size >= WORK_TARGET) return notify(`근무일이 이미 ${WORK_TARGET}일이에요. (교육·행사 포함)\n근무일을 누르면 그날이 교육·행사 날로 바뀌어요.\n다른 날에 넣으려면 📅 근무일 고르기에서 하루를 먼저 빼 주세요.`);
         ed.set(k, curEdu); sel.delete(k); return draw();
       }
-      if (ed.has(k)) return notify(`${dd(k)}은 교육 날이에요. 🎓 교육 날짜 넣기에서 빼 주세요.`);
+      if (ed.has(k)) return notify(`${dd(k)}은 교육·행사 날이에요. 🎓 교육 및 행사 날짜 넣기에서 빼 주세요.`);
       if (sel.has(k)) sel.delete(k);
-      else if (sel.size >= WORK_TARGET) return notify(`근무일은 ${WORK_TARGET}일까지입니다.\n다른 날을 먼저 눌러서 빼 주세요.\n(교육 날은 따로라 이 수에 안 들어가요)`);
+      else if (sel.size + ed.size >= WORK_TARGET) return notify(`근무일은 교육·행사 날까지 합쳐 ${WORK_TARGET}일입니다.\n다른 날을 먼저 눌러서 빼 주세요.`);
       else sel.add(k);
       draw();
     });
@@ -999,8 +997,9 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav }){
   $('#sc-cancel').onclick = () => back.remove();
   const go = async d => { if (snap() !== s0 && !await ask('고친 내용이 아직 저장되지 않았어요.\n저장하지 않고 다른 달로 넘어갈까요?')) return; back.remove(); nav(d); };
   $('#sc-prev')?.addEventListener('click', () => go(-1)); $('#sc-next')?.addEventListener('click', () => go(1));
-  $('#sc-save').onclick = () => {
+  $('#sc-save').onclick = async () => {
     if (!sel.size) return notify('근무일을 하루 이상 골라 주세요.');
+    if (sel.size + ed.size < WORK_TARGET && !await ask(`근무일이 교육·행사 포함 ${sel.size + ed.size}일입니다. (보통 ${WORK_TARGET}일)\n이대로 저장할까요?`)) return;
     back.remove(); onSave({ days: [...sel].sort(), edu: [...ed].sort().map(([date, name]) => ({ date, name })) });
   };
   draw();
@@ -1013,7 +1012,7 @@ function openWorkdays(){
       logEvent('활동일 설정', null, `${m}월: ${days.map(d => Number(d.slice(8,10))).join(', ')}일`, days[0]);
       const before = JSON.stringify(eduAll[mk] || []);
       if (edu.length) eduAll[mk] = edu; else delete eduAll[mk];
-      if (JSON.stringify(eduAll[mk] || []) !== before) logEvent('교육 일정(모든 어르신)', null, `${m}월: ${edu.map(e => `${dd(e.date)} ${e.name}`).join(', ') || '없음'} (일한 날로 인정)`, days[0]);
+      if (JSON.stringify(eduAll[mk] || []) !== before) logEvent('교육·행사 일정(모든 어르신)', null, `${m}월: ${edu.map(e => `${dd(e.date)} ${e.name}`).join(', ') || '없음'} (근무일에 포함)`, days[0]);
       store('jinan_edu', JSON.stringify(eduAll)); renderList();
     } });
 }
@@ -1339,7 +1338,8 @@ function renderZones(){
   const box = document.getElementById('zone-btns'); if (!box) return;
   box.innerHTML = zones.map(z => {
     const n = z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0);
-    return `<button type="button" class="zone-btn ${z.sites.length?'':'empty'}" onclick="openZone(${z.id})"><b>${esc(z.name)}</b>${z.sites.length ? `<small>${zoneTownText(z).split(' / ').map(esc).join('<br>')}</small>` : ''}</button>`;
+    const v = z.sites.length ? zoneVisit(z) : null;
+    return `<button type="button" class="zone-btn ${z.sites.length?'':'empty'}" onclick="openZone(${z.id})"><b>${esc(z.name)}</b>${z.sites.length ? `<small>${zoneTownText(z).split(' / ').map(esc).join('<br>')}</small>` : ''}${v ? `<small style="margin-top:2px;">${v.miss.length ? `<span style="color:var(--warning);font-weight:bold;">안 감 ${v.miss.length}</span>` : '<span style="color:var(--success)">✔ 다 감</span>'}${v.bad.length ? ` · <span style="color:var(--danger);font-weight:bold;">미흡 ${v.bad.length}</span>` : ''}</small>` : ''}</button>`;
   }).join('');
 }
 function openZone(id){
@@ -1350,6 +1350,12 @@ function openZone(id){
     <label>구역 이름 <span class="muted" style="font-weight:normal;">(예: 김○○ 팀장)</span></label>
     <div style="display:flex;gap:6px;margin-bottom:8px;"><input type="text" id="zn-name" autocomplete="off" style="margin:0;"></div>
     <div id="zn-main">
+      <div id="zn-visit-box" style="background:#fffaf0;border:1px solid #fbd38d;border-radius:10px;padding:8px 10px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><b style="flex:1;">📋 이 구역 점검 현황</b>
+          <select id="zn-range" style="width:auto;margin:0;padding:4px 6px;font-size:.85rem;"><option value="month">이번 달</option><option value="14">최근 2주</option><option value="7">최근 1주</option></select></div>
+        <div id="zn-visit"></div>
+        <div class="muted" style="font-size:.8rem;margin-top:4px;">경로당을 누르면 바로 점검 화면으로 가요.</div>
+      </div>
       <button type="button" class="warning full" id="zn-add" style="margin-bottom:8px;">＋ 경로당 고르기</button>
       <details id="zn-sites-box" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
         <summary><span id="zn-sites-title" style="font-weight:bold;">담당 경로당</span><span class="chg-arrow"></span></summary>
@@ -1372,6 +1378,7 @@ function openZone(id){
   document.body.appendChild(bg);
   const $ = q => bg.querySelector(q);
   $('#zn-name').value = z.name; $('#zn-phone').value = z.phone || '';
+  $('#zn-range').value = nvRange; $('#zn-range').onchange = () => { nvRange = $('#zn-range').value; drawMain(); renderZones(); };
   const drawMain = () => {
     const total = z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0);
     $('#zn-title').innerHTML = `🗺 ${esc(z.name)} <span class="muted" style="font-size:.85rem;font-weight:normal;">${z.sites.length ? esc(zoneTownText(z)) : '경로당 0곳'}</span>`;
@@ -1397,6 +1404,7 @@ function openZone(id){
           </div></div></details>`;
     }).join('') : '';
     bg.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { bg.remove(); openModal(Number(b.dataset.open)); });
+    $('#zn-visit').innerHTML = zoneVisitHtml(z); $('#zn-visit-box').classList.toggle('hidden', !z.sites.length);
     bg.querySelectorAll('[data-gosite]').forEach(b => b.onclick = () => { const [town, senior] = b.dataset.gosite.split('|'); bg.remove(); lastTown = town; curSenior = senior; document.getElementById('search').value = ''; renderList(); openSiteCheck(); });
     $('#zn-sites-title').textContent = `담당 경로당 (${z.sites.length}곳)${z.sites.filter(x => isBest(x.town, x.senior)).length ? ` · 👑 ${z.sites.filter(x => isBest(x.town, x.senior)).length}` : ''}`;
     const reopen = (town, senior) => { drawMain(); const det = [...bg.querySelectorAll('#zn-sites details')].find(d => d.querySelector(`[data-map="${CSS.escape(town+'|'+senior)}"]`)); if (det) det.open = true; };
@@ -2526,45 +2534,41 @@ const siteNoList = tw => sitesOf(tw).filter(k => k !== '개별관리' && k !== N
 const siteNo = (tw, k) => { const i = siteNoList(tw).indexOf(k); return i >= 0 ? i + 1 : 0; };
 
 // ---------- 🚶 안 간 경로당 (점검 기록이 없는 곳) ----------
-const visitFrom = () => { const v = document.getElementById('nv-range')?.value || 'month'; return v === 'month' ? monthKey() + '-01' : addDays(today(), -Number(v) + 1); };
+let nvRange = 'month';   // 이번 달 / 최근 14일 / 최근 7일
+const visitFrom = () => nvRange === 'month' ? monthKey() + '-01' : addDays(today(), -Number(nvRange) + 1);
 function siteVisits(town, senior){
   return participants.filter(p => p.town===town && seniorOf(p)===senior).flatMap(p => p.logs.map(l => l.date)).sort();
 }
-function renderNotVisited(){
-  const box = document.getElementById('nv-list'); if (!box) return;
-  const from = visitFrom(), to = monthKey() === today().slice(0,7) ? today() : monthKey() + '-31';
-  const out = [];
-  // 읍·면을 골랐으면 그 면만, 안 골랐으면 내 담당 면 전체
-  const nvTowns = (lastTown && lastTown !== '전체' && TOWNS.includes(lastTown)) ? [lastTown] : visibleTowns();
-  nvTowns.forEach(tw => {
-    const sites = [...new Set(participants.filter(p => p.town===tw && !stats(p).dropped).map(seniorOf))].filter(k => k !== '개별관리');   // 개별관리는 경로당이 아니라 뺌
-    const ord = (a,b) => (siteNo(tw, a) || 9999) - (siteNo(tw, b) || 9999) || a.localeCompare(b);
-    const inRange = k => siteVisits(tw, k).filter(d => d >= from && d <= to);
-    // 다녀온 곳 중 이탈·조끼·명찰 미착용·태도 불량이 있었던 곳은 빨간색(미흡)
-    const probs = k => { const ls = participants.filter(p => p.town===tw && seniorOf(p)===k).flatMap(p => p.logs).filter(l => l.date >= from && l.date <= to);
-      const t = []; const n = f => ls.filter(f).length;
-      if (n(l => l.leave==='이탈')) t.push(`이탈 ${n(l => l.leave==='이탈')}`);
-      if (n(l => l.leave==='자리비움')) t.push(`자리비움 ${n(l => l.leave==='자리비움')}`);
-      if (n(l => l.vest==='미착용')) t.push(`조끼 ${n(l => l.vest==='미착용')}`);
-      if (n(l => l.badge==='미착용')) t.push(`명찰 ${n(l => l.badge==='미착용')}`);
-      if (n(l => l.attitude==='불량')) t.push('태도 불량');
-      return t; };
-    const miss = sites.filter(k => !inRange(k).length).sort(ord), done = sites.filter(k => inRange(k).length).sort(ord);
-    if (sites.length) out.push({ tw, miss, done, inRange, probs, bad: done.filter(k => probs(k).length).length });
-  });
-  const n = out.reduce((k, x) => k + x.miss.length, 0), dn = out.reduce((k, x) => k + x.done.length, 0), bn = out.reduce((k, x) => k + x.bad, 0);
-  document.getElementById('nv-title').innerHTML = `🚶 ${nvTowns.length === 1 ? esc(nvTowns[0]) + ' ' : ''}아직 안 간 경로당 <span style="color:${n?'var(--warning)':'var(--success)'}">${n}곳</span>${dn ? ` <span style="color:var(--success);font-size:.85rem;">· ✔ 다녀옴 ${dn}곳</span>` : ''}${bn ? ` <span style="color:var(--danger);font-size:.85rem;">· ⚠ 미흡 ${bn}곳</span>` : ''}`;
-  const chip = (x, k, ok) => { const v = siteVisits(x.tw, k), last = ok ? x.inRange(k).pop() : v[v.length-1];
-    const pr = ok ? x.probs(k) : [];
-    return `<button type="button" class="chip nv-chip${ok ? (pr.length ? ' bad' : ' ok') : ''}" data-t="${esc(x.tw)}" data-k="${esc(k)}"><span>${ok ? (pr.length ? '⚠ ' : '✔ ') : ''}${crown(x.tw, k)}${esc(k)}</span>${(() => { const t = ok ? (pr.length ? `${md(last)} · ${pr.join('·')}` : `${md(last)} 다녀옴`) : last ? `마지막 ${md(last)}` : ''; return t ? `<small>${t}</small>` : ''; })()}</button>`; };
-  box.innerHTML = out.map(x => `<div style="font-weight:bold;margin:8px 0 4px;">📍 ${esc(x.tw)} <span class="muted" style="font-weight:normal;">안 감 <b style="color:var(--warning)">${x.miss.length}</b> · 다녀옴 <b style="color:var(--success)">${x.done.length}</b>${x.bad ? ` · 미흡 <b style="color:var(--danger)">${x.bad}</b>` : ''}</span></div>
-    <div class="chips">${x.miss.map(k => chip(x, k, false)).join('')}${x.done.map(k => chip(x, k, true)).join('')}</div>`).join('')
-    + (out.length && !n ? '<div class="pen-none">✔ 모든 경로당을 다녀왔어요</div>' : '');
-  box.querySelectorAll('.nv-chip').forEach(b => b.onclick = () => {
-    lastTown = b.dataset.t; curSenior = b.dataset.k; document.getElementById('search').value = ''; renderList();
-    openSiteCheck();
-  });
+// 다녀온 곳 중 이탈·자리 비움·조끼·명찰 미착용·태도 불량이 있었던 곳 = 미흡
+function siteProbs(town, senior, from, to){
+  const ls = participants.filter(p => p.town===town && seniorOf(p)===senior).flatMap(p => p.logs).filter(l => l.date >= from && l.date <= to);
+  const t = [], n = f => ls.filter(f).length;
+  if (n(l => l.leave==='이탈')) t.push(`이탈 ${n(l => l.leave==='이탈')}`);
+  if (n(l => l.leave==='자리비움')) t.push(`자리비움 ${n(l => l.leave==='자리비움')}`);
+  if (n(l => l.vest==='미착용')) t.push(`조끼 ${n(l => l.vest==='미착용')}`);
+  if (n(l => l.badge==='미착용')) t.push(`명찰 ${n(l => l.badge==='미착용')}`);
+  if (n(l => l.attitude==='불량')) t.push('태도 불량');
+  return t;
 }
+// 구역 경로당 점검 현황: 안 감 / 미흡 / 다녀옴 (개별관리·어르신 없는 곳 제외)
+function zoneVisit(z){
+  const from = visitFrom(), to = monthKey() === today().slice(0,7) ? today() : monthKey() + '-31';
+  const sites = z.sites.filter(x => x.senior !== '개별관리' && siteMembers(x.town, x.senior).some(p => !stats(p).dropped));
+  const ord = (a,b) => TOWNS.indexOf(a.town) - TOWNS.indexOf(b.town) || seniorRank(a.senior) - seniorRank(b.senior) || a.senior.localeCompare(b.senior);
+  const rows = sites.map(x => { const v = siteVisits(x.town, x.senior), inR = v.filter(d => d >= from && d <= to);
+    return { ...x, last: inR.length ? inR[inR.length-1] : v[v.length-1] || '', visited: inR.length > 0, probs: inR.length ? siteProbs(x.town, x.senior, from, to) : [] }; }).sort(ord);
+  return { miss: rows.filter(r => !r.visited), bad: rows.filter(r => r.visited && r.probs.length), ok: rows.filter(r => r.visited && !r.probs.length) };
+}
+function zoneVisitHtml(z){
+  const v = zoneVisit(z), many = new Set(z.sites.map(x => x.town)).size > 1;
+  const chip = (r, kind) => `<button type="button" class="chip nv-chip${kind === 'bad' ? ' bad' : kind === 'ok' ? ' ok' : ''}" data-gosite="${esc(siteKey(r.town, r.senior))}"><span>${kind === 'bad' ? '⚠ ' : kind === 'ok' ? '✔ ' : ''}${many ? `<span class="muted" style="font-size:.8rem;">${esc(r.town.replace(/[면읍]$/,''))}</span> ` : ''}${crown(r.town, r.senior)}${esc(r.senior)}</span>${(() => {
+      const t = kind === 'bad' ? `${md(r.last)} · ${r.probs.join('·')}` : kind === 'ok' ? `${md(r.last)} 다녀옴` : r.last ? `마지막 ${md(r.last)}` : ''; return t ? `<small>${t}</small>` : ''; })()}</button>`;
+  const sec = (title, color, list, kind) => list.length ? `<div style="font-weight:bold;font-size:.9rem;margin:8px 0 2px;color:${color};">${title} ${list.length}곳</div><div class="chips">${list.map(r => chip(r, kind)).join('')}</div>` : '';
+  if (!v.miss.length && !v.bad.length && !v.ok.length) return '<div class="muted" style="font-size:.88rem;">경로당을 넣으면 점검 현황이 보여요.</div>';
+  return sec('🚶 아직 안 간 경로당', 'var(--warning)', v.miss, 'miss') + sec('⚠ 미흡 경로당', 'var(--danger)', v.bad, 'bad') + sec('✔ 다녀온 경로당 (양호)', 'var(--success)', v.ok, 'ok')
+    + (!v.miss.length ? '<div class="pen-none" style="margin-top:6px;">✔ 이 구역 경로당을 모두 다녀왔어요</div>' : '');
+}
+function renderNotVisited(){}   // 안 간 경로당은 이제 각 구역 안에서 보여요
 function renderList(){
   renderCallAlert();
   renderNotVisited();
@@ -3225,9 +3229,11 @@ function smsGroups(){
   return gs;
 }
 const dayList = days => days.map(d => `${Number(d.slice(8,10))}일(${WEEK[dObj(d).getDay()]})`).join(', ');
-function workdayText(mk, days, who){
-  const m = Number(mk.slice(5,7)), last = days[days.length-1];
-  return `[진안군노인회] ${m}월 활동일 안내\n\n${who},\n${mk.slice(0,4)}년 ${m}월 활동일을 알려 드립니다.\n\n▶ 활동일 (${days.length}일)\n${m}월 ${dayList(days)}\n` + (last ? `※ 마지막 날: ${m}월 ${dd(last)}\n` : '') +
+function workdayText(mk, days, who, edu){
+  edu = edu || [];
+  const m = Number(mk.slice(5,7)), last = [...days, ...edu.map(e => e.date)].sort().pop();
+  return `[진안군노인회] ${m}월 활동일 안내\n\n${who},\n${mk.slice(0,4)}년 ${m}월 활동일을 알려 드립니다.\n\n▶ 활동일 (${edu.length ? `총 ${days.length + edu.length}일: 근무 ${days.length}일 + 교육·행사 ${edu.length}일` : `${days.length}일`})\n${m}월 ${dayList(days)}\n` +
+    (edu.length ? `\n▶ 교육·행사 (근무일에 들어갑니다)\n${edu.map(e => `· ${m}월 ${dd(e.date)} ${e.name}`).join('\n')}\n` : '') + (last ? `※ 마지막 날: ${m}월 ${dd(last)}\n` : '') +
     `\n▶ 꼭 지켜 주세요\n· 근무지를 비우면(이탈) 1번에 -1점, 그날 일당이 나오지 않습니다.\n· 잠깐 자리 비움, 조끼·명찰 미착용은 각 -0.5점입니다. (벌점 -1점마다 하루치 일당 미지급)\n· 한 해에 -${MAX_LEAVE}점이 되면 중도포기 처리되어 더 이상 일하실 수 없습니다.\n· 날짜를 바꿔야 할 때는 꼭 미리 담당자와 팀장님께 연락 주세요.\n\n감사합니다.\n※ 단체 문자라 답장은 받지 않습니다.`;
 }
 // 문자 앱 열기 (여러 명이면 쉼표로)
@@ -3251,7 +3257,7 @@ function openGroupSms(){
     </div>
     <div id="gs-body" class="hidden">
       <div id="gs-who" style="font-weight:bold;margin:6px 0;"></div>
-      <button type="button" class="full hidden" id="gs-edu" style="background:#805ad5;margin:0 0 6px;">📅 팀장님 근무일·교육 일정 <span style="font-weight:normal;font-size:.85rem;">(달력에서 고치면 문자에 들어가요)</span></button>
+      <button type="button" class="full hidden" id="gs-edu" style="background:#805ad5;margin:0 0 6px;">📅 팀장님 근무일·교육·행사 일정 <span style="font-weight:normal;font-size:.85rem;">(달력에서 고치면 문자에 들어가요)</span></button>
       <textarea id="gs-text" rows="14" style="font-size:.92rem;"></textarea>
       <label style="margin-top:6px;">🖼 사진 함께 보내기 (선택)</label>
       <input type="file" id="gs-img" accept="image/*" class="hidden">
@@ -3276,21 +3282,19 @@ function openGroupSms(){
     bg.querySelector('#gs-groups').classList.add('hidden'); bg.querySelector('#gs-body').classList.remove('hidden');
     bg.querySelector('#gs-who').innerHTML = `📩 ${esc(g.label)} · 받는 분 <span style="color:var(--primary)">${main.length}명</span>`
       + (noTel.length ? `<div class="muted" style="font-weight:normal;font-size:.85rem;">연락처 없는 분 ${noTel.length}명: ${noTel.map(p => esc(nm(p))).join(', ')}</div>` : '');
-    ta.value = workdayText(mk, days, g.whoText || (g.key === '게이트볼' ? '게이트볼장 관리도우미 어르신' : `${g.label} 경로당지킴이 어르신`));
+    ta.value = workdayText(mk, days, g.whoText || (g.key === '게이트볼' ? '게이트볼장 관리도우미 어르신' : `${g.label} 경로당지킴이 어르신`), eduAll[mk] || []);
     bg.querySelector('#gs-edu').classList.toggle('hidden', g.key !== 'leaders');
     if (g.key === 'leaders' && leaderPlan[mk]) ta.value = leaderText();
   };
   // 팀장님 일정: 활동일 정하기와 같은 달력으로 근무일·교육(여러 개)을 고치면 문자에 바로 반영
   const leaderText = () => { const pl = leaderPlan[mk], ds = pl?.days?.length ? pl.days : days;
-    let t = workdayText(mk, ds, '구역장(팀장)님'); const ed2 = pl?.edu || [];
-    if (ed2.length) { const ymdK = d => `${Number(d.slice(5,7))}월 ${dd(d)}`, block = `▶ 교육 일정 (일한 날로 인정됩니다)\n${ed2.map(e => `· ${ymdK(e.date)} ${e.name}`).join('\n')}\n\n`, i = t.indexOf('▶ 꼭 지켜 주세요'); t = i >= 0 ? t.slice(0, i) + block + t.slice(i) : t + '\n\n' + block; }
-    return t; };
-  bg.querySelector('#gs-edu').onclick = () => schedEditor({ title: `👤 ${curMonth}월 팀장님 일정`, mk, days: leaderPlan[mk]?.days?.length ? leaderPlan[mk].days : days, edu: leaderPlan[mk]?.edu || [],
+    return workdayText(mk, ds, '구역장(팀장)님', pl ? (pl.edu || []) : (eduAll[mk] || [])); };
+  bg.querySelector('#gs-edu').onclick = () => schedEditor({ title: `👤 ${curMonth}월 팀장님 일정`, mk, days: leaderPlan[mk]?.days?.length ? leaderPlan[mk].days : days, edu: leaderPlan[mk] ? (leaderPlan[mk].edu || []) : (eduAll[mk] || []),
     onSave: ({ days: ds, edu: ed2 }) => {
       leaderPlan[mk] = { days: ds, edu: ed2 }; store('jinan_leaders', JSON.stringify(leaderPlan));
-      logEvent('팀장 일정', null, `${curMonth}월 근무 ${ds.map(d => Number(d.slice(8,10))).join(', ')}일${ed2.length ? ` · 교육 ${ed2.map(e => `${dd(e.date)} ${e.name}`).join(', ')}` : ''}`, ds[0]);
+      logEvent('팀장 일정', null, `${curMonth}월 근무 ${ds.map(d => Number(d.slice(8,10))).join(', ')}일${ed2.length ? ` · 교육·행사 ${ed2.map(e => `${dd(e.date)} ${e.name}`).join(', ')}` : ''}`, ds[0]);
       ta.value = leaderText(); renderList();
-      help.innerHTML = `<b style="color:#553c9a">📅 팀장님 일정을 저장하고 문자에 넣었어요.</b> (근무 ${ds.length}일${ed2.length ? ` · 교육 ${ed2.length}일` : ''})`;
+      help.innerHTML = `<b style="color:#553c9a">📅 팀장님 일정을 저장하고 문자에 넣었어요.</b> (총 ${ds.length + ed2.length}일: 근무 ${ds.length}일${ed2.length ? ` + 교육·행사 ${ed2.length}일` : ''})`;
     } });
   // 체크한 그룹 합치기 (같은 분은 한 번만)
   const picked = () => [...bg.querySelectorAll('#gs-groups input:checked')].map(c => groups[Number(c.dataset.i)]);
