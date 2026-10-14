@@ -259,11 +259,6 @@
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
-  <div id="call-alert"></div>
-  <div class="card" id="zone-card" style="padding:12px 14px;">
-    <div style="font-weight:bold;margin-bottom:6px;">🗺 구역 <span class="muted" style="font-weight:normal;font-size:.85rem;">(누르면 경로당·어르신)</span></div>
-    <div class="zone-grid" id="zone-btns"></div>
-  </div>
   <div class="card">
     <div class="month-bar">
       <button id="m-prev" onclick="moveMonth(-1)">◀</button>
@@ -271,6 +266,11 @@
         <button class="small secondary hidden" id="this-month" onclick="goThisMonth()" style="margin:4px 0 0;padding:4px 10px;font-size:.8rem;width:auto;white-space:nowrap;">↩ 이번 달로</button></div>
       <button id="m-next" onclick="moveMonth(1)">▶</button>
     </div>
+  </div>
+  <div id="call-alert"></div>
+  <div class="card" id="zone-card" style="padding:12px 14px;">
+    <div style="font-weight:bold;margin-bottom:6px;">🗺 구역 <span class="muted" style="font-weight:normal;font-size:.85rem;">(누르면 경로당·어르신)</span></div>
+    <div class="zone-grid" id="zone-btns"></div>
   </div>
 
   <div class="card hidden" id="link-card" style="padding:10px 14px;">
@@ -434,7 +434,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-19</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.14-20</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
