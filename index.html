@@ -435,7 +435,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.15-6</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.15-7</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -516,7 +516,7 @@
   </details>
 
   <details class="info">
-    <summary>어르신 정보 고치기 · 중도포기 · 삭제</summary>
+    <summary>어르신 정보 고치기</summary>
     <div class="grid-2" style="margin-top:10px;">
       <div><label>소속 면</label><select id="m-town"></select></div>
       <div><label>나이</label><input type="text" inputmode="numeric" id="m-age" class="age-in" placeholder="예: 1948"></div>
@@ -529,7 +529,6 @@
     <label>근무 시작 달</label><select id="m-start" class="start-sel"></select>
     <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-bottom:12px;"><input type="checkbox" id="m-link" style="width:22px;height:22px;margin:0;"> 🔗 신규 연계 중</label>
     <button class="full" onclick="saveInfo()">정보 저장</button>
-    <button class="warning full" id="btn-quit" onclick="toggleQuit()">중도포기 처리 (본인 사정)</button>
     <button class="danger full" onclick="deleteParticipant()">명단에서 삭제</button>
   </details>
   <button class="secondary full" onclick="closeModal()">닫기</button>
@@ -3728,7 +3727,6 @@ function renderModal(){
   if (p.guess) n = `<div class="notice">📍 경로당 <b>"${esc(p.senior)}"</b>은 주소(${esc(p.address||'')})를 보고 자동으로 넣은 <b>추정</b>입니다.<br>맞으면 아래 "어르신 정보 고치기"에서 그대로 <b>정보 저장</b>, 틀리면 경로당 이름을 고쳐서 저장해 주세요.</div>` + n;
   document.getElementById('modal-notice').innerHTML = n;
   document.getElementById('check-section').classList.toggle('hidden', s.dropped && !editingLogId);
-  document.getElementById('btn-quit').textContent = s.quitNow ? '중도포기(본인 사정) 취소' : '중도포기 처리 (본인 사정)';
 
   const logs = [...p.logs].sort((a,b) => b.date.localeCompare(a.date));
   document.getElementById('log-title').textContent = `📋 지금까지 점검 기록${logs.length ? ` ${logs.length}건` : ''}`;
@@ -4003,7 +4001,7 @@ async function toggleQuit(){
 
 async function deleteParticipant(){
   const p = current();
-  if (!await ask(`${p.name} 어르신을 명단에서 완전히 삭제할까요?\n점검 기록도 함께 사라집니다.\n(그만두신 경우에는 삭제 대신 "중도포기 처리"를 눌러 주세요)`)) return;
+  if (!await ask(`${p.name} 어르신을 명단에서 완전히 삭제할까요?\n점검 기록도 함께 사라집니다.\n(그만두신 경우에는 삭제 대신 "근무일 변경 → 🚪 중도포기"로 처리해 주세요)`)) return;
   logEvent('명단에서 삭제', p, `점검 기록 ${p.logs.length}건 함께 삭제`);
   participants = participants.filter(x => x.id !== p.id);
   saveData(); closeModal();
