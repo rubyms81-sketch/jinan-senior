@@ -199,6 +199,9 @@
   .m-sub { margin:0 0 12px; line-height:1.9; }
   .m-head { display:flex; gap:10px; align-items:flex-start; }
   .m-sub .tel-row { display:block; margin-top:4px; }
+  .chip.pen { background:#fff5f5 !important; color:#c53030 !important; border:2px solid #fc8181 !important; text-decoration:line-through; font-weight:bold; }
+  .tag-new { display:inline-block; background:#fefcbf; color:#975a16; border:1px solid #f6e05e; border-radius:6px; font-size:.72em; font-weight:bold; padding:0 5px; margin-left:3px; vertical-align:2px; }
+  .tag-pen { display:inline-block; background:#fff5f5; color:#c53030; border:1px solid #feb2b2; border-radius:6px; font-size:.72em; font-weight:bold; padding:0 5px; margin-left:3px; vertical-align:2px; }
   .quit-stamp { display:inline-block; color:#c53030; border:5px double #c53030; border-radius:8px; padding:2px 18px; font-size:2rem; font-weight:900; letter-spacing:.25em; transform:rotate(-7deg); background:rgba(255,245,245,.7); text-shadow:0 0 1px #c53030; }
   .quit-box { text-align:center; background:#fff5f5; border:2px solid #feb2b2; border-radius:12px; padding:14px 10px 10px; margin-bottom:12px; }
   #mate-tabs button.quit, #mate-tabs button.quit.on { background:#edf2f7; color:#a0aec0; border:2px solid #feb2b2; }
@@ -278,12 +281,24 @@
       <button id="m-next" onclick="moveMonth(1)">▶</button>
     </div>
   </div>
+  <button class="warning full" onclick="openQuickChange()" style="margin:0 0 12px;">🎤 말로 근무일 변경</button>
   <div id="new-alert"></div>
   <div id="call-alert"></div>
-  <button class="warning full" onclick="openQuickChange()" style="margin:0 0 12px;">🎤 말로 근무일 변경</button>
+  <div class="card" style="padding:10px 14px;">
+    <details id="chg-box" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
+      <summary><h3 id="chg-title"></h3><span class="chg-arrow"></span></summary>
+      <div id="chg-list"></div>
+    </details>
+  </div>
+  <div class="card">
+    <div class="wd-head"><h3 id="wd-title"></h3><span style="display:flex;gap:4px;"><button class="small secondary" id="wd-lock" onclick="toggleWdLock()" style="width:auto;margin:0;padding:6px 10px;"></button><button class="small secondary" onclick="openWorkdays()" style="white-space:nowrap;">날짜 정하기</button></span></div>
+    <div id="wd-chips" class="chips"></div>
+    <div id="wd-note" class="muted hidden"></div>
+  </div>
   <div class="card" id="zone-card" style="padding:12px 14px;">
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><div style="flex:1;font-weight:bold;">🗺 구역</div>
       <button type="button" class="small secondary" id="zone-minus" onclick="zoneCount(-1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">－</button><b id="zone-n" style="min-width:2.2em;text-align:center;"></b><button type="button" class="small" id="zone-plus" onclick="zoneCount(1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">＋</button></div>
+    <div id="zone-sum" style="font-size:.85rem;margin:-2px 0 8px;"></div>
     <div class="zone-grid" id="zone-btns"></div>
   </div>
 
@@ -292,11 +307,6 @@
       <summary><h3 id="link-title" style="margin:0;"></h3><span class="chg-arrow"></span></summary>
       <div id="link-list" style="margin-top:6px;"></div>
     </details>
-  </div>
-  <div class="card">
-    <div class="wd-head"><h3 id="wd-title"></h3><button class="small secondary" onclick="openWorkdays()">날짜 정하기</button></div>
-    <div id="wd-chips" class="chips"></div>
-    <div id="wd-note" class="muted hidden"></div>
   </div>
 
   <div class="card">
@@ -323,12 +333,6 @@
   </div>
 
 
-  <div class="card">
-    <details id="chg-box" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
-      <summary><h3 id="chg-title"></h3><span class="chg-arrow"></span></summary>
-      <div id="chg-list"></div>
-    </details>
-  </div>
 
   <div class="card">
     <details class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
@@ -352,7 +356,7 @@
 
   <div class="card" id="tools-card">
     <details class="chg-box" id="tools-box" style="margin-top:0;border-top:none;padding-top:0;">
-      <summary><h3>⚙️ 명단 관리</h3><span class="chg-arrow"></span></summary>
+      <summary><h3>➕ 신규등록</h3><span class="chg-arrow"></span></summary>
       <div style="margin-top:8px;">
         <div class="grid-2">
           <button onclick="openAdd()">+ 참여자 신규 등록</button>
@@ -435,7 +439,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-1</span></footer>
+<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-2</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -641,7 +645,8 @@ participants.forEach(p => {
 });
 saveData(false);
 
-function saveData(render=true){ store(KEY, JSON.stringify(participants)); if(render) renderList(); }
+function saveData(render=true){ store(KEY, JSON.stringify(participants)); if(render) renderList();
+  clearTimeout(window._snapT); window._snapT = setTimeout(() => { try { snapSave(); } catch(e) {} }, 4000); }   // 고칠 때마다 휴대폰 안 오늘 백업도 새로
 
 // ---------- 누적 계산 ----------
 // ---------- 📜 변경 이력 (마감 엑셀 "변경 이력" 시트로 나감) ----------
@@ -669,7 +674,18 @@ function setSex(id, v){ const inp = document.getElementById(id); if (!inp) retur
   document.querySelectorAll(`.sex-pick[data-for="${id}"] button`).forEach(b => b.classList.toggle('on', b.dataset.v === inp.value)); }
 document.addEventListener('click', e => { const b = e.target.closest('.sex-pick button'); if (!b) return;
   const id = b.parentElement.dataset.for; setSex(id, document.getElementById(id).value === b.dataset.v ? '' : b.dataset.v); });
-const nm = p => (p.name || '') + (p.age ? `(${p.age})` : '') + (isNew(p) ? '(신규)' : '');   // 이름(나이) — 근무 시작 달은 정보 칸·엑셀에
+const nm = p => (p.name || '') + (p.age ? `(${p.age})` : '') + (isNew(p) ? '(신규)' : '');
+// 화면용 이름: (신규)는 노란 칸, 이번 달 벌점은 빨간 (-1점) — 한 달 동안 이름 옆에
+function nmH(p){
+  const pts = (p.logs || []).filter(l => l.date.startsWith(monthKey())).reduce((n, l) => n + logPts(l), 0);
+  return esc((p.name || '') + (p.age ? `(${p.age})` : '')) + (isNew(p) ? '<span class="tag-new">신규</span>' : '') + (pts ? `<span class="tag-pen">-${pts}점</span>` : '');
+}
+// 그달 일당 미지급(벌점으로 근무 인정 안 되는) 날짜
+function unpaidDaysOf(p, mk){
+  const pi = payInfo(p, mk.slice(0,4)), out = new Set();
+  (p.logs || []).filter(l => l.date.startsWith(mk) && pi[l.id]).forEach(l => out.add(l.date));
+  return out;
+}   // 이름(나이) — 근무 시작 달은 정보 칸·엑셀에
 // ⚙️ 점검 항목·벌점 설정 (사용자 요청, 2026-10-15)
 //  PT: 기본 항목 점수 (jinan_pts) · checkItems: 새로 넣은 항목 (jinan_items) [{id, name, ok, bad, pts}]
 //  점검 기록에는 저장할 때의 점수를 같이 남김(l.pv, l.ex) → 나중에 점수를 바꿔도 지난 기록은 그대로
@@ -819,7 +835,7 @@ function personRow(p, showSite){
   const s = stats(p), t = today();
   const checked = p.logs.some(l => l.date===t);
   return `<button class="site" onclick="openModal(${p.id})">
-    <div><strong>${esc(nm(p))}</strong> ${ageSex(p)?`<span class="muted">(${esc(ageSex(p))})</span>`:''} ${checked?'<span class="done">✔ 오늘 점검</span>':''}<br>
+    <div><strong>${nmH(p)}</strong> ${ageSex(p)?`<span class="muted">(${esc(ageSex(p))})</span>`:''} ${checked?'<span class="done">✔ 오늘 점검</span>':''}<br>
       ${showSite?`<span class="muted">🏠 ${esc(p.town)} · ${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</span><br>`:''}${badgeOf(s)}${inHospNow(p)?' <span class="badge bg-hosp">🏥 입원 중</span>':''}${p.linking?' <span class="badge bg-warning">🔗 연계 중</span>':''}</div>
     <span class="arrow">›</span></button>`;
 }
@@ -902,14 +918,15 @@ function eduOf(p, mk){
   const seen = new Set(); return all.filter(e => !seen.has(e.date) && seen.add(e.date)).sort((a,b) => a.date.localeCompare(b.date));
 }
 const eduOn = (p, d) => eduOf(p, d.slice(0,7)).find(e => e.date === d);
-function personDays(p, mk){
+function personDays(p, mk, noStart){
   const cu = customOf(p, mk);
   const lp = isLeader(p) && leaderPlan[mk]?.days?.length ? leaderPlan[mk].days : null;   // 팀장은 팀장 일정
   const set = new Set(cu ? cu.days : lp || monthDays(mk));
   changesIn(p, mk).forEach(c => { set.delete(c.from); if (c.to.startsWith(mk)) set.add(c.to); });
   eduOf(p, mk).forEach(e => set.add(e.date));   // 교육 날은 근무일로 침
   const qd = quitDayOf(p);   // 중도포기한 날부터는 근무일 없음
-  return [...set].filter(d => !qd || d < qd).sort();
+  const sd = noStart ? '' : (p.startDay || '');   // 신규: 근무 시작한 날 전에는 근무일 없음
+  return [...set].filter(d => (!qd || d < qd) && (!sd || d >= sd)).sort();
 }
 const EDU_NAMES = ['의무교육', '안전교육', '소양교육', '직무교육', '역량강화교육', '문화활동'];
 // 교육 날짜 고르기 창: 달력에서 날짜(여러 날) + 교육 이름 → onSave([{date, name}])
@@ -965,6 +982,7 @@ async function delEdu(id){
 }
 
 function renderWork(){
+  drawWdLock();
   const mk = monthKey(), set = !!workdays[mk], days = monthDays(mk);
   const eds = eduAll[mk] || [];
   document.getElementById('wd-title').textContent = `📅 ${curMonth}월 활동일 (${days.length + eds.length}일${eds.length ? ` · 교육·행사 ${eds.length}일 포함` : ''})`;
@@ -990,35 +1008,29 @@ function renderWork(){
   const cus = ps.filter(p => customOf(p, mk))
     .sort((a,b) => seniorRank(seniorOf(a))-seniorRank(seniorOf(b)) || seniorOf(a).localeCompare(seniorOf(b)) || a.name.localeCompare(b.name));
   const nH = cus.filter(p => customOf(p, mk).inHosp).length;
+  document.getElementById('chg-box').closest('.card').classList.toggle('hidden', !rows.length && !cus.length);
   document.getElementById('chg-title').textContent = `🔄 ${curMonth}월 근무일 변경 (${new Set(rows.map(r=>r.p.id)).size}명)` + (cus.length - nH ? ` · 🩹 보충 ${cus.length - nH}명` : '') + (nH ? ` · 🏥 입원 ${nH}명` : '');
   const cusHTML = cus.length ? `<div class="cus-box"><div style="font-weight:bold;margin-bottom:4px;">🩹 보충 근무 · 🏥 입원 ${cus.length}명</div>` + cus.map(p => {
     const cu = customOf(p, mk), reg = monthDays(mk);
     return `<button class="pen-row warn" onclick="openModal(${p.id})" ${cu.inHosp?'style="border-left-color:#d53f8c"':''}><span class="muted">🏠 ${town==='전체'?esc(p.town)+' · ':''}${esc(seniorOf(p))}</span><br>
-      <b>${esc(nm(p))}</b> ${cu.inHosp?'<span class="badge bg-hosp">🏥 입원 중</span> ':''}${cu.reason?`<span class="muted">${esc(cu.reason)}</span>`:''}${cu.back?` <span class="muted">· ${dd(cu.back)} 복귀</span>`:''}
+      <b>${nmH(p)}</b> ${cu.inHosp?'<span class="badge bg-hosp">🏥 입원 중</span> ':''}${cu.reason?`<span class="muted">${esc(cu.reason)}</span>`:''}${cu.back?` <span class="muted">· ${dd(cu.back)} 복귀</span>`:''}
       ${cu.memo ? `<br><span style="font-size:.9rem;">📝 ${esc(cu.memo)}</span>` : ''}
       ${cu.hosp?.length ? `<br><span style="font-size:.9rem;color:#97266d;">🏥 입원 ${rangeText(cu.hosp)}</span>` : ''}<br>
       <span style="font-size:.9rem;">근무 ${cu.days.length ? '' : '없음'}${cu.days.map(d => reg.includes(d) ? Number(d.slice(8,10)) : `<b style="color:var(--warning)">${Number(d.slice(8,10))}</b>`).join(', ')}일</span></button>`;
   }).join('') + '<div class="muted" style="font-size:.8rem;">주황 숫자 = 원래 근무일이 아닌 보충한 날</div></div>' : '';
-  // 한 어르신의 변경은 하나로 묶고, 변경 내용이 똑같은 분끼리 같은 줄에 모음 (누르면 펼쳐짐)
+  // 면끼리 묶고, 어르신마다 바뀐 날짜 + 지금 근무일 + 총 근무 횟수
   const byPerson = new Map();
   rows.forEach(r => { if (!byPerson.has(r.p.id)) byPerson.set(r.p.id, { p: r.p, cs: [] }); byPerson.get(r.p.id).cs.push(r.c); });
-  const groups = {};
-  byPerson.forEach(x => {
-    x.cs.sort((a,b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
-    (groups[x.cs.map(c => c.from+'|'+c.to).join(';')] ||= []).push(x);
-  });
-  const keys = Object.keys(groups).sort();
-  document.getElementById('chg-list').innerHTML = cusHTML + (keys.length ? keys.map(k => {
-    const g = groups[k], pairs = k.split(';').map(x => x.split('|'));
-    const reasons = [...new Set(g.flatMap(x => x.cs.map(c => c.reason)).filter(Boolean))];
-    const bySite = {};
-    g.forEach(x => (bySite[(town==='전체'?x.p.town+' · ':'')+seniorOf(x.p)] ||= []).push(x.p));
-    return `<details class="chg-group">
-      <summary><span>${pairs.map(([from, to]) => `<b style="white-space:nowrap;">${dd(from)} → <span style="color:var(--warning)">${dd(to)}</span></b>`).join('<br>')}${reasons.length?` <span class="muted">${esc(reasons.join(', '))}</span>`:''}</span>
-        <span class="chg-cnt">${g.length}명 ▾</span></summary>
-      ${Object.keys(bySite).sort((a,b) => seniorRank(a.split(' · ').pop())-seniorRank(b.split(' · ').pop()) || a.localeCompare(b)).map(site => `<div class="chg-site"><span class="muted">🏠 ${esc(site)}</span>
-        <div class="chips">${bySite[site].map(p => `<button class="chip name" onclick="openModal(${p.id})">${esc(nm(p))}</button>`).join('')}</div></div>`).join('')}
-    </details>`;
+  const people = [...byPerson.values()];
+  const towns = TOWNS.filter(t => people.some(x => x.p.town === t));
+  document.getElementById('chg-list').innerHTML = cusHTML + (people.length ? towns.map(t => {
+    const ps = people.filter(x => x.p.town === t).sort((a,b) => seniorRank(seniorOf(a.p)) - seniorRank(seniorOf(b.p)) || seniorOf(a.p).localeCompare(seniorOf(b.p)) || a.p.name.localeCompare(b.p.name));
+    return `<div style="font-weight:bold;margin:10px 0 4px;color:#2c5282;">📍 ${esc(t)} <span class="muted" style="font-weight:normal;">${ps.length}명</span></div>` + ps.map(x => {
+      const ds = personDays(x.p, mk), moved = new Set(x.cs.map(c => c.to)), un = unpaidDaysOf(x.p, mk);
+      return `<button class="pen-row warn" onclick="openModal(${x.p.id})" style="margin-top:4px;"><b>${nmH(x.p)}</b> <span class="muted">${esc(seniorOf(x.p))}</span><br>
+        <span style="font-size:.9rem;">${x.cs.sort((a,b) => a.from.localeCompare(b.from)).map(c => `${dd(c.from)} → <b style="color:${c.to ? 'var(--warning)' : 'var(--danger)'}">${c.to ? dd(c.to) : '빠짐'}</b>`).join(', ')}${[...new Set(x.cs.map(c => c.reason).filter(Boolean))].map(r => ` <span class="muted">(${esc(r)})</span>`).join('')}</span><br>
+        <span style="font-size:.85rem;">📅 ${ds.map(d => `<span style="${moved.has(d) ? 'color:var(--warning);font-weight:bold;' : un.has(d) ? 'color:var(--danger);text-decoration:line-through;' : ''}">${Number(d.slice(8,10))}</span>`).join(', ')}일 · <b>총 ${ds.length - un.size}일</b></span></button>`;
+    }).join('');
   }).join('') : (cus.length ? '' : '<div class="muted">변경한 어르신이 없습니다.</div>'));
 }
 
@@ -1100,8 +1112,18 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav }){
   };
   draw();
 }
+// 🔒 날짜 정하기 잠금 (달마다): 잠그면 활동일을 실수로 못 바꿈
+let wdLock = (() => { try { return JSON.parse(load('jinan_wdlock')) || {}; } catch(e) { return {}; } })();
+function drawWdLock(){ const b = document.getElementById('wd-lock'); if (b) { const on = !!wdLock[monthKey()]; b.textContent = on ? '🔒' : '🔓'; b.title = on ? '잠김' : '잠금'; b.style.color = on ? 'var(--danger)' : ''; } }
+async function toggleWdLock(){
+  const mk = monthKey(), on = !!wdLock[mk];
+  if (!await ask(on ? `${curMonth}월 활동일 잠금을 풀까요?` : `${curMonth}월 활동일을 잠글까요?\n잠그면 "날짜 정하기"로 바꿀 수 없어요.`)) return;
+  if (on) delete wdLock[mk]; else wdLock[mk] = today();
+  store('jinan_wdlock', JSON.stringify(wdLock)); logEvent(on ? '활동일 잠금 풀기' : '활동일 잠금', null, `${curMonth}월`); drawWdLock();
+}
 function openWorkdays(){
   const mk = monthKey(), m = curMonth;
+  if (wdLock[mk]) return notify(`🔒 ${m}월 활동일은 잠겨 있어요.\n바꾸려면 🔒를 눌러 먼저 풀어 주세요.`);
   schedEditor({ title: `📅 ${m}월 활동일 정하기`, mk, days: monthDays(mk), edu: eduAll[mk] || [], nav: d => { moveMonth(d); openWorkdays(); },
     onSave: ({ days, edu }) => {
       workdays[mk] = days; store('jinan_workdays', JSON.stringify(workdays));
@@ -1130,6 +1152,10 @@ function renderPersonDays(p){
   // 교육 날은 보라색 🎓 (누르면 지우기)
   document.querySelectorAll('#m-days .chip.wd').forEach(c => { const e = eduOn(p, c.dataset.d); if (!e) return;
     c.classList.add('edu'); c.classList.remove('wd'); c.innerHTML = `🎓 ${dd(c.dataset.d)} ${esc(e.name)}`; c.onclick = () => delEdu(e.id || 0); });
+  // 벌점으로 일당 미지급인 날: 빨간 "벌점" (근무 인정 안 됨)
+  const un = unpaidDaysOf(p, mk);
+  document.querySelectorAll('#m-days .chip.wd').forEach(c => { if (un.has(c.dataset.d)) { c.classList.add('pen'); c.innerHTML = `${dd(c.dataset.d)} 벌점`; } });
+  if (un.size) document.getElementById('m-days-title').innerHTML = document.getElementById('m-days-title').innerHTML.replace(`(${days.length}일)`, `(${days.length - un.size}일 · <span style="color:var(--danger)">벌점 ${un.size}일 빠짐</span>)`);
   // 근무일을 누르면 그 날짜로 근무일 변경 창
   document.querySelectorAll('#m-days .chip.wd').forEach(c => c.onclick = () => addChange({ from: c.dataset.d }));
   document.getElementById('m-chg').innerHTML = (cu ? `<div class="log warn">${cu.inHosp ? '🏥 <b>입원 중</b>' : '🩹 <b>보충 근무 (개인 일정)</b>'}${cu.reason?` <span class="muted">· ${esc(cu.reason)}</span>`:''}${cu.back?` <span class="muted">· ${dd(cu.back)} 복귀</span>`:''}
@@ -1224,20 +1250,20 @@ function renderCallAlert(){
     const left = chg.filter(x => !dayCalled(x.p, td)).length;
     h += alertCard('chg', 'background:#fffaf0;border-color:var(--warning);', `<div style="font-weight:bold;color:#c05621;">${chg.length ? `🔄 오늘 바뀐 날짜로 근무하는 어르신 ${chg.length}명${left ? ` · 📞 확인 전화 ${left}명 남음` : ' · ✔ 모두 통화함'}` : '🔄 오늘은 바뀐 날짜로 근무하는 어르신이 없어요'}</div>`, `
       ${chg.map(x => { const done = dayCalled(x.p, td); return `<div class="call-row ${done?'called':''}">
-        <button class="who" onclick="openModal(${x.p.id})"><b>${esc(nm(x.p))}</b> <span class="muted">${esc(x.p.town)} · ${esc(seniorOf(x.p))}</span><br>
+        <button class="who" onclick="openModal(${x.p.id})"><b>${nmH(x.p)}</b> <span class="muted">${esc(x.p.town)} · ${esc(seniorOf(x.p))}</span><br>
           <span style="font-size:.85rem;">${x.kind==='변경' ? `원래 ${dd(x.from)} → <b style="color:var(--warning)">오늘</b>` : '<b style="color:var(--warning)">보충 근무</b>'}${x.reason?` · ${esc(x.reason)}`:''}</span><br>${telBtn(x.p)}</button>
         ${done ? '<span class="muted" style="white-space:nowrap;">✔ 통화함</span>' : `<button class="done-btn" onclick="dayCallDone(${x.p.id})">✔ 통화했어요</button>`}</div>`; }).join('')}
-      ${tmr.length ? `<div class="muted" style="font-size:.85rem;margin-top:4px;">내일 바뀐 날짜로 근무: ${tmr.map(x => `<a href="#" onclick="openModal(${x.p.id});return false;" style="color:inherit;">${esc(nm(x.p))}</a>`).join(', ')}</div>` : ''}`);
+      ${tmr.length ? `<div class="muted" style="font-size:.85rem;margin-top:4px;">내일 바뀐 날짜로 근무: ${tmr.map(x => `<a href="#" onclick="openModal(${x.p.id});return false;" style="color:inherit;">${nmH(x.p)}</a>`).join(', ')}</div>` : ''}`);
   }
   if (all.length) {
     const next = all.filter(p => p.hospCall.due > td).sort((a,b) => a.hospCall.due.localeCompare(b.hospCall.due));
     h += alertCard('hosp', '', `<div style="font-weight:bold;color:#97266d;">${due.length ? `📞 오늘 안부 전화할 입원 어르신 ${due.length}명` : `🏥 입원 중인 어르신 ${all.length}명`}</div>`, `
     ${due.map(p => { const hc = p.hospCall, late = daysBetween(hc.due, td); return `<div class="call-row">
-      <button class="who" onclick="openModal(${p.id})"><b>${esc(nm(p))}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
+      <button class="who" onclick="openModal(${p.id})"><b>${nmH(p)}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
         ${(() => { const c = customOf(p, td.slice(0,7)) || customOf(p, hc.since.slice(0,7)); const r = [c?.reason, c?.memo].filter(Boolean).join(' · '); return r ? `<span style="font-size:.85rem;">📝 ${esc(r)}</span><br>` : ''; })()}
         <span class="muted" style="font-size:.85rem;">입원 ${daysBetween(hc.since, td)+1}일째 · 마지막 통화 ${mdw(hc.last)}${late>0?` · <b style="color:var(--danger)">${late}일 지남</b>`:''}</span><br>${telBtn(p)}</button>
       <button class="done-btn" onclick="callDone(${p.id})">✔ 통화했어요</button></div>`; }).join('')}
-    ${next.length ? `<div class="muted" style="font-size:.85rem;margin-top:4px;">다음 안부 전화: ${next.map(p => `<a href="#" onclick="openModal(${p.id});return false;" style="color:inherit;">${esc(nm(p))} ${mdw(p.hospCall.due)}</a>`).join(', ')}</div>` : ''}`);
+    ${next.length ? `<div class="muted" style="font-size:.85rem;margin-top:4px;">다음 안부 전화: ${next.map(p => `<a href="#" onclick="openModal(${p.id});return false;" style="color:inherit;">${nmH(p)} ${mdw(p.hospCall.due)}</a>`).join(', ')}</div>` : ''}`);
   }
   box.innerHTML = h; bindAlerts(box);
 }
@@ -1268,7 +1294,7 @@ function openCustom(){
   let sel = new Set(cu ? cu.days : fillFromBack(mk, back, [])), reason = cu?.reason || '입원·치료';   // 사유 단추는 빼고 입원·치료로
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = `<div class="dlg">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🏥 ${esc(nm(p))} 어르신 입원 체크 (${m}월)</div>
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🏥 ${nmH(p)} 어르신 입원 체크 (${m}월)</div>
     <div class="muted" style="margin-bottom:8px;">입원해서 못 나오는 날은 <b>🏥 입원 체크</b>로 표시하고, 돌아오면 <b>복귀일</b>을 정해 남은 날을 몰아서 채웁니다.</div>
     <label>입원 사유</label>
     <textarea id="cu-memo" rows="2" placeholder="예: 밭일하다 넘어져 다리 골절, ○○병원 입원"></textarea>
@@ -1400,7 +1426,7 @@ function openNote(id){
   let date = old?.date || today(), cat = old?.cat || '';
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = `<div class="dlg">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📝 ${esc(nm(p))} 어르신 특이사항</div>
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📝 ${nmH(p)} 어르신 특이사항</div>
     <label>날짜 (일이 있었던 날)</label>
     <button type="button" class="secondary full" id="nt-date" style="margin-bottom:10px;"></button>
     <label>구분</label>
@@ -1470,6 +1496,10 @@ async function zoneCount(d){
 }
 function renderZones(){
   const box = document.getElementById('zone-btns'); if (!box) return;
+  // 면별: 경로당 수 · 지킴이 / 게이트볼 = 전체 (예: 상전 20곳 79명/6명=85)
+  const zs = document.getElementById('zone-sum');
+  if (zs) zs.innerHTML = myTowns.map(t => { const c = townCount(t);
+    return `<div>📍 <b>${esc(t.replace(/[면읍]$/, ''))}</b> ${c.site}곳 ${c.act}명/<span style="color:#2f855a">게이트볼 ${c.gate}명</span> = <b>${c.all}명</b></div>`; }).join('');
   const zn = document.getElementById('zone-n'); if (zn) zn.textContent = zones.length + '개';
   document.getElementById('zone-minus').disabled = zones.length <= ZONE_MIN; document.getElementById('zone-plus').disabled = zones.length >= ZONE_MAX;
   box.innerHTML = zones.map(z => {
@@ -1523,7 +1553,7 @@ function openZone(id){
       return `<details class="zs-site"><summary><span><span class="muted">${esc(x.town)}</span> <b>${crown(x.town, x.senior)}${esc(x.senior)}</b></span><span class="muted">${ms.filter(p => !stats(p).dropped).length}명 ▾</span></summary>
         <button type="button" class="small full" data-gosite="${esc(siteKey(x.town, x.senior))}" style="margin:6px 0 4px;">▶ 이 경로당 점검하기</button>
         <div class="zs-people">${ms.length ? ms.map(p => { const st = stats(p); return `<div class="zs-person">
-          <b>${esc(nm(p))}</b> ${ageSex(p)?`<span class="muted">(${esc(ageSex(p))})</span>`:''} ${st.dropped?`<span class="badge bg-danger">${esc(st.status)}</span>`:badgeOf(st)}${inHospNow(p)?' <span class="badge bg-hosp">🏥 입원 중</span>':''}
+          <b>${nmH(p)}</b> ${ageSex(p)?`<span class="muted">(${esc(ageSex(p))})</span>`:''} ${st.dropped?`<span class="badge bg-danger">${esc(st.status)}</span>`:badgeOf(st)}${inHospNow(p)?' <span class="badge bg-hosp">🏥 입원 중</span>':''}
           <br>${telBtn(p)}${p.address?`<br><span class="muted" style="font-size:.85rem;">🏠 ${esc(p.address)}</span>`:''}
           <br><button type="button" class="small secondary" data-open="${p.id}">점검 화면 열기 ›</button>
           ${z.leaderId === p.id ? '<span class="badge" style="background:#276749;">👤 팀장</span> <button type="button" class="small secondary" data-unlead="1">팀장 해제</button>' : `<button type="button" class="small" data-lead="${p.id}" style="background:#276749;">👤 팀장으로 정하기</button>`}</div>`; }).join('') : '<div class="muted">어르신이 없습니다.</div>'}
@@ -1538,9 +1568,11 @@ function openZone(id){
             <button type="button" class="small secondary" data-new="${esc(siteKey(x.town, x.senior))}">명단에 없으면 신규 등록</button>
           </div></div></details>`;
     }).join('') : '';
-    bg.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { bg.remove(); openModal(Number(b.dataset.open)); });
+    // 구역에서 점검하러 들어가면, 점검 화면의 "← 구역으로"로 이 구역 창에 돌아옴
+    const backZone = () => { modalBack = { label: `${z.name} 구역으로`, fn: () => openZone(z.id) }; document.getElementById('m-crumb').textContent = `← ${z.name} 구역으로`; };
+    bg.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { bg.remove(); openModal(Number(b.dataset.open)); backZone(); });
     $('#zn-visit').innerHTML = zoneVisitHtml(z); $('#zn-visit-box').classList.toggle('hidden', !z.sites.length);
-    bg.querySelectorAll('[data-gosite]').forEach(b => b.onclick = () => { const [town, senior] = b.dataset.gosite.split('|'); bg.remove(); lastTown = town; curSenior = senior; document.getElementById('search').value = ''; renderList(); openSiteCheck(); });
+    bg.querySelectorAll('[data-gosite]').forEach(b => b.onclick = () => { const [town, senior] = b.dataset.gosite.split('|'); bg.remove(); lastTown = town; curSenior = senior; document.getElementById('search').value = ''; renderList(); openSiteCheck(); backZone(); });
     $('#zn-sites-title').textContent = `담당 경로당 (${z.sites.length}곳)${z.sites.filter(x => isBest(x.town, x.senior)).length ? ` · 👑 ${z.sites.filter(x => isBest(x.town, x.senior)).length}` : ''}`;
     const reopen = (town, senior) => { drawMain(); const det = [...bg.querySelectorAll('#zn-sites details')].find(d => d.querySelector(`[data-map="${CSS.escape(town+'|'+senior)}"]`)); if (det) det.open = true; };
     bg.querySelectorAll('[data-map]').forEach(b => b.onclick = () => { const [town, senior] = b.dataset.map.split('|'); mapOf(town, senior) ? openSiteMap(town, senior) : editSiteMap(town, senior, () => reopen(town, senior)); });
@@ -1556,7 +1588,7 @@ function openZone(id){
       if (!t) { box.innerHTML = ''; return; }
       const hits = participants.filter(p => p.name.includes(t)).sort((a,b) => a.name.localeCompare(b.name)).slice(0, 20);
       box.innerHTML = hits.length ? hits.map(p => { const here = p.town===town && seniorOf(p)===senior; return `<button type="button" class="site" data-mv="${p.id}" ${here?'disabled':''} style="padding:8px 10px;margin:3px 0;${here?'opacity:.5;':''}">
-        <div><b>${esc(nm(p))}</b> ${p.age?`<span class="muted">(${esc(p.age)}세)</span>`:''}<br><span class="muted" style="font-size:.85rem;">🏠 ${esc(p.town)} · ${esc(seniorOf(p))}${p.phone?` · ${esc(p.phone)}`:''}</span></div><span class="arrow">${here?'✔':'＋'}</span></button>`; }).join('')
+        <div><b>${nmH(p)}</b> ${p.age?`<span class="muted">(${esc(p.age)}세)</span>`:''}<br><span class="muted" style="font-size:.85rem;">🏠 ${esc(p.town)} · ${esc(seniorOf(p))}${p.phone?` · ${esc(p.phone)}`:''}</span></div><span class="arrow">${here?'✔':'＋'}</span></button>`; }).join('')
         : '<div class="muted" style="font-size:.88rem;padding:4px 0;">찾는 어르신이 없어요.</div>';
       box.querySelectorAll('button[data-mv]:not([disabled])').forEach(b => b.onclick = async () => {
         const p = participants.find(x => x.id === Number(b.dataset.mv)); if (!p) return;
@@ -1601,13 +1633,29 @@ function openZone(id){
     // 다른 구역에 이미 들어간 경로당은 안 보이게 (이 구역에 넣은 것만 남김)
     const taken = sites.filter(k => { const o = zoneOfSite(curTown, k); return o && o.id !== z.id && !pick.has(siteKey(curTown, k)); });
     $('#zn-pick-title').textContent = `${curTown} 경로당을 누르세요 (여러 곳)${taken.length ? ` · 다른 구역 ${taken.length}곳은 숨김` : ''}`;
-    $('#zn-list').innerHTML = sites.filter(k => !taken.includes(k)).map(k => {
+    const shown = sites.filter(k => !taken.includes(k)), allOn = shown.length && shown.every(k => pick.has(siteKey(curTown, k)));
+    const isX = k => (xSites[curTown] || []).includes(k);
+    $('#zn-list').innerHTML = (shown.length ? `<button type="button" class="small ${allOn ? 'secondary' : ''}" id="zn-all" style="margin:0 0 4px;">${allOn ? '✕ 전부 빼기' : '✔ 전부 선택'} (${shown.length}곳)</button>` : '') + shown.map(k => {
       const other = zoneOfSite(curTown, k), mine = pick.has(siteKey(curTown, k));
       const n = siteMembers(curTown, k).filter(p => !stats(p).dropped).length;
-      return `<button type="button" class="site ${mine?'zs-on':''}" data-k="${esc(k)}" style="padding:9px 12px;margin:4px 0;${mine?'background:#c6f6d5;border-color:#38a169;':''}">
-        <div>${mine?'✔ ':''}<b>${crown(curTown, k)}${esc(k)}</b> <span class="muted">${n}명</span>${other && other.id!==z.id ? ` <span class="badge bg-gray">${esc(other.name)}</span>` : ''}</div><span class="arrow">${mine?'':'＋'}</span></button>`;
-    }).join('') + `<div style="display:flex;gap:6px;margin-top:6px;"><input type="text" id="zn-new" placeholder="명단에 없는 경로당 이름 적기" autocomplete="off" style="margin:0;"><button type="button" class="small secondary" id="zn-new-add" style="margin:0;white-space:nowrap;">＋ 넣기</button></div>`;
-    const addNew = () => { const inp = $('#zn-new'); inp.blur(); setTimeout(() => { const v = inp.value.trim(); if (!v) return; pick.add(siteKey(curTown, v)); drawList(); }, 50); };
+      return `<div style="display:flex;gap:4px;align-items:center;"><button type="button" class="site ${mine?'zs-on':''}" data-k="${esc(k)}" style="flex:1;padding:9px 12px;margin:4px 0;${mine?'background:#c6f6d5;border-color:#38a169;':''}">
+        <div>${mine?'✔ ':''}<b>${crown(curTown, k)}${esc(k)}</b> <span class="muted">${n}명</span>${other && other.id!==z.id ? ` <span class="badge bg-gray">${esc(other.name)}</span>` : ''}</div><span class="arrow">${mine?'':'＋'}</span></button>
+        ${isX(k) ? `<button type="button" class="small secondary" data-xren="${esc(k)}" style="width:auto;margin:0;padding:6px 8px;">✏️</button><button type="button" class="small secondary" data-xdel="${esc(k)}" style="width:auto;margin:0;padding:6px 8px;color:var(--danger);">✕</button>` : ''}</div>`;
+    }).join('') + `<div style="display:flex;gap:6px;margin-top:6px;"><input type="text" id="zn-new" placeholder="명단에 없는 경로당 이름 적기" autocomplete="off" style="margin:0;"><button type="button" class="small secondary" id="zn-new-add" style="margin:0;white-space:nowrap;">＋ 추가</button></div>`;
+    $('#zn-all')?.addEventListener('click', () => { shown.forEach(k => allOn ? pick.delete(siteKey(curTown, k)) : pick.add(siteKey(curTown, k))); drawList(); });
+    bg.querySelectorAll('[data-xdel]').forEach(b => b.onclick = async () => { const k = b.dataset.xdel;
+      if (!await ask(`"${k}" 경로당을 목록에서 뺄까요?`)) return;
+      xSites[curTown] = (xSites[curTown] || []).filter(x => x !== k); saveXSites(); pick.delete(siteKey(curTown, k));
+      logEvent('경로당 목록 빼기', null, `${curTown} ${k}`); drawList(); });
+    bg.querySelectorAll('[data-xren]').forEach(b => b.onclick = () => { const k = b.dataset.xren, v = (prompt('경로당 이름을 고쳐 주세요', k) || '').trim(); if (!v || v === k) return;
+      xSites[curTown] = (xSites[curTown] || []).map(x => x === k ? v : x); saveXSites();
+      if (pick.delete(siteKey(curTown, k))) pick.add(siteKey(curTown, v));
+      zones.forEach(o => o.sites.forEach(x => { if (x.town === curTown && x.senior === k) x.senior = v; })); saveZones();
+      participants.filter(q => q.town === curTown && q.senior === k).forEach(q => q.senior = v); saveData(false);
+      logEvent('경로당 이름 바꾸기', null, `${curTown} ${k} → ${v}`); drawList(); });
+    const addNew = () => { const inp = $('#zn-new'); inp.blur(); setTimeout(() => { const v = inp.value.trim(); if (!v) return;
+      if (!sitesOf(curTown).includes(v)) { (xSites[curTown] ||= []).push(v); saveXSites(); logEvent('경로당 목록 추가', null, `${curTown} ${v}`); }
+      pick.add(siteKey(curTown, v)); drawList(); }, 50); };
     $('#zn-new-add').onclick = addNew;
     $('#zn-new').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addNew(); } });
     bg.querySelectorAll('#zn-list button[data-k]').forEach(b => b.onclick = () => {
@@ -1616,7 +1664,7 @@ function openZone(id){
     });
   };
   const drawTowns = () => {
-    $('#zn-towns').innerHTML = townsWith.map(t => `<button type="button" class="reason ${t===curTown?'on':''}" data-t="${t}">${t}</button>`).join('');
+    $('#zn-towns').innerHTML = townsWith.map(t => { const c = townCount(t); return `<button type="button" class="reason ${t===curTown?'on':''}" data-t="${t}" style="line-height:1.25;">${t}<br><small style="font-weight:normal;font-size:.75rem;">(활동${c.act}/게이트볼${c.gate}) ${c.all}명</small></button>`; }).join('');
     bg.querySelectorAll('#zn-towns button').forEach(b => b.onclick = () => { curTown = b.dataset.t; drawTowns(); drawList(); });
   };
   $('#zn-add').onclick = () => {
@@ -1693,7 +1741,7 @@ function showPenReasons(p){
     ${l.memo ? `<br>📝 ${esc(l.memo)}` : '<br><span class="muted" style="font-size:.85rem;">적어 둔 메모 없음</span>'}</div>`;
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">⚠️ ${esc(nm(p))} 어르신 감점 이유 (${y}년)</div>
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">⚠️ ${nmH(p)} 어르신 감점 이유 (${y}년)</div>
     <div class="notice" style="margin-bottom:8px;">누적 <b style="color:var(--danger)">-${ptsAll}점</b> · 일당 미지급 ${Object.values(payInfo(p, y)).reduce((a,b) => a + b, 0)}일 · -${MAX_LEAVE}점이면 중도포기</div>
     ${leaves.length ? leaves.map((l, i) => row(l, i)).join('') : '<p class="muted">감점 기록이 없습니다.</p>'}
     ${notes.length ? `<div style="font-weight:bold;margin:8px 0 4px;">📝 같은 날 특이사항</div>` + notes.map(n => `<div class="log">${Number(n.date.slice(5,7))}월 ${dd(n.date)} ${n.cat?`[${esc(n.cat)}] `:''}${esc(n.text)}</div>`).join('') : ''}
@@ -1711,7 +1759,7 @@ function openInfo(){
   const z = zoneOf(p), L = z && z.leaderId ? participants.find(x => x.id === z.leaderId) : null, st = stats(p);
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = `<div class="dlg">
-    <div style="font-weight:bold;font-size:1.25rem;margin-bottom:8px;">👤 ${esc(nm(p))} 어르신</div>
+    <div style="font-weight:bold;font-size:1.25rem;margin-bottom:8px;">👤 ${nmH(p)} 어르신</div>
     ${photoOf(p) ? `<img id="if-photo" src="${photoOf(p)}" alt="" style="display:block;width:100%;max-height:62vh;object-fit:contain;border-radius:10px;background:#f7fafc;margin-bottom:6px;cursor:zoom-in;">
       <div style="display:flex;gap:6px;margin-bottom:10px;"><button type="button" class="small secondary" id="if-ph-cam" style="margin:0;">📸 다시 찍기</button><button type="button" class="small secondary" id="if-ph-file" style="margin:0;">🖼️ 바꾸기</button><button type="button" class="small secondary" id="if-ph-del" style="margin:0;color:var(--danger);">지우기</button></div>`
     : `<div style="border:2px dashed #cbd5e0;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center;background:#f7fafc;">
@@ -1998,9 +2046,7 @@ function changeLogDate(logId){
 // 예) "송태인 어르신 16일을 15일로 병원"  /  "고부 경로당 16일에서 15일 행사"
 const REASON_WORDS = [
   ['병원 진료', /병원|진료|치료|아프|아퍼|입원|검진|수술|약/],
-  ['경조사', /경조|장례|상가|초상|결혼|혼사|돌잔치|칠순|팔순|구순|제사/],
-  ['행사', /행사|축제|잔치|회의|교육|모임|대회|여행/],
-  ['개인 사정', /개인|사정|볼일|일이\s*있|농사|집안|가족|외출/]
+  ['개인 사정', /개인|사정|볼일|일이\s*있|농사|집안|가족|외출|경조|장례|상가|초상|결혼|혼사|잔치|칠순|팔순|제사|행사|모임|여행/]
 ];
 function parseChange(text){
   const t = String(text||''), ns = t.replace(/\s+/g, '');
@@ -2012,9 +2058,11 @@ function parseChange(text){
     .replace(/(?<![0-9가-힣])((?:[이삼]?십)?[일이삼사오육칠팔구]?)\s*(월|일)/g, (all, w, u) => {
       if (!w || !/^(?:[이삼]?십)?[일이삼사오육칠팔구]?$/.test(w)) return all;
       const n = kn(w); return n ? `${n}${u}` : all; });
+  // "23.24" · "23-24" · "23→24" · "23 24" 처럼 숫자만 적어도: 23일 → 24일
+  const td2 = td.replace(/(?<![\d월.])(\d{1,2})\s*(?:[.\-~→>\/,·]|\s)\s*(\d{1,2})(?![\d일월])/g, '$1일 $2일');
   // 날짜: "11월 3일" 또는 "16일"
   const dates = []; const re = /(?:(\d{1,2})\s*월\s*)?(\d{1,2})\s*일/g; let m;
-  while ((m = re.exec(td))) {
+  while ((m = re.exec(td2))) {
     const mon = m[1] ? Number(m[1]) : (dates.length ? Number(dates[dates.length-1].slice(5,7)) : curMonth), day = Number(m[2]);   // 월을 안 말하면 앞 날짜의 달
     let y = YEAR; if (mon < curMonth - 6) y = YEAR + 1;
     if (day >= 1 && day <= new Date(y, mon, 0).getDate()) dates.push(ymd(y, mon, day));
@@ -2040,7 +2088,7 @@ function openQuickChange(){
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🎤 말로 근무일 변경</div>
     <button type="button" id="qc-mic" class="mic-btn">🎤 눌러서 말하기</button>
     <div id="qc-mic-msg" class="muted" style="text-align:center;margin:-2px 0 8px;min-height:1em;"></div>
-    <div class="notice" style="font-size:.88rem;">예) <b>송태인 16일을 15일로 병원</b><br>예) <b>고부 경로당 16일에서 15일 행사</b><br>예) <b>김옥분 11월 4일 대신 5일 개인 사정</b></div>
+    <div class="notice" style="font-size:.88rem;">예) <b>홍길동 23.24</b><br>예) <b>송태인 16일을 15일로 병원</b><br>예) <b>김옥분 11월 4일 대신 5일 개인 사정</b></div>
     <textarea id="qc-text" rows="3" placeholder="누가, 며칠을, 며칠로, 왜" style="font-size:1.05rem;"></textarea>
     <div id="qc-result" style="margin-bottom:8px;"></div>
     <div class="grid-2"><button class="secondary" id="qc-cancel">닫기</button><button id="qc-go">확인하기</button></div></div>`;
@@ -2100,7 +2148,7 @@ function openQuickChange(){
     if (r.people.length === 1) return go(r.people[0], r, false);
     // 같은 이름이 여러 분이거나 여러 이름이 나오면 고르기
     box.innerHTML = '<div style="margin-bottom:4px;"><b>어느 분인가요?</b></div>' + r.people.map(p =>
-      `<button class="site" data-id="${p.id}" style="padding:10px 12px;"><div><b>${esc(nm(p))}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span></div><span class="arrow">›</span></button>`).join('');
+      `<button class="site" data-id="${p.id}" style="padding:10px 12px;"><div><b>${nmH(p)}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span></div><span class="arrow">›</span></button>`).join('');
     box.querySelectorAll('button[data-id]').forEach(b => b.onclick = () => go(participants.find(p => p.id===Number(b.dataset.id)), r, false));
   };
 }
@@ -2112,12 +2160,14 @@ function addChange(pre){
   const mates = participants.filter(x => x.id!==p.id && x.town===p.town && seniorOf(x)===seniorOf(p) && !stats(x).dropped);
   const td = today(), end = endDay(mk);
   // 여러 날짜를 한 번에: pairs = [{from, to}]  · 지난 날짜(오늘 전)는 바꿀 수 없음
-  let pairs = [], from = null, quitFrom = null;
+  let pairs = [], from = null, quitFrom = null, startFrom = null;
   const isQuit = () => back.querySelector('#cg-type')?.value === '중도포기';
+  const isStart = () => back.querySelector('#cg-type')?.value === '시작일';
+  const newbie = !!(p.start || p.startDay || isNew(p)), rawDays = personDays(p, mk, true);
   const canFrom = k => days.includes(k) && k >= td && !pairs.some(x => x.from === k);
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">🔄 ${esc(nm(p))} 어르신 근무일 변경${inH ? ` <button type="button" id="cg-inhosp" class="small" style="width:auto;margin:0 0 0 4px;padding:3px 10px;background:#d53f8c;vertical-align:2px;">🏥 현재 입원중 ›</button>` : ''}</div>
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">🔄 ${nmH(p)} 어르신 근무일 변경${inH ? ` <button type="button" id="cg-inhosp" class="small" style="width:auto;margin:0 0 0 4px;padding:3px 10px;background:#d53f8c;vertical-align:2px;">🏥 현재 입원중 ›</button>` : ''}</div>
     ${hospD.size || inH ? `<div class="notice" style="background:#fff5f7;border-color:#fbb6ce;margin-bottom:8px;font-size:.9rem;">🏥 ${inH ? '<b>지금 입원 중</b>이에요' : '입원 기록이 있어요'}${hospD.size ? ` · 입원한 날 ${[...hospD].sort().map(dd).join(', ')}` : ''}${cuH?.memo ? ` · ${esc(cuH.memo)}` : ''}<br><span class="muted">달력의 분홍 칸이 입원한 날이에요.</span></div>` : ''}
     <div class="legend"><span><i style="background:var(--primary);opacity:.55"></i>근무일</span><span><i style="background:#fffaf0;border:2px dashed var(--warning)"></i>원래 날짜</span><span><i style="background:var(--warning)"></i>바꾼 날짜</span><span><i style="background:#edf2f7"></i>지난 날·마감 이후</span></div>
     <div class="cal" id="cg-cal"></div>
@@ -2126,8 +2176,8 @@ function addChange(pre){
     <label>사유</label>
     <input type="hidden" id="cg-type">
     <div class="grid-2" id="cg-types" style="margin-bottom:12px;">
-      <button type="button" class="reason" data-v="병원 진료">🏥 병원 진료</button><button type="button" class="reason" data-v="행사">🎉 행사</button>
-      <button type="button" class="reason" data-v="개인 사정">🙋 개인 사정</button><button type="button" class="reason" data-v="경조사">💐 경조사</button>
+      <button type="button" class="reason" data-v="병원 진료">🏥 병원 진료</button><button type="button" class="reason" data-v="개인 사정">🙋 개인 사정</button>
+      ${newbie ? `<button type="button" class="reason" data-v="시작일" style="grid-column:1/-1;color:#975a16;background:#fefcbf;">🆕 근무 시작 날짜${p.startDay ? ` (지금 ${dd(p.startDay)})` : ''}</button>` : ''}
       <button type="button" class="reason" data-v="중도포기" style="grid-column:1/-1;color:var(--danger);">🚪 중도포기</button>
     </div>
     <div id="cg-qwhy-box" class="hidden" style="margin:-4px 0 12px;">
@@ -2145,6 +2195,10 @@ function addChange(pre){
   $('#cg-inhosp')?.addEventListener('click', () => { back.remove(); openCustom(); });
   const y = YEAR, m = curMonth, lastD = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
   const showList = () => {
+    if (isStart()) {
+      $('#cg-picked').innerHTML = startFrom ? `<b style="color:#975a16">🆕 ${dd(startFrom)}부터 근무 시작</b>${rawDays.filter(d => d < startFrom).length ? ` · 그 전 근무일 ${rawDays.filter(d => d < startFrom).length}일 빠짐` : ''}` : '<b style="color:#975a16">🆕 근무 시작하는 날</b>';
+      $('#cg-list').innerHTML = ''; $('#cg-all-wrap')?.classList.add('hidden'); $('#cg-qwhy-box').classList.add('hidden'); $('#cg-hosp').classList.add('hidden'); return;
+    }
     if (isQuit()) {
       $('#cg-picked').innerHTML = quitFrom ? `<b style="color:var(--danger)">🚪 ${dd(quitFrom)}부터 중도포기</b> · 근무일 ${days.filter(d => d >= quitFrom).length}일 빠짐` : '<b style="color:var(--danger)">🚪 그만두는 날</b>';
       $('#cg-list').innerHTML = ''; $('#cg-all-wrap')?.classList.add('hidden'); $('#cg-qwhy-box').classList.remove('hidden'); $('#cg-hosp').classList.add('hidden'); return;
@@ -2163,18 +2217,19 @@ function addChange(pre){
     for (let d = 1; d <= lastD; d++) {
       const k = ymd(y,m,d), w = new Date(y, m-1, d).getDay();
       const past = k < td, after = end && k > end, isWork = days.includes(k), isH = hospD.has(k);
-      const isFrom = k === from || fromSet.has(k) || (isQuit() && quitFrom && k >= quitFrom && isWork), isTo = toSet.has(k);
+      const isFrom = k === from || fromSet.has(k) || (isQuit() && quitFrom && k >= quitFrom && isWork) || (isStart() && startFrom && k < startFrom && rawDays.includes(k)), isTo = toSet.has(k) || (isStart() && k === startFrom);
       const cls = [isFrom ? 'from' : isTo ? 'pick' : (isWork ? 'work' : isH ? 'hosp' : ''), (w===0 || w===6 || HOLIDAYS.has(k)) ? 'red' : ''].join(' ');
-      const tag = isQuit() && quitFrom && k === quitFrom ? '포기' : isQuit() && quitFrom && k > quitFrom && isWork ? '빠짐' : fromSet.has(k) ? `→${dd(fromSet.get(k)).replace(/\(.*/, '')}` : k === from ? '원래' : isTo ? '바꿈' : isH ? '입원' : k === end ? '마감' : '';
+      const tag = isStart() && k === startFrom ? '시작' : isStart() && startFrom && k < startFrom && rawDays.includes(k) ? '빠짐' : isQuit() && quitFrom && k === quitFrom ? '포기' : isQuit() && quitFrom && k > quitFrom && isWork ? '빠짐' : fromSet.has(k) ? `→${dd(fromSet.get(k)).replace(/\(.*/, '')}` : k === from ? '원래' : isTo ? '바꿈' : isH ? '입원' : k === end ? '마감' : '';
       const red = w === 0 || w === 6 || HOLIDAYS.has(k);   // 토·일·공휴일(빨간 날)로는 못 옮김
       const qd = quitDayOf(p), gone = qd && k >= qd;   // 이미 중도포기한 날 이후는 못 넣음
-      const off = isQuit() ? (after || (red && !isWork)) : ((past || after || gone || (red && !isWork)) && !isFrom && !isTo);
+      const off = isStart() ? (after || red) : isQuit() ? (after || (red && !isWork)) : ((past || after || gone || (red && !isWork)) && !isFrom && !isTo);
       h += `<button data-k="${k}" class="${cls}" ${off ? 'disabled' : ''}>${d}${tag ? `<small>${tag}</small>` : ''}</button>`;
     }
     $('#cg-cal').innerHTML = h;
     back.querySelectorAll('#cg-cal button:not(:disabled)').forEach(b => b.onclick = () => {
       const k = b.dataset.k, pi = pairs.findIndex(x => x.from === k || (x.to && x.to === k));
       if (isQuit()) { quitFrom = quitFrom === k ? null : k; return drawCal(); }
+      if (isStart()) { startFrom = startFrom === k ? null : k; return drawCal(); }
       if (pi >= 0) { pairs.splice(pi, 1); return drawCal(); }          // 이미 고른 날을 다시 누르면 빼기
       if (k === from) { from = null; return drawCal(); }
       if (canFrom(k)) { from = k; return drawCal(); }
@@ -2194,9 +2249,9 @@ function addChange(pre){
     const on = !b.classList.contains('on');
     back.querySelectorAll('#cg-types button').forEach(x => x.classList.remove('on'));
     if (on) b.classList.add('on');
-    const was = isQuit();
+    const was = isQuit() + '|' + isStart();
     $('#cg-type').value = on ? b.dataset.v : '';
-    if (was !== isQuit()) { pairs = []; from = null; quitFrom = null; drawCal(); }
+    if (was !== isQuit() + '|' + isStart()) { pairs = []; from = null; quitFrom = null; startFrom = null; drawCal(); }
   });
   if (pre.reason) $(`#cg-types button[data-v="${pre.reason}"]`)?.click();
   if (pre.all && $('#cg-all')) $('#cg-all').checked = true;
@@ -2204,6 +2259,14 @@ function addChange(pre){
   $('#cg-cancel').onclick = () => back.remove();
   $('#cg-save').onclick = async () => {
     const reason = $('#cg-type').value;
+    if (isStart()) {
+      if (!startFrom) return notify('근무 시작하는 날을 달력에서 눌러 주세요.');
+      const drop = rawDays.filter(d => d < startFrom), old = p.startDay;
+      p.startDay = startFrom; p.start = startFrom.slice(0,7);
+      logEvent('근무 시작일', p, `${old ? dd(old) + ' → ' : ''}${Number(startFrom.slice(5,7))}월 ${dd(startFrom)}부터${drop.length ? ` · 그 전 근무일 ${drop.length}일 빠짐 (${drop.map(dd).join(', ')})` : ''}`, startFrom);
+      saveData(false); back.remove(); renderModal(); renderList();
+      return notify(`${p.name} 어르신 근무 시작일을 ${dd(startFrom)}로 정했어요.\n이 달 근무 ${personDays(p, mk).length}일`);
+    }
     if (isQuit()) {
       if (!quitFrom) return notify('그만두는 날을 달력에서 눌러 주세요.');
       const why = $('#cg-qwhy').value.trim();
@@ -2243,7 +2306,7 @@ function delChange(cid){
 function renderGuessBtn(){
   const n = participants.filter(p => p.guess).length, b = document.getElementById('btn-guess');
   b.classList.toggle('hidden', !n); b.textContent = `📍 추정 경로당 한번에 정리 (${n}명)`;
-  document.querySelector('#tools-box > summary h3').innerHTML = '⚙️ 명단 관리' + (n ? ` <span class="badge bg-warning" style="vertical-align:2px;">📍 추정 ${n}명</span>` : '');
+  document.querySelector('#tools-box > summary h3').innerHTML = '➕ 신규등록' + (n ? ` <span class="badge bg-warning" style="vertical-align:2px;">📍 추정 ${n}명</span>` : '');
 }
 // ---------- 🚫 내년도 참여 제외 ----------
 const exYear = () => viewYear() + 1;
@@ -2286,7 +2349,7 @@ function renderExList(){
   document.getElementById('ex-title').textContent = `🚫 ${exYear()}년 참여 제외 대상 (${list.length}명)`;
   document.getElementById('ex-list').innerHTML = list.length ? list.map(p => { const ex = exOf(p); return `
     <button class="pen-row" onclick="openModal(${p.id})"><span class="muted">🏠 ${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
-      <b>${esc(nm(p))}</b> ${ex.reason?`<b style="color:var(--danger)">${esc(ex.reason)}</b>`:''}${ex.memo?`<br><span class="muted">📝 ${esc(ex.memo)}</span>`:''}</button>`; }).join('')
+      <b>${nmH(p)}</b> ${ex.reason?`<b style="color:var(--danger)">${esc(ex.reason)}</b>`:''}${ex.memo?`<br><span class="muted">📝 ${esc(ex.memo)}</span>`:''}</button>`; }).join('')
     : '<div class="muted">제외 대상이 없어요.</div>';
 }
 // 목록에서 바로 사람 고르고 제외 지정
@@ -2314,7 +2377,7 @@ function openAddExclude(){
     const t = q.value.replace(/\s+/g,'');
     if (!t) { found.innerHTML = ''; return; }
     const hits = participants.filter(p => p.name.includes(t)).sort((a,b) => a.name.localeCompare(b.name)).slice(0, 30);
-    found.innerHTML = hits.length ? hits.map(p => `<button class="site" data-id="${p.id}" style="padding:9px 12px;margin:4px 0;"><div><b>${esc(nm(p))}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span>${exOf(p)?' <span class="badge bg-danger">이미 제외</span>':''}</div><span class="arrow">›</span></button>`).join('')
+    found.innerHTML = hits.length ? hits.map(p => `<button class="site" data-id="${p.id}" style="padding:9px 12px;margin:4px 0;"><div><b>${nmH(p)}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span>${exOf(p)?' <span class="badge bg-danger">이미 제외</span>':''}</div><span class="arrow">›</span></button>`).join('')
       : '<div class="muted" style="padding:6px 0;">찾는 어르신이 없어요.</div>';
     found.querySelectorAll('button[data-id]').forEach(b => b.onclick = () => {
       picked = participants.find(p => p.id === Number(b.dataset.id));
@@ -2376,14 +2439,14 @@ function showPenalty(tw){
       <div style="background:#fff5f5;border-radius:6px;padding:8px 2px;text-align:center;font-size:.82rem;"><b style="display:block;font-size:1.2rem;color:var(--danger)">-${list.reduce((n,x)=>n+x.m.pts,0)}점</b>${curMonth}월 감점</div>
       <div style="background:#edf2f7;border-radius:6px;padding:8px 2px;text-align:center;font-size:.82rem;"><b style="display:block;font-size:1.2rem;color:#4a5568">${drops.length}명</b>중도포기(누적)</div>
     </div>
-    ${drops.length ? `<div class="muted" style="margin:2px 0 8px;">중도포기: ${drops.map(p => `${esc(nm(p))}(${esc(seniorOf(p))})`).join(', ')}</div>` : ''}
+    ${drops.length ? `<div class="muted" style="margin:2px 0 8px;">중도포기: ${drops.map(p => `${nmH(p)}(${esc(seniorOf(p))})`).join(', ')}</div>` : ''}
     <div class="muted" style="margin-bottom:6px;">이름을 누르면 그 어르신 점검 화면으로 갑니다.</div>
     ${list.map(({p,m}) => {
       const s = stats(p);
       const warnTxt = m.warns.map(l => `${md(l.date)} ${[l.vest==='미착용'?'조끼':'', l.badge==='미착용'?'명찰':''].filter(Boolean).join('·')}`).join(', ');
       return `<button class="pen-row ${m.pts?'':'warn'}" data-id="${p.id}">
         <span class="muted">🏠 ${esc(seniorOf(p))}</span><br>
-        <b>${esc(nm(p))}</b> ${m.pts?`<b style="color:var(--danger)">-${m.pts}점</b> <span class="muted">(${m.pens.map(l => md(l.date) + ' ' + shortItems(l)).join(', ')})</span>`:''}
+        <b>${nmH(p)}</b> ${m.pts?`<b style="color:var(--danger)">-${m.pts}점</b> <span class="muted">(${m.pens.map(l => md(l.date) + ' ' + shortItems(l)).join(', ')})</span>`:''}
         <br><span class="muted">누적 ${s.penalty}점${s.dropped?` · <b style="color:var(--danger)">${s.status}</b>`:''}</span></button>`;
     }).join('')}
     <button class="secondary full" id="pen-close">닫기</button></div>`;
@@ -2410,7 +2473,7 @@ function showClose(kind){
     <div class="muted" style="margin-bottom:6px;">${list.length ? '이름을 누르면 그 어르신 점검 화면으로 갑니다.' : `${curMonth}월에는 없습니다.`}</div>
     ${list.map(({p, ls}) => `<button class="pen-row ${kind==='leave'?'':'warn'}" data-id="${p.id}">
         <span class="muted">🏠 ${town==='전체'?esc(p.town)+' · ':''}${esc(seniorOf(p))}</span><br>
-        <b>${esc(nm(p))}</b> <b style="color:${kind==='leave'?'var(--danger)':'var(--warning)'}">${amount(ptOf(ls))}</b>
+        <b>${nmH(p)}</b> <b style="color:${kind==='leave'?'var(--danger)':'var(--warning)'}">${amount(ptOf(ls))}</b>
         <span class="muted">(${ls.map(l => md(l.date) + (kind==='leave' ? ' ' + shortItems(l) : '')).join(', ')})</span></button>`).join('')}
     <button class="secondary full" id="close-close">닫기</button></div>`;
   document.body.appendChild(back);
@@ -2419,7 +2482,7 @@ function showClose(kind){
 }
 
 // 경로당 순서: 개별관리 → 게이트볼 → 나머지(가나다) → 미입력
-function seniorRank(k){ k = String(k||'').replace(/\s/g,''); return k.includes('개별관리') ? 0 : k.includes('게이트볼') ? 1 : k===NO_SENIOR.replace(/\s/g,'') ? 3 : 2; }
+function seniorRank(k){ k = String(k||'').replace(/\s/g,''); return k.includes('파크골프') ? -1 : k.includes('개별관리') ? 0 : k.includes('게이트볼') ? 1 : k===NO_SENIOR.replace(/\s/g,'') ? 3 : 2; }
 
 // ---------- 내 담당 읍·면 (휴대폰마다 따로 저장) ----------
 let myTowns = (() => { try { const v = JSON.parse(load('jinan_my_towns')); if (Array.isArray(v) && v.length) return v; } catch(e){} return ['동향면','상전면']; })();
@@ -2482,7 +2545,7 @@ function openGuessFix(){
           <div style="display:flex;align-items:center;gap:6px;"><span style="white-space:nowrap;"><b>${esc(g)}</b> 추정 ${groups[g].length}명 → 모두</span>
             <select class="gfx-all" data-town="${esc(tw)}" style="margin:0;padding:6px;">${opts(tw, g)}</select></div>
           ${groups[g].map(p => `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
-            <div style="flex:1;min-width:0;"><b>${esc(nm(p))}</b> <span class="muted" style="font-size:.8rem;">${esc(short(p.address))}</span></div>
+            <div style="flex:1;min-width:0;"><b>${nmH(p)}</b> <span class="muted" style="font-size:.8rem;">${esc(short(p.address))}</span></div>
             <select class="gfx-one" data-id="${p.id}" data-town="${esc(tw)}" style="margin:0;padding:6px;width:46%;">${opts(tw, p.senior)}</select></div>`).join('')}
         </div>`).join('');
     }).join('')}
@@ -2581,7 +2644,7 @@ function renderLinking(){
   if (!ps.length) return;
   document.getElementById('link-title').innerHTML = `🔗 신규 · 연계 중 <span style="color:var(--warning)">${ps.length}명</span>`;
   document.getElementById('link-list').innerHTML = ps.map(p => { const n = daysBetween(p.linking.since, today()) + 1; return `<div class="call-row" style="border-top:1px dashed #e2e8f0;">
-    <button class="who" onclick="openModal(${p.id})"><b>${esc(nm(p))}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
+    <button class="who" onclick="openModal(${p.id})"><b>${nmH(p)}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
       <span class="muted" style="font-size:.85rem;">${mdw(p.linking.since)} 등록 · 연계 ${n}일째</span><br>${telBtn(p)}</button>
     <button class="small danger" onclick="linkDone(${p.id})" style="width:auto;margin:0;padding:8px 12px;white-space:nowrap;" title="연계 끝">✕ 연계 끝</button></div>`; }).join('');
 }
@@ -2591,6 +2654,57 @@ async function linkDone(id){
   logEvent('연계 완료', p, `${p.linking.since}부터 연계 → 끝남`);
   if (p.start && !(p.startDay && p.startDay > today())) p.startDay = today();   // 연계 끝난 날부터 근무
   delete p.linking; saveData(false); renderList();
+  welcomeSms(p);
+}
+// 🎉 환영 문자: 축하 + 활동일(달력) + 주의사항. 글은 한 번 고치면 다음에도 그대로 씀 (jinan_tpl.welcome)
+const WELCOME_DEF = `[진안군노인회] 노인일자리 참여 안내
+
+{이름} 어르신, 노인일자리 참여를 진심으로 축하드립니다!
+
+▶ {월}월 활동일 ({일수}일)
+{활동일}
+
+▶ 꼭 지켜 주세요
+· 근무 시간을 꼭 지켜 주세요.
+· 근무할 때는 조끼와 명찰을 꼭 착용해 주세요. (미착용 시 각 -0.5점)
+· 근무지를 비우면(이탈) 1번에 -1점, 그날 일당이 나오지 않습니다.
+· 벌점 -1점마다 하루치 일당이 나오지 않고, 한 해 -3점이 되면 더 이상 참여할 수 없습니다.
+· 병원에 가거나 사정이 생기면 미리 팀장님과 꼭 이야기해 주세요.
+· 경로당 어르신들과 서로 인사 나누며 즐겁게 활동해 주세요.
+{팀장}
+감사합니다.`;
+let smsTpl = (() => { try { return JSON.parse(load('jinan_tpl')) || {}; } catch(e) { return {}; } })();
+function welcomeSms(p){
+  let start = p.startDay || today();
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">🎉 ${nmH(p)} 어르신 환영 문자</div>
+    <label>근무 시작 날짜</label><input type="date" id="wl-start" value="${start}" style="margin-bottom:6px;">
+    <div id="wl-days" class="chips" style="margin-bottom:8px;"></div>
+    <label>문자 글</label>
+    <textarea id="wl-text" rows="12" style="font-size:.92rem;"></textarea>
+    <div style="display:flex;gap:6px;margin:-4px 0 8px;"><button type="button" class="small secondary" id="wl-reset" style="width:auto;margin:0;">↺ 처음 글로</button><span class="muted" id="wl-saved" style="font-size:.8rem;align-self:center;"></span></div>
+    <div class="grid-2"><button class="secondary" id="wl-cancel">나중에</button><button id="wl-go">📩 문자 보내기</button></div></div>`;
+  document.body.appendChild(back);
+  const $ = q => back.querySelector(q);
+  $('#wl-text').value = smsTpl.welcome || WELCOME_DEF;
+  $('#wl-saved').textContent = smsTpl.welcome ? '✔ 저장한 글' : '';
+  const days = () => { const mk = start.slice(0,7); return personDays(p, mk, true).filter(d => d >= start); };
+  const drawDays = () => { $('#wl-days').innerHTML = days().map(d => `<span class="chip">${Number(d.slice(5,7))}/${dd(d)}</span>`).join('') || '<span class="muted">이 달 남은 활동일이 없어요.</span>'; };
+  drawDays();
+  $('#wl-start').onchange = () => { start = $('#wl-start').value || today(); drawDays(); };
+  $('#wl-reset').onclick = () => { $('#wl-text').value = WELCOME_DEF; };
+  $('#wl-cancel').onclick = () => back.remove();
+  $('#wl-go').onclick = () => {
+    const tpl = $('#wl-text').value, ds = days(), m = Number(start.slice(5,7)), L = leaderOf(p);
+    if (tpl !== (smsTpl.welcome || WELCOME_DEF)) { smsTpl.welcome = tpl; store('jinan_tpl', JSON.stringify(smsTpl)); logEvent('환영 문자 글 저장', null, '다음에도 이 글로 보냄'); }
+    if (start !== p.startDay) { p.startDay = start; p.start = start.slice(0,7); logEvent('근무 시작일', p, `${m}월 ${dd(start)}부터`, start); saveData(false); renderList(); }
+    const text = tpl.replace(/\{이름\}/g, p.name).replace(/\{월\}/g, m).replace(/\{일수\}/g, ds.length)
+      .replace(/\{활동일\}/g, ds.length ? `${m}월 ${dayList(ds)}` : '(담당자가 따로 알려 드립니다)')
+      .replace(/\{팀장\}/g, L ? `\n※ 팀장님: ${L.name} (${fmtPhone(L.num)})\n` : '');
+    back.remove();
+    smsBox({ title: '🎉 환영 문자', people: [p], text, logType: '환영 문자', logDetail: `${m}월 ${dd(start)}부터 · 활동일 ${ds.length}일` });
+  };
 }
 // ---------- 📝 활동일지 (그날 점검한 경로당별 보고용 글) ----------
 // 고쳐 쓴 글은 jinan_diary 에 저장 { '날짜|면|경로당': 글 }
@@ -2790,7 +2904,7 @@ function renderList(){
 
   // 읍·면 선택칸 (인원 표시)
   const tSel = document.getElementById('filter-town');
-  const opt = tw => { const n = participants.filter(p => p.town===tw).length; return `<option value="${tw}">${tw}${n?` (${n}명)`:''}</option>`; };
+  const opt = tw => `<option value="${tw}">${townLabel(tw)}</option>`;
   const tHtml = '<option value="전체">읍·면을 선택하세요</option>'
     + `<optgroup label="⭐ 내 담당">${TOWNS.filter(t => myTowns.includes(t)).map(opt).join('')}</optgroup>`
     + (showOthers
@@ -2803,7 +2917,7 @@ function renderList(){
 
   // 경로당 선택칸
   const sWrap = document.getElementById('senior-wrap'), sSel = document.getElementById('sel-senior');
-  sWrap.classList.toggle('hidden', all);
+  sWrap.classList.add('hidden');   // 메인 화면의 경로당 선택은 뺌 (구역·검색으로 들어감)
   if (!all) {
     const groups = {};
     inTown.forEach(p => (groups[seniorOf(p)] ||= []).push(p));
@@ -2827,7 +2941,8 @@ function renderList(){
         return `<optgroup label="🗺 ${esc(z.name)} (${ks.length}곳)">${ks.map(optOf).join('')}</optgroup>`; }).join('')
         + (rest.length ? `<optgroup label="구역에 안 넣은 경로당 (${rest.length}곳)">${rest.map(optOf).join('')}</optgroup>` : '');
     }
-    sSel.innerHTML = `<option value="">${keys.length ? `경로당을 선택하세요 (${keys.length}곳)` : '이 면에는 등록된 명단이 없어요'}</option>` + body;
+    const gk = keys.filter(k => k.includes('게이트볼')).length;
+    sSel.innerHTML = `<option value="">${keys.length ? `(경로당${keys.length - gk}/게이트볼${gk}) ${keys.length}곳` : '이 면에는 등록된 명단이 없어요'}</option>` + body;
     sSel.value = curSenior || '';
     document.getElementById('senior-tools').classList.toggle('hidden', !curSenior);
     const bb = document.getElementById('btn-best'), isB = curSenior && isBest(town, curSenior);
@@ -2843,14 +2958,14 @@ function renderList(){
   const pWrap = document.getElementById('person-wrap'), pSel = document.getElementById('sel-person');
   const members = (!all && curSenior) ? inTown.filter(p => seniorOf(p)===curSenior)
     .sort((a,b) => stats(a).dropped - stats(b).dropped || a.name.localeCompare(b.name)) : [];
-  pWrap.classList.toggle('hidden', !members.length);
+  pWrap.classList.add('hidden');
   pSel.innerHTML = `<option value="">이름을 선택하세요 (${members.length}명)</option>` + members.map(p => {
     const s = stats(p);
     let tag = '';
     if (s.dropped) tag = ` - ${s.status}`;
     else if (s.status!=='정상') tag = s.pts ? ` - ${s.penalty}점` : '';
     const chk = p.logs.some(l => l.date===t) ? ' ✔오늘 점검' : '';
-    return `<option value="${p.id}">${esc(nm(p))}${ageSex(p)?` (${esc(ageSex(p))})`:''}${p.guess?' 📍추정':''}${inHospNow(p)?' 🏥입원중':''}${p.linking?' 🔗연계중':''}${tag}${chk}</option>`;
+    return `<option value="${p.id}">${nmH(p)}${ageSex(p)?` (${esc(ageSex(p))})`:''}${p.guess?' 📍추정':''}${inHospNow(p)?' 🏥입원중':''}${p.linking?' 🔗연계중':''}${tag}${chk}</option>`;
   }).join('');
   pSel.value = '';
   document.getElementById('btn-open-site').innerHTML = members.length ? `▶ ${esc(curSenior)} 점검 화면 열기 <span style="font-weight:normal;font-size:.88rem;">(${members.filter(p => !stats(p).dropped).map(p => esc(p.name) + (p.logs.some(l => l.date===t) ? ' ✔' : '')).join(', ') || members.length + '명'})</span>` : '';
@@ -2908,8 +3023,14 @@ function parseAge(v){
 }
 const AGE_BAD = '나이를 다시 확인해 주세요.\n태어난 해(예: 1948) 또는 나이(예: 78)로 적어 주세요.';
 const ageShow = (age, birth) => birth ? `${birth} (${age}세)` : (age || '');
+// 나이 칸: 누르면 "19"가 먼저 들어가 있어서 태어난 해 뒤 두 자리만 치면 됨 (1948)
+document.addEventListener('focusin', e => {
+  if (!e.target.classList?.contains('age-in') || e.target.value) return;
+  e.target.value = '19'; setTimeout(() => { try { e.target.setSelectionRange(2, 2); } catch(x) {} }, 0);
+});
 document.addEventListener('focusout', e => {
   if (!e.target.classList?.contains('age-in')) return;
+  if (e.target.value.trim() === '19') { e.target.value = ''; return; }
   const r = parseAge(e.target.value); if (r.birth) e.target.value = ageShow(r.age, r.birth); else if (r.bad) notify(AGE_BAD);
 });
 // ---------- 11개 읍·면 경로당 목록 (2026년 경로당지킴이 참여 현황·노인체육시설 기준) ----------
@@ -2918,12 +3039,22 @@ const KNOWN_SENIORS = {"진안읍":["개실(개곡)","검북","고향마을@","�
 const seniorParts = k => k.split(/[()\s]+/).map(x => x.trim()).filter(Boolean);
 // 한쪽 이름 조각이 다른 쪽에 모두 들어 있으면 같은 경로당 (예: "수월" = "수월(새울)")
 const sameSenior = (a, b) => { if (a.includes('경모정') !== b.includes('경모정')) return false; const A = seniorParts(a), B = seniorParts(b); return A.every(x => B.includes(x)) || B.every(x => A.includes(x)); };
+// 명단에 없는 경로당(직접 적어 넣은 곳): jinan_xsites { 면: [이름] }
+let xSites = (() => { try { return JSON.parse(load('jinan_xsites')) || {}; } catch(e) { return {}; } })();
+const saveXSites = () => store('jinan_xsites', JSON.stringify(xSites));
 function sitesOf(town){
-  const have = [...new Set(participants.filter(p => p.town===town && p.senior).map(p => p.senior))];
+  const have = [...new Set([...participants.filter(p => p.town===town && p.senior).map(p => p.senior), ...(xSites[town] || [])])];
   // 모든 읍·면에 "개별관리"가 맨 위에 오도록 늘 넣어 둠
   ['개별관리', ...(KNOWN_SENIORS[town] || [])].forEach(k => { if (!have.some(e => sameSenior(e, k))) have.push(k); });
   return have.sort((a,b) => seniorRank(a)-seniorRank(b) || a.localeCompare(b));
 }
+// 면별 인원·경로당 수 (중도포기 빼고) — 게이트볼은 따로
+function townCount(t){
+  const ps = participants.filter(p => p.town === t && !stats(p).dropped), g = ps.filter(isGate).length;
+  const sites = [...new Set(ps.map(seniorOf))].filter(k => k !== '개별관리' && k !== NO_SENIOR), gs = sites.filter(k => k.includes('게이트볼')).length;
+  return { act: ps.length - g, gate: g, all: ps.length, site: sites.length - gs, gsite: gs };
+}
+const townLabel = t => { const c = townCount(t); return `${t}(활동${c.act}/게이트볼${c.gate}) ${c.all}명`; };
 // 경로당 이름: "지사"만 적어도 됨. 끝의 "경로당"은 떼고, 그 면에 있는 경로당 이름과 맞으면 그 이름으로
 function normSenior(town, v){
   let t = String(v||'').trim().replace(/\s*경로당$/, '').trim();
@@ -3075,7 +3206,7 @@ function openBulkGuide(){
       · <b>성명</b>은 꼭 · 나머지는 아는 것만<br>· 나이 칸에 <b>1948</b>처럼 태어난 해를 적어도 돼요<br>· 업무시스템에서 받은 명단 파일도 그대로 올릴 수 있어요</div>
     <button type="button" class="secondary full" id="bk-tpl">⬇️ <b>양식 내려받기</b><br><span style="font-size:.85rem;">엑셀 파일이 없으면 이 양식을 받아서 작성해 올려 주세요</span></button>
     <label style="margin-top:10px;">어떻게 올릴까요?</label>
-    <button type="button" class="full" id="bk-full" style="text-align:left;">📋 <b>전체 명단 올리기</b><br><span style="font-size:.85rem;font-weight:normal;">새로 오신 분은 넣고, 바뀐 정보는 고치고, 명단에 없는 분은 뺄지 물어봐요</span></button>
+    <button type="button" class="full" id="bk-full" style="text-align:left;">📋 <b>올해 명단으로 정리</b><br><span style="font-size:.85rem;font-weight:normal;">겹치는 분은 건강·정보 그대로 · 새로 오신 분은 넣고 · 올해 명단에 없는 분은 뺌</span></button>
     <button type="button" class="warning full" id="bk-fill" style="text-align:left;">✏️ <b>추가 정보만 넣기</b><br><span style="font-size:.85rem;font-weight:normal;">이미 있는 분의 정보만 채워요 (예: 이름+경로당만 있는 파일). 새 사람 추가·빼기 없음</span></button>
     <button type="button" class="secondary full" id="bk-close">닫기</button></div>`;
   document.body.appendChild(bg);
@@ -3489,7 +3620,7 @@ function openGroupSms(){
     cur.main = main;
     bg.querySelector('#gs-groups').classList.add('hidden'); bg.querySelector('#gs-body').classList.remove('hidden');
     bg.querySelector('#gs-who').innerHTML = `📩 ${esc(g.label)} · 받는 분 <span style="color:var(--primary)">${main.length}명</span>`
-      + (noTel.length ? `<div class="muted" style="font-weight:normal;font-size:.85rem;">연락처 없는 분 ${noTel.length}명: ${noTel.map(p => esc(nm(p))).join(', ')}</div>` : '');
+      + (noTel.length ? `<div class="muted" style="font-weight:normal;font-size:.85rem;">연락처 없는 분 ${noTel.length}명: ${noTel.map(p => nmH(p)).join(', ')}</div>` : '');
     ta.value = workdayText(mk, days, g.whoText || (g.key === '게이트볼' ? '게이트볼장 관리도우미 어르신' : `${g.label} 경로당지킴이 어르신`), eduAll[mk] || []);
     bg.querySelector('#gs-edu').classList.toggle('hidden', g.key !== 'leaders');
     if (g.key === 'leaders' && leaderPlan[mk]) ta.value = leaderText();
@@ -3578,6 +3709,24 @@ const leaderOf = p => {
   const num = String((L && L.phone) || z.phone || '').replace(/[^0-9]/g,'');
   return num ? { name: L ? L.name : z.name, num } : null;
 };
+// 점검 화면에서 구역(팀장) 이름을 누르면: 팀장 전화 · 문자 · 구역 보기
+function leaderMenu(p){
+  const z = p && zoneOf(p); if (!z) return;
+  const L = leaderOf(p), bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = `<div class="dlg" style="max-width:340px;">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:10px;">👤 ${esc(L ? L.name + ' 팀장' : z.name)}${L ? ` <span class="muted" style="font-weight:normal;font-size:.9rem;">${esc(fmtPhone(L.num))}</span>` : ''}</div>
+    ${L ? `<a class="tel-link" href="tel:${L.num}" id="lm-call" style="display:block;text-align:center;font-size:1.1rem;padding:12px;margin-bottom:8px;">📞 전화 걸기</a>
+    <button type="button" class="full" id="lm-sms" style="margin:0 0 8px;">💬 문자 보내기</button>` : '<div class="muted" style="margin-bottom:8px;">팀장 연락처가 없어요.</div>'}
+    <button type="button" class="secondary full" id="lm-zone" style="margin:0 0 8px;">🗺 ${esc(z.name)} 구역 보기</button>
+    <button type="button" class="secondary full" id="lm-close" style="margin:0;">닫기</button></div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('#lm-close').onclick = () => bg.remove();
+  bg.querySelector('#lm-zone').onclick = () => { bg.remove(); openZone(z.id); };
+  bg.querySelector('#lm-call')?.addEventListener('click', () => { logEvent('팀장 전화', p, `${L.name} 팀장 (${p.name} 어르신 점검 중)`); });
+  bg.querySelector('#lm-sms')?.addEventListener('click', () => { bg.remove();
+    logEvent('팀장 문자', p, `${L.name} 팀장 (${p.name} 어르신 점검 중)`);
+    openSmsApp([L.num], `[진안군노인회] ${L.name} 팀장님, ${p.name} 어르신(${seniorOf(p)}) 관련 연락드립니다.\n`); });
+}
 function smsBox({ title, people, text, logType, logDetail, free }){
   return new Promise(resolve => {
     const recips = people.filter(p => telOf(p)).map(p => ({ key: 'p'+p.id, label: `${p.name} 어르신`, num: telOf(p), p }));
@@ -3680,10 +3829,10 @@ function openModal(id){
   // 전화번호를 누르면 바로 전화 걸기
   const tel = String(p.phone||'').replace(/[^0-9+]/g,'');
   // 동네(면)와 경로당 이름을 크게
-  document.getElementById('modal-sub').innerHTML = `<span class="place">📍 <b>${esc(p.town)}</b> · <b>${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</b>${mapOf(p.town, seniorOf(p)) ? ` <a class="tel-link" href="#" onclick="openSiteMap('${esc(p.town)}', this.dataset.s);return false;" data-s="${esc(seniorOf(p))}">🗺️ 위치</a>` : ''}</span>${zoneOf(p) ? `<span class="zone" onclick="openZone(${zoneOf(p).id})" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px;">🗺 ${esc(zoneOf(p).name)}${zoneOf(p).leaderId === p.id ? ' · 👤 팀장' : ''} ›</span>` : ''}` +
+  document.getElementById('modal-sub').innerHTML = `<span class="place">📍 <b>${esc(p.town)}</b> · <b>${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</b>${mapOf(p.town, seniorOf(p)) ? ` <a class="tel-link" href="#" onclick="openSiteMap('${esc(p.town)}', this.dataset.s);return false;" data-s="${esc(seniorOf(p))}">🗺️ 위치</a>` : ''}</span>${zoneOf(p) ? `<span class="zone" onclick="leaderMenu(current())" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px;">🗺 ${esc(zoneOf(p).name)}${zoneOf(p).leaderId === p.id ? ' · 👤 팀장' : ''} ›</span>` : ''}` +
     (p.phone ? `<span class="tel-row">${tel ? `<a class="tel-link" href="tel:${tel}">📞 ${esc(p.phone)}</a>` : esc(p.phone)}</span>` : '');
   document.getElementById('c-memo').value = '';
-  document.getElementById('memo-label').innerHTML = `점검 메모 · <b style="color:#1a365d;">${esc(nm(p))}</b> 어르신 <span class="muted" style="font-weight:normal;">(${esc(p.town)} ${esc(seniorOf(p))})</span>`;
+  document.getElementById('memo-label').innerHTML = `점검 메모 · <b style="color:#1a365d;">${nmH(p)}</b> 어르신 <span class="muted" style="font-weight:normal;">(${esc(p.town)} ${esc(seniorOf(p))})</span>`;
   renderModal();
   document.getElementById('modal').classList.remove('hidden');
   window.scrollTo(0,0);
@@ -3696,7 +3845,7 @@ function renderMates(p){
   const ms = matesOf(p), d = document.getElementById('c-date').value || today();
   if (ms.length < 2) { box.innerHTML = ''; return; }
   box.innerHTML = `<div class="mt-wrap"><div class="mt-lbl">👥 ${esc(seniorOf(p))} 같이 근무 ${ms.filter(q => !stats(q).dropped).length}명</div>${ms.map(q => { const done = q.logs.some(l => l.date===d), gone = stats(q).dropped;
-    return `<button type="button" class="${q.id===p.id?'on':''} ${done?'done':''} ${gone?'quit':''}" data-mate="${q.id}">${done && !gone?'✔ ':''}<span class="nm">${esc(nm(q))}</span><small>${gone ? '중도포기' : q.id===p.id ? '지금 점검 중' : done ? `${md(d)} 점검함` : '아직 안 함'}</small></button>`; }).join('')}</div>`;
+    return `<button type="button" class="${q.id===p.id?'on':''} ${done?'done':''} ${gone?'quit':''}" data-mate="${q.id}">${done && !gone?'✔ ':''}<span class="nm">${nmH(q)}</span><small>${gone ? '중도포기' : q.id===p.id ? '지금 점검 중' : done ? `${md(d)} 점검함` : '아직 안 함'}</small></button>`; }).join('')}</div>`;
   box.querySelectorAll('[data-mate]').forEach(b => b.onclick = () => switchMate(Number(b.dataset.mate)));
 }
 async function switchMate(id){
@@ -3714,8 +3863,8 @@ function renderModal(){
   renderExPanel(p);
   if (document.getElementById('c-date').value) setCheckDate(document.getElementById('c-date').value);
   // 이름을 누르면 기본 정보·건강 정보 창
-  document.getElementById('modal-title').innerHTML = `<b class="name-tap" onclick="openInfo()">${esc(nm(p))}${p.health && (p.health.conds?.length || p.health.memo) ? '<span class="hl-dot">🩺</span>' : ''}${photoOf(p) ? '<span class="hl-dot">📷</span>' : ''}</b>` +
-    ` <span class="badge" style="background:var(--tint);color:var(--primary);vertical-align:6px;font-size:.85rem;">${curMonth}월 근무 ${personDays(p, monthKey()).length}일</span>` +
+  document.getElementById('modal-title').innerHTML = `<b class="name-tap" onclick="openInfo()">${nmH(p)}${p.health && (p.health.conds?.length || p.health.memo) ? '<span class="hl-dot">🩺</span>' : ''}${photoOf(p) ? '<span class="hl-dot">📷</span>' : ''}</b>` +
+    ` <span class="badge" style="background:var(--tint);color:var(--primary);vertical-align:6px;font-size:.85rem;">${curMonth}월 근무 ${personDays(p, monthKey()).length - unpaidDaysOf(p, monthKey()).size}일</span>` +
     ` <button type="button" class="small warning" onclick="addChange()" style="width:auto;margin:0;padding:4px 10px;vertical-align:6px;font-size:.85rem;">🔄 근무일 변경</button>` +
     (inHospNow(p) ? ` <span class="badge bg-hosp" style="vertical-align:6px;font-size:.85rem;cursor:pointer;" onclick="openCustom()">🏥 현재 입원중</span>` : '');
   // 올해 감점이 있을 때만 짧게 표시 (누르면 이유)
@@ -3728,8 +3877,9 @@ function renderModal(){
   document.getElementById('modal-notice').innerHTML = n;
   document.getElementById('check-section').classList.toggle('hidden', s.dropped && !editingLogId);
 
-  const logs = [...p.logs].sort((a,b) => b.date.localeCompare(a.date));
-  document.getElementById('log-title').textContent = `📋 지금까지 점검 기록${logs.length ? ` ${logs.length}건` : ''}`;
+  // 점검 기록은 벌점·경고가 있는 것만 (활동일지에는 모두 나옴)
+  const logs = [...p.logs].filter(l => logPts(l) > 0 || l.attitude === '불량' || Object.values(l.ex || {}).some(x => x.bad)).sort((a,b) => b.date.localeCompare(a.date));
+  document.getElementById('log-title').textContent = `📋 벌점·경고 기록${logs.length ? ` ${logs.length}건` : ''}`;
   document.getElementById('log-list').innerHTML = logs.length ? logs.map(l => {
     const pt = logPts(l), up = pt ? unpaidOf(p, l) : 0;
     const cls = l.leave==='이탈' ? 'bad' : pt ? 'warn' : l.attitude==='불량' ? 'warn' : 'ok';
@@ -3738,7 +3888,7 @@ function renderModal(){
       ${pt ? `<br><b style="color:var(--danger)">감점 -${pt}점</b> <span style="font-size:.88rem;">(${logItems(l).map(x => x.replace(/ -[\d.]+점$/, '')).join(' · ')})</span>${up ? ` · <b style="color:var(--danger)">일당 미지급${up > 1 ? ` ${up}일분` : ''}</b>` : ''}` : ''}
       ${l.memo?`<br>📝 ${esc(l.memo)}`:''}
       <br>${pt?`<button class="small" onclick="smsForLog(${l.id})">📩 안내 문자</button> `:''}<button class="small warning" onclick="editLog(${l.id})">✏️ 수정</button> <button class="small" onclick="changeLogDate(${l.id})">📅 날짜 바꾸기</button> <button class="small secondary" onclick="deleteLog(${l.id})">이 기록 지우기</button></div>`;
-  }).join('') : '<p class="muted">아직 점검 기록이 없습니다.</p>';
+  }).join('') : '<p class="muted">벌점·경고 기록이 없어요.</p>';
 }
 
 // ---------- 📷 어르신 사진 (이름을 누르면 크게, 이 휴대폰 IndexedDB에만 저장 · 백업 파일에는 같이 들어감) ----------
@@ -3787,7 +3937,7 @@ function photoFull(p){
   const ph = photoOf(p); if (!ph) return;
   const v = document.createElement('div'); v.className = 'no-invert';
   v.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;';
-  v.innerHTML = `<img src="${ph}" alt="" style="max-width:100vw;max-height:88vh;object-fit:contain;"><div style="color:#fff;font-size:1.3rem;font-weight:bold;margin-top:10px;">${esc(nm(p))} 어르신</div><div style="color:#a0aec0;font-size:.85rem;">누르면 닫혀요</div>`;
+  v.innerHTML = `<img src="${ph}" alt="" style="max-width:100vw;max-height:88vh;object-fit:contain;"><div style="color:#fff;font-size:1.3rem;font-weight:bold;margin-top:10px;">${nmH(p)} 어르신</div><div style="color:#a0aec0;font-size:.85rem;">누르면 닫혀요</div>`;
   v.onclick = () => v.remove(); document.body.appendChild(v);
 }
 // 통계·감점 목록에서 어르신을 열었으면, 닫을 때 그 목록으로 돌아감
@@ -3845,7 +3995,7 @@ function voiceCheck(){
   const p = current(); if (!p) return;
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🎤 말로 점검 · ${esc(nm(p))} 어르신</div>
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🎤 말로 점검 · ${nmH(p)} 어르신</div>
     <button type="button" class="full" id="vc-mic">🎤 눌러서 말하기</button>
     <div class="muted" id="vc-msg" style="font-size:.85rem;margin:4px 0;"></div>
     <textarea id="vc-text" rows="3" placeholder="여기에 들은 내용이 나와요 (직접 고쳐도 돼요)" style="width:100%;"></textarea>
@@ -4153,7 +4303,12 @@ async function renderBackup(){
 }
 // 앱을 열 때: 기록이 비어 있는데 이 휴대폰에 백업이 남아 있으면 복원할지 물어봄
 async function checkRestore(){
-  if (participants.length) { snapSave(); return; }   // 하루 한 번 자동으로 이 휴대폰 안에 백업
+  if (participants.length) { snapSave();   // 하루 한 번 자동으로 이 휴대폰 안에 백업
+    // 하루에 한 번: 백업 파일도 저장할지 물어봄 (휴대폰이 바뀌어도 되살릴 수 있게)
+    const last = load('jinan_last_backup') || '';
+    if (load('jinan_bk_ask') !== today() && !last.startsWith(today())) { store('jinan_bk_ask', today());
+      setTimeout(async () => { if (await showDialog(`💾 오늘 백업 파일을 저장할까요?\n(어르신 ${participants.length}명 · 마지막 저장 ${last || '없음'})`, true, ['저장하기', '나중에'])) saveBackup(); }, 1200); }
+    return; }
   const sn = await snapLatest(); if (!sn) return;
   if (await ask(`📱 이 휴대폰에 백업 자료가 남아 있어요.\n${sn.at} 백업 · 어르신 ${sn.count}명\n\n복원시켜 드릴까요?`)) restoreFrom(sn);
 }
@@ -4237,16 +4392,29 @@ function shortData(){
 const shortMonths = r => r.byM.map(x => `${x.m}월 ${x.got}일(-${x.lack})`).join(', ');
 function showShort(){
   const { d, rows } = shortData(), tot = rows.reduce((n, r) => n + r.lack, 0);
+  // 기간 통계와 같은 모양: 달별 표 + 면별 칸(누르면 그 면 명단)
+  const months = d.mks.map(mk => { const m = Number(mk.slice(5)); const rs = rows.filter(r => r.byM.some(x => x.m === m));
+    return { m, n: rs.length, lack: rs.reduce((k, r) => k + (r.byM.find(x => x.m === m)?.lack || 0), 0) }; });
+  const towns = TOWNS.filter(t => rows.some(r => r.p.town === t));
+  const COL = ['#b7791f', '#2b6cb0', '#2f855a', '#805ad5', '#c53030', '#dd6b20'];
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg" style="max-width:560px;">
-    <div style="font-weight:bold;font-size:1.1rem;">📉 ${d.y}년 근무 미달 인원 <span style="color:#b7791f;">${rows.length}명</span></div>
-    <div class="muted" style="font-size:.84rem;margin:2px 0 8px;">1월 1일 ~ ${SHORT_TO}월 30일${rows.length ? ` · 모자란 날 합계 <b>${tot}일</b>` : ''}</div>
-    ${rows.length ? rows.map((r, i) => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#fffff0;border-left-color:#d69e2e;margin-top:4px;">
-      <b>${i + 1}. ${esc(nm(r.p))}</b> <span class="muted">🏠 ${esc(r.p.town)} · ${esc(seniorOf(r.p))}</span> <b style="color:var(--danger);">${r.lack}일 모자람</b><br>
-      <span style="font-size:.86rem;">인정 ${r.paid}일 / 필요 ${r.need}일${r.unpaid ? ` (일당 미지급 ${r.unpaid}일)` : ''}${r.byM.length ? ` · ${shortMonths(r)}` : ''}</span> <span class="arrow">›</span></button>`).join('')
-      : '<div class="pen-none">✔ 근무일이 모자란 어르신이 없어요</div>'}
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:2px;">📉 ${d.y}년 1월~${SHORT_TO}월 근무 미달</div>
+    <div class="muted" style="font-size:.85rem;margin-bottom:6px;">대상: ${esc(d.towns.join('·'))} · 미달 ${rows.length}명 · 모자란 날 ${tot}일</div>
+    <table class="st-tbl"><tr><th>달</th><th>미달 인원</th><th>모자란 날</th></tr>
+      ${months.map(x => `<tr><td>${x.m}월</td><td style="color:${x.n ? 'var(--danger)' : 'inherit'}">${x.n}</td><td>${x.lack ? '-' + x.lack + '일' : 0}</td></tr>`).join('')}
+      <tr style="font-weight:bold;background:#f7fafc;"><td>합계</td><td style="color:var(--danger)">${rows.length}명</td><td>-${tot}일</td></tr></table>
+    ${towns.length ? `<div class="close-sum" style="grid-template-columns:repeat(${Math.min(towns.length, 4)},1fr);margin:8px 0;">${towns.map((t, i) => { const rs = rows.filter(r => r.p.town === t);
+      return `<button type="button" data-go="${i}" style="background:#fffff0;border:1px solid ${COL[i % 6]}33;border-radius:8px;padding:8px 2px;font-size:.8rem;color:#2d3748;"><b style="display:block;font-size:1.25rem;color:${COL[i % 6]}">${rs.length}명</b>📍 ${esc(t)}<br>-${rs.reduce((k, r) => k + r.lack, 0)}일</button>`; }).join('')}</div>` : '<div class="pen-none">✔ 근무일이 모자란 어르신이 없어요</div>'}
+    ${towns.map((t, i) => { const rs = rows.filter(r => r.p.town === t);
+      return `<div id="sh-g${i}" class="sg-list hidden" style="margin-top:6px;"><div style="font-weight:bold;padding:6px 8px;border-radius:8px;background:#fffff0;color:${COL[i % 6]};border-left:4px solid ${COL[i % 6]};">📍 ${esc(t)} <span style="color:#2d3748;">${rs.length}명 · -${rs.reduce((k, r) => k + r.lack, 0)}일</span></div>
+      ${rs.map((r, k) => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#fff;border-left-color:${COL[i % 6]};margin-top:4px;">
+        <b>${k + 1}. ${nmH(r.p)}</b> <span class="muted">🏠 ${esc(seniorOf(r.p))}</span><br>
+        <span style="font-size:.88rem;"><b style="color:var(--danger)">${r.lack}일 모자람</b> · 인정 ${r.paid}일 / 필요 ${r.need}일${r.byM.length ? ` · ${shortMonths(r)}` : ''}</span> <span class="arrow">›</span></button>`).join('')}</div>`; }).join('')}
     <div class="grid-2" style="margin-top:10px;"><button class="secondary" id="sh-close">닫기</button><button id="sh-xls">엑셀로 내려받기</button></div></div>`;
   document.body.appendChild(back);
+  back.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const el = back.querySelector('#sh-g' + b.dataset.go), show = el.classList.contains('hidden');
+    back.querySelectorAll('.sg-list').forEach(x => x.classList.add('hidden')); el.classList.toggle('hidden', !show); if (show) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
   back.querySelector('#sh-close').onclick = () => back.remove();
   back.querySelector('#sh-xls').onclick = () => exportShort();
   back.querySelectorAll('[data-id]').forEach(b => b.onclick = () => { back.remove(); openModal(Number(b.dataset.id)); });
@@ -4282,13 +4450,13 @@ function showStats(openGroup){
     <div class="muted" id="sg-hint" style="font-size:.85rem;text-align:center;margin:-2px 0 6px;display:none;"></div>
     ${gs.map(g => `<div id="sg-${g.key}" class="sg-list hidden" style="margin-top:6px;"><div style="font-weight:bold;padding:6px 8px;border-radius:8px;background:${g.bg};color:${g.color};border-left:4px solid ${g.color};">${g.icon} ${g.title} <span style="color:#2d3748;">${g.ps.length}명 · ${g.ps.reduce((n, r) => n + g.cnt(r), 0)}회</span> <span class="muted" style="font-weight:normal;font-size:.8rem;">(${g.note})</span></div>
       ${g.ps.length ? g.ps.map((r, i) => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#fff;border-left-color:${g.color};margin-top:4px;">
-        <b>${i+1}. ${esc(nm(r.p))}</b> <span class="muted">🏠 ${esc(r.p.town)} · ${esc(seniorOf(r.p))}</span><br>
+        <b>${i+1}. ${nmH(r.p)}</b> <span class="muted">🏠 ${esc(r.p.town)} · ${esc(seniorOf(r.p))}</span><br>
         <span style="font-size:.88rem;"><b style="color:${g.color}">${g.txt(r)}</b>${g.key === 'leave' && r.unpaid ? ` · 일당 미지급 ${r.unpaid}일` : ''}${r.pts ? ` · 누적 벌점 -${r.pts}점` : ''}</span> <span class="arrow">›</span></button>`).join('') : '<div class="muted" style="padding:6px 8px;font-size:.88rem;">없어요 👍</div>'}</div>`).join('')}
-    ${few.length ? `<div style="font-weight:bold;margin:10px 0 4px;">🟨 근무일 적은 어르신 ${few.length}명</div>` + few.map(r => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#${FILL.few};border-left-color:#ecc94b;"><b>${esc(nm(r.p))}</b> <span class="muted">🏠 ${esc(r.p.town)} · ${esc(seniorOf(r.p))}</span><br><span style="font-size:.88rem;">활동일 ${r.days}일 · 인정 ${r.paid}일</span> <span class="arrow">›</span></button>`).join('') : ''}
+    ${few.length ? `<div style="font-weight:bold;margin:10px 0 4px;">🟨 근무일 적은 어르신 ${few.length}명</div>` + few.map(r => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#${FILL.few};border-left-color:#ecc94b;"><b>${nmH(r.p)}</b> <span class="muted">🏠 ${esc(r.p.town)} · ${esc(seniorOf(r.p))}</span><br><span style="font-size:.88rem;">활동일 ${r.days}일 · 인정 ${r.paid}일</span> <span class="arrow">›</span></button>`).join('') : ''}
     <div style="margin-top:14px;padding:10px;border:2px solid #805ad5;border-radius:10px;background:#faf5ff;">
       <div style="font-weight:bold;color:#553c9a;">📋 ${exYear()}년 재참여 심사 대상 ${rv.length}명</div>
       ${rv.length ? rv.map((r, i) => `<div class="pen-row" style="background:#fff;border-left-color:#805ad5;margin-top:4px;cursor:default;">
-        <b>${i+1}. ${esc(nm(r.p))}</b> <span class="muted">🏠 ${esc(r.p.town)} · ${esc(seniorOf(r.p))}</span> <b style="color:#553c9a;">검토 ${r.rv}점</b>${exOf(r.p) ? ' <span class="badge bg-danger">제외 지정됨</span>' : ''}
+        <b>${i+1}. ${nmH(r.p)}</b> <span class="muted">🏠 ${esc(r.p.town)} · ${esc(seniorOf(r.p))}</span> <b style="color:#553c9a;">검토 ${r.rv}점</b>${exOf(r.p) ? ' <span class="badge bg-danger">제외 지정됨</span>' : ''}
         <div style="font-size:.86rem;margin:4px 0;">${esc(reviewText(r, d))}</div>
         <button type="button" class="small secondary" data-rvopen="${r.p.id}" style="width:auto;margin:0;">어르신 화면</button>
         ${exOf(r.p) ? '' : `<button type="button" class="small" data-rvex="${r.p.id}" style="width:auto;margin:0;background:#805ad5;">🚫 ${exYear()}년 참여 제외로 지정</button>`}</div>`).join('')
