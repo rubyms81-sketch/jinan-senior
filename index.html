@@ -32,7 +32,7 @@
   .ui-opts button.on { background:var(--tint); border-color:var(--primary); color:var(--primary-dk); font-weight:bold; }
   body { font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); margin:0; color:#2d3748; font-size:1rem; -webkit-text-size-adjust:100%; }
   header { background:var(--primary); color:#fff; padding:14px; text-align:center; font-size:1.15rem; font-weight:bold; position:sticky; top:0; z-index:10; }
-  .container { padding:12px; max-width:600px; margin:0 auto; }
+  .container { padding:12px; max-width:none; width:100%; margin:0 auto; box-sizing:border-box; }   /* 휴대폰·아이패드 화면에 꽉 차게 */
   .card { background:#fff; padding:14px; border-radius:10px; box-shadow:0 2px 4px rgba(0,0,0,.08); margin-bottom:12px; }
   h3 { margin:0 0 10px; font-size:1.05rem; }
   h4 { margin:14px 0 6px; }
@@ -53,7 +53,8 @@
   .summary div { background:#edf2f7; border-radius:6px; padding:6px 2px; font-size:.8rem; }
   .summary b { display:block; font-size:1.1rem; }
   .modal { position:fixed; inset:0; z-index:1000; overflow-y:auto; background:#fff; padding:16px; }
-  .modal-inner { max-width:600px; margin:0 auto; padding-bottom:40px; }
+  .modal-inner { max-width:none; width:100%; margin:0 auto; padding-bottom:40px; box-sizing:border-box; }
+  @media (min-width:700px) { .dlg { max-width:680px !important; } .zone-grid { grid-template-columns:repeat(3,1fr) !important; } }
   .log { background:#f7fafc; border-left:4px solid var(--gray); padding:8px 10px; margin:6px 0; border-radius:4px; font-size:.88rem; }
   .log.bad { border-left-color:var(--danger); } .log.warn { border-left-color:var(--warning); } .log.ok { border-left-color:var(--success); }
   .notice { background:#fffaf0; border:1px solid #fbd38d; padding:10px; border-radius:6px; font-size:.9rem; margin-bottom:10px; }
@@ -200,6 +201,8 @@
   .m-head { display:flex; gap:10px; align-items:flex-start; }
   .m-sub .tel-row { display:block; margin-top:4px; }
   .chip.pen { background:#fff5f5 !important; color:#c53030 !important; border:2px solid #fc8181 !important; text-decoration:line-through; font-weight:bold; }
+  .pick2.writer { background:#c53030 !important; color:#fff !important; border-color:#9b2c2c !important; }
+  .tr-writer { color:#c53030; }
   .tag-new { display:inline-block; background:#fefcbf; color:#975a16; border:1px solid #f6e05e; border-radius:6px; font-size:.72em; font-weight:bold; padding:0 5px; margin-left:3px; vertical-align:2px; }
   .tag-pen { display:inline-block; background:#fff5f5; color:#c53030; border:1px solid #feb2b2; border-radius:6px; font-size:.72em; font-weight:bold; padding:0 5px; margin-left:3px; vertical-align:2px; }
   .quit-stamp { display:inline-block; color:#c53030; border:5px double #c53030; border-radius:8px; padding:2px 18px; font-size:2rem; font-weight:900; letter-spacing:.25em; transform:rotate(-7deg); background:rgba(255,245,245,.7); text-shadow:0 0 1px #c53030; }
@@ -291,14 +294,16 @@
     </details>
   </div>
   <div class="card">
-    <div class="wd-head"><h3 id="wd-title"></h3><span style="display:flex;gap:4px;"><button class="small secondary" id="wd-lock" onclick="toggleWdLock()" style="width:auto;margin:0;padding:6px 10px;"></button><button class="small secondary" onclick="openWorkdays()" style="white-space:nowrap;">날짜 정하기</button></span></div>
+    <div class="wd-head"><h3 id="wd-title"></h3><span style="display:flex;gap:4px;"><span id="wd-lock" style="align-self:center;"></span><button class="small secondary" onclick="openWorkdays()" style="white-space:nowrap;">날짜 정하기</button></span></div>
     <div id="wd-chips" class="chips"></div>
     <div id="wd-note" class="muted hidden"></div>
   </div>
   <div class="card" id="zone-card" style="padding:12px 14px;">
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><div style="flex:1;font-weight:bold;">🗺 구역</div>
       <button type="button" class="small secondary" id="zone-minus" onclick="zoneCount(-1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">－</button><b id="zone-n" style="min-width:2.2em;text-align:center;"></b><button type="button" class="small" id="zone-plus" onclick="zoneCount(1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">＋</button></div>
-    <div id="zone-sum" style="font-size:.85rem;margin:-2px 0 8px;"></div>
+    <div id="zone-sum" style="font-size:.85rem;margin:-2px 0 4px;"></div>
+    <details class="chg-box" id="zone-all" style="margin:0 0 6px;border-top:none;padding-top:0;"><summary><span class="muted" style="font-size:.85rem;">🗺 11개 읍·면 전체</span><span class="chg-arrow" style="width:26px;height:26px;"></span></summary><div id="zone-all-list" style="font-size:.82rem;"></div></details>
+    <div id="zone-lead" style="font-size:.85rem;margin:0 0 8px;padding:6px 8px;background:#f0fff4;border-radius:8px;"></div>
     <div class="zone-grid" id="zone-btns"></div>
   </div>
 
@@ -367,6 +372,7 @@
       </div>
     </details>
     <input type="file" id="addr-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="sr-only" onchange="addrImport(this)">
+    <input type="file" id="lead-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="sr-only" onchange="leaderImport(this)">
     <input type="file" id="bulk-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="sr-only" onchange="bulkImport(this)">
   </div>
 
@@ -439,7 +445,7 @@
   </div>
 </div>
 
-<footer style="max-width:600px;margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-2</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-3</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -602,6 +608,15 @@ function showDialog(msg, withCancel, labels){
   });
 }
 function notify(msg){ return showDialog(msg, false); }
+// 모든 창: 창 바깥(어두운 곳)을 누르면 닫힘 — 취소·닫기 단추가 있으면 그걸 누른 것과 같게
+document.addEventListener('pointerdown', e => { window._bgDown = e.target.classList?.contains('dlg-back') ? e.target : null; }, true);
+document.addEventListener('click', e => {
+  const bk = e.target; if (!bk.classList?.contains('dlg-back') || window._bgDown !== bk) return;
+  const bs = [...bk.querySelectorAll('.dlg button')];
+  const btn = bk.querySelector('.dlg button[data-v="0"]') || bs.reverse().find(b => /^(취소|닫기|나중에|◀ 돌아가기)$/.test(b.textContent.trim()))
+    || (bs.length === 1 && bs[0].dataset.v === '1' ? bs[0] : null);
+  if (btn) btn.click(); else bk.remove();
+});
 function ask(msg){ return showDialog(msg, true); }
 
 // 한국 시간 기준 오늘 날짜
@@ -1036,7 +1051,8 @@ function renderWork(){
 
 // 활동일 정하기 (달력)
 // 📅 달력 편집 (활동일 정하기 · 팀장님 일정 같이 씀): 근무일 + 교육(여러 개, 이름별)
-function schedEditor({ title, mk, days, edu, note, onSave, nav }){
+function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable }){
+  let locked = !!(lockable && wdLock[mk]);
   const y = Number(mk.slice(0,4)), m = Number(mk.slice(5,7)), last = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
   let sel = new Set(days), ed = new Map((edu || []).map(e => [e.date, e.name])), curEdu = '';   // '' = 근무일, 이름 = 그 교육·행사
   const snap = () => [...sel].sort().join() + '|' + [...ed].sort().join();
@@ -1054,7 +1070,7 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav }){
     <div class="cal" id="sc-cal"></div>
     <div style="text-align:center;margin-bottom:6px;">총 근무 <b id="sc-t"></b>일 / ${WORK_TARGET}일 <span class="muted">(근무 <span id="sc-n"></span>일 + 교육·행사 <span id="sc-e"></span>일)</span></div>
     <div id="sc-list" style="margin-bottom:8px;"></div>
-    <div class="grid-2"><button class="secondary" id="sc-clear">모두 지우기</button><button class="warning" id="sc-auto">월·수·금 자동</button></div>
+    <div class="grid-2">${lockable ? '<button id="sc-lock"></button>' : '<button class="secondary" id="sc-clear">모두 지우기</button>'}<button class="warning" id="sc-auto">월·수·금 자동</button></div>
     <div class="grid-2"><button class="secondary" id="sc-cancel">취소</button><button id="sc-save">저장</button></div></div>`;
   document.body.appendChild(back);
   const $ = q => back.querySelector(q);
@@ -1079,7 +1095,11 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav }){
       <button type="button" class="small secondary" data-ren="${esc(n)}" style="width:auto;margin:0;padding:2px 8px;">이름</button><button type="button" class="small secondary" data-delname="${esc(n)}" style="width:auto;margin:0;padding:2px 8px;">✕</button></div>`).join('') : '';
     back.querySelectorAll('[data-ren]').forEach(b => b.onclick = () => { const o = b.dataset.ren, v = prompt('교육 이름을 고쳐 주세요', o); if (!v || !v.trim()) return; [...ed].forEach(([d, n]) => { if (n === o) ed.set(d, v.trim()); }); if (curEdu === o) curEdu = v.trim(); draw(); });
     back.querySelectorAll('[data-delname]').forEach(b => b.onclick = () => { [...ed].forEach(([d, n]) => { if (n === b.dataset.delname) ed.delete(d); }); draw(); });
+    // 🔒 잠금: 달력·자동·저장 막기
+    if (lockable) { const lb = $('#sc-lock'); lb.textContent = locked ? '🔒 잠금 풀기' : '🔓 잠그기'; lb.className = locked ? 'danger' : 'secondary';
+      $('#sc-auto').disabled = locked; $('#sc-save').disabled = locked; $('#sc-edu').style.opacity = locked ? .45 : 1; }
     back.querySelectorAll('#sc-cal button').forEach(b => b.onclick = () => {
+      if (locked) return notify('🔒 잠겨 있어요. "잠금 풀기"를 눌러 주세요.');
       const k = b.dataset.k;
       const full = () => notify(`근무일이 이미 ${WORK_TARGET}일이에요. (교육·행사 포함)\n다른 근무일을 먼저 눌러서 빼 주세요.\n(교육·행사는 상관없이 더 넣을 수 있어요)`);
       if (curEdu) {   // 🎓 교육·행사 넣기
@@ -1101,7 +1121,13 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav }){
   $('#sc-edu-new').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addName(); } });
   // 월·수·금 자동: 교육·행사 날은 그대로 두고 남은 칸을 월·수·금(공휴일이면 다음 날)으로 채움
   $('#sc-auto').onclick = () => { sel = new Set(suggestDays(mk, Math.max(0, WORK_TARGET - ed.size), new Set(ed.keys()))); draw(); };
-  $('#sc-clear').onclick = async () => { if (!await ask('달력에 고른 근무일과 교육·행사를 모두 지울까요?\n(저장을 눌러야 바뀌어요)')) return; sel = new Set(); ed = new Map(); draw(); };
+  $('#sc-lock')?.addEventListener('click', async () => {
+    if (!locked && snap() !== s0 && !await ask('고친 내용이 아직 저장되지 않았어요.\n저장하지 않고 잠글까요?')) return;
+    if (!await ask(locked ? `${Number(mk.slice(5))}월 활동일 잠금을 풀까요?` : `${Number(mk.slice(5))}월 활동일을 잠글까요?`)) return;
+    locked = !locked; if (locked) wdLock[mk] = today(); else delete wdLock[mk];
+    store('jinan_wdlock', JSON.stringify(wdLock)); logEvent(locked ? '활동일 잠금' : '활동일 잠금 풀기', null, `${Number(mk.slice(5))}월`);
+    if (locked) { sel = new Set(days); ed = new Map((edu || []).map(e => [e.date, e.name])); } draw(); renderList(); });
+  $('#sc-clear')?.addEventListener('click', async () => { if (!await ask('달력에 고른 근무일과 교육·행사를 모두 지울까요?\n(저장을 눌러야 바뀌어요)')) return; sel = new Set(); ed = new Map(); draw(); });
   $('#sc-cancel').onclick = () => back.remove();
   const go = async d => { if (snap() !== s0 && !await ask('고친 내용이 아직 저장되지 않았어요.\n저장하지 않고 다른 달로 넘어갈까요?')) return; back.remove(); nav(d); };
   $('#sc-prev')?.addEventListener('click', () => go(-1)); $('#sc-next')?.addEventListener('click', () => go(1));
@@ -1114,7 +1140,7 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav }){
 }
 // 🔒 날짜 정하기 잠금 (달마다): 잠그면 활동일을 실수로 못 바꿈
 let wdLock = (() => { try { return JSON.parse(load('jinan_wdlock')) || {}; } catch(e) { return {}; } })();
-function drawWdLock(){ const b = document.getElementById('wd-lock'); if (b) { const on = !!wdLock[monthKey()]; b.textContent = on ? '🔒' : '🔓'; b.title = on ? '잠김' : '잠금'; b.style.color = on ? 'var(--danger)' : ''; } }
+function drawWdLock(){ const b = document.getElementById('wd-lock'); if (b) b.textContent = wdLock[monthKey()] ? '🔒' : ''; }
 async function toggleWdLock(){
   const mk = monthKey(), on = !!wdLock[mk];
   if (!await ask(on ? `${curMonth}월 활동일 잠금을 풀까요?` : `${curMonth}월 활동일을 잠글까요?\n잠그면 "날짜 정하기"로 바꿀 수 없어요.`)) return;
@@ -1123,8 +1149,7 @@ async function toggleWdLock(){
 }
 function openWorkdays(){
   const mk = monthKey(), m = curMonth;
-  if (wdLock[mk]) return notify(`🔒 ${m}월 활동일은 잠겨 있어요.\n바꾸려면 🔒를 눌러 먼저 풀어 주세요.`);
-  schedEditor({ title: `📅 ${m}월 활동일 정하기`, mk, days: monthDays(mk), edu: eduAll[mk] || [], nav: d => { moveMonth(d); openWorkdays(); },
+  schedEditor({ title: `📅 ${m}월 활동일 정하기`, mk, lockable: true, days: monthDays(mk), edu: eduAll[mk] || [], nav: d => { moveMonth(d); openWorkdays(); },
     onSave: ({ days, edu }) => {
       workdays[mk] = days; store('jinan_workdays', JSON.stringify(workdays));
       logEvent('활동일 설정', null, `${m}월: ${days.map(d => Number(d.slice(8,10))).join(', ')}일`, days[0]);
@@ -1500,6 +1525,13 @@ function renderZones(){
   const zs = document.getElementById('zone-sum');
   if (zs) zs.innerHTML = myTowns.map(t => { const c = townCount(t);
     return `<div>📍 <b>${esc(t.replace(/[면읍]$/, ''))}</b> ${c.site}곳 ${c.act}명/<span style="color:#2f855a">게이트볼 ${c.gate}명</span> = <b>${c.all}명</b></div>`; }).join('');
+  const za = document.getElementById('zone-all-list');
+  if (za) za.innerHTML = TOWNS.map(t => { const c = townCount(t); return `<div>${myTowns.includes(t) ? '⭐' : '·'} ${esc(t)} 경로당 ${c.site}곳/게이트볼 ${c.gsite}곳 · ${c.act}명/${c.gate}명 = <b>${c.all}명</b></div>`; }).join('');
+  // 팀장 구역 합계: 구역 수 · 경로당 · 게이트볼 · 총 인원
+  const zl = document.getElementById('zone-lead');
+  if (zl) { const used = zones.filter(z => z.sites.length), ss = used.flatMap(z => z.sites), g = ss.filter(x => x.senior.includes('게이트볼')).length;
+    const n = ss.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0);
+    zl.innerHTML = `👤 팀장 구역 <b>${used.length}</b>개 · 경로당 <b>${ss.length - g}</b>곳 · 게이트볼 <b>${g}</b>곳 · 총 <b>${n}</b>명`; zl.classList.toggle('hidden', !used.length); }
   const zn = document.getElementById('zone-n'); if (zn) zn.textContent = zones.length + '개';
   document.getElementById('zone-minus').disabled = zones.length <= ZONE_MIN; document.getElementById('zone-plus').disabled = zones.length >= ZONE_MAX;
   box.innerHTML = zones.map(z => {
@@ -1514,7 +1546,7 @@ function openZone(id){
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.15rem;margin-bottom:8px;" id="zn-title"></div>
     <label>구역 이름</label>
-    <div style="display:flex;gap:6px;margin-bottom:8px;"><input type="text" id="zn-name" autocomplete="off" style="margin:0;"></div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;"><input type="text" id="zn-name" autocomplete="off" style="margin:0;"><button type="button" class="small" id="zn-lead-ed" style="width:auto;margin:0;white-space:nowrap;background:#276749;">👤 팀장 정보</button></div>
     <div id="zn-main">
       <div id="zn-visit-box" style="background:#fffaf0;border:1px solid #fbd38d;border-radius:10px;padding:8px 10px;margin-bottom:10px;">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><b style="flex:1;">📋 이 구역 점검 현황</b>
@@ -1543,6 +1575,22 @@ function openZone(id){
   document.body.appendChild(bg);
   const $ = q => bg.querySelector(q);
   $('#zn-name').value = z.name; $('#zn-phone').value = z.phone || '';
+  $('#zn-lead-ed').onclick = () => {
+    const L = participants.find(x => x.id === z.leaderId), d2 = document.createElement('div'); d2.className = 'dlg-back';
+    d2.innerHTML = `<div class="dlg" style="max-width:360px;"><div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">👤 ${esc(z.name)} 팀장 정보</div>
+      <label>팀장 성명</label><input type="text" id="ld-name" value="${esc(L ? L.name : (z.leaderName || ''))}" autocomplete="off">
+      <label>연락처</label><input type="tel" id="ld-phone" class="phone-in" inputmode="numeric" value="${esc(z.phone || (L && L.phone) || '')}" placeholder="010-0000-0000" autocomplete="off">
+      <div class="grid-2"><button class="secondary" id="ld-cancel">취소</button><button id="ld-save">저장</button></div></div>`;
+    document.body.appendChild(d2);
+    d2.querySelector('#ld-cancel').onclick = () => d2.remove();
+    d2.querySelector('#ld-save').onclick = () => {
+      const nmv = d2.querySelector('#ld-name').value.trim(), ph = fmtPhone(d2.querySelector('#ld-phone').value);
+      const P = nmv ? (participants.find(q => q.name === nmv && z.sites.some(x => x.town === q.town)) || participants.find(q => q.name === nmv)) : null;
+      logEvent('팀장 정보 수정', P || null, `${z.name}: ${(L ? L.name : z.leaderName) || '(없음)'} → ${nmv || '(없음)'}${ph ? ' · ' + ph : ''}`);
+      z.leaderName = nmv; z.phone = ph; if (P) z.leaderId = P.id; else delete z.leaderId;
+      saveZones(); d2.remove(); $('#zn-phone').value = z.phone; drawMain(); renderZones();
+    };
+  };
   $('#zn-range').value = nvRange; $('#zn-range').onchange = () => { nvRange = $('#zn-range').value; drawMain(); renderZones(); };
   const drawMain = () => {
     const total = z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0);
@@ -1827,7 +1875,7 @@ function openInfo(){
       return;
     }
     const cur = f === 'age' ? ageShow(p.age, p.birth) : (p[f] || '');
-    td.innerHTML = `<div class="ed-box" style="display:flex;gap:6px;"><input type="${f === 'phone' ? 'tel' : 'text'}" ${f === 'address' ? '' : 'inputmode="numeric"'} class="${f === 'phone' ? 'phone-in' : ''}" style="margin:0;" value="${esc(cur)}"><button type="button" class="small" style="margin:0;width:auto;white-space:nowrap;">저장</button></div>`;
+    td.innerHTML = `<div class="ed-box" style="display:flex;gap:6px;"><input type="${f === 'phone' ? 'tel' : 'text'}" ${f === 'address' ? '' : 'inputmode="numeric"'} class="${f === 'age' ? 'age-in' : f === 'phone' ? 'phone-in' : ''}" style="margin:0;" value="${esc(cur)}"><button type="button" class="small" style="margin:0;width:auto;white-space:nowrap;">저장</button></div>`;
     const inp = td.querySelector('input'), go = () => {
       const v = inp.value.trim();
       if (f === 'age') { const ag = parseAge(v); if (ag.bad) return notify(AGE_BAD); return putInfo('age', ag.age, ag.birth); }
@@ -1891,21 +1939,23 @@ function staffShort(n){
   return dupSur && n.length > 1 ? n.slice(1) : n[0];
 }
 const joinStaff = arr => arr.map(staffShort).join('·');
+// 출장 직원: 한 번 누르면 나감, 두 번 누르면 ✍ 활동일지 쓰는 사람(빨강), 세 번이면 빠짐
+const joinStaffH = (arr, wr) => arr.map(x => (wr || []).includes(x) ? `<b class="tr-writer">${esc(staffShort(x))}✍</b>` : esc(staffShort(x))).join('·');
 // 화면 표시: 지역은 주황색, 직원은 괄호 안에  예) 주(김·전)
-function tripHTML(towns, staff){
-  const t = (towns||[]).map(x => x[0]).join(''), st = joinStaff(staff||[]);
+function tripHTML(towns, staff, writer){
+  const t = (towns||[]).map(x => x[0]).join(''), st = joinStaffH(staff||[], writer);
   if (!t && !st) return '';
-  return `${t?`<b class="tr-town">${esc(t)}</b>`:''}${st?`<span class="tr-staff">(${esc(st)})</span>`:''}`;
+  return `${t?`<b class="tr-town">${esc(t)}</b>`:''}${st?`<span class="tr-staff">(${st})</span>`:''}`;
 }
 function tripShort(d){
   const t = trips[d]; if (t?.none) return '<b class="tr-none">✕</b>';   // 바빠서 출장 안 나간 날
   if (!t || (!t.towns?.length && !t.staff?.length)) return '';
-  return tripHTML(t.towns, t.staff);
+  return tripHTML(t.towns, t.staff, t.writer);
 }
-const tripLong = d => { const t = trips[d]; if (t?.none) return '출장 안 나감'; return t ? `${(t.towns||[]).join('·')}${t.staff?.length?` (${t.staff.join('·')})`:''}` : ''; };
+const tripLong = d => { const t = trips[d]; if (t?.none) return '출장 안 나감'; return t ? `${(t.towns||[]).join('·')}${t.staff?.length?` (${t.staff.map(x => (t.writer||[]).includes(x) ? x + '✍' : x).join('·')})`:''}` : ''; };
 function openTrip(d){
   const t = trips[d] || {towns:[], staff:[]};
-  const selT = new Set(t.towns||[]), selS = new Set(t.staff||[]);
+  const selT = new Set(t.towns||[]), selS = new Set(t.staff||[]), selW = new Set(t.writer||[]);
   const order = [...TOWNS].sort((a,b) => myTowns.includes(b) - myTowns.includes(a));
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
@@ -1923,12 +1973,12 @@ function openTrip(d){
   document.body.appendChild(back);
   const preview = () => {
     const tmp = {towns:[...selT].sort((a,b)=>TOWNS.indexOf(a)-TOWNS.indexOf(b)), staff:[...selS]};
-    const sh = tripHTML(tmp.towns, tmp.staff);
+    const sh = tripHTML(tmp.towns, tmp.staff, [...selW]);
     back.querySelector('#tp-preview').innerHTML = sh ? `달력에 <span class="trip-prev">${sh}</span> 로 표시돼요` : '<span class="muted">지역이나 직원을 골라 주세요</span>';
   };
   let delMode = false;
   const drawStaff = () => {
-    back.querySelector('#tp-staff').innerHTML = staffList.map(x => `<button type="button" class="pick2 ${selS.has(x)&&!delMode?'on':''} ${delMode?'delmode':''}" data-v="${esc(x)}">${delMode?'✕ ':''}${esc(x)}</button>`).join('')
+    back.querySelector('#tp-staff').innerHTML = staffList.map(x => `<button type="button" class="pick2 ${selS.has(x)&&!delMode?'on':''} ${selW.has(x)&&!delMode?'writer':''} ${delMode?'delmode':''}" data-v="${esc(x)}">${delMode?'✕ ':''}${esc(x)}${selW.has(x)&&!delMode?' ✍':''}</button>`).join('')
       + (staffList.length ? '' : '<div class="muted">직원이 없습니다. 이름을 적고 추가해 주세요.</div>');
     back.querySelectorAll('#tp-staff button').forEach(b => b.onclick = async () => {
       const v = b.dataset.v;
@@ -1936,7 +1986,8 @@ function openTrip(d){
         if (!await ask(`직원 목록에서 "${v}"을(를) 지울까요?\n(이미 적어 둔 출장 기록은 그대로 남아요)`)) return;
         staffList = staffList.filter(x => x !== v); selS.delete(v); saveStaff(); drawStaff(); return;
       }
-      selS.has(v) ? selS.delete(v) : selS.add(v); drawStaff();
+      if (!selS.has(v)) selS.add(v); else if (!selW.has(v)) selW.add(v); else { selS.delete(v); selW.delete(v); }
+      drawStaff();
     });
     back.querySelector('#tp-del').textContent = delMode ? '✔ 삭제 끝' : '➖ 삭제';
     back.querySelector('#tp-del').classList.toggle('danger', delMode);
@@ -1968,7 +2019,7 @@ function openTrip(d){
   const done = () => { store('jinan_trips', JSON.stringify(trips)); back.remove(); renderList(); };
   back.querySelector('#tp-save').onclick = () => {
     if (!selT.size && !selS.size) delete trips[d];
-    else trips[d] = { towns:[...selT].sort((a,b)=>TOWNS.indexOf(a)-TOWNS.indexOf(b)), staff:[...selS] };
+    else trips[d] = { towns:[...selT].sort((a,b)=>TOWNS.indexOf(a)-TOWNS.indexOf(b)), staff:[...selS], ...([...selW].some(x => selS.has(x)) ? { writer:[...selW].filter(x => selS.has(x)) } : {}) };
     logEvent('출장 일정', null, `${dd(d)} ${trips[d] ? tripLong(d) : '지움'}`, d);
     done();
   };
@@ -3026,12 +3077,12 @@ const ageShow = (age, birth) => birth ? `${birth} (${age}세)` : (age || '');
 // 나이 칸: 누르면 "19"가 먼저 들어가 있어서 태어난 해 뒤 두 자리만 치면 됨 (1948)
 document.addEventListener('focusin', e => {
   if (!e.target.classList?.contains('age-in') || e.target.value) return;
-  e.target.value = '19'; setTimeout(() => { try { e.target.setSelectionRange(2, 2); } catch(x) {} }, 0);
+  e.target.value = '19'; const t = e.target, end = () => { try { if (t.value === '19') t.setSelectionRange(2, 2); } catch(x) {} }; end(); setTimeout(end, 0);
 });
 document.addEventListener('focusout', e => {
   if (!e.target.classList?.contains('age-in')) return;
   if (e.target.value.trim() === '19') { e.target.value = ''; return; }
-  const r = parseAge(e.target.value); if (r.birth) e.target.value = ageShow(r.age, r.birth); else if (r.bad) notify(AGE_BAD);
+  const r = parseAge(e.target.value); if (r.birth) e.target.value = ageShow(r.age, r.birth);
 });
 // ---------- 11개 읍·면 경로당 목록 (2026년 경로당지킴이 참여 현황·노인체육시설 기준) ----------
 const KNOWN_SENIORS = {"진안읍":["개실(개곡)","검북","고향마을@","관산1","관산2","구운","궁동","금마","남광@ (우화5)","내사양","내오천","내후사","노계1","노계2","대광1","대광1 경모정","대성(군하리)","대성경모정","대성(연장리)","대연장","부곡","사인동(사옥)","산암","상가막","상도치","상평","새마을","석곡","선인","소토실","송대","신흥","암곡","양지","어은","언건","에코르","연구1","연구2(상림)","예리","외기","외사양","외오천","외후사","용지","우화1","우화2","우화3","우화4","원가림","원단양","원물곡","원반월","원연장","월랑@","월랑@ 경모정","유산","은천","정주동(우무실)","종평","주공1@","주공1 경모정","주공2 (노계3)","주공2 경모정","중리","중앙","중평","탄곡","평촌","하가막","하도치","하평","학천1","학천2","학천2 경모정","학천3","활인동(개활곡)","개별관리","진안게이트볼","마이게이트볼","그라운드골프장","파크골프장"],"용담면":["감동","노온","문화","방화","번덕","새마을","옥거","옥수","와룡","중앙","회룡1","회룡1경모정","회룡2","용담게이트볼"],"안천면":["괴정","교동","구곡","구례","노산","노채경모정","대덕(지사)","도라곡","보한","상리","샛담","시장","안기","율현","장등","중리","직동","하리","안천게이트볼"],"동향면":["고부","금곡(외금)","노은(하노)","대량경모정","보촌(보말)","봉곡","봉곡경모정","사미대(대야)","사미대경모정","상노","상능길","상향","성은(하향)","송학(내유)","수월(새울)","양지","양지경모정","옥천(창촌)","외유","용암","용암경모정","원금곡(내금)","을곡","장전","중노","추동","하노경모정","하능길","하향경모정","호천","후고산","대량게이트볼","대야게이트볼","하노게이트볼"],"상전면":["교동","금당","금지","금지경모정","내송","대구평","문화","세동","신연(용평)","양지","외송","원가막","원주평","중기","지사","회사","후가막","원수동","상전게이트볼"],"백운면":["경친(원촌)","남퇴","내봉","대유","동산","동신","두원","무등","미비","반송","백운동","번덕","번암","상동","상서","상운(상백)","서촌","석전(석무)","신마","신전","오정","원노","원산","원상서","원운","윤기","은번","임신","주천","중백","평장","하미","화산","정송","백운게이트볼"],"성수면":["가수","광음(음수동)","내좌","달길","반용","봉좌","산수동","산주","상기","상달","상촌","송기","송촌","신고","신기","안평","양화","염북","오암","원구신","원도통","원신기","원외궁","원좌","원좌산","장성","중군","중마(만덕)","중평","증자","지동","포동","성수게이트볼"],"마령면":["솔안","솔안경모정","평산","사곡","석교","원평지","원평지경모정","마평","방화","계남","오동","서산(서비산)","원동촌","서금(서촌)","원강정","원강정경모정","월운","신덕","대동","신동","장재","안방","널티(판치)","전원","추동","마령게이트볼","덕천게이트볼"],"부귀면":["가정","가치","거석","금계곡","금마(금평)","대곡","대동","두봉(원두남)","미곡","방곡(방각)","봉황골","부암","부천","사인암","삼봉","상거석","서판","석정","소태정","승각(장승)","신거석","신궁","신기","신덕","신리","신해오름","야곡","오복","오산","우정","운장","원봉암","원세동","적천","중궁","중수항","진상","큰터골(수원)","하곡(하수항)","하금(하거석)","회신","부귀게이트볼","운장게이트볼"],"정천면":["갈거","갈두","마조","무거","상조림(상항)","상조림경모정","상초","수암(조포)","신양","용정","원월평","정자동","정천","조림","하초","학동","항가동","정천게이트볼"],"주천면":["괴정","괴정경모정","양지","양지경모정","광석","성암","금평","금평경모정","봉소","구암","구암경모정","안정","(상)양명","미적","도촌","대촌","대촌경모정","산제","어자(무릉)","어자경모정","강촌","삼거","장등","장등경모정","중리","개화","개화경모정","신기","학선","중산","처사(중사)","하양명","주천게이트볼"]};
@@ -3172,6 +3223,58 @@ const COLS = { town:['읍면','면','소속면','읍·면','읍면동'], senior:
 const TEMPLATE = [['읍면','경로당','성명','성별','나이','연락처','주소'],
   ['동향면','고부','홍길동','남',78,'010-1234-5678','진안군 동향면 OO길 1'],
   ['상전면','지사','김진안','여',1948,'010-0000-0000','진안군 상전면 OO로 2']];
+// 👤 팀장 명단 엑셀: 팀장마다 구역 하나 (담당 경로당은 쉼표로 여러 곳)
+const LEADER_TPL = [['읍면','팀장 성명','연락처','담당 경로당'], ['동향면','홍길동','010-1234-5678','고부, 상향, 대량게이트볼']];
+function downloadLeaderTpl(){
+  if (typeof XLSX === 'undefined') {
+    const csv = '\uFEFF' + LEADER_TPL.map(r => r.map(c => `"${c}"`).join(',')).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'})); a.download = '팀장_명단_양식.csv'; a.click(); return;
+  }
+  const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet(LEADER_TPL); ws['!cols'] = [10,10,15,50].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws, '팀장 명단'); XLSX.writeFile(wb, '팀장_명단_양식.xlsx');
+}
+function leaderImport(input){
+  const file = input.files && input.files[0]; if (!file) return;
+  if (typeof XLSX === 'undefined') { input.value = ''; return notify('엑셀을 읽는 기능을 불러오지 못했습니다.\n인터넷 연결을 확인해 주세요.'); }
+  const rd = new FileReader();
+  rd.onload = async e => { input.value = '';
+    let grid = null, hRow = -1;
+    try { const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      for (const sn of wb.SheetNames) { const g = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '', raw: false });
+        const i = g.slice(0, 10).findIndex(r => r.some(c => /팀장|성명/.test(String(c)))); if (i >= 0) { grid = g; hRow = i; break; } }
+    } catch(err) { return notify('파일을 읽을 수 없어요.'); }
+    if (!grid) return notify('엑셀에서 "팀장 성명" 칸을 찾지 못했어요.\n"⬇️ 팀장 양식"을 받아서 써 주세요.');
+    const head = grid[hRow].map(c => String(c).replace(/\s/g, ''));
+    const ci = re => head.findIndex(h => re.test(h));
+    const cT = ci(/읍면|면/), cN = ci(/팀장|성명|이름/), cP = ci(/연락처|전화|휴대폰/), cS = ci(/경로당|담당/), cZ = ci(/구역/);
+    const rows = [];
+    grid.slice(hRow + 1).forEach(r => { const g = c => c >= 0 ? String(r[c] ?? '').trim() : '';
+      const name = g(cN); if (!name) return;
+      const town = normTown(g(cT)) || myTowns[0], phone = g(cP) ? fmtPhone(g(cP)) : '';
+      const sites = g(cS).split(/[,，·/\n]+/).map(x => normSenior(town, x)).filter(Boolean);
+      let L = rows.find(x => x.name === name && (x.phone === phone || !phone || !x.phone));
+      if (!L) rows.push(L = { name, phone, town, zname: g(cZ), sites: [] });
+      sites.forEach(k => { if (!L.sites.some(x => x.town === town && x.senior === k)) L.sites.push({ town, senior: k }); });
+    });
+    if (!rows.length) return notify('팀장 명단이 비어 있어요.');
+    if (rows.length > ZONE_MAX) return notify(`팀장이 ${rows.length}명이에요.\n구역은 ${ZONE_MAX}개까지라 ${ZONE_MAX}명까지만 올릴 수 있어요.`);
+    const msg = rows.map(L => `👤 ${L.name}${L.phone ? ' ' + L.phone : ''} — ${L.sites.length}곳`).join('\n');
+    if (!await ask(`팀장 ${rows.length}명으로 구역을 정리할까요?\n\n${msg}\n\n(같은 이름의 구역은 고치고, 없으면 빈 구역에 넣어요)`)) return;
+    rows.forEach(L => {
+      let z = zones.find(o => o.leaderName === L.name || o.name === L.name || o.name === L.zname) || zones.find(o => !o.sites.length && !o.leaderId && !o.leaderName);
+      if (!z) { if (zones.length >= ZONE_MAX) return; z = { id: Math.max(0, ...zones.map(o => o.id)) + 1, name: '', sites: [] }; zones.push(z); }
+      // 다른 구역에 있던 경로당은 이 구역으로 옮김
+      zones.forEach(o => { if (o !== z) o.sites = o.sites.filter(x => !L.sites.some(y => y.town === x.town && y.senior === x.senior)); });
+      z.name = L.zname || L.name; z.leaderName = L.name; if (L.phone) z.phone = L.phone; z.sites = L.sites;
+      const dg = x => String(x||'').replace(/[^0-9]/g,'');
+      const P = participants.find(q => q.name === L.name && (!L.phone || dg(q.phone) === dg(L.phone))) || participants.find(q => q.name === L.name && q.town === L.town);
+      if (P) z.leaderId = P.id; else delete z.leaderId;
+      logEvent('팀장 명단 등록', P || null, `${z.name} 구역 · 팀장 ${L.name}${L.phone ? ' ' + L.phone : ''} · 경로당 ${L.sites.map(x => x.senior).join(', ')}`);
+    });
+    saveZones(); renderList(); notify(`👤 팀장 ${rows.length}명으로 구역을 정리했어요.`);
+  };
+  rd.readAsArrayBuffer(file);
+}
 function downloadTemplate(){
   if (typeof XLSX === 'undefined') {
     const csv = '\uFEFF' + TEMPLATE.map(r => r.map(c => `"${c}"`).join(',')).join('\r\n');
@@ -3208,8 +3311,13 @@ function openBulkGuide(){
     <label style="margin-top:10px;">어떻게 올릴까요?</label>
     <button type="button" class="full" id="bk-full" style="text-align:left;">📋 <b>올해 명단으로 정리</b><br><span style="font-size:.85rem;font-weight:normal;">겹치는 분은 건강·정보 그대로 · 새로 오신 분은 넣고 · 올해 명단에 없는 분은 뺌</span></button>
     <button type="button" class="warning full" id="bk-fill" style="text-align:left;">✏️ <b>추가 정보만 넣기</b><br><span style="font-size:.85rem;font-weight:normal;">이미 있는 분의 정보만 채워요 (예: 이름+경로당만 있는 파일). 새 사람 추가·빼기 없음</span></button>
-    <button type="button" class="secondary full" id="bk-close">닫기</button></div>`;
+    <label style="margin-top:12px;">👤 팀장 명단 (구역 자동 정리)</label>
+    <table class="st-tbl" style="margin:0 0 6px;background:#fff;font-size:.8rem;"><tr>${LEADER_TPL[0].map(h => `<th>${h}</th>`).join('')}</tr><tr>${LEADER_TPL[1].map(c => `<td>${esc(c)}</td>`).join('')}</tr></table>
+    <div class="grid-2"><button type="button" class="secondary" id="bk-ltpl" style="margin:0;">⬇️ 팀장 양식</button><button type="button" id="bk-lead" style="margin:0;background:#276749;">👤 팀장 명단 올리기</button></div>
+    <button type="button" class="secondary full" id="bk-close" style="margin-top:10px;">닫기</button></div>`;
   document.body.appendChild(bg);
+  bg.querySelector('#bk-ltpl').onclick = () => downloadLeaderTpl();
+  bg.querySelector('#bk-lead').onclick = () => { bg.remove(); document.getElementById('lead-file').click(); };
   bg.querySelector('#bk-tpl').onclick = () => downloadTemplate();
   bg.querySelector('#bk-full').onclick = () => { bulkMode = 'full'; bg.remove(); document.getElementById('bulk-file').click(); };
   bg.querySelector('#bk-fill').onclick = () => { bulkMode = 'fill'; bg.remove(); document.getElementById('bulk-file').click(); };
@@ -3707,7 +3815,7 @@ const leaderOf = p => {
   const z = zoneOf(p); if (!z) return null;
   const L = z.leaderId ? participants.find(x => x.id === z.leaderId) : null;
   const num = String((L && L.phone) || z.phone || '').replace(/[^0-9]/g,'');
-  return num ? { name: L ? L.name : z.name, num } : null;
+  return num ? { name: L ? L.name : (z.leaderName || z.name), num } : null;
 };
 // 점검 화면에서 구역(팀장) 이름을 누르면: 팀장 전화 · 문자 · 구역 보기
 function leaderMenu(p){
