@@ -457,7 +457,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-16</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-17</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1346,7 +1346,7 @@ function renderNewAlert(){
   const qs = quitsIn(mk);
   // 🎂 오늘 생일: 구역에 넣은 어르신만 (구역이 없으면 내 담당 면)
   const todayIs = issuesOn(today());
-  const tmd = today().slice(5), bd = sortPs(participants.filter(p => p.bday === tmd && !stats(p).dropped));   // 구역과 상관없이 모든 어르신
+  const tmd = today().slice(5), bd = sortPs(participants.filter(p => p.bday === tmd && visibleTowns().includes(p.town) && !stats(p).dropped));   // 내 담당 읍·면 어르신
   box.innerHTML = (bd.length ? alertCard('bday', 'background:#fff5f7;border-color:#ed64a6;padding:8px 12px;', `<b style="color:#b83280;">🎂 오늘 생일 ${bd.length}명</b>`,
       `<div style="font-size:.9rem;margin-bottom:6px;">${bd.map(p => `<a href="#" data-open="${p.id}" style="color:#702459;white-space:nowrap;">${esc(p.name)}<span class="muted" style="font-size:.82rem;">(${esc(p.town.replace(/[면읍]$/,''))} ${esc(seniorOf(p))})</span></a>`).join(', ')}</div>
       <button type="button" class="full" id="bd-sms" style="margin:0;background:#d53f8c;">📋 자세히 보기 · 생일 축하 문자</button>`) : '')
