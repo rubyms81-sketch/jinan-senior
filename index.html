@@ -280,6 +280,20 @@
   .dlg-back { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:3000; display:flex; align-items:center; justify-content:center; padding:16px; }
   .dlg { background:#fff; border-radius:10px; padding:18px; width:100%; max-width:420px; max-height:80vh; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,.25); }
   .dlg-msg { white-space:pre-wrap; line-height:1.5; margin-bottom:14px; }
+  /* 🎮 입체(3D) 느낌: 단추는 아래쪽 두께 + 위쪽 반짝임, 카드는 살짝 떠 보이게 */
+  button:not(.chip) { border-radius:12px; box-shadow:inset 0 -3px 0 rgba(0,0,0,.18), inset 0 2px 0 rgba(255,255,255,.28), 0 3px 0 rgba(0,0,0,.14), 0 5px 10px rgba(0,0,0,.10);
+    transition:transform .08s, box-shadow .08s; position:relative; }
+  button:not(.chip):active { transform:translateY(2px); box-shadow:inset 0 -1px 0 rgba(0,0,0,.18), inset 0 2px 0 rgba(255,255,255,.28), 0 1px 0 rgba(0,0,0,.14), 0 2px 4px rgba(0,0,0,.10); }
+  button:not(.chip):not(.secondary):not(.site):not(.date-btn):not(.reason) { text-shadow:0 1px 1px rgba(0,0,0,.28); }
+  button:not(.chip)::after { content:''; position:absolute; left:8%; right:8%; top:3px; height:38%; border-radius:10px 10px 40% 40%;
+    background:linear-gradient(rgba(255,255,255,.38), rgba(255,255,255,.04)); pointer-events:none; }
+  .seg button::after, .cal button::after, .site::after, .ui-opts button::after, .date-btn::after, .mt-wrap button::after, .cond-grid button::after, .reason::after, button.secondary::after { display:none; }
+  .seg button, .ui-opts button, .reason { text-shadow:none; }
+  .seg button.on, .ui-opts button.on { box-shadow:inset 0 2px 4px rgba(0,0,0,.10), 0 1px 0 rgba(255,255,255,.6); transform:translateY(2px); }
+  .cal button { box-shadow:inset 0 -2px 0 rgba(0,0,0,.08), 0 2px 3px rgba(0,0,0,.06); }
+  .card { border-radius:16px; box-shadow:0 3px 0 rgba(0,0,0,.05), 0 8px 18px rgba(0,0,0,.08); }
+  header { background-image:linear-gradient(180deg, rgba(255,255,255,.18), rgba(0,0,0,.08)); box-shadow:0 3px 0 var(--warning), 0 6px 12px rgba(0,0,0,.15); text-shadow:0 2px 2px rgba(0,0,0,.3); }
+  input, select, textarea { border-radius:10px; box-shadow:inset 0 2px 3px rgba(0,0,0,.06); }
 </style>
 </head>
 <body>
@@ -457,7 +471,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-17</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-18</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
