@@ -124,6 +124,11 @@
   button.reason { margin:0; background:#edf2f7; color:#2d3748; border:2px solid transparent; padding:12px 4px; font-size:.98rem; }
   button.reason.on { background:var(--tint); border-color:var(--primary); color:var(--primary); font-weight:bold; }
   .date-btn { width:100%; display:flex; justify-content:space-between; align-items:center; background:#fff; color:#2d3748; border:1px solid #cbd5e0; border-radius:5px; padding:11px 12px; margin:5px 0 12px; font-size:1rem; text-align:left; }
+  .days-head { display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap; padding:4px 0; }
+  .days-head h4 { margin:0; }
+  .days-head .date-btn { display:inline-flex; width:auto; gap:4px; margin:0; padding:4px 10px; font-weight:normal; }
+  .days-head .date-btn .tag { display:none; }
+  .days-head .date-btn, .days-head .date-btn * { font-size:.85rem !important; line-height:1.3; }
   #modal-title .date-btn { display:inline-flex; width:auto; gap:4px; margin:0 0 0 4px; padding:4px 10px; font-size:.85rem; vertical-align:6px; font-weight:normal; }
   #modal-title .date-btn .tag { display:none; }
   #modal-title .date-btn, #modal-title .date-btn * { font-size:.85rem !important; line-height:1.3; }
@@ -452,7 +457,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-6</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-7</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -463,20 +468,20 @@
   </div>
   <input type="file" id="photo-cam" accept="image/*" capture="environment" class="hidden" onchange="photoPicked(this)">
   <input type="file" id="photo-file" accept="image/*" class="hidden" onchange="photoPicked(this)">
-  <details class="chg-box m-sec" id="sec-days"><summary><h4 id="m-days-title">📅 이달 근무일</h4><span class="chg-arrow"></span></summary>
+  <div class="chg-box" id="sec-days"><div class="days-head"><h4 id="m-days-title">📅 이달 근무일</h4>
+    <button type="button" class="date-btn" id="c-date-btn" onclick="pickCheckDate()"></button></div>
   <div id="m-days" class="chips"></div>
-  <div id="m-chg"></div>
+  <details class="chg-box m-sec hidden" id="sec-moved" style="margin-top:8px;"><summary><h4 id="m-chg-title" style="font-size:.95rem;">🔄 이동한 날짜</h4><span class="chg-arrow"></span></summary>
+  <div id="m-chg"></div></details>
   <button class="warning full hidden" id="btn-addchg" onclick="addChange()">🔄 근무일 변경 추가</button>
   <button class="secondary full hidden" id="btn-custom" onclick="addChange({ reason: '입원' })">🏥 입원 체크</button>
-  </details>
+  </div>
   <div id="mate-tabs"></div>
   <div id="modal-notice"></div>
   <input type="hidden" id="edit-id">
 
   <div id="check-section">
     <input type="hidden" id="c-date">
-    <button type="button" class="date-btn" id="c-date-btn" onclick="pickCheckDate()"></button>
-
     <label>근무지 이탈 (벌점)</label>
     <input type="hidden" id="c-leave">
     <div class="seg" data-for="c-leave"><button type="button" data-v="정상">정상 근무</button><button type="button" data-v="자리비움" data-bad data-pt="자리비움">자리 비움</button><button type="button" data-v="이탈" data-bad data-pt="이탈">이탈</button></div>
@@ -1208,6 +1213,9 @@ function renderPersonDays(p){
     + chg.map(c => `<div class="log warn">🔄 <b>${dd(c.from)} → ${dd(c.to)}</b>${c.reason?` <span class="muted">(${esc(c.reason)})</span>`:''}
       <br><button class="small secondary" onclick="delChange(${c.id})">이 변경 지우기</button></div>`).join('');
   document.getElementById('btn-custom').textContent = cu ? '🏥 입원 체크 고치기' : '🏥 입원 체크';
+  const nMv = chg.length + (cu ? 1 : 0) + (p.hospCall ? 1 : 0);
+  document.getElementById('sec-moved').classList.toggle('hidden', !nMv);
+  document.getElementById('m-chg-title').innerHTML = `🔄 이동한 날짜 ${chg.length}건${cu ? (cu.inHosp ? ' · 🏥 입원' : ' · 🩹 보충') : ''}`;
 }
 
 // ---------- 🩹 보충 근무 (개인 일정) ----------
@@ -2275,6 +2283,7 @@ function addChange(pre){
       <label>중도포기 사유</label>
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">${['건강 문제','개인 사정','이사','가족 돌봄','다른 일자리'].map(w => `<button type="button" class="small secondary" data-qwhy="${w}" style="width:auto;margin:0;">${w}</button>`).join('')}</div>
       <input type="text" id="cg-qwhy" placeholder="직접 적기" autocomplete="off" style="margin:0;"></div>
+    <button type="button" class="secondary full hidden" id="cg-back" style="margin:-4px 0 10px;">← 뒤로 (근무일 변경)</button>
     <div id="cg-hbox" class="hidden" style="margin:-4px 0 12px;">
       <label>입원 사유</label><input type="text" id="cg-hmemo" placeholder="예: 다리 골절, ○○병원" autocomplete="off" style="margin:0 0 6px;">
       <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin:0;"><input type="checkbox" id="cg-hnow" style="width:22px;height:22px;margin:0;"> 🏥 지금 입원 중</label></div>
@@ -2290,13 +2299,14 @@ function addChange(pre){
     $('#cg-enames').innerHTML = names.map(n => `<button type="button" class="small ${n === eduName ? '' : 'secondary'}" data-en="${esc(n)}" style="width:auto;margin:0;${n === eduName ? 'background:#805ad5;' : ''}">🎓 ${esc(n)}</button>`).join('');
     back.querySelectorAll('[data-en]').forEach(b => b.onclick = () => { eduName = b.dataset.en; drawENames(); }); };
   const addEName = () => { const v = $('#cg-enew').value.trim(); if (!v) return; eduName = v; $('#cg-enew').value = ''; drawENames(); };
+  $('#cg-back').onclick = () => back.querySelector('#cg-types button.on')?.click();
   $('#cg-eadd').onclick = addEName; $('#cg-enew').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addEName(); } });
   drawENames();
   back.querySelectorAll('[data-qwhy]').forEach(b => b.onclick = () => { $('#cg-qwhy').value = b.dataset.qwhy;
     back.querySelectorAll('[data-qwhy]').forEach(x => { x.classList.toggle('secondary', x !== b); x.style.background = x === b ? 'var(--danger)' : ''; }); });
   const y = YEAR, m = curMonth, lastD = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
   const showList = () => {
-    $('#cg-hbox').classList.toggle('hidden', !isHosp()); $('#cg-ebox').classList.toggle('hidden', !isEdu());
+    $('#cg-hbox').classList.toggle('hidden', !isHosp()); $('#cg-ebox').classList.toggle('hidden', !isEdu()); $('#cg-back').classList.toggle('hidden', !isHosp() && !isEdu());
     if (isHosp()) {
       $('#cg-picked').innerHTML = `<b style="color:#97266d">🛏️ 입원한 날 ${hospSel.size}일</b>${hospSel.size ? ` · ${[...hospSel].sort().map(d => Number(d.slice(8,10))).join(', ')}일` : ''}`;
       $('#cg-list').innerHTML = ''; $('#cg-all-wrap')?.classList.add('hidden'); $('#cg-qwhy-box').classList.add('hidden'); return;
@@ -4086,11 +4096,14 @@ function openModal(id){
   editingLogId = null; showEditBar();
   ['c-badge','c-vest','c-leave'].forEach(i => setSeg(i,'정상'));
   setSeg('c-attitude','우수'); resetExItems();
+  const pl = pendChecks[p.id];
+  if (pl) { setCheckDate(pl.date); setSeg('c-leave', pl.leave); setSeg('c-vest', pl.vest); setSeg('c-badge', pl.badge); setSeg('c-attitude', pl.attitude);
+    checkItems.forEach(it => setSeg('cx-' + it.id, pl.ex?.[it.id]?.bad ? 'bad' : '정상')); }
   // 전화번호를 누르면 바로 전화 걸기
   const tel = String(p.phone||'').replace(/[^0-9+]/g,'');
   // 동네(면)와 경로당 이름을 크게
   document.getElementById('modal-sub').innerHTML = (p.phone ? `<span class="tel-row">${tel ? `<a class="tel-link" href="tel:${tel}">📞 ${esc(p.phone)}</a>` : esc(p.phone)}</span>` : '') + `<span class="place">📍 <b>${esc(p.town)}</b> · <b>${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</b>${mapOf(p.town, seniorOf(p)) ? ` <a class="tel-link" href="#" onclick="openSiteMap('${esc(p.town)}', this.dataset.s);return false;" data-s="${esc(seniorOf(p))}">🗺️ 위치</a>` : ''}</span>${zoneOf(p) ? `<span class="zone" onclick="leaderMenu(current())" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px;">🗺 ${esc(zoneOf(p).name)}${zoneOf(p).leaderId === p.id ? ' · 👤 팀장' : ''} ›</span>` : ''}`;
-  document.getElementById('c-memo').value = '';
+  document.getElementById('c-memo').value = pl?.memo || '';
   document.getElementById('memo-label').innerHTML = `점검 메모 · <b style="color:#1a365d;">${nmH(p)}</b> 어르신 <span class="muted" style="font-weight:normal;">(${esc(p.town)} ${esc(seniorOf(p))})</span>`;
   renderModal();
   document.getElementById('modal').classList.remove('hidden');
@@ -4103,8 +4116,8 @@ function renderMates(p){
   const box = document.getElementById('mate-tabs'); if (!box) return;
   const ms = matesOf(p), d = document.getElementById('c-date').value || today();
   if (ms.length < 2) { box.innerHTML = ''; return; }
-  box.innerHTML = `<div class="mt-wrap"><div class="mt-lbl">👥 ${esc(seniorOf(p))} 같이 근무 ${ms.filter(q => !stats(q).dropped).length}명</div>${ms.map(q => { const done = q.logs.some(l => l.date===d), gone = stats(q).dropped;
-    return `<button type="button" class="${q.id===p.id?'on':''} ${done?'done':''} ${gone?'quit':''}" data-mate="${q.id}">${done && !gone?'✔ ':''}<span class="nm">${nmH(q)}</span><small>${gone ? '중도포기' : q.id===p.id ? '지금 점검 중' : done ? `${md(d)} 점검함` : '아직 안 함'}</small></button>`; }).join('')}</div>`;
+  box.innerHTML = `<div class="mt-wrap"><div class="mt-lbl">👥 ${esc(seniorOf(p))} 같이 근무 ${ms.filter(q => !stats(q).dropped).length}명</div>${ms.map(q => { const pd = !!pendOf(q, d), done = pd || q.logs.some(l => l.date===d), gone = stats(q).dropped;
+    return `<button type="button" class="${q.id===p.id?'on':''} ${done?'done':''} ${gone?'quit':''}" data-mate="${q.id}">${done && !gone?'✔ ':''}<span class="nm">${nmH(q)}</span><small>${gone ? '중도포기' : q.id===p.id ? '지금 점검 중' : pd ? '점검함 · 저장 전' : done ? `${md(d)} 점검함` : '아직 안 함'}</small></button>`; }).join('')}</div>`;
   box.querySelectorAll('[data-mate]').forEach(b => b.onclick = () => switchMate(Number(b.dataset.mate)));
 }
 async function switchMate(id){
@@ -4114,19 +4127,17 @@ async function switchMate(id){
   openModal(id);
   if (d && d !== today()) { setCheckDate(d); renderModal(); }
 }
-const DATE_BTN = document.getElementById('c-date-btn');   // 제목 줄로 옮겨 다님 (다시 그려도 같은 단추)
 function renderModal(){
   const p = current(), s = stats(p);
   renderMates(p);
+  saveBtnLabel();
   renderPersonDays(p);
   renderNotes(p);
   renderExPanel(p);
   if (document.getElementById('c-date').value) setCheckDate(document.getElementById('c-date').value);
   // 이름을 누르면 기본 정보·건강 정보 창
   document.getElementById('modal-title').innerHTML = `<b class="name-tap" onclick="openInfo()">${nmH(p)}${p.health && (p.health.conds?.length || p.health.memo) ? '<span class="hl-dot">🩺</span>' : ''}${photoOf(p) ? '<span class="hl-dot">📷</span>' : ''}</b>` +
-    ` <button type="button" class="small warning" onclick="addChange()" style="width:auto;margin:0;padding:4px 10px;vertical-align:6px;font-size:.85rem;">🔄 근무일 변경</button>` +
     (inHospNow(p) ? ` <span class="badge bg-hosp" style="vertical-align:6px;font-size:.85rem;cursor:pointer;" onclick="addChange({ reason: '입원' })">🏥 현재 입원중</span>` : '');
-  document.getElementById('modal-title').appendChild(DATE_BTN);   // 점검 날짜 바꾸기: 근무일 변경 오른쪽
   // 올해 감점이 있을 때만 짧게 표시 (누르면 이유)
   let n = s.pts ? `<div class="notice">${viewYear()}년 누적 감점 <b style="color:var(--danger)" class="pen-link" onclick="showPenReasons(current())">${s.penalty}점 이유 보기 ›</b>${s.unpaid ? ` · 일당 미지급 ${s.unpaid}일` : ''}</div>` : '';
   if (s.dropped) { const qd = quitDayOf(p);
@@ -4203,7 +4214,7 @@ function photoFull(p){
 // 통계·감점 목록에서 어르신을 열었으면, 닫을 때 그 목록으로 돌아감
 let modalBack = null;
 function openFrom(id, label, fn){ openModal(id); modalBack = { label, fn }; document.getElementById('m-crumb').textContent = `← ${label}`; }
-function closeModal(){
+function closeModal0(){
   const b = modalBack; modalBack = null; document.getElementById('m-crumb').textContent = '← 경로당 선택으로';
   document.getElementById('modal').classList.add('hidden'); renderList();
   if (b) b.fn();
@@ -4318,6 +4329,48 @@ function playDingDong(sad){
   } catch(e) { chimeWebAudio(notes); }
   try { if (navigator.vibrate) navigator.vibrate(sad ? [200, 100, 200] : 80); } catch(e) {}
 }
+// 같은 경로당 여러 명: 앞 분들 점검은 잠시 모아 두고, 마지막 분 점검 뒤 "점검 기록을 저장하세요" → 한 번에 저장
+let pendChecks = {};
+const pendOf = (p, d) => { const l = pendChecks[p.id]; return l && l.date === d ? l : null; };
+const nextMate = (p, d) => matesOf(p).find(q => q.id !== p.id && !stats(q).dropped && !q.logs.some(l => l.date===d) && !pendOf(q, d));
+function saveBtnLabel(){
+  const p = current(); if (!p || editingLogId) return;
+  document.getElementById('btn-save-check').textContent = nextMate(p, document.getElementById('c-date').value || today()) ? '✔ 다음 어르신 점검 ›' : '점검 저장';
+}
+async function commitCheck(p, log){
+  if (log.leave==='이탈' && p.logs.some(l => l.date===log.date && l.leave==='이탈'))
+    if (!await ask(`${nm(p)} 어르신: 같은 날짜에 이미 이탈 기록이 있습니다. 한 번 더 감점할까요?`)) return 0;
+  p.logs.push(log);
+  saveData(false); playDingDong(logPts(log) > 0);
+  const s = stats(p);
+  const pt = logPts(log), up = pt ? unpaidOf(p, log) : 0;
+  if (pt) logEvent(log.leave==='이탈' ? '근무지 이탈' : '벌점', p, `${logItems(log).join(', ')} → 감점 -${pt}점 (${viewYear()}년 누적 ${s.penalty}점)` + (up ? ' · 일당 미지급' : '') + (s.pts >= MAX_LEAVE ? ' → 감점 누적 중도포기' : '') + (log.memo ? ` · ${log.memo}` : ''), log.date);
+  if (pt) {
+    let msg = `${nm(p)} 어르신\n${logItems(log).join('\n')}\n→ 벌점 -${pt}점 (누적 ${s.penalty}점)`;
+    msg += up ? `\n\n벌점 -1점이 채워져 하루치 일당 미지급입니다.` : `\n\n(벌점 -1점마다 하루치 일당 미지급)`;
+    if (s.pts >= MAX_LEAVE) msg += `\n\n⚠️ 누적 -${MAX_LEAVE}점으로 중도포기 처리되었습니다.`;
+    await notify(msg);
+    await smsDialog(p, log);
+  }
+  return pt;
+}
+async function savePending(extra){
+  const list = Object.entries(pendChecks).map(([id, l]) => [participants.find(x => x.id == id), l]).filter(([q]) => q);
+  if (extra) list.push(extra);
+  pendChecks = {};
+  for (const [q, l] of list) await commitCheck(q, l);
+  return list.length;
+}
+function closeModal(){
+  const n = Object.keys(pendChecks).length;
+  if (n) {
+    const txt = Object.entries(pendChecks).map(([id, l]) => { const q = participants.find(x => x.id == id); return q ? `✔ ${nm(q)} · ${shortItems(l) || '이상 없음'}` : ''; }).filter(Boolean).join('\n');
+    showDialog(`점검 기록을 저장하세요.\n\n${txt}`, true, ['💾 저장', '저장 안 함']).then(async ok => {
+      if (ok) { const k = await savePending(); notify(`${k}명 점검 기록이 저장되었습니다.`); } else pendChecks = {};
+      renderList(); });
+  }
+  closeModal0();
+}
 async function saveCheck(){
   const p = current(); if(!p) return;
   try { document.activeElement && document.activeElement.blur(); } catch(e) {}
@@ -4346,11 +4399,27 @@ async function saveCheck(){
   const log = { id: Date.now(), date, badge:g('c-badge'), vest:g('c-vest'), attitude:g('c-attitude'),
     leave:g('c-leave'), memo:g('c-memo').trim(), pv: Object.assign({}, PT), ex: exFromForm() };
 
+  p.phone = g('m-phone').trim();
+  delete pendChecks[p.id];
+  const nx = nextMate(p, date);
+  if (nx) {   // 다음 분으로 (저장은 마지막 분 점검 뒤에 한 번에)
+    pendChecks[p.id] = log; playDingDong(false);
+    document.getElementById('c-memo').value = ''; resetExItems();
+    openModal(nx.id); if (date !== today()) { setCheckDate(date); renderModal(); }
+    return;
+  }
+  const pend = Object.entries(pendChecks).map(([id, l]) => [participants.find(x => x.id == id), l]).filter(([q]) => q);
+  if (pend.length) {
+    const all = [...pend, [p, log]];
+    if (!await showDialog(`점검 기록을 저장하세요.\n\n${all.map(([q, l]) => `✔ ${nm(q)} · ${shortItems(l) || '이상 없음'}`).join('\n')}`, true, ['💾 저장', '취소'])) return;
+    const k = await savePending([p, log]);
+    document.getElementById('c-memo').value = ''; resetExItems(); renderModal();
+    return notify(`${k}명 점검 기록이 저장되었습니다.`);
+  }
   if (log.leave==='이탈' && p.logs.some(l => l.date===date && l.leave==='이탈'))
     if (!await ask('같은 날짜에 이미 이탈 기록이 있습니다. 한 번 더 감점할까요?')) return;
 
   p.logs.push(log);
-  p.phone = g('m-phone').trim();
   saveData(false); playDingDong(logPts(log) > 0);
   const s = stats(p);
   const pt = logPts(log), up = pt ? unpaidOf(p, log) : 0;
@@ -4362,11 +4431,9 @@ async function saveCheck(){
     await notify(msg);
     await smsDialog(p, log);
   }
-  const next = matesOf(p).find(q => q.id !== p.id && !stats(q).dropped && !q.logs.some(l => l.date===date));
   document.getElementById('c-memo').value = ''; resetExItems();
   renderModal();
-  if (next) { if (await showDialog(`${pt ? '' : '점검 기록이 저장되었습니다.\n\n'}같은 경로당 ${nm(next)} 어르신도 이어서 점검할까요?`, true, [`${nm(next)} 점검하기`, '여기 있기'])) switchMate(next.id); }
-  else if (!pt) notify('점검 기록이 저장되었습니다.');
+  if (!pt) notify('점검 기록이 저장되었습니다.');
 }
 
 async function deleteLog(logId){
