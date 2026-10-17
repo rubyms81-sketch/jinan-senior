@@ -471,7 +471,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-19</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-20</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -886,7 +886,7 @@ function personRow(p, showSite){
   const checked = p.logs.some(l => l.date===t);
   return `<button class="site" onclick="openModal(${p.id})">
     <div><strong>${nmH(p)}</strong> ${ageSex(p)?`<span class="muted">(${esc(ageSex(p))})</span>`:''} ${checked?'<span class="done">✔ 오늘 점검</span>':''}<br>
-      ${showSite?`<span class="muted">🏠 ${esc(p.town)} · ${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</span><br>`:''}${badgeOf(s)}${inHospNow(p)?' <span class="badge bg-hosp">🏥 입원 중</span>':''}${p.linking?' <span class="badge bg-warning">🔗 연계 중</span>':''}</div>
+      ${showSite?`<span class="muted">🏠 ${esc(p.town)} · ${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</span><br>`:''}${inHospNow(p) && s.status==='정상' ? '' : badgeOf(s)}${inHospNow(p)?' <span class="badge bg-hosp">🏥 입원 중</span>':''}${p.linking?' <span class="badge bg-warning">🔗 연계 중</span>':''}</div>
     <span class="arrow">›</span></button>`;
 }
 
@@ -1719,7 +1719,7 @@ function openZone(id){
       return `<details class="zs-site"><summary><span><span class="muted">${esc(x.town)}</span> <b>${crown(x.town, x.senior)}${esc(x.senior)}</b></span><span class="muted">${ms.filter(p => !stats(p).dropped).length}명 ▾</span></summary>
         <button type="button" class="small full" data-gosite="${esc(siteKey(x.town, x.senior))}" style="margin:6px 0 4px;">▶ 이 경로당 점검하기</button>
         <div class="zs-people">${ms.length ? ms.map(p => { const st = stats(p); return `<div class="zs-person">
-          <b>${nmH(p)}</b> ${ageSex(p)?`<span class="muted">(${esc(ageSex(p))})</span>`:''} ${st.dropped?`<span class="badge bg-danger">${esc(st.status)}</span>`:badgeOf(st)}${inHospNow(p)?' <span class="badge bg-hosp">🏥 입원 중</span>':''}
+          <b>${nmH(p)}</b> ${ageSex(p)?`<span class="muted">(${esc(ageSex(p))})</span>`:''} ${st.dropped?`<span class="badge bg-danger">${esc(st.status)}</span>`:(inHospNow(p) && st.status==='정상' ? '' : badgeOf(st))}${inHospNow(p)?' <span class="badge bg-hosp">🏥 입원 중</span>':''}
           <br>${telBtn(p)}${p.address?`<br><span class="muted" style="font-size:.85rem;">🏠 ${esc(p.address)}</span>`:''}
           <br><button type="button" class="small secondary" data-open="${p.id}">점검 화면 열기 ›</button>
           ${z.leaderId === p.id ? '<span class="badge" style="background:#276749;">👤 팀장</span> <button type="button" class="small secondary" data-unlead="1">팀장 해제</button>' : `<button type="button" class="small" data-lead="${p.id}" style="background:#276749;">👤 팀장으로 정하기</button>`}</div>`; }).join('') : '<div class="muted">어르신이 없습니다.</div>'}
