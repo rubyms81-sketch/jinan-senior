@@ -457,7 +457,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-12</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-13</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1255,8 +1255,10 @@ function issuesDialog(d){
   back.querySelectorAll('[data-sms]').forEach(b => b.onclick = () => {
     const g = groups[b.dataset.sms], pick = g.rows.filter((r, i) => back.querySelector(`input[data-g="${b.dataset.sms}"][data-i="${i}"]`).checked);
     if (!pick.length) return notify('문자 보낼 어르신을 골라 주세요.');
-    const text = `[진안군노인회] ${M}월 ${D}일 현장 점검 결과\n\n${g.L ? g.L.name + ' 팀장님' : '팀장님'},\n아래 어르신들 지도 부탁드립니다.\n\n`
-      + pick.map(r => `· ${r.q.name} (${r.q.town.replace(/[면읍]$/,'')} ${seniorOf(r.q)}${r.time ? ' ' + r.time : ''})\n  ${r.t.join(', ')}${r.l.memo ? ` - ${r.l.memo}` : ''}`).join('\n') + `\n\n감사합니다.`;
+    const isToday = d === today(), when = isToday ? '오늘' : `${M}월 ${D}일`;
+    const text = `[진안군노인회] ${M}월 ${D}일 현장 점검 결과\n\n안녕하세요, ${g.L ? g.L.name + ' 팀장님' : '팀장님'}.\n진안군 노인회 ${me.name || '김장원'}입니다.\n${isToday ? '오늘도' : '늘'} 수고가 많으시고 고생이 많으십니다.\n\n아래 어르신들은 ${when} 현장 점검을 다니며 확인된 문제들입니다.\n\n`
+      + pick.map(r => `· ${r.q.name} 어르신 (${r.q.town.replace(/[면읍]$/,'')} ${seniorOf(r.q)}${r.time ? ', ' + r.time : ''})\n  ${r.t.join(', ')}${r.l.memo ? ` - ${r.l.memo}` : ''}`).join('\n')
+      + `\n\n어르신들께 주의 말씀 전해 주시고, 지도 편달 부탁드립니다.\n${isToday ? '오늘도' : '늘'} 애써 주셔서 진심으로 감사합니다.\n\n${me.name || '김장원'} 드림`;
     smsBox({ title: `${M}월 ${dd(d)} 점검 결과 → ${g.L ? g.L.name + ' 팀장' : '팀장'}`, people: [...new Set(pick.map(r => r.q))], text, logType: '점검 결과 팀장 문자',
       logDetail: `${d} ${pick.map(r => `${r.q.name}(${r.time}): ${r.t.join(', ')}`).join(' / ')}`, leaderOnly: true });
   });
