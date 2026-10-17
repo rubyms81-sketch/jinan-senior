@@ -452,7 +452,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-5</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-6</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -467,7 +467,7 @@
   <div id="m-days" class="chips"></div>
   <div id="m-chg"></div>
   <button class="warning full hidden" id="btn-addchg" onclick="addChange()">🔄 근무일 변경 추가</button>
-  <button class="secondary full hidden" id="btn-custom" onclick="openCustom()">🏥 입원 체크</button>
+  <button class="secondary full hidden" id="btn-custom" onclick="addChange({ reason: '입원' })">🏥 입원 체크</button>
   </details>
   <div id="mate-tabs"></div>
   <div id="modal-notice"></div>
@@ -1202,7 +1202,7 @@ function renderPersonDays(p){
       ${hosp.size ? `<br><b style="color:#97266d">🏥 입원 ${rangeText([...hosp])}</b>` : ''}
       <br><span class="muted">원래 근무일 중 못 나온 날 ${reg.filter(d => !days.includes(d)).length}일, 보충한 날 ${days.filter(d => !reg.includes(d)).length}일</span>
 
-      <br><button class="small secondary" onclick="openCustom()">고치기</button> <button class="small secondary" onclick="delCustom()">지우기</button></div>` : '')
+      <br><button class="small secondary" onclick="addChange({ reason: '입원' })">고치기</button> <button class="small secondary" onclick="delCustom()">지우기</button></div>` : '')
     + (p.hospCall ? `<div class="log" style="border-left-color:#d53f8c;">📞 <b>안부 전화</b> · 마지막 ${mdw(p.hospCall.last)} · <b style="color:${p.hospCall.due <= today() ? 'var(--danger)' : '#97266d'}">다음 ${mdw(p.hospCall.due)}${p.hospCall.due <= today() ? ' (오늘 전화하세요)' : ''}</b>
       <br><button class="small secondary" onclick="callDone(${p.id})">✔ 오늘 통화했어요</button></div>` : '')
     + chg.map(c => `<div class="log warn">🔄 <b>${dd(c.from)} → ${dd(c.to)}</b>${c.reason?` <span class="muted">(${esc(c.reason)})</span>`:''}
@@ -2244,13 +2244,20 @@ function addChange(pre){
   const td = today(), end = endDay(mk);
   // 여러 날짜를 한 번에: pairs = [{from, to}]  · 지난 날짜(오늘 전)는 바꿀 수 없음
   let pairs = [], from = null, quitFrom = null, startFrom = null;
+  // 🏥 입원 · 🎓 교육·행사도 이 창 하나에서
+  let hospSel = new Set(hospD);
+  const ownEdu = (p.edu || []).filter(e => e.date.startsWith(mk));
+  let eduSel = new Map(ownEdu.map(e => [e.date, e.name])), eduName = ownEdu[0]?.name || '';
+  const isHosp = () => back.querySelector('#cg-type')?.value === '입원';
+  const isEdu = () => back.querySelector('#cg-type')?.value === '교육';
+  const modeKey = () => [isQuit(), isStart(), isHosp(), isEdu()].join('|');
   const isQuit = () => back.querySelector('#cg-type')?.value === '중도포기';
   const isStart = () => back.querySelector('#cg-type')?.value === '시작일';
   const newbie = !!(p.start || p.startDay || isNew(p)), rawDays = personDays(p, mk, true);
   const canFrom = k => days.includes(k) && k >= td && !pairs.some(x => x.from === k);
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">🔄 ${nmH(p)} 어르신 근무일 변경${inH ? ` <button type="button" id="cg-inhosp" class="small" style="width:auto;margin:0 0 0 4px;padding:3px 10px;background:#d53f8c;vertical-align:2px;">🏥 현재 입원중 ›</button>` : ''}</div>
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">🔄 ${nmH(p)} 어르신 근무일 변경${inH ? ` <span class="badge bg-hosp" style="vertical-align:2px;">🏥 현재 입원중</span>` : ''}</div>
     ${hospD.size || inH ? `<div class="notice" style="background:#fff5f7;border-color:#fbb6ce;margin-bottom:8px;font-size:.9rem;">🏥 ${inH ? '<b>지금 입원 중</b>이에요' : '입원 기록이 있어요'}${hospD.size ? ` · 입원한 날 ${[...hospD].sort().map(dd).join(', ')}` : ''}${cuH?.memo ? ` · ${esc(cuH.memo)}` : ''}<br><span class="muted">달력의 분홍 칸이 입원한 날이에요.</span></div>` : ''}
     <div class="legend"><span><i style="background:var(--primary);opacity:.55"></i>근무일</span><span><i style="background:#fffaf0;border:2px dashed var(--warning)"></i>원래 날짜</span><span><i style="background:var(--warning)"></i>바꾼 날짜</span><span><i style="background:#edf2f7"></i>지난 날·마감 이후</span></div>
     <div class="cal" id="cg-cal"></div>
@@ -2260,6 +2267,7 @@ function addChange(pre){
     <input type="hidden" id="cg-type">
     <div class="grid-2" id="cg-types" style="margin-bottom:12px;">
       <button type="button" class="reason" data-v="병원 진료">🏥 병원 진료</button><button type="button" class="reason" data-v="개인 사정">🙋 개인 사정</button>
+      <button type="button" class="reason" data-v="입원" style="color:#97266d;">🛏️ 입원 체크</button><button type="button" class="reason" data-v="교육" style="color:#553c9a;">🎓 교육·행사</button>
       ${newbie ? `<button type="button" class="reason" data-v="시작일" style="grid-column:1/-1;color:#975a16;background:#fefcbf;">🆕 근무 시작 날짜${p.startDay ? ` (지금 ${dd(p.startDay)})` : ''}</button>` : ''}
       <button type="button" class="reason" data-v="중도포기" style="grid-column:1/-1;color:var(--danger);">🚪 중도포기</button>
     </div>
@@ -2267,26 +2275,46 @@ function addChange(pre){
       <label>중도포기 사유</label>
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">${['건강 문제','개인 사정','이사','가족 돌봄','다른 일자리'].map(w => `<button type="button" class="small secondary" data-qwhy="${w}" style="width:auto;margin:0;">${w}</button>`).join('')}</div>
       <input type="text" id="cg-qwhy" placeholder="직접 적기" autocomplete="off" style="margin:0;"></div>
-    <button type="button" class="full" id="cg-hosp" style="background:#d53f8c;margin:-4px 0 12px;">🏥 입원 체크</button>
+    <div id="cg-hbox" class="hidden" style="margin:-4px 0 12px;">
+      <label>입원 사유</label><input type="text" id="cg-hmemo" placeholder="예: 다리 골절, ○○병원" autocomplete="off" style="margin:0 0 6px;">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin:0;"><input type="checkbox" id="cg-hnow" style="width:22px;height:22px;margin:0;"> 🏥 지금 입원 중</label></div>
+    <div id="cg-ebox" class="hidden" style="margin:-4px 0 12px;">
+      <div id="cg-enames" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;"></div>
+      <div style="display:flex;gap:4px;"><input type="text" id="cg-enew" placeholder="새 이름" autocomplete="off" style="margin:0;"><button type="button" class="small" id="cg-eadd" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button></div></div>
     ${mates.length ? `<label id="cg-all-wrap" style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-bottom:12px;"><input type="checkbox" id="cg-all" style="width:22px;height:22px;margin:0;"> 같은 경로당(${esc(seniorOf(p))}) ${mates.length}명도 똑같이 변경</label>` : ''}
     <div class="grid-2"><button class="secondary" id="cg-cancel">취소</button><button id="cg-save">저장</button></div></div>`;
   document.body.appendChild(back);
   const $ = q => back.querySelector(q);
-  $('#cg-hosp').onclick = () => { back.remove(); openCustom(); };
+  $('#cg-hmemo').value = cuH?.memo || ''; $('#cg-hnow').checked = !!cuH?.inHosp;
+  const drawENames = () => { const names = [...new Set([...EDU_NAMES, ...eduSel.values(), ...(eduName ? [eduName] : [])])];
+    $('#cg-enames').innerHTML = names.map(n => `<button type="button" class="small ${n === eduName ? '' : 'secondary'}" data-en="${esc(n)}" style="width:auto;margin:0;${n === eduName ? 'background:#805ad5;' : ''}">🎓 ${esc(n)}</button>`).join('');
+    back.querySelectorAll('[data-en]').forEach(b => b.onclick = () => { eduName = b.dataset.en; drawENames(); }); };
+  const addEName = () => { const v = $('#cg-enew').value.trim(); if (!v) return; eduName = v; $('#cg-enew').value = ''; drawENames(); };
+  $('#cg-eadd').onclick = addEName; $('#cg-enew').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addEName(); } });
+  drawENames();
   back.querySelectorAll('[data-qwhy]').forEach(b => b.onclick = () => { $('#cg-qwhy').value = b.dataset.qwhy;
     back.querySelectorAll('[data-qwhy]').forEach(x => { x.classList.toggle('secondary', x !== b); x.style.background = x === b ? 'var(--danger)' : ''; }); });
-  $('#cg-inhosp')?.addEventListener('click', () => { back.remove(); openCustom(); });
   const y = YEAR, m = curMonth, lastD = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
   const showList = () => {
+    $('#cg-hbox').classList.toggle('hidden', !isHosp()); $('#cg-ebox').classList.toggle('hidden', !isEdu());
+    if (isHosp()) {
+      $('#cg-picked').innerHTML = `<b style="color:#97266d">🛏️ 입원한 날 ${hospSel.size}일</b>${hospSel.size ? ` · ${[...hospSel].sort().map(d => Number(d.slice(8,10))).join(', ')}일` : ''}`;
+      $('#cg-list').innerHTML = ''; $('#cg-all-wrap')?.classList.add('hidden'); $('#cg-qwhy-box').classList.add('hidden'); return;
+    }
+    if (isEdu()) {
+      const by = {}; [...eduSel].sort().forEach(([d, n]) => (by[n] ||= []).push(d));
+      $('#cg-picked').innerHTML = Object.keys(by).length ? Object.entries(by).map(([n, ds]) => `<b style="color:#553c9a">🎓 ${esc(n)}</b> ${ds.map(d => Number(d.slice(8,10))).join(', ')}일`).join('<br>') : '<b style="color:#553c9a">🎓 교육·행사 날</b>';
+      $('#cg-list').innerHTML = ''; $('#cg-all-wrap')?.classList.remove('hidden'); $('#cg-qwhy-box').classList.add('hidden'); return;
+    }
     if (isStart()) {
       $('#cg-picked').innerHTML = startFrom ? `<b style="color:#975a16">🆕 ${dd(startFrom)}부터 근무 시작</b>${rawDays.filter(d => d < startFrom).length ? ` · 그 전 근무일 ${rawDays.filter(d => d < startFrom).length}일 빠짐` : ''}` : '<b style="color:#975a16">🆕 근무 시작하는 날</b>';
-      $('#cg-list').innerHTML = ''; $('#cg-all-wrap')?.classList.add('hidden'); $('#cg-qwhy-box').classList.add('hidden'); $('#cg-hosp').classList.add('hidden'); return;
+      $('#cg-list').innerHTML = ''; $('#cg-all-wrap')?.classList.add('hidden'); $('#cg-qwhy-box').classList.add('hidden'); return;
     }
     if (isQuit()) {
       $('#cg-picked').innerHTML = quitFrom ? `<b style="color:var(--danger)">🚪 ${dd(quitFrom)}부터 중도포기</b> · 근무일 ${days.filter(d => d >= quitFrom).length}일 빠짐` : '<b style="color:var(--danger)">🚪 그만두는 날</b>';
-      $('#cg-list').innerHTML = ''; $('#cg-all-wrap')?.classList.add('hidden'); $('#cg-qwhy-box').classList.remove('hidden'); $('#cg-hosp').classList.add('hidden'); return;
+      $('#cg-list').innerHTML = ''; $('#cg-all-wrap')?.classList.add('hidden'); $('#cg-qwhy-box').classList.remove('hidden'); return;
     }
-    $('#cg-all-wrap')?.classList.remove('hidden'); $('#cg-qwhy-box').classList.add('hidden'); $('#cg-hosp').classList.remove('hidden');
+    $('#cg-all-wrap')?.classList.remove('hidden'); $('#cg-qwhy-box').classList.add('hidden');
     $('#cg-picked').innerHTML = !days.length ? '이달 근무일이 없습니다.'
       : from ? `<b>${dd(from)}</b> → ? <button type="button" class="small" id="cg-drop" style="width:auto;margin:0 0 0 6px;padding:3px 10px;background:var(--danger);">✕ 이 날 빼기</button>` : '';
     $('#cg-drop')?.addEventListener('click', () => { pairs.push({ from, to: '' }); pairs.sort((a, b) => a.from.localeCompare(b.from)); from = null; drawCal(); });
@@ -2301,16 +2329,19 @@ function addChange(pre){
       const k = ymd(y,m,d), w = new Date(y, m-1, d).getDay();
       const past = k < td, after = end && k > end, isWork = days.includes(k), isH = hospD.has(k);
       const isFrom = k === from || fromSet.has(k) || (isQuit() && quitFrom && k >= quitFrom && isWork) || (isStart() && startFrom && k < startFrom && rawDays.includes(k)), isTo = toSet.has(k) || (isStart() && k === startFrom);
-      const cls = [isFrom ? 'from' : isTo ? 'pick' : (isWork ? 'work' : isH ? 'hosp' : ''), (w===0 || w===6 || HOLIDAYS.has(k)) ? 'red' : ''].join(' ');
-      const tag = isStart() && k === startFrom ? '시작' : isStart() && startFrom && k < startFrom && rawDays.includes(k) ? '빠짐' : isQuit() && quitFrom && k === quitFrom ? '포기' : isQuit() && quitFrom && k > quitFrom && isWork ? '빠짐' : fromSet.has(k) ? `→${dd(fromSet.get(k)).replace(/\(.*/, '')}` : k === from ? '원래' : isTo ? '바꿈' : isH ? '입원' : k === end ? '마감' : '';
+      const hh = isHosp() ? hospSel.has(k) : isH, ee = isEdu() && eduSel.get(k);
+      const cls = [ee ? 'edu' : hh && isHosp() ? 'hosp' : isFrom ? 'from' : isTo ? 'pick' : (isWork ? 'work' : hh ? 'hosp' : ''), (w===0 || w===6 || HOLIDAYS.has(k)) ? 'red' : ''].join(' ');
+      const tag = ee ? ee.slice(0, 4) : isHosp() && hh ? '입원' : isStart() && k === startFrom ? '시작' : isStart() && startFrom && k < startFrom && rawDays.includes(k) ? '빠짐' : isQuit() && quitFrom && k === quitFrom ? '포기' : isQuit() && quitFrom && k > quitFrom && isWork ? '빠짐' : fromSet.has(k) ? `→${dd(fromSet.get(k)).replace(/\(.*/, '')}` : k === from ? '원래' : isTo ? '바꿈' : isH ? '입원' : k === end ? '마감' : '';
       const red = w === 0 || w === 6 || HOLIDAYS.has(k);   // 토·일·공휴일(빨간 날)로는 못 옮김
       const qd = quitDayOf(p), gone = qd && k >= qd;   // 이미 중도포기한 날 이후는 못 넣음
-      const off = isStart() ? (after || red) : isQuit() ? (after || (red && !isWork)) : ((past || after || gone || (red && !isWork)) && !isFrom && !isTo);
+      const off = isHosp() || isEdu() ? false : isStart() ? (after || red) : isQuit() ? (after || (red && !isWork)) : ((past || after || gone || (red && !isWork)) && !isFrom && !isTo);
       h += `<button data-k="${k}" class="${cls}" ${off ? 'disabled' : ''}>${d}${tag ? `<small>${tag}</small>` : ''}</button>`;
     }
     $('#cg-cal').innerHTML = h;
     back.querySelectorAll('#cg-cal button:not(:disabled)').forEach(b => b.onclick = () => {
       const k = b.dataset.k, pi = pairs.findIndex(x => x.from === k || (x.to && x.to === k));
+      if (isHosp()) { hospSel.has(k) ? hospSel.delete(k) : hospSel.add(k); return drawCal(); }
+      if (isEdu()) { if (eduSel.get(k) === eduName) eduSel.delete(k); else { if (!eduName) return notify('교육·행사 이름을 먼저 골라 주세요.'); eduSel.set(k, eduName); } return drawCal(); }
       if (isQuit()) { quitFrom = quitFrom === k ? null : k; return drawCal(); }
       if (isStart()) { startFrom = startFrom === k ? null : k; return drawCal(); }
       if (pi >= 0) { pairs.splice(pi, 1); return drawCal(); }          // 이미 고른 날을 다시 누르면 빼기
@@ -2332,9 +2363,9 @@ function addChange(pre){
     const on = !b.classList.contains('on');
     back.querySelectorAll('#cg-types button').forEach(x => x.classList.remove('on'));
     if (on) b.classList.add('on');
-    const was = isQuit() + '|' + isStart();
+    const was = modeKey();
     $('#cg-type').value = on ? b.dataset.v : '';
-    if (was !== isQuit() + '|' + isStart()) { pairs = []; from = null; quitFrom = null; startFrom = null; drawCal(); }
+    if (was !== modeKey()) { pairs = []; from = null; quitFrom = null; startFrom = null; drawCal(); }
   });
   if (pre.reason) $(`#cg-types button[data-v="${pre.reason}"]`)?.click();
   if (pre.all && $('#cg-all')) $('#cg-all').checked = true;
@@ -2342,6 +2373,30 @@ function addChange(pre){
   $('#cg-cancel').onclick = () => back.remove();
   $('#cg-save').onclick = async () => {
     const reason = $('#cg-type').value;
+    if (isHosp()) {   // 🛏️ 입원 체크: 입원한 날은 근무일에서 빠짐
+      const hd = [...hospSel].sort(), memo = $('#cg-hmemo').value.trim(), now = $('#cg-hnow').checked;
+      const reg = isLeader(p) && leaderPlan[mk]?.days?.length ? leaderPlan[mk].days : monthDays(mk);
+      const base = cuH ? [...new Set([...cuH.days, ...(cuH.hosp || []).filter(d => reg.includes(d))])] : reg;
+      if (!hd.length && !now) { if (cuH) { delete p.custom[mk]; logEvent('입원 지움', p, `${curMonth}월`); } if (p.hospCall) delete p.hospCall; }
+      else {
+        (p.custom ||= {})[mk] = { days: base.filter(d => !hospSel.has(d)).sort(), reason: '입원·치료', memo, back: '', hosp: hd, inHosp: now, date: today() };
+        if (now && !p.hospCall) p.hospCall = { since: hd[0] || today(), last: today(), due: addDays(today(), CALL_EVERY) };
+        if (!now && p.hospCall) delete p.hospCall;
+        logEvent(now ? '입원 표시' : '입원 수정', p, [memo ? `"${memo}"` : '', hd.length ? `입원 ${rangeText(hd)}` : '', now ? '입원 중' : ''].filter(Boolean).join(' · '), hd[0] || today());
+      }
+      saveData(false); back.remove(); renderModal(); renderList();
+      return notify(hd.length || now ? `🛏️ 입원을 저장했어요.${hd.length ? `\n입원한 날 ${hd.length}일은 근무일에서 빠져요.` : ''}` : '입원 표시를 지웠어요.');
+    }
+    if (isEdu()) {   // 🎓 교육·행사: 일한 날로 인정
+      const targets = [p, ...(($('#cg-all')?.checked) ? mates : [])], list = [...eduSel].sort().map(([date, name]) => ({ date, name }));
+      const removed = ownEdu.filter(e => eduSel.get(e.date) !== e.name);
+      p.edu = (p.edu || []).filter(e => !e.date.startsWith(mk));
+      removed.forEach(e => logEvent('교육 날짜 삭제', p, `${dd(e.date)} ${e.name}`, e.date));
+      targets.forEach(x => list.forEach(e => { if (x !== p && eduOn(x, e.date)) return; (x.edu ||= []).push({ id: Date.now() + Math.random(), ...e });
+        if (x !== p || !ownEdu.some(o => o.date === e.date && o.name === e.name)) logEvent('교육 날짜', x, `${dd(e.date)} ${e.name} (일한 날로 인정)`, e.date); }));
+      saveData(false); back.remove(); renderModal(); renderList();
+      return notify(list.length ? `🎓 교육·행사 날짜를 저장했어요.${targets.length > 1 ? ` (${targets.length}명)` : ''}\n${list.map(e => `${dd(e.date)} ${e.name}`).join('\n')}` : '교육·행사 날짜를 지웠어요.');
+    }
     if (isStart()) {
       if (!startFrom) return notify('근무 시작하는 날을 달력에서 눌러 주세요.');
       const drop = rawDays.filter(d => d < startFrom), old = p.startDay;
@@ -4070,8 +4125,7 @@ function renderModal(){
   // 이름을 누르면 기본 정보·건강 정보 창
   document.getElementById('modal-title').innerHTML = `<b class="name-tap" onclick="openInfo()">${nmH(p)}${p.health && (p.health.conds?.length || p.health.memo) ? '<span class="hl-dot">🩺</span>' : ''}${photoOf(p) ? '<span class="hl-dot">📷</span>' : ''}</b>` +
     ` <button type="button" class="small warning" onclick="addChange()" style="width:auto;margin:0;padding:4px 10px;vertical-align:6px;font-size:.85rem;">🔄 근무일 변경</button>` +
-    ` <button type="button" class="small" onclick="addEdu()" style="width:auto;margin:0;padding:4px 10px;vertical-align:6px;font-size:.85rem;background:#805ad5;">🎓 교육·행사</button>` +
-    (inHospNow(p) ? ` <span class="badge bg-hosp" style="vertical-align:6px;font-size:.85rem;cursor:pointer;" onclick="openCustom()">🏥 현재 입원중</span>` : '');
+    (inHospNow(p) ? ` <span class="badge bg-hosp" style="vertical-align:6px;font-size:.85rem;cursor:pointer;" onclick="addChange({ reason: '입원' })">🏥 현재 입원중</span>` : '');
   document.getElementById('modal-title').appendChild(DATE_BTN);   // 점검 날짜 바꾸기: 근무일 변경 오른쪽
   // 올해 감점이 있을 때만 짧게 표시 (누르면 이유)
   let n = s.pts ? `<div class="notice">${viewYear()}년 누적 감점 <b style="color:var(--danger)" class="pen-link" onclick="showPenReasons(current())">${s.penalty}점 이유 보기 ›</b>${s.unpaid ? ` · 일당 미지급 ${s.unpaid}일` : ''}</div>` : '';
