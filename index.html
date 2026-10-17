@@ -457,7 +457,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-8</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-9</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -469,6 +469,7 @@
   <input type="file" id="photo-cam" accept="image/*" capture="environment" class="hidden" onchange="photoPicked(this)">
   <input type="file" id="photo-file" accept="image/*" class="hidden" onchange="photoPicked(this)">
   <div class="chg-box" id="sec-days"><div class="days-head"><h4 id="m-days-title">📅 이달 근무일</h4>
+    <button type="button" class="small warning" onclick="addChange()" style="width:auto;margin:0 auto 0 0;padding:4px 10px;font-size:.85rem;">🔄 근무일 변경</button>
     <button type="button" class="date-btn" id="c-date-btn" onclick="pickCheckDate()"></button></div>
   <div id="m-days" class="chips"></div>
   <details class="chg-box m-sec hidden" id="sec-moved" style="margin-top:8px;"><summary><h4 id="m-chg-title" style="font-size:.95rem;">🔄 이동한 날짜</h4><span class="chg-arrow"></span></summary>
@@ -1200,8 +1201,8 @@ function renderPersonDays(p){
   const un = unpaidDaysOf(p, mk);
   document.querySelectorAll('#m-days .chip.wd').forEach(c => { if (un.has(c.dataset.d)) { c.classList.add('pen'); c.innerHTML = `${dd(c.dataset.d)} 벌점`; } });
   if (un.size) document.getElementById('m-days-title').innerHTML = document.getElementById('m-days-title').innerHTML.replace(`(${days.length}일)`, `(${days.length - un.size}일 · <span style="color:var(--danger)">벌점 ${un.size}일 빠짐</span>)`);
-  // 근무일을 누르면 그 날짜로 근무일 변경 창
-  document.querySelectorAll('#m-days .chip.wd').forEach(c => c.onclick = () => addChange({ from: c.dataset.d }));
+  // 근무일을 누르면 그날 경고·벌점 받은 어르신 목록 → 팀장에게 문자
+  document.querySelectorAll('#m-days .chip.wd').forEach(c => c.onclick = () => dayIssues(p, c.dataset.d));
   document.getElementById('m-chg').innerHTML = (cu ? `<div class="log warn">${cu.inHosp ? '🏥 <b>입원 중</b>' : '🩹 <b>보충 근무 (개인 일정)</b>'}${cu.reason?` <span class="muted">· ${esc(cu.reason)}</span>`:''}${cu.back?` <span class="muted">· ${dd(cu.back)} 복귀</span>`:''}
       ${cu.memo ? `<br>📝 ${esc(cu.memo)}` : ''}
       ${hosp.size ? `<br><b style="color:#97266d">🏥 입원 ${rangeText([...hosp])}</b>` : ''}
@@ -1216,6 +1217,45 @@ function renderPersonDays(p){
   const nMv = chg.length + (cu ? 1 : 0) + (p.hospCall ? 1 : 0);
   document.getElementById('sec-moved').classList.toggle('hidden', !nMv);
   document.getElementById('m-chg-title').innerHTML = `🔄 이동한 날짜 ${chg.length}건${cu ? (cu.inHosp ? ' · 🏥 입원' : ' · 🩹 보충') : ''}`;
+}
+
+// 📋 그날 문제(경고·벌점) 있었던 어르신: 같은 구역(팀장) 안에서, 고른 분들을 팀장에게 문자로
+function issueText(l){
+  const t = logItems(l).map(x => / -[\d.]+점$/.test(x) ? x : x + '(경고)');
+  if (l.attitude === '불량') t.push('응대 태도 불량(경고)');
+  return t;
+}
+function dayIssues(p, d){
+  const z = zoneOf(p);
+  const pool = z ? participants.filter(q => zoneOf(q) === z) : participants.filter(q => q.town === p.town);
+  const rows = [];
+  pool.forEach(q => q.logs.filter(l => l.date === d).forEach(l => { const t = issueText(l); if (t.length) rows.push({ q, l, t }); }));
+  rows.sort((a, b) => logPts(b.l) - logPts(a.l) || seniorOf(a.q).localeCompare(seniorOf(b.q)) || a.q.name.localeCompare(b.q.name));
+  const L = leaderOf(p), M = Number(d.slice(5,7));
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">📋 ${M}월 ${dd(d)} 경고·벌점${z ? ` <span class="muted" style="font-weight:normal;font-size:.9rem;">${esc(L ? L.name + ' 팀장' : z.name)} 구역</span>` : ''}</div>
+    ${rows.length ? rows.map((r, i) => `<label style="display:flex;align-items:flex-start;gap:8px;font-weight:normal;margin:6px 0;padding:8px;border-radius:8px;background:${logPts(r.l) ? '#fff5f5' : '#fffaf0'};">
+      <input type="checkbox" data-i="${i}" checked style="width:22px;height:22px;margin:2px 0 0;flex:none;">
+      <span><b>${nmH(r.q)}</b> <span class="muted" style="font-size:.85rem;">${esc(seniorOf(r.q))}</span><br>
+      <span style="color:${logPts(r.l) ? 'var(--danger)' : '#c05621'};font-weight:bold;">${r.t.map(esc).join(', ')}</span>${r.l.memo ? `<br><span class="muted" style="font-size:.85rem;">📝 ${esc(r.l.memo)}</span>` : ''}</span></label>`).join('')
+      : '<div class="muted" style="margin:8px 0 12px;">이 날 경고·벌점 받은 어르신이 없어요.</div>'}
+    ${rows.length ? `<button type="button" class="full" id="di-sms" style="margin:8px 0;">💬 팀장에게 문자</button>` : ''}
+    <button type="button" class="secondary full" id="di-close" style="margin:0;">닫기</button></div>`;
+  document.body.appendChild(back);
+  back.querySelector('#di-close').onclick = () => back.remove();
+  back.querySelector('#di-sms')?.addEventListener('click', () => {
+    const pick = rows.filter((r, i) => back.querySelector(`input[data-i="${i}"]`).checked);
+    if (!pick.length) return notify('문자 보낼 어르신을 골라 주세요.');
+    back.remove();
+    const text = `[진안군노인회] ${M}월 ${Number(d.slice(8,10))}일 현장 점검 결과\n\n${L ? L.name + ' 팀장님' : '팀장님'},\n아래 어르신들 지도 부탁드립니다.\n\n`
+      + pick.map(r => `· ${r.q.name}(${seniorOf(r.q)}) - ${r.t.join(', ')}`).join('\n') + `\n\n감사합니다.`;
+    const ps = [...new Set(pick.map(r => r.q))];
+    smsBox({ title: `${M}월 ${dd(d)} 점검 결과 → 팀장`, people: ps, text, logType: '점검 결과 팀장 문자',
+      logDetail: `${d} ${pick.map(r => `${r.q.name}: ${r.t.join(', ')}`).join(' / ')}` });
+    // 받는 분은 팀장님만 (어르신 본인은 체크 해제, 필요하면 다시 체크)
+    [...document.querySelectorAll('.dlg-back')].pop()?.querySelectorAll('input[data-k^="p"]').forEach(x => x.checked = false);
+  });
 }
 
 // ---------- 🩹 보충 근무 (개인 일정) ----------
