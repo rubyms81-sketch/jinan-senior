@@ -457,7 +457,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-7</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-8</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -4096,9 +4096,9 @@ function openModal(id){
   editingLogId = null; showEditBar();
   ['c-badge','c-vest','c-leave'].forEach(i => setSeg(i,'정상'));
   setSeg('c-attitude','우수'); resetExItems();
-  const pl = pendChecks[p.id];
-  if (pl) { setCheckDate(pl.date); setSeg('c-leave', pl.leave); setSeg('c-vest', pl.vest); setSeg('c-badge', pl.badge); setSeg('c-attitude', pl.attitude);
-    checkItems.forEach(it => setSeg('cx-' + it.id, pl.ex?.[it.id]?.bad ? 'bad' : '정상')); }
+  const pl = checkDrafts[p.id];
+  if (pl) { setSeg('c-leave', pl.leave); setSeg('c-vest', pl.vest); setSeg('c-badge', pl.badge); setSeg('c-attitude', pl.attitude);
+    checkItems.forEach(it => setSeg('cx-' + it.id, pl.ex?.[it.id] || '정상')); }
   // 전화번호를 누르면 바로 전화 걸기
   const tel = String(p.phone||'').replace(/[^0-9+]/g,'');
   // 동네(면)와 경로당 이름을 크게
@@ -4116,13 +4116,13 @@ function renderMates(p){
   const box = document.getElementById('mate-tabs'); if (!box) return;
   const ms = matesOf(p), d = document.getElementById('c-date').value || today();
   if (ms.length < 2) { box.innerHTML = ''; return; }
-  box.innerHTML = `<div class="mt-wrap"><div class="mt-lbl">👥 ${esc(seniorOf(p))} 같이 근무 ${ms.filter(q => !stats(q).dropped).length}명</div>${ms.map(q => { const pd = !!pendOf(q, d), done = pd || q.logs.some(l => l.date===d), gone = stats(q).dropped;
-    return `<button type="button" class="${q.id===p.id?'on':''} ${done?'done':''} ${gone?'quit':''}" data-mate="${q.id}">${done && !gone?'✔ ':''}<span class="nm">${nmH(q)}</span><small>${gone ? '중도포기' : q.id===p.id ? '지금 점검 중' : pd ? '점검함 · 저장 전' : done ? `${md(d)} 점검함` : '아직 안 함'}</small></button>`; }).join('')}</div>`;
+  box.innerHTML = `<div class="mt-wrap"><div class="mt-lbl">👥 ${esc(seniorOf(p))} 같이 근무 ${ms.filter(q => !stats(q).dropped).length}명</div>${ms.map(q => { const pd = !!checkDrafts[q.id] && q.id !== p.id, done = q.logs.some(l => l.date===d), gone = stats(q).dropped;
+    return `<button type="button" class="${q.id===p.id?'on':''} ${done?'done':''} ${gone?'quit':''}" data-mate="${q.id}">${done && !gone?'✔ ':''}<span class="nm">${nmH(q)}</span><small>${gone ? '중도포기' : q.id===p.id ? '지금 점검 중' : pd ? '✏️ 저장 전' : done ? `${md(d)} 점검함` : '아직 안 함'}</small></button>`; }).join('')}</div>`;
   box.querySelectorAll('[data-mate]').forEach(b => b.onclick = () => switchMate(Number(b.dataset.mate)));
 }
 async function switchMate(id){
   const cur = current(); if (!cur || cur.id === id) return;
-  if (document.getElementById('c-memo').value.trim() && !await ask('적은 점검 메모가 아직 저장되지 않았어요.\n저장하지 않고 넘어갈까요?')) return;
+  keepDraft(cur);
   const d = document.getElementById('c-date').value;
   openModal(id);
   if (d && d !== today()) { setCheckDate(d); renderModal(); }
@@ -4130,7 +4130,6 @@ async function switchMate(id){
 function renderModal(){
   const p = current(), s = stats(p);
   renderMates(p);
-  saveBtnLabel();
   renderPersonDays(p);
   renderNotes(p);
   renderExPanel(p);
@@ -4214,7 +4213,7 @@ function photoFull(p){
 // 통계·감점 목록에서 어르신을 열었으면, 닫을 때 그 목록으로 돌아감
 let modalBack = null;
 function openFrom(id, label, fn){ openModal(id); modalBack = { label, fn }; document.getElementById('m-crumb').textContent = `← ${label}`; }
-function closeModal0(){
+function closeModal(){
   const b = modalBack; modalBack = null; document.getElementById('m-crumb').textContent = '← 경로당 선택으로';
   document.getElementById('modal').classList.add('hidden'); renderList();
   if (b) b.fn();
@@ -4329,47 +4328,15 @@ function playDingDong(sad){
   } catch(e) { chimeWebAudio(notes); }
   try { if (navigator.vibrate) navigator.vibrate(sad ? [200, 100, 200] : 80); } catch(e) {}
 }
-// 같은 경로당 여러 명: 앞 분들 점검은 잠시 모아 두고, 마지막 분 점검 뒤 "점검 기록을 저장하세요" → 한 번에 저장
-let pendChecks = {};
-const pendOf = (p, d) => { const l = pendChecks[p.id]; return l && l.date === d ? l : null; };
-const nextMate = (p, d) => matesOf(p).find(q => q.id !== p.id && !stats(q).dropped && !q.logs.some(l => l.date===d) && !pendOf(q, d));
-function saveBtnLabel(){
-  const p = current(); if (!p || editingLogId) return;
-  document.getElementById('btn-save-check').textContent = nextMate(p, document.getElementById('c-date').value || today()) ? '✔ 다음 어르신 점검 ›' : '점검 저장';
-}
-async function commitCheck(p, log){
-  if (log.leave==='이탈' && p.logs.some(l => l.date===log.date && l.leave==='이탈'))
-    if (!await ask(`${nm(p)} 어르신: 같은 날짜에 이미 이탈 기록이 있습니다. 한 번 더 감점할까요?`)) return 0;
-  p.logs.push(log);
-  saveData(false); playDingDong(logPts(log) > 0);
-  const s = stats(p);
-  const pt = logPts(log), up = pt ? unpaidOf(p, log) : 0;
-  if (pt) logEvent(log.leave==='이탈' ? '근무지 이탈' : '벌점', p, `${logItems(log).join(', ')} → 감점 -${pt}점 (${viewYear()}년 누적 ${s.penalty}점)` + (up ? ' · 일당 미지급' : '') + (s.pts >= MAX_LEAVE ? ' → 감점 누적 중도포기' : '') + (log.memo ? ` · ${log.memo}` : ''), log.date);
-  if (pt) {
-    let msg = `${nm(p)} 어르신\n${logItems(log).join('\n')}\n→ 벌점 -${pt}점 (누적 ${s.penalty}점)`;
-    msg += up ? `\n\n벌점 -1점이 채워져 하루치 일당 미지급입니다.` : `\n\n(벌점 -1점마다 하루치 일당 미지급)`;
-    if (s.pts >= MAX_LEAVE) msg += `\n\n⚠️ 누적 -${MAX_LEAVE}점으로 중도포기 처리되었습니다.`;
-    await notify(msg);
-    await smsDialog(p, log);
-  }
-  return pt;
-}
-async function savePending(extra){
-  const list = Object.entries(pendChecks).map(([id, l]) => [participants.find(x => x.id == id), l]).filter(([q]) => q);
-  if (extra) list.push(extra);
-  pendChecks = {};
-  for (const [q, l] of list) await commitCheck(q, l);
-  return list.length;
-}
-function closeModal(){
-  const n = Object.keys(pendChecks).length;
-  if (n) {
-    const txt = Object.entries(pendChecks).map(([id, l]) => { const q = participants.find(x => x.id == id); return q ? `✔ ${nm(q)} · ${shortItems(l) || '이상 없음'}` : ''; }).filter(Boolean).join('\n');
-    showDialog(`점검 기록을 저장하세요.\n\n${txt}`, true, ['💾 저장', '저장 안 함']).then(async ok => {
-      if (ok) { const k = await savePending(); notify(`${k}명 점검 기록이 저장되었습니다.`); } else pendChecks = {};
-      renderList(); });
-  }
-  closeModal0();
+// 같은 경로당 여러 명: 다른 분 탭으로 넘어가도 누른 내용(자리 비움 등)은 그대로 남겨 둠 (저장은 한 분씩)
+let checkDrafts = {};
+function keepDraft(p){
+  if (!p || editingLogId) return;
+  const g = id => document.getElementById(id).value;
+  const dr = { leave: g('c-leave'), vest: g('c-vest'), badge: g('c-badge'), attitude: g('c-attitude'), memo: g('c-memo'),
+    ex: Object.fromEntries(checkItems.map(it => [it.id, g('cx-' + it.id) || '정상'])) };
+  const plain = dr.leave === '정상' && dr.vest !== '미착용' && dr.badge !== '미착용' && dr.attitude === '우수' && !dr.memo.trim() && Object.values(dr.ex).every(v => v !== 'bad');
+  if (plain) delete checkDrafts[p.id]; else checkDrafts[p.id] = dr;
 }
 async function saveCheck(){
   const p = current(); if(!p) return;
@@ -4400,22 +4367,7 @@ async function saveCheck(){
     leave:g('c-leave'), memo:g('c-memo').trim(), pv: Object.assign({}, PT), ex: exFromForm() };
 
   p.phone = g('m-phone').trim();
-  delete pendChecks[p.id];
-  const nx = nextMate(p, date);
-  if (nx) {   // 다음 분으로 (저장은 마지막 분 점검 뒤에 한 번에)
-    pendChecks[p.id] = log; playDingDong(false);
-    document.getElementById('c-memo').value = ''; resetExItems();
-    openModal(nx.id); if (date !== today()) { setCheckDate(date); renderModal(); }
-    return;
-  }
-  const pend = Object.entries(pendChecks).map(([id, l]) => [participants.find(x => x.id == id), l]).filter(([q]) => q);
-  if (pend.length) {
-    const all = [...pend, [p, log]];
-    if (!await showDialog(`점검 기록을 저장하세요.\n\n${all.map(([q, l]) => `✔ ${nm(q)} · ${shortItems(l) || '이상 없음'}`).join('\n')}`, true, ['💾 저장', '취소'])) return;
-    const k = await savePending([p, log]);
-    document.getElementById('c-memo').value = ''; resetExItems(); renderModal();
-    return notify(`${k}명 점검 기록이 저장되었습니다.`);
-  }
+  delete checkDrafts[p.id];
   if (log.leave==='이탈' && p.logs.some(l => l.date===date && l.leave==='이탈'))
     if (!await ask('같은 날짜에 이미 이탈 기록이 있습니다. 한 번 더 감점할까요?')) return;
 
@@ -4431,9 +4383,11 @@ async function saveCheck(){
     await notify(msg);
     await smsDialog(p, log);
   }
+  const next = matesOf(p).find(q => q.id !== p.id && !stats(q).dropped && !q.logs.some(l => l.date===date));
   document.getElementById('c-memo').value = ''; resetExItems();
   renderModal();
-  if (!pt) notify('점검 기록이 저장되었습니다.');
+  if (next) { if (await showDialog(`${pt ? '' : '점검 기록이 저장되었습니다.\n\n'}같은 경로당 ${nm(next)} 어르신도 이어서 점검할까요?`, true, [`${nm(next)} 점검하기`, '여기 있기'])) switchMate(next.id); }
+  else if (!pt) notify('점검 기록이 저장되었습니다.');
 }
 
 async function deleteLog(logId){
