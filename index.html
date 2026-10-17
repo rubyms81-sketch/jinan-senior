@@ -457,7 +457,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-11</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-12</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1258,9 +1258,7 @@ function issuesDialog(d){
     const text = `[진안군노인회] ${M}월 ${D}일 현장 점검 결과\n\n${g.L ? g.L.name + ' 팀장님' : '팀장님'},\n아래 어르신들 지도 부탁드립니다.\n\n`
       + pick.map(r => `· ${r.q.name} (${r.q.town.replace(/[면읍]$/,'')} ${seniorOf(r.q)}${r.time ? ' ' + r.time : ''})\n  ${r.t.join(', ')}${r.l.memo ? ` - ${r.l.memo}` : ''}`).join('\n') + `\n\n감사합니다.`;
     smsBox({ title: `${M}월 ${dd(d)} 점검 결과 → ${g.L ? g.L.name + ' 팀장' : '팀장'}`, people: [...new Set(pick.map(r => r.q))], text, logType: '점검 결과 팀장 문자',
-      logDetail: `${d} ${pick.map(r => `${r.q.name}(${r.time}): ${r.t.join(', ')}`).join(' / ')}` });
-    // 받는 분은 팀장님만 (어르신 본인은 체크 해제, 필요하면 다시 체크)
-    [...document.querySelectorAll('.dlg-back')].pop()?.querySelectorAll('input[data-k^="p"]').forEach(x => x.checked = false);
+      logDetail: `${d} ${pick.map(r => `${r.q.name}(${r.time}): ${r.t.join(', ')}`).join(' / ')}`, leaderOnly: true });
   });
 }
 // ⏰ 점검한 날 오전 11시 50분: 알람 + 경고·벌점 받은 어르신 목록 (앱이 켜져 있을 때 / 늦게 열면 열 때)
@@ -4060,13 +4058,14 @@ function leaderMenu(p){
     logEvent('팀장 문자', p, `${L.name} 팀장 (${p.name} 어르신 점검 중)`);
     openSmsApp([L.num], `[진안군노인회] ${L.name} 팀장님, ${p.name} 어르신(${seniorOf(p)}) 관련 연락드립니다.\n`); });
 }
-function smsBox({ title, people, text, logType, logDetail, free }){
+function smsBox({ title, people, text, logType, logDetail, free, leaderOnly }){
   return new Promise(resolve => {
     const recips = people.filter(p => telOf(p)).map(p => ({ key: 'p'+p.id, label: `${p.name} 어르신`, num: telOf(p), p }));
     const noTel = people.filter(p => !telOf(p));
     // 같은 구역 팀장은 한 번만
     const seen = new Set();
     people.forEach(p => { const L = leaderOf(p); if (L && !seen.has(L.num) && !recips.some(r => r.num === L.num)) { seen.add(L.num); recips.push({ key: 'L'+L.num, label: `👤 팀장 ${L.name}`, num: L.num, leader: true }); } });
+    if (leaderOnly) { recips.splice(0, recips.length, ...recips.filter(r => r.leader)); noTel.length = 0; }   // 팀장님께만 (어르신 본인은 받는 사람에서 뺌)
     const back = document.createElement('div'); back.className = 'dlg-back';
     back.innerHTML = `<div class="dlg">
       <div style="font-weight:bold;margin-bottom:6px;">📩 ${esc(title)}</div>
