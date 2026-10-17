@@ -457,7 +457,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-9</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-10</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -765,7 +765,7 @@ function stats(p){
 function fillTownSelects(){
   ['n-town','m-town'].forEach(id => document.getElementById(id).innerHTML = TOWNS.map(t=>`<option>${t}</option>`).join(''));
   // 점검 화면의 선택 버튼
-  document.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.onclick = () => setSeg(seg.dataset.for, b.dataset.v)));
+  document.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.onclick = () => { window._segTouched = true; setSeg(seg.dataset.for, b.dataset.v); }));
   renderCheckItems();
 }
 // 점검 화면: 기본 항목 점수 글씨 + 새로 넣은 항목 칸 그리기
@@ -774,7 +774,7 @@ function renderCheckItems(){
   const box = document.getElementById('ex-items'); if (!box) return;
   box.innerHTML = checkItems.map(it => `<label>${esc(it.name)}</label><input type="hidden" id="cx-${it.id}" value="정상">
     <div class="seg" data-for="cx-${it.id}"><button type="button" data-v="정상">${esc(it.ok || '정상')}</button><button type="button" data-v="bad" data-bad>${esc(it.bad)}${it.pts ? ` (-${it.pts}점)` : ' (경고)'}</button></div>`).join('');
-  box.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.onclick = () => setSeg(seg.dataset.for, b.dataset.v)));
+  box.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.onclick = () => { window._segTouched = true; setSeg(seg.dataset.for, b.dataset.v); }));
   checkItems.forEach(it => setSeg('cx-' + it.id, '정상'));
 }
 const resetExItems = () => checkItems.forEach(it => setSeg('cx-' + it.id, '정상'));
@@ -4136,7 +4136,7 @@ function openModal(id){
   editingLogId = null; showEditBar();
   ['c-badge','c-vest','c-leave'].forEach(i => setSeg(i,'정상'));
   setSeg('c-attitude','우수'); resetExItems();
-  const pl = checkDrafts[p.id];
+  const pl = checkDrafts[p.id]; window._segTouched = !!pl;
   if (pl) { setSeg('c-leave', pl.leave); setSeg('c-vest', pl.vest); setSeg('c-badge', pl.badge); setSeg('c-attitude', pl.attitude);
     checkItems.forEach(it => setSeg('cx-' + it.id, pl.ex?.[it.id] || '정상')); }
   // 전화번호를 누르면 바로 전화 걸기
@@ -4157,7 +4157,7 @@ function renderMates(p){
   const ms = matesOf(p), d = document.getElementById('c-date').value || today();
   if (ms.length < 2) { box.innerHTML = ''; return; }
   box.innerHTML = `<div class="mt-wrap"><div class="mt-lbl">👥 ${esc(seniorOf(p))} 같이 근무 ${ms.filter(q => !stats(q).dropped).length}명</div>${ms.map(q => { const pd = !!checkDrafts[q.id] && q.id !== p.id, done = q.logs.some(l => l.date===d), gone = stats(q).dropped;
-    return `<button type="button" class="${q.id===p.id?'on':''} ${done?'done':''} ${gone?'quit':''}" data-mate="${q.id}">${done && !gone?'✔ ':''}<span class="nm">${nmH(q)}</span><small>${gone ? '중도포기' : q.id===p.id ? '지금 점검 중' : pd ? '✏️ 저장 전' : done ? `${md(d)} 점검함` : '아직 안 함'}</small></button>`; }).join('')}</div>`;
+    return `<button type="button" class="${q.id===p.id?'on':''} ${done?'done':''} ${gone?'quit':''}" data-mate="${q.id}">${done && !gone?'✔ ':''}<span class="nm">${nmH(q)}</span><small>${gone ? '중도포기' : q.id===p.id ? '지금 점검 중' : pd && !done ? '✏️ 저장 전' : done ? `${md(d)} 점검함` : '아직 안 함'}</small></button>`; }).join('')}</div>`;
   box.querySelectorAll('[data-mate]').forEach(b => b.onclick = () => switchMate(Number(b.dataset.mate)));
 }
 async function switchMate(id){
@@ -4376,7 +4376,7 @@ function keepDraft(p){
   const dr = { leave: g('c-leave'), vest: g('c-vest'), badge: g('c-badge'), attitude: g('c-attitude'), memo: g('c-memo'),
     ex: Object.fromEntries(checkItems.map(it => [it.id, g('cx-' + it.id) || '정상'])) };
   const plain = dr.leave === '정상' && dr.vest !== '미착용' && dr.badge !== '미착용' && dr.attitude === '우수' && !dr.memo.trim() && Object.values(dr.ex).every(v => v !== 'bad');
-  if (plain) delete checkDrafts[p.id]; else checkDrafts[p.id] = dr;
+  if (plain && !window._segTouched) delete checkDrafts[p.id]; else checkDrafts[p.id] = dr;
 }
 async function saveCheck(){
   const p = current(); if(!p) return;
@@ -4411,23 +4411,39 @@ async function saveCheck(){
   if (log.leave==='이탈' && p.logs.some(l => l.date===date && l.leave==='이탈'))
     if (!await ask('같은 날짜에 이미 이탈 기록이 있습니다. 한 번 더 감점할까요?')) return;
 
+  let pt = await commitLog(p, log, false);
+  window._segTouched = false;
+  // 같은 경로당에서 먼저 눌러 두고 넘어간 분들도 함께 저장
+  const saved = [p];
+  for (const q of matesOf(p)) {
+    const dr = checkDrafts[q.id];
+    if (q.id === p.id || !dr || stats(q).dropped || q.logs.some(l => l.date===date)) continue;
+    delete checkDrafts[q.id];
+    const ql = { id: Date.now() + Math.random(), date, badge: dr.badge, vest: dr.vest, attitude: dr.attitude, leave: dr.leave, memo: (dr.memo || '').trim(), pv: Object.assign({}, PT),
+      ex: Object.fromEntries(checkItems.map(it => { const bad = dr.ex?.[it.id] === 'bad'; return [it.id, { n: it.name, v: bad ? it.bad : (it.ok || '정상'), bad, pt: bad ? (it.pts || 0) : 0 }]; })) };
+    pt += await commitLog(q, ql, true); saved.push(q);
+  }
+  const next = matesOf(p).find(q => q.id !== p.id && !stats(q).dropped && !q.logs.some(l => l.date===date));
+  document.getElementById('c-memo').value = ''; resetExItems();
+  renderModal();
+  const who = saved.length > 1 ? ` (${saved.map(nm).join(', ')})` : '';
+  if (next) { if (await showDialog(`${pt ? '' : `점검 기록이 저장되었습니다.${who}\n\n`}같은 경로당 ${nm(next)} 어르신도 이어서 점검할까요?`, true, [`${nm(next)} 점검하기`, '여기 있기'])) switchMate(next.id); }
+  else if (!pt) notify(`점검 기록이 저장되었습니다.${who}`);
+}
+async function commitLog(p, log, named){
   p.logs.push(log);
   saveData(false); playDingDong(logPts(log) > 0);
   const s = stats(p);
   const pt = logPts(log), up = pt ? unpaidOf(p, log) : 0;
-  if (pt) logEvent(log.leave==='이탈' ? '근무지 이탈' : '벌점', p, `${logItems(log).join(', ')} → 감점 -${pt}점 (${viewYear()}년 누적 ${s.penalty}점)` + (up ? ' · 일당 미지급' : '') + (s.pts >= MAX_LEAVE ? ' → 감점 누적 중도포기' : '') + (log.memo ? ` · ${log.memo}` : ''), date);
+  if (pt) logEvent(log.leave==='이탈' ? '근무지 이탈' : '벌점', p, `${logItems(log).join(', ')} → 감점 -${pt}점 (${viewYear()}년 누적 ${s.penalty}점)` + (up ? ' · 일당 미지급' : '') + (s.pts >= MAX_LEAVE ? ' → 감점 누적 중도포기' : '') + (log.memo ? ` · ${log.memo}` : ''), log.date);
   if (pt) {
-    let msg = `${logItems(log).join('\n')}\n→ 벌점 -${pt}점 (누적 ${s.penalty}점)`;
+    let msg = `${named ? nm(p) + ' 어르신\n' : ''}${logItems(log).join('\n')}\n→ 벌점 -${pt}점 (누적 ${s.penalty}점)`;
     msg += up ? `\n\n벌점 -1점이 채워져 하루치 일당 미지급입니다.` : `\n\n(벌점 -1점마다 하루치 일당 미지급)`;
     if (s.pts >= MAX_LEAVE) msg += `\n\n⚠️ 누적 -${MAX_LEAVE}점으로 중도포기 처리되었습니다.`;
     await notify(msg);
     await smsDialog(p, log);
   }
-  const next = matesOf(p).find(q => q.id !== p.id && !stats(q).dropped && !q.logs.some(l => l.date===date));
-  document.getElementById('c-memo').value = ''; resetExItems();
-  renderModal();
-  if (next) { if (await showDialog(`${pt ? '' : '점검 기록이 저장되었습니다.\n\n'}같은 경로당 ${nm(next)} 어르신도 이어서 점검할까요?`, true, [`${nm(next)} 점검하기`, '여기 있기'])) switchMate(next.id); }
-  else if (!pt) notify('점검 기록이 저장되었습니다.');
+  return pt;
 }
 
 async function deleteLog(logId){
