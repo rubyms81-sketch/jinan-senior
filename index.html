@@ -471,7 +471,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-18</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-19</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1938,7 +1938,7 @@ function openInfo(){
       <tr><th>나이</th><td class="if-ed" data-f="age">${p.age ? esc(p.age)+'세' : '-'}${p.birth ? ` <span class="muted">(${p.birth}년생)</span>` : ''} <span class="ed-pen">✏️</span></td></tr>
       <tr><th>연락처</th><td data-f="phone">${p.phone ? telBtn(p) : '-'} <button type="button" class="ed-pen-btn" data-ed="phone">✏️</button></td></tr>
       <tr><th>주소</th><td data-f="address">${p.address ? `<span class="map-link" id="if-map">🗺️ ${esc(p.address)}</span>` : '-'} <button type="button" class="ed-pen-btn" data-ed="address">✏️</button></td></tr>
-      <tr><th>상태</th><td>${esc(st.status)}${st.penalty ? ` <b style="color:var(--danger)" class="pen-link" id="if-pen">(${st.penalty}점) 이유 보기 ›</b>` : ''}${inHospNow(p) ? ' <span class="badge bg-hosp">🏥 입원 중</span>' : ''}${startTag(p) ? ` <span class="muted">· ${Number(p.start.slice(5))}월부터 근무</span>` : ''}</td></tr>
+      <tr><th>상태</th><td>${inHospNow(p) && st.status === '정상' ? '' : esc(st.status)}${st.penalty ? ` <b style="color:var(--danger)" class="pen-link" id="if-pen">(${st.penalty}점) 이유 보기 ›</b>` : ''}${inHospNow(p) ? ' <span class="badge bg-hosp">🏥 입원 중</span>' : ''}${startTag(p) ? ` <span class="muted">· ${Number(p.start.slice(5))}월부터 근무</span>` : ''}</td></tr>
     </table>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><label style="margin:0;">🩺 아픈 곳</label><button type="button" class="small secondary" id="if-toggle" style="margin:0;width:auto;"></button></div>
     <div class="cond-grid" id="if-conds"></div>
