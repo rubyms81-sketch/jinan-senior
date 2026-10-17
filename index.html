@@ -124,6 +124,9 @@
   button.reason { margin:0; background:#edf2f7; color:#2d3748; border:2px solid transparent; padding:12px 4px; font-size:.98rem; }
   button.reason.on { background:var(--tint); border-color:var(--primary); color:var(--primary); font-weight:bold; }
   .date-btn { width:100%; display:flex; justify-content:space-between; align-items:center; background:#fff; color:#2d3748; border:1px solid #cbd5e0; border-radius:5px; padding:11px 12px; margin:5px 0 12px; font-size:1rem; text-align:left; }
+  #modal-title .date-btn { display:inline-flex; width:auto; gap:4px; margin:0 0 0 4px; padding:4px 10px; font-size:.85rem; vertical-align:6px; font-weight:normal; }
+  #modal-title .date-btn .tag { display:none; }
+  #modal-title .date-btn, #modal-title .date-btn * { font-size:.85rem !important; line-height:1.3; }
   .date-btn .tag { font-size:.8rem; border-radius:10px; padding:2px 8px; margin-left:6px; }
   .tag.work { background:var(--tint); color:var(--primary); } .tag.off { background:#edf2f7; color:#718096; } .tag.end { background:#dd6b20; color:#fff; }
   .cal button.wk { background:var(--primary); color:#fff; border-color:var(--primary); font-weight:bold; }
@@ -254,9 +257,9 @@
   .st-tbl th { background:#edf2f7; }
   .nv-chip { display:inline-flex; flex-direction:column; align-items:center; line-height:1.25; background:#fffaf0; color:#7b341e; border:1px solid #fbd38d; cursor:pointer; margin:0; }
   .nv-chip small { font-size:.72rem; color:#a0aec0; font-weight:normal; }
-  .nv-chip.ok { background:#f0fff4; color:#22543d; border-color:#9ae6b4; }
+  .nv-chip.ok { background:#c6f6d5; color:#22543d; border:2px solid #38a169; transform:scale(1.08); margin:2px 4px; font-weight:bold; }
   .nv-chip { position:relative; }
-  .nv-chip.bad { background:#fff5f5; color:#9b2c2c; border-color:#feb2b2; }
+  .nv-chip.bad { background:#fed7d7; color:#9b2c2c; border:2px solid #e53e3e; transform:scale(1.08); margin:2px 4px; font-weight:bold; }
   .nv-chip.bad small { color:#c53030; }
   .nv-chip.ok small { color:#38a169; }
   .cus-box { background:#fffaf0; border:1px solid #fbd38d; border-radius:10px; padding:8px 10px; margin-bottom:10px; }
@@ -449,7 +452,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-4</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-5</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -460,12 +463,17 @@
   </div>
   <input type="file" id="photo-cam" accept="image/*" capture="environment" class="hidden" onchange="photoPicked(this)">
   <input type="file" id="photo-file" accept="image/*" class="hidden" onchange="photoPicked(this)">
+  <details class="chg-box m-sec" id="sec-days"><summary><h4 id="m-days-title">📅 이달 근무일</h4><span class="chg-arrow"></span></summary>
+  <div id="m-days" class="chips"></div>
+  <div id="m-chg"></div>
+  <button class="warning full hidden" id="btn-addchg" onclick="addChange()">🔄 근무일 변경 추가</button>
+  <button class="secondary full hidden" id="btn-custom" onclick="openCustom()">🏥 입원 체크</button>
+  </details>
   <div id="mate-tabs"></div>
   <div id="modal-notice"></div>
   <input type="hidden" id="edit-id">
 
   <div id="check-section">
-    <label>점검 날짜</label>
     <input type="hidden" id="c-date">
     <button type="button" class="date-btn" id="c-date-btn" onclick="pickCheckDate()"></button>
 
@@ -497,13 +505,6 @@
     <button class="secondary full hidden" id="btn-cancel-edit" onclick="cancelEdit()">수정 취소</button>
   </div>
 
-  <details class="chg-box m-sec" id="sec-days"><summary><h4 id="m-days-title">📅 이달 근무일</h4><span class="chg-arrow"></span></summary>
-  <div id="m-days" class="chips"></div>
-  <button type="button" class="small full" onclick="addEdu()" style="background:#805ad5;margin:6px 0 4px;">🎓 교육 및 행사 날짜 넣기</button>
-  <div id="m-chg"></div>
-  <button class="warning full hidden" id="btn-addchg" onclick="addChange()">🔄 근무일 변경 추가</button>
-  <button class="secondary full hidden" id="btn-custom" onclick="openCustom()">🏥 입원 체크</button>
-  </details>
 
   <details class="chg-box m-sec" id="sec-notes"><summary><h4 id="note-title">📝 특이사항</h4><span class="chg-arrow"></span></summary>
   <div id="note-list"></div>
@@ -1548,7 +1549,7 @@ function renderZones(){
   const za = document.getElementById('zone-all-list');
   if (za) { za.innerHTML = TOWNS.filter(t => !myTowns.includes(t)).map(t => { const c = townCount(t); return `<div>· ${esc(t)} 경로당 ${c.site}곳/게이트볼 ${c.gsite}곳 · ${c.act}명/${c.gate}명 = <b>${c.all}명</b></div>`; }).join('');
     const T = TOWNS.map(townCount).reduce((a, c) => ({ site: a.site + c.site, gsite: a.gsite + c.gsite, act: a.act + c.act, gate: a.gate + c.gate, all: a.all + c.all }), { site: 0, gsite: 0, act: 0, gate: 0, all: 0 });
-    document.getElementById('zone-all-sum').innerHTML = `🗺 11개 읍·면 전체 · 경로당 <b>${T.site}</b>곳 · <b>${T.act}</b>명 · 게이트볼 <b>${T.gate}</b>명 = <b>${T.all}</b>명`; }
+    za.innerHTML = `<div style="font-weight:bold;margin:4px 0;">경로당 ${T.site}곳 · ${T.act}명 · 게이트볼 ${T.gate}명 = 총 ${T.all}명</div>` + za.innerHTML; }
   // 팀장 구역 합계: 구역 수 · 경로당 · 게이트볼 · 총 인원
   const zl = document.getElementById('zone-lead');
   if (zl) { const used = zones.filter(z => z.sites.length), ss = used.flatMap(z => z.sites), g = ss.filter(x => x.senior.includes('게이트볼')).length;
@@ -1559,7 +1560,10 @@ function renderZones(){
   box.innerHTML = zones.map(z => {
     const n = z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0);
     const v = z.sites.length ? zoneVisit(z) : null;
-    return `<button type="button" class="zone-btn ${z.sites.length?'':'empty'}" onclick="openZone(${z.id})"><b>${esc(z.name)}</b>${z.sites.length ? `<small>${zoneTownText(z).split(' / ').map(esc).join('<br>')}</small>` : ''}${v ? `<small style="margin-top:2px;">${v.miss.length ? `<span style="color:var(--warning);font-weight:bold;">안 감 ${v.miss.length}</span>` : '<span style="color:var(--success)">✔ 다 감</span>'}${v.bad.length ? ` · <span style="color:var(--danger);font-weight:bold;">미흡 ${v.bad.length}</span>` : ''}</small>` : ''}</button>`;
+    // 예) 홍길동(상전) 10곳, 게이트볼 1곳 총 23명 / (동향) 2곳 총 4명
+    const by = {}; z.sites.forEach(x => { const t = (by[x.town] ||= { s: 0, g: 0, n: 0 }); x.senior.includes('게이트볼') ? t.g++ : t.s++; t.n += siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length; });
+    const lines = TOWNS.filter(t => by[t]).map((t, i) => `${i ? '' : `<span style="font-weight:bold;font-size:1.05rem;">${esc(z.name)}</span>`}(${esc(t.replace(/[면읍]$/, ''))}) ${by[t].s}곳${by[t].g ? `, 게이트볼 ${by[t].g}곳` : ''} 총 ${by[t].n}명`);
+    return `<button type="button" class="zone-btn ${z.sites.length?'':'empty'}" onclick="openZone(${z.id})">${lines.length ? `<span style="display:block;font-size:.9rem;line-height:1.45;">${lines.join('<br>')}</span>` : `<b>${esc(z.name)}</b>`}</button>`;
   }).join('');
 }
 function openZone(id){
@@ -2986,13 +2990,13 @@ function zoneVisit(z){
   return { miss: rows.filter(r => !r.visited), bad: rows.filter(r => r.visited && r.probs.length), ok: rows.filter(r => r.visited && !r.probs.length) };
 }
 function zoneVisitHtml(z){
+  // 경로당은 한 줄에 그대로 두고, 다녀오면 살짝 커지며 초록, 미흡이면 살짝 커지며 빨강
   const v = zoneVisit(z), many = new Set(z.sites.map(x => x.town)).size > 1;
-  const chip = (r, kind) => `<button type="button" class="chip nv-chip${kind === 'bad' ? ' bad' : kind === 'ok' ? ' ok' : ''}" data-gosite="${esc(siteKey(r.town, r.senior))}"><span>${kind === 'bad' ? '⚠ ' : kind === 'ok' ? '✔ ' : ''}${many ? `<span class="muted" style="font-size:.8rem;">${esc(r.town.replace(/[면읍]$/,''))}</span> ` : ''}${crown(r.town, r.senior)}${esc(r.senior)}</span>${(() => {
-      const t = kind === 'bad' ? `${md(r.last)} · ${r.probs.join('·')}` : kind === 'ok' ? `${md(r.last)} 다녀옴` : r.last ? `마지막 ${md(r.last)}` : ''; return t ? `<small>${t}</small>` : ''; })()}</button>`;
-  const sec = (title, color, list, kind) => list.length ? `<div style="font-weight:bold;font-size:.9rem;margin:8px 0 2px;color:${color};">${title} ${list.length}곳</div><div class="chips">${list.map(r => chip(r, kind)).join('')}</div>` : '';
-  if (!v.miss.length && !v.bad.length && !v.ok.length) return '<div class="muted" style="font-size:.88rem;">경로당을 넣으면 점검 현황이 보여요.</div>';
-  return sec('🚶 아직 안 간 경로당', 'var(--warning)', v.miss, 'miss') + sec('⚠ 미흡 경로당', 'var(--danger)', v.bad, 'bad') + sec('✔ 다녀온 경로당 (양호)', 'var(--success)', v.ok, 'ok')
-    + (!v.miss.length ? '<div class="pen-none" style="margin-top:6px;">✔ 이 구역 경로당을 모두 다녀왔어요</div>' : '');
+  const all = [...v.miss.map(r => [r, '']), ...v.ok.map(r => [r, 'ok']), ...v.bad.map(r => [r, 'bad'])]
+    .sort((a, b) => TOWNS.indexOf(a[0].town) - TOWNS.indexOf(b[0].town) || seniorRank(a[0].senior) - seniorRank(b[0].senior) || a[0].senior.localeCompare(b[0].senior));
+  if (!all.length) return '<div class="muted" style="font-size:.88rem;">경로당을 넣으면 점검 현황이 보여요.</div>';
+  return `<div style="font-size:.88rem;margin:6px 0 4px;"><b style="color:var(--warning)">안 감 ${v.miss.length}</b> · <b style="color:var(--success)">다녀옴 ${v.ok.length}</b>${v.bad.length ? ` · <b style="color:var(--danger)">미흡 ${v.bad.length}</b>` : ''}</div>
+    <div class="chips">${all.map(([r, k]) => `<button type="button" class="chip nv-chip ${k}" data-gosite="${esc(siteKey(r.town, r.senior))}"><span>${k === 'bad' ? '⚠ ' : k === 'ok' ? '✔ ' : ''}${many ? `<span class="muted" style="font-size:.8rem;">${esc(r.town.replace(/[면읍]$/,''))}</span> ` : ''}${crown(r.town, r.senior)}${esc(r.senior)}</span>${k ? `<small>${md(r.last)}${k === 'bad' ? ' · ' + r.probs.join('·') : ''}</small>` : ''}</button>`).join('')}</div>`;
 }
 function renderNotVisited(){}   // 안 간 경로당은 이제 각 구역 안에서 보여요
 function renderList(){
@@ -4030,8 +4034,7 @@ function openModal(id){
   // 전화번호를 누르면 바로 전화 걸기
   const tel = String(p.phone||'').replace(/[^0-9+]/g,'');
   // 동네(면)와 경로당 이름을 크게
-  document.getElementById('modal-sub').innerHTML = `<span class="place">📍 <b>${esc(p.town)}</b> · <b>${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</b>${mapOf(p.town, seniorOf(p)) ? ` <a class="tel-link" href="#" onclick="openSiteMap('${esc(p.town)}', this.dataset.s);return false;" data-s="${esc(seniorOf(p))}">🗺️ 위치</a>` : ''}</span>${zoneOf(p) ? `<span class="zone" onclick="leaderMenu(current())" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px;">🗺 ${esc(zoneOf(p).name)}${zoneOf(p).leaderId === p.id ? ' · 👤 팀장' : ''} ›</span>` : ''}` +
-    (p.phone ? `<span class="tel-row">${tel ? `<a class="tel-link" href="tel:${tel}">📞 ${esc(p.phone)}</a>` : esc(p.phone)}</span>` : '');
+  document.getElementById('modal-sub').innerHTML = (p.phone ? `<span class="tel-row">${tel ? `<a class="tel-link" href="tel:${tel}">📞 ${esc(p.phone)}</a>` : esc(p.phone)}</span>` : '') + `<span class="place">📍 <b>${esc(p.town)}</b> · <b>${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</b>${mapOf(p.town, seniorOf(p)) ? ` <a class="tel-link" href="#" onclick="openSiteMap('${esc(p.town)}', this.dataset.s);return false;" data-s="${esc(seniorOf(p))}">🗺️ 위치</a>` : ''}</span>${zoneOf(p) ? `<span class="zone" onclick="leaderMenu(current())" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px;">🗺 ${esc(zoneOf(p).name)}${zoneOf(p).leaderId === p.id ? ' · 👤 팀장' : ''} ›</span>` : ''}`;
   document.getElementById('c-memo').value = '';
   document.getElementById('memo-label').innerHTML = `점검 메모 · <b style="color:#1a365d;">${nmH(p)}</b> 어르신 <span class="muted" style="font-weight:normal;">(${esc(p.town)} ${esc(seniorOf(p))})</span>`;
   renderModal();
@@ -4056,6 +4059,7 @@ async function switchMate(id){
   openModal(id);
   if (d && d !== today()) { setCheckDate(d); renderModal(); }
 }
+const DATE_BTN = document.getElementById('c-date-btn');   // 제목 줄로 옮겨 다님 (다시 그려도 같은 단추)
 function renderModal(){
   const p = current(), s = stats(p);
   renderMates(p);
@@ -4065,9 +4069,10 @@ function renderModal(){
   if (document.getElementById('c-date').value) setCheckDate(document.getElementById('c-date').value);
   // 이름을 누르면 기본 정보·건강 정보 창
   document.getElementById('modal-title').innerHTML = `<b class="name-tap" onclick="openInfo()">${nmH(p)}${p.health && (p.health.conds?.length || p.health.memo) ? '<span class="hl-dot">🩺</span>' : ''}${photoOf(p) ? '<span class="hl-dot">📷</span>' : ''}</b>` +
-    ` <span class="badge" style="background:var(--tint);color:var(--primary);vertical-align:6px;font-size:.85rem;">${curMonth}월 근무 ${personDays(p, monthKey()).length - unpaidDaysOf(p, monthKey()).size}일</span>` +
     ` <button type="button" class="small warning" onclick="addChange()" style="width:auto;margin:0;padding:4px 10px;vertical-align:6px;font-size:.85rem;">🔄 근무일 변경</button>` +
+    ` <button type="button" class="small" onclick="addEdu()" style="width:auto;margin:0;padding:4px 10px;vertical-align:6px;font-size:.85rem;background:#805ad5;">🎓 교육·행사</button>` +
     (inHospNow(p) ? ` <span class="badge bg-hosp" style="vertical-align:6px;font-size:.85rem;cursor:pointer;" onclick="openCustom()">🏥 현재 입원중</span>` : '');
+  document.getElementById('modal-title').appendChild(DATE_BTN);   // 점검 날짜 바꾸기: 근무일 변경 오른쪽
   // 올해 감점이 있을 때만 짧게 표시 (누르면 이유)
   let n = s.pts ? `<div class="notice">${viewYear()}년 누적 감점 <b style="color:var(--danger)" class="pen-link" onclick="showPenReasons(current())">${s.penalty}점 이유 보기 ›</b>${s.unpaid ? ` · 일당 미지급 ${s.unpaid}일` : ''}</div>` : '';
   if (s.dropped) { const qd = quitDayOf(p);
