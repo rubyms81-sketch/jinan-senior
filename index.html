@@ -297,6 +297,12 @@
     </div>
   </div>
   <button class="warning full" onclick="openQuickChange()" style="margin:0 0 12px;">🎤 말로 근무일 변경</button>
+  <div class="card hidden" id="link-card" style="padding:10px 14px;">
+    <details id="link-box" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
+      <summary><h3 id="link-title" style="margin:0;"></h3><span class="chg-arrow"></span></summary>
+      <div id="link-list" style="margin-top:6px;"></div>
+    </details>
+  </div>
   <div id="new-alert"></div>
   <div id="call-alert"></div>
   <div class="card" style="padding:10px 14px;">
@@ -319,12 +325,6 @@
     <div class="zone-grid" id="zone-btns"></div>
   </div>
 
-  <div class="card hidden" id="link-card" style="padding:10px 14px;">
-    <details id="link-box" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
-      <summary><h3 id="link-title" style="margin:0;"></h3><span class="chg-arrow"></span></summary>
-      <div id="link-list" style="margin-top:6px;"></div>
-    </details>
-  </div>
 
   <div class="card">
     <input type="search" id="search" placeholder="🔍 어르신 이름으로 바로 찾기 (모든 면)" oninput="renderList()" autocomplete="off" style="margin:0 0 4px;">
@@ -457,7 +457,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-10</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.17-11</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1201,8 +1201,8 @@ function renderPersonDays(p){
   const un = unpaidDaysOf(p, mk);
   document.querySelectorAll('#m-days .chip.wd').forEach(c => { if (un.has(c.dataset.d)) { c.classList.add('pen'); c.innerHTML = `${dd(c.dataset.d)} 벌점`; } });
   if (un.size) document.getElementById('m-days-title').innerHTML = document.getElementById('m-days-title').innerHTML.replace(`(${days.length}일)`, `(${days.length - un.size}일 · <span style="color:var(--danger)">벌점 ${un.size}일 빠짐</span>)`);
-  // 근무일을 누르면 그날 경고·벌점 받은 어르신 목록 → 팀장에게 문자
-  document.querySelectorAll('#m-days .chip.wd').forEach(c => c.onclick = () => dayIssues(p, c.dataset.d));
+  // 근무일을 누르면 그 날짜로 근무일 변경 창
+  document.querySelectorAll('#m-days .chip.wd').forEach(c => c.onclick = () => addChange({ from: c.dataset.d }));
   document.getElementById('m-chg').innerHTML = (cu ? `<div class="log warn">${cu.inHosp ? '🏥 <b>입원 중</b>' : '🩹 <b>보충 근무 (개인 일정)</b>'}${cu.reason?` <span class="muted">· ${esc(cu.reason)}</span>`:''}${cu.back?` <span class="muted">· ${dd(cu.back)} 복귀</span>`:''}
       ${cu.memo ? `<br>📝 ${esc(cu.memo)}` : ''}
       ${hosp.size ? `<br><b style="color:#97266d">🏥 입원 ${rangeText([...hosp])}</b>` : ''}
@@ -1225,38 +1225,62 @@ function issueText(l){
   if (l.attitude === '불량') t.push('응대 태도 불량(경고)');
   return t;
 }
-function dayIssues(p, d){
-  const z = zoneOf(p);
-  const pool = z ? participants.filter(q => zoneOf(q) === z) : participants.filter(q => q.town === p.town);
+const hhmm = dt => `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+const logTime = l => l.time || (l.id > 1e12 ? hhmm(new Date(Math.floor(l.id))) : '');
+// 그날 경고·벌점 받은 어르신 (모든 구역) → [{q, l, t, time}]
+function issuesOn(d){
   const rows = [];
-  pool.forEach(q => q.logs.filter(l => l.date === d).forEach(l => { const t = issueText(l); if (t.length) rows.push({ q, l, t }); }));
-  rows.sort((a, b) => logPts(b.l) - logPts(a.l) || seniorOf(a.q).localeCompare(seniorOf(b.q)) || a.q.name.localeCompare(b.q.name));
-  const L = leaderOf(p), M = Number(d.slice(5,7));
+  participants.forEach(q => q.logs.filter(l => l.date === d).forEach(l => { const t = issueText(l); if (t.length) rows.push({ q, l, t, time: logTime(l) }); }));
+  return rows.sort((a, b) => a.time.localeCompare(b.time) || a.q.name.localeCompare(b.q.name));
+}
+// 🔔 점검 결과: 팀장(구역)별로 묶어서 이유·경로당·시간까지 → 팀장에게 문자
+function issuesDialog(d){
+  const rows = issuesOn(d), M = Number(d.slice(5,7)), D = Number(d.slice(8,10));
+  const groups = [];
+  rows.forEach(r => { const z = zoneOf(r.q), L = leaderOf(r.q), key = L ? 'L' + L.num : z ? 'z' + z.id : 'none';
+    let g = groups.find(x => x.key === key); if (!g) groups.push(g = { key, z, L, rows: [] }); g.rows.push(r); });
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">📋 ${M}월 ${dd(d)} 경고·벌점${z ? ` <span class="muted" style="font-weight:normal;font-size:.9rem;">${esc(L ? L.name + ' 팀장' : z.name)} 구역</span>` : ''}</div>
-    ${rows.length ? rows.map((r, i) => `<label style="display:flex;align-items:flex-start;gap:8px;font-weight:normal;margin:6px 0;padding:8px;border-radius:8px;background:${logPts(r.l) ? '#fff5f5' : '#fffaf0'};">
-      <input type="checkbox" data-i="${i}" checked style="width:22px;height:22px;margin:2px 0 0;flex:none;">
-      <span><b>${nmH(r.q)}</b> <span class="muted" style="font-size:.85rem;">${esc(seniorOf(r.q))}</span><br>
-      <span style="color:${logPts(r.l) ? 'var(--danger)' : '#c05621'};font-weight:bold;">${r.t.map(esc).join(', ')}</span>${r.l.memo ? `<br><span class="muted" style="font-size:.85rem;">📝 ${esc(r.l.memo)}</span>` : ''}</span></label>`).join('')
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">🔔 ${M}월 ${dd(d)} 점검 결과 · 경고·벌점 ${rows.length}건</div>
+    ${rows.length ? groups.map((g, gi) => `<div style="margin:10px 0 4px;font-weight:bold;color:#2c5282;">👤 ${g.L ? esc(g.L.name) + ' 팀장' : '팀장 없음'}${g.z ? ` <span class="muted" style="font-weight:normal;font-size:.85rem;">${esc(g.z.name)}</span>` : ''}</div>
+      ${g.rows.map((r, i) => `<label style="display:flex;align-items:flex-start;gap:8px;font-weight:normal;margin:6px 0;padding:8px;border-radius:8px;background:${logPts(r.l) ? '#fff5f5' : '#fffaf0'};">
+        <input type="checkbox" data-g="${gi}" data-i="${i}" checked style="width:22px;height:22px;margin:2px 0 0;flex:none;">
+        <span><b>${nmH(r.q)}</b> <span class="muted" style="font-size:.85rem;">📍 ${esc(r.q.town)} ${esc(seniorOf(r.q))}${r.time ? ` · 🕐 ${r.time}` : ''}</span><br>
+        <span style="color:${logPts(r.l) ? 'var(--danger)' : '#c05621'};font-weight:bold;">${r.t.map(esc).join(', ')}</span>${r.l.memo ? `<br><span class="muted" style="font-size:.85rem;">📝 ${esc(r.l.memo)}</span>` : ''}</span></label>`).join('')}
+      <button type="button" class="full" data-sms="${gi}" style="margin:4px 0 8px;">💬 ${g.L ? esc(g.L.name) + ' 팀장에게' : ''} 문자</button>`).join('')
       : '<div class="muted" style="margin:8px 0 12px;">이 날 경고·벌점 받은 어르신이 없어요.</div>'}
-    ${rows.length ? `<button type="button" class="full" id="di-sms" style="margin:8px 0;">💬 팀장에게 문자</button>` : ''}
     <button type="button" class="secondary full" id="di-close" style="margin:0;">닫기</button></div>`;
   document.body.appendChild(back);
   back.querySelector('#di-close').onclick = () => back.remove();
-  back.querySelector('#di-sms')?.addEventListener('click', () => {
-    const pick = rows.filter((r, i) => back.querySelector(`input[data-i="${i}"]`).checked);
+  back.querySelectorAll('[data-sms]').forEach(b => b.onclick = () => {
+    const g = groups[b.dataset.sms], pick = g.rows.filter((r, i) => back.querySelector(`input[data-g="${b.dataset.sms}"][data-i="${i}"]`).checked);
     if (!pick.length) return notify('문자 보낼 어르신을 골라 주세요.');
-    back.remove();
-    const text = `[진안군노인회] ${M}월 ${Number(d.slice(8,10))}일 현장 점검 결과\n\n${L ? L.name + ' 팀장님' : '팀장님'},\n아래 어르신들 지도 부탁드립니다.\n\n`
-      + pick.map(r => `· ${r.q.name}(${seniorOf(r.q)}) - ${r.t.join(', ')}`).join('\n') + `\n\n감사합니다.`;
-    const ps = [...new Set(pick.map(r => r.q))];
-    smsBox({ title: `${M}월 ${dd(d)} 점검 결과 → 팀장`, people: ps, text, logType: '점검 결과 팀장 문자',
-      logDetail: `${d} ${pick.map(r => `${r.q.name}: ${r.t.join(', ')}`).join(' / ')}` });
+    const text = `[진안군노인회] ${M}월 ${D}일 현장 점검 결과\n\n${g.L ? g.L.name + ' 팀장님' : '팀장님'},\n아래 어르신들 지도 부탁드립니다.\n\n`
+      + pick.map(r => `· ${r.q.name} (${r.q.town.replace(/[면읍]$/,'')} ${seniorOf(r.q)}${r.time ? ' ' + r.time : ''})\n  ${r.t.join(', ')}${r.l.memo ? ` - ${r.l.memo}` : ''}`).join('\n') + `\n\n감사합니다.`;
+    smsBox({ title: `${M}월 ${dd(d)} 점검 결과 → ${g.L ? g.L.name + ' 팀장' : '팀장'}`, people: [...new Set(pick.map(r => r.q))], text, logType: '점검 결과 팀장 문자',
+      logDetail: `${d} ${pick.map(r => `${r.q.name}(${r.time}): ${r.t.join(', ')}`).join(' / ')}` });
     // 받는 분은 팀장님만 (어르신 본인은 체크 해제, 필요하면 다시 체크)
     [...document.querySelectorAll('.dlg-back')].pop()?.querySelectorAll('input[data-k^="p"]').forEach(x => x.checked = false);
   });
 }
+// ⏰ 점검한 날 오전 11시 50분: 알람 + 경고·벌점 받은 어르신 목록 (앱이 켜져 있을 때 / 늦게 열면 열 때)
+const ALARM_AT = '11:50';
+function checkAlarm(){
+  const d = today(); if (hhmm(new Date()) < ALARM_AT) return;
+  const n = issuesOn(d).length; if (!n) return;
+  const seen = (() => { try { return JSON.parse(load('jinan_alarm')) || {}; } catch(e) { return {}; } })();
+  if (seen.d === d && seen.n >= n) return;
+  store('jinan_alarm', JSON.stringify({ d, n }));
+  try { navigator.vibrate && navigator.vibrate([400, 150, 400, 150, 400]); } catch(e) {}
+  try { playDingDong(true); setTimeout(() => playDingDong(true), 1200); } catch(e) {}
+  try { if (window.Notification && Notification.permission === 'granted' && navigator.serviceWorker)
+    navigator.serviceWorker.ready.then(r => r.showNotification('🔔 오늘 점검 결과', { body: `경고·벌점 ${n}건 · 팀장님께 문자를 보내 주세요.`, tag: 'jinan-alarm', icon: 'icon-192.png' })); } catch(e) {}
+  logEvent('점검 결과 알람', null, `${d} ${ALARM_AT} 경고·벌점 ${n}건`, d);
+  document.querySelectorAll('.dlg-back[data-alarm]').forEach(x => x.remove());
+  issuesDialog(d); [...document.querySelectorAll('.dlg-back')].pop()?.setAttribute('data-alarm', '1');
+}
+setInterval(checkAlarm, 30000);
+setTimeout(checkAlarm, 4000);
 
 // ---------- 🩹 보충 근무 (개인 일정) ----------
 // 복귀일부터: 원래 근무일은 그대로 + 모자란 날은 복귀일 이후 가장 빠른 평일(공휴일 제외)로 채움 (마감일 넘지 않음)
@@ -1322,16 +1346,19 @@ function renderNewAlert(){
   const qs = quitsIn(mk);
   // 🎂 오늘 생일: 구역에 넣은 어르신만 (구역이 없으면 내 담당 면)
   const inZone = p => zones.some(z => z.sites.length) ? !!zoneOf(p) : visibleTowns().includes(p.town);
+  const todayIs = issuesOn(today());
   const tmd = today().slice(5), bd = sortPs(participants.filter(p => p.bday === tmd && inZone(p) && !stats(p).dropped));
   box.innerHTML = (bd.length ? alertCard('bday', 'background:#fff5f7;border-color:#ed64a6;padding:8px 12px;', `<b style="color:#b83280;">🎂 오늘 생일 ${bd.length}명</b>`,
       `<div style="font-size:.9rem;margin-bottom:6px;">${bd.map(p => `<a href="#" data-open="${p.id}" style="color:#702459;white-space:nowrap;">${esc(p.name)}<span class="muted" style="font-size:.82rem;">(${esc(p.town.replace(/[면읍]$/,''))} ${esc(seniorOf(p))})</span></a>`).join(', ')}</div>
       <button type="button" class="full" id="bd-sms" style="margin:0;background:#d53f8c;">🎂 생일 축하 문자 보내기 (${bd.length}명)</button>`) : '')
-    + (ps.length ? alertCard('new', 'background:#f0fff4;border-color:#38a169;padding:8px 12px;', `<b style="color:#276749;">🆕 ${m}월 새로 온 어르신 ${ps.length}명</b>`,
-      `<div style="font-size:.9rem;">${ps.map(p => `<a href="#" data-open="${p.id}" style="color:#22543d;white-space:nowrap;">${esc(p.name)}<span class="muted" style="font-size:.82rem;">(${esc(p.town.replace(/[면읍]$/,''))} ${esc(seniorOf(p))})</span></a>`).join(', ')}</div>`) : '')
+    + (todayIs.length ? alertCard('issue', 'background:#fff5f5;border-color:#e53e3e;padding:8px 12px;', `<b style="color:#c53030;">🔔 오늘 경고·벌점 ${todayIs.length}건</b>`,
+      `<div style="font-size:.9rem;margin-bottom:6px;">${todayIs.map(r => `<span style="white-space:nowrap;">${esc(r.q.name)}<span class="muted" style="font-size:.82rem;">(${esc(seniorOf(r.q))}${r.time ? ' ' + r.time : ''})</span></span>`).join(', ')}</div>
+      <button type="button" class="full" id="is-open" style="margin:0;background:#e53e3e;">📋 자세히 보기 · 팀장 문자</button>`) : '')
     + (qs.length ? alertCard('quit', 'background:#f7fafc;border-color:#718096;padding:8px 12px;', `<b style="color:#2d3748;">🚪 ${m}월 중도포기 어르신 ${qs.length}명</b>`,
       `<div style="font-size:.9rem;">${qs.map(x => `<a href="#" data-open="${x.p.id}" style="color:#2d3748;white-space:nowrap;">${esc(x.p.name)}<span class="muted" style="font-size:.82rem;">(${esc(x.p.town.replace(/[면읍]$/,''))} ${esc(seniorOf(x.p))} · ${md(x.date)} · ${esc(x.why)})</span></a>`).join(', ')}</div>`) : '');
   box.querySelectorAll('[data-open]').forEach(a => a.onclick = e => { e.preventDefault(); openModal(Number(a.dataset.open)); });
   box.querySelector('#bd-sms')?.addEventListener('click', () => bdaySms(bd));
+  box.querySelector('#is-open')?.addEventListener('click', () => issuesDialog(today()));
   bindAlerts(box);
 }
 function renderCallAlert(){
@@ -2174,7 +2201,7 @@ function changeLogDate(logId){
 }
 
 // ---------- 🎤 말로 근무일 변경 ----------
-// 예) "송태인 어르신 16일을 15일로 병원"  /  "고부 경로당 16일에서 15일 행사"
+// 예) "홍길동 어르신 16일을 15일로 병원"  /  "고부 경로당 16일에서 15일 행사"
 const REASON_WORDS = [
   ['병원 진료', /병원|진료|치료|아프|아퍼|입원|검진|수술|약/],
   ['개인 사정', /개인|사정|볼일|일이\s*있|농사|집안|가족|외출|경조|장례|상가|초상|결혼|혼사|잔치|칠순|팔순|제사|행사|모임|여행/]
@@ -2219,7 +2246,7 @@ function openQuickChange(){
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🎤 말로 근무일 변경</div>
     <button type="button" id="qc-mic" class="mic-btn">🎤 눌러서 말하기</button>
     <div id="qc-mic-msg" class="muted" style="text-align:center;margin:-2px 0 8px;min-height:1em;"></div>
-    <div class="notice" style="font-size:.88rem;">예) <b>홍길동 23.24</b><br>예) <b>송태인 16일을 15일로 병원</b><br>예) <b>김옥분 11월 4일 대신 5일 개인 사정</b></div>
+    <div class="notice" style="font-size:.88rem;">예) <b>홍길동 23.24</b><br>예) <b>홍길동 16일을 15일로 병원</b><br>예) <b>이영희 11월 4일 대신 5일 개인 사정</b></div>
     <textarea id="qc-text" rows="3" placeholder="누가, 며칠을, 며칠로, 왜" style="font-size:1.05rem;"></textarea>
     <div id="qc-result" style="margin-bottom:8px;"></div>
     <div class="grid-2"><button class="secondary" id="qc-cancel">닫기</button><button id="qc-go">확인하기</button></div></div>`;
@@ -2827,20 +2854,25 @@ function onPerson(){
 // ---------- 🔗 신규 연계 중 (등록했지만 전산 연계가 끝나야 시작) ----------
 function renderLinking(){
   const card = document.getElementById('link-card'); if (!card) return;
-  const ps = participants.filter(p => p.linking).sort((a,b) => a.linking.since.localeCompare(b.linking.since) || a.name.localeCompare(b.name));
+  // 연계가 끝나도 한 달 동안은 이 칸에 남김 (✔ 연계 끝)
+  const recent = p => p.linkDone && p.linkDone.day > addDays(today(), -31);
+  const ps = participants.filter(p => p.linking || recent(p)).sort((a,b) => !!a.linkDone - !!b.linkDone || (a.linking || a.linkDone).since.localeCompare((b.linking || b.linkDone).since) || a.name.localeCompare(b.name));
   card.classList.toggle('hidden', !ps.length);
   if (!ps.length) return;
-  document.getElementById('link-title').innerHTML = `🔗 신규 · 연계 중 <span style="color:var(--warning)">${ps.length}명</span>`;
-  document.getElementById('link-list').innerHTML = ps.map(p => { const n = daysBetween(p.linking.since, today()) + 1; return `<div class="call-row" style="border-top:1px dashed #e2e8f0;">
+  const nOn = ps.filter(p => p.linking).length;
+  document.getElementById('link-title').innerHTML = `🔗 신규 · 연계 중 <span style="color:var(--warning)">${nOn}명</span>${ps.length > nOn ? ` <span class="muted" style="font-size:.85rem;font-weight:normal;">· 연계 끝 ${ps.length - nOn}명</span>` : ''}`;
+  document.getElementById('link-list').innerHTML = ps.map(p => { const L = p.linking || p.linkDone, n = daysBetween(L.since, today()) + 1; return `<div class="call-row" style="border-top:1px dashed #e2e8f0;">
     <button class="who" onclick="openModal(${p.id})"><b>${nmH(p)}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
-      <span class="muted" style="font-size:.85rem;">${mdw(p.linking.since)} 등록 · 연계 ${n}일째</span><br>${telBtn(p)}</button>
-    <button class="small danger" onclick="linkDone(${p.id})" style="width:auto;margin:0;padding:8px 12px;white-space:nowrap;" title="연계 끝">✕ 연계 끝</button></div>`; }).join('');
+      <span class="muted" style="font-size:.85rem;">${mdw(L.since)} 등록 · ${p.linking ? `연계 ${n}일째` : `${mdw(p.linkDone.day)} 연계 끝`}</span><br>${telBtn(p)}</button>
+    ${p.linking ? `<button class="small danger" onclick="linkDone(${p.id})" style="width:auto;margin:0;padding:8px 12px;white-space:nowrap;" title="연계 끝">✕ 연계 끝</button>`
+      : `<span class="badge" style="background:#c6f6d5;color:#22543d;align-self:center;white-space:nowrap;">✔ 연계 끝</span>`}</div>`; }).join('');
 }
 async function linkDone(id){
   const p = participants.find(x => x.id === id); if (!p || !p.linking) return;
   if (!await ask(`${p.name} 어르신 전산 연계가 끝났나요?\n목록에서 빠지고, 명단에는 그대로 남아요.`)) return;
   logEvent('연계 완료', p, `${p.linking.since}부터 연계 → 끝남`);
   if (p.start && !(p.startDay && p.startDay > today())) p.startDay = today();   // 연계 끝난 날부터 근무
+  p.linkDone = { since: p.linking.since, day: today() };
   delete p.linking; saveData(false); renderList();
   welcomeSms(p);
 }
@@ -4404,7 +4436,8 @@ async function saveCheck(){
     return;
   }
   const log = { id: Date.now(), date, badge:g('c-badge'), vest:g('c-vest'), attitude:g('c-attitude'),
-    leave:g('c-leave'), memo:g('c-memo').trim(), pv: Object.assign({}, PT), ex: exFromForm() };
+    leave:g('c-leave'), memo:g('c-memo').trim(), pv: Object.assign({}, PT), ex: exFromForm(), time: hhmm(new Date()) };
+  try { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); } catch(e) {}   // 11:50 알람용
 
   p.phone = g('m-phone').trim();
   delete checkDrafts[p.id];
@@ -4419,7 +4452,7 @@ async function saveCheck(){
     const dr = checkDrafts[q.id];
     if (q.id === p.id || !dr || stats(q).dropped || q.logs.some(l => l.date===date)) continue;
     delete checkDrafts[q.id];
-    const ql = { id: Date.now() + Math.random(), date, badge: dr.badge, vest: dr.vest, attitude: dr.attitude, leave: dr.leave, memo: (dr.memo || '').trim(), pv: Object.assign({}, PT),
+    const ql = { id: Date.now() + Math.random(), date, badge: dr.badge, vest: dr.vest, attitude: dr.attitude, leave: dr.leave, memo: (dr.memo || '').trim(), pv: Object.assign({}, PT), time: hhmm(new Date()),
       ex: Object.fromEntries(checkItems.map(it => { const bad = dr.ex?.[it.id] === 'bad'; return [it.id, { n: it.name, v: bad ? it.bad : (it.ok || '정상'), bad, pt: bad ? (it.pts || 0) : 0 }]; })) };
     pt += await commitLog(q, ql, true); saved.push(q);
   }
@@ -4461,8 +4494,8 @@ function saveInfo(){
   const ag = parseAge(g('m-age')); if (ag.bad) return notify(AGE_BAD);
   if (ag.birth) p.birth = ag.birth; else if (String(p.age||'') !== ag.age) delete p.birth;
   const lk = document.getElementById('m-link').checked;
-  if (lk && !p.linking) { p.linking = { since: today() }; logEvent('신규 연계 중', p, '연계 중으로 표시'); }
-  if (!lk && p.linking) { logEvent('연계 완료', p, `${p.linking.since}부터 연계 → 끝남`); delete p.linking; }
+  if (lk && !p.linking) { delete p.linkDone; p.linking = { since: today() }; logEvent('신규 연계 중', p, '연계 중으로 표시'); }
+  if (!lk && p.linking) { logEvent('연계 완료', p, `${p.linking.since}부터 연계 → 끝남`); p.linkDone = { since: p.linking.since, day: today() }; delete p.linking; }
   const ns = startVal('m-start'), os = p.start && Number(p.start.slice(0,4)) === viewYear() ? p.start : '';
   if (ns !== os) { logEvent('정보 수정', p, `근무 시작 달: ${os ? Number(os.slice(5))+'월' : '처음부터'} → ${ns ? Number(ns.slice(5))+'월' : '처음부터'}`); if (ns) p.start = ns; else delete p.start; }
   const NEWV = { town:g('m-town'), name:g('m-name'), sex:normSex(g('m-sex')), age:ag.age, senior:normSenior(g('m-town'), g('m-senior')), phone:fmtPhone(g('m-phone')), address:g('m-address') };
@@ -4915,7 +4948,7 @@ function exportExcel(){
 
   const kinds1 = list.map(p => monthKind(p, monthKey()));
   const sheet1 = list.map((p, i) => { const s = stats(p), m = mstats(p); return {
-    '표시':KIND_TXT[kinds1[i]] || '', '읍면':p.town, '경로당':p.senior, '우수 경로당':isBest(p.town, seniorOf(p)) ? '👑' : '', '구역':zoneOf(p)?.name || '', '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '성별':p.sex || '', '생일':bdayText(p.bday), '근무 시작':startTag(p) ? `${Number(p.start.slice(5))}월부터` : '', '신규 등록일':newUntil(p) ? p.regDay : '', '중도포기일':quitDayOf(p), '중도포기 사유':stats(p).dropped ? (p.quitWhy || stats(p).status) : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : '', '나이':p.age, '태어난 해':p.birth || '', '연락처':p.phone, '주소':p.address,
+    '표시':KIND_TXT[kinds1[i]] || '', '읍면':p.town, '경로당':p.senior, '우수 경로당':isBest(p.town, seniorOf(p)) ? '👑' : '', '구역':zoneOf(p)?.name || '', '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '성별':p.sex || '', '생일':bdayText(p.bday), '근무 시작':startTag(p) ? `${Number(p.start.slice(5))}월부터` : '', '신규 등록일':newUntil(p) ? p.regDay : '', '중도포기일':quitDayOf(p), '중도포기 사유':stats(p).dropped ? (p.quitWhy || stats(p).status) : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : p.linkDone ? `연계 끝 (${p.linkDone.day})` : '', '나이':p.age, '태어난 해':p.birth || '', '연락처':p.phone, '주소':p.address,
     [`${curMonth}월 점검 횟수`]:mLogs(p).length, [`${curMonth}월 감점`]:-m.pts, [`${curMonth}월 자리 비움`]:m.aways.length, [`${curMonth}월 일당 미지급 일수`]:m.unpaid,
     [`${curMonth}월 조끼 미착용`]:m.vest, [`${curMonth}월 명찰 미착용`]:m.badge, '누적 이탈 횟수':s.leaves, '누적 감점':s.penalty, '상태':s.status, '마지막 점검일':s.last,
     [`${curMonth}월 활동 날짜`]: personDays(p, monthKey()).map(d => Number(d.slice(8,10))).join(', '),
@@ -4929,7 +4962,7 @@ function exportExcel(){
 
   const sheet2 = [];
   list.forEach(p => [...mLogs(p)].sort((a,b)=>a.date.localeCompare(b.date)).forEach(l => sheet2.push({
-    '점검일':l.date, '읍면':p.town, '경로당':p.senior, '성명':p.name, '명찰':l.badge, '조끼':l.vest,
+    '점검일':l.date, '시간':logTime(l), '읍면':p.town, '경로당':p.senior, '성명':p.name, '명찰':l.badge, '조끼':l.vest,
     '응대 태도':l.attitude, '근무지 이탈':l.leave==='자리비움' ? '잠깐 자리 비움' : l.leave, ...Object.fromEntries(Object.values(l.ex || {}).map(x => [x.n, x.v])), '감점':-logPts(l),
     '일당':unpaidOf(p, l) ? `미지급${unpaidOf(p, l) > 1 ? ` (${unpaidOf(p, l)}일분)` : ''}` : '지급', '메모':l.memo })));
 
