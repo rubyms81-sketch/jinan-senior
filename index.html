@@ -346,7 +346,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text">진안군 노인회 일자리 현장 점검<div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -508,6 +508,14 @@
         <div class="ui-opts" id="ui-weight"></div>
         <label>글씨체</label>
         <div class="ui-opts" id="ui-font" style="grid-template-columns:repeat(2,1fr);"></div>
+        <label>맨 위 제목 글자</label>
+        <input type="text" id="ui-hdtext" maxlength="30" placeholder="진안군 노인회 일자리 현장 점검" autocomplete="off" style="margin:5px 0 8px;">
+        <label>제목 색깔</label>
+        <div class="ui-opts" id="ui-hdcolor" style="grid-template-columns:repeat(4,1fr);"></div>
+        <label>제목 글씨체</label>
+        <div class="ui-opts" id="ui-hdfont"></div>
+        <label>제목 꾸밈</label>
+        <div class="ui-opts" id="ui-hdstyle"></div>
         <label>날씨 표시</label>
         <div class="ui-opts" id="ui-wx" style="grid-template-columns:repeat(2,1fr);"></div>
         <label>날씨 효과</label>
@@ -519,7 +527,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-7</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-8</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -646,13 +654,39 @@ const AWAY_PT = 0.5; // 잠깐 자리 비움·조끼 미착용·명찰 미착용
 // ---------- 저장소 (휴대폰 저장이 막혀도 앱이 멈추지 않게) ----------
 function load(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
 // ---------- 🛠️ 환경 설정: 글씨 크기(1~10) · 두께 · 글씨체 (이 휴대폰에만 저장) ----------
+// 맨 위 제목 꾸미기 (환경 설정)
+const HD_DEF = '진안군 노인회 일자리 현장 점검';
+const HD_COLORS = [['#ffffff','흰색'],['#fefcbf','노랑'],['#bee3f8','하늘'],['#fed7e2','분홍'],['#c6f6d5','연두'],['#fbd38d','주황'],['#1a202c','검정']];
+const HD_FONTS = [
+  { k: '', name: '앱 글씨' },
+  { k: 'Black Han Sans', name: '굵은 제목', css: 'Black+Han+Sans' },
+  { k: 'Jua', name: '동글동글', css: 'Jua' },
+  { k: 'Do Hyeon', name: '반듯하게', css: 'Do+Hyeon' },
+  { k: 'Song Myung', name: '붓글씨', css: 'Song+Myung' },
+  { k: 'Nanum Pen Script', name: '손글씨', css: 'Nanum+Pen+Script' },
+];
+const HD_STYLES = [['plain','기본'],['shadow','그림자'],['outline','테두리'],['glow','반짝 빛'],['box','띠 두르기']];
+function applyHeader(){
+  const t = document.getElementById('hd-title'); if (!t) return;
+  t.textContent = ui.hdText || HD_DEF;
+  const c = ui.hdColor || '#ffffff', dark = c === '#1a202c';
+  t.style.color = c; t.style.fontFamily = ui.hdFont ? `'${ui.hdFont}', sans-serif` : '';
+  t.style.fontSize = ui.hdFont === 'Nanum Pen Script' ? '1.45em' : ui.hdFont === 'Black Han Sans' || ui.hdFont === 'Do Hyeon' || ui.hdFont === 'Jua' ? '1.12em' : '';
+  t.style.fontWeight = ui.hdFont ? 'normal' : '';
+  const sh = dark ? 'rgba(255,255,255,.85)' : 'rgba(0,0,0,.6)';
+  t.style.textShadow = { plain: 'none', shadow: `0 2px 3px ${sh}`, outline: `-1.5px -1.5px 0 ${sh}, 1.5px -1.5px 0 ${sh}, -1.5px 1.5px 0 ${sh}, 1.5px 1.5px 0 ${sh}`, glow: `0 0 6px ${c}, 0 0 14px ${c}, 0 1px 2px ${sh}`, box: 'none' }[ui.hdStyle] ?? '';
+  Object.assign(t.style, ui.hdStyle === 'box' ? { background: dark ? 'rgba(255,255,255,.75)' : 'rgba(0,0,0,.35)', padding: '2px 12px', borderRadius: '14px' } : { background: '', padding: '', borderRadius: '' });
+  const f = HD_FONTS.find(x => x.k === ui.hdFont);
+  if (f && f.css) { let l = document.getElementById('hd-font-css'); if (!l) { l = document.createElement('link'); l.id = 'hd-font-css'; l.rel = 'stylesheet'; document.head.appendChild(l); }
+    l.href = `https://fonts.googleapis.com/css2?family=${f.css}&display=swap`; }
+}
 const UI_FONTS = [
   { k: '', name: '기본 (휴대폰 글씨)' },
   { k: 'Nanum Gothic', name: '나눔고딕', css: 'Nanum+Gothic:wght@400;700;800' },
   { k: 'Gowun Dodum', name: '고운돋움', css: 'Gowun+Dodum' },
   { k: 'Noto Sans KR', name: '본고딕 (노토)', css: 'Noto+Sans+KR:wght@300;400;600;800' },
 ];
-let ui = (() => { try { return Object.assign({ size: 5, weight: 'normal', font: '', wx: true, wxfx: true, theme: 'blue' }, JSON.parse(load('jinan_ui')) || {}); } catch(e) { return { size: 5, weight: 'normal', font: '', wx: true, wxfx: true, theme: 'blue' }; } })();
+let ui = (() => { try { return Object.assign({ size: 5, weight: 'normal', font: '', wx: true, wxfx: true, theme: 'blue', hdText: '', hdColor: '#ffffff', hdFont: '', hdStyle: 'shadow' }, JSON.parse(load('jinan_ui')) || {}); } catch(e) { return { size: 5, weight: 'normal', font: '', wx: true, wxfx: true, theme: 'blue' }; } })();
 function applyUI(){
   const h = document.documentElement;
   h.style.fontSize = (13 + ui.size) + 'px';            // 5단계 = 18px
@@ -665,6 +699,7 @@ function applyUI(){
     document.getElementById('ui-font-css').href = `https://fonts.googleapis.com/css2?family=${f.css}&display=swap`;
     h.dataset.font = f.k; h.style.setProperty('--app-font', `'${f.k}', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif`);
   } else { delete h.dataset.font; }
+  applyHeader();
 }
 applyUI();
 function store(k,v){ try { localStorage.setItem(k,v); } catch(e){ notify('이 휴대폰에서는 저장이 되지 않습니다. 인터넷 창의 "비공개(시크릿) 모드"를 끄고 사용해 주세요.'); } }
@@ -1657,12 +1692,14 @@ const monitorOfSite = (town, senior) => monitors.find(m => m.sites?.some(x => x.
 const siteKey = (town, senior) => town + '|' + senior;
 const zoneOfSite = (town, senior) => zones.find(z => z.sites.some(x => x.town===town && x.senior===senior)) || null;
 const zoneOf = p => zoneOfSite(p.town, seniorOf(p));
+// 인원수: 중도포기한 분과 아직 연계 중인 신규는 빼고 셈 (연계 끝난 뒤부터 포함)
+const counted = p => !stats(p).dropped && !p.linking;
 const siteMembers = (town, senior) => participants.filter(p => p.town===town && seniorOf(p)===senior)
   .sort((a,b) => stats(a).dropped - stats(b).dropped || a.name.localeCompare(b.name));
 // 구역 안 경로당을 면별로: "동향면 10곳·15명" (면이 여럿이면 " / "로 이어 붙임)
 function zoneTownText(z){
   const by = {};
-  z.sites.forEach(x => { const t = (by[x.town] ||= { s: 0, g: 0, n: 0 }); x.senior.includes('게이트볼') ? t.g++ : t.s++; t.n += siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length; });
+  z.sites.forEach(x => { const t = (by[x.town] ||= { s: 0, g: 0, n: 0 }); x.senior.includes('게이트볼') ? t.g++ : t.s++; t.n += siteMembers(x.town, x.senior).filter(counted).length; });
   return TOWNS.filter(t => by[t]).map(t => `${t} ${by[t].s}곳${by[t].g ? `·게이트볼 ${by[t].g}` : ''}·${by[t].n}명`).join(' / ');
 }
 // 구역 수: 기본 4개, ＋/－로 1~6개
@@ -1687,7 +1724,7 @@ function townSites(t){   // [{ name, gate, placed, n(앱 인원) }]
     .filter(k => k && k !== '개별관리' && k !== NO_SENIOR && !/파크골프|그라운드골프/.test(k));
   const uniq = []; names.forEach(k => { if (!uniq.some(u => sameSenior(u, k))) uniq.push(k); });
   return uniq.map(k => ({ name: k, gate: k.includes('게이트볼'), placed: (PLACED[t] || {})[k] ?? Object.entries(PLACED[t] || {}).find(([x]) => sameSenior(x, k))?.[1] ?? 0,
-    n: participants.filter(p => p.town === t && sameSenior(seniorOf(p), k) && !stats(p).dropped).length }))
+    n: participants.filter(p => p.town === t && sameSenior(seniorOf(p), k) && counted(p)).length }))
     .sort((a, b) => b.gate - a.gate || a.name.localeCompare(b.name));
 }
 function townAllHtml(){
@@ -1710,15 +1747,15 @@ function renderZones(){
   // 팀장 구역 합계: 구역 수 · 경로당 · 게이트볼 · 총 인원
   const zl = document.getElementById('zone-lead');
   if (zl) { const used = zones.filter(z => z.sites.length), ss = used.flatMap(z => z.sites), g = ss.filter(x => x.senior.includes('게이트볼')).length;
-    const n = ss.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0);
+    const n = ss.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(counted).length, 0);
     zl.innerHTML = `👤 팀장 담당 · 경로당 <b>${ss.length - g}</b>곳 · 게이트볼 <b>${g}</b>곳 · 총 <b>${n}</b>명`; zl.classList.toggle('hidden', !used.length); }
   const zn = document.getElementById('zone-n'); if (zn) zn.textContent = zones.length + '개';
   document.getElementById('zone-minus').disabled = zones.length <= ZONE_MIN; document.getElementById('zone-plus').disabled = zones.length >= ZONE_MAX;
   box.innerHTML = zones.map(z => {
-    const n = z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0);
+    const n = z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(counted).length, 0);
     const v = z.sites.length ? zoneVisit(z) : null;
     // 예) 홍길동(상전) 10곳, 게이트볼 1곳 총 23명 / (동향) 2곳 총 4명
-    const by = {}; z.sites.forEach(x => { const t = (by[x.town] ||= { s: 0, g: 0, n: 0 }); x.senior.includes('게이트볼') ? t.g++ : t.s++; t.n += siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length; });
+    const by = {}; z.sites.forEach(x => { const t = (by[x.town] ||= { s: 0, g: 0, n: 0 }); x.senior.includes('게이트볼') ? t.g++ : t.s++; t.n += siteMembers(x.town, x.senior).filter(counted).length; });
     const lines = TOWNS.filter(t => by[t]).map((t, i) => `${i ? '' : `<span style="font-weight:bold;font-size:1.05rem;">${esc(z.name)}</span>`}(${esc(t.replace(/[면읍]$/, ''))}) ${by[t].s}곳${by[t].g ? `, 게이트볼 ${by[t].g}곳` : ''} 총 ${by[t].n}명`);
     return `<button type="button" class="zone-btn ${z.sites.length?'':'empty'}" onclick="openZone(${z.id})">${lines.length ? `<span style="display:block;font-size:.9rem;line-height:1.45;">${lines.join('<br>')}</span>` : `<b>${esc(z.name)}</b>`}</button>`;
   }).join('');
@@ -1792,7 +1829,7 @@ function openZone(id){
   };
   $('#zn-range').value = nvRange; $('#zn-range').onchange = () => { nvRange = $('#zn-range').value; drawMain(); renderZones(); };
   const drawMain = () => {
-    const total = z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0);
+    const total = z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(counted).length, 0);
     $('#zn-title').innerHTML = `🗺 ${esc(z.name)} <span class="muted" style="font-size:.85rem;font-weight:normal;">${z.sites.length ? esc(zoneTownText(z)) : '경로당 0곳'}</span>`;
     const sorted = [...z.sites].sort((a,b) => a.town.localeCompare(b.town) || seniorRank(a.senior)-seniorRank(b.senior) || a.senior.localeCompare(b.senior));
     $('#zn-sites').innerHTML = sorted.length ? sorted.map(x => {
@@ -1884,7 +1921,7 @@ function openZone(id){
     const isX = k => (xSites[curTown] || []).includes(k);
     $('#zn-list').innerHTML = (shown.length ? `<button type="button" class="small ${allOn ? 'secondary' : ''}" id="zn-all" style="margin:0 0 4px;">${allOn ? '✕ 전부 빼기' : '✔ 전부 선택'} (${shown.length}곳)</button>` : '') + shown.map(k => {
       const other = zoneOfSite(curTown, k), mine = pick.has(siteKey(curTown, k));
-      const n = siteMembers(curTown, k).filter(p => !stats(p).dropped).length;
+      const n = siteMembers(curTown, k).filter(counted).length;
       return `<div style="display:flex;gap:4px;align-items:center;"><button type="button" class="site ${mine?'zs-on':''}" data-k="${esc(k)}" style="flex:1;padding:9px 12px;margin:4px 0;${mine?'background:#c6f6d5;border-color:#38a169;':''}">
         <div>${mine?'✔ ':''}<b>${crown(curTown, k)}${esc(k)}</b> <span class="muted">${n}명</span>${other && other.id!==z.id ? ` <span class="badge bg-gray">${esc(other.name)}</span>` : ''}</div><span class="arrow">${mine?'':'＋'}</span></button>
         ${isX(k) ? `<button type="button" class="small secondary" data-xren="${esc(k)}" style="width:auto;margin:0;padding:6px 8px;">✏️</button><button type="button" class="small secondary" data-xdel="${esc(k)}" style="width:auto;margin:0;padding:6px 8px;color:var(--danger);">✕</button>` : ''}</div>`;
@@ -3237,11 +3274,20 @@ function renderUI(){
   document.getElementById('ui-weight').innerHTML = [['thin','얇게'],['normal','보통'],['bold','두껍게']].map(([k, n]) => `<button type="button" class="${ui.weight === k ? 'on' : ''}" onclick="ui.weight='${k}';saveUI('글씨 두께 ${n}')">${n}</button>`).join('');
   const tg = (k, on, n) => `<button type="button" class="${ui[k] === on ? 'on' : ''}" onclick="ui.${k}=${on};saveUI('${n} ${on ? '켬' : '끔'}');refreshWeather()">${on ? '켜기' : '끄기'}</button>`;
   document.getElementById('ui-wx').innerHTML = tg('wx', true, '날씨 표시') + tg('wx', false, '날씨 표시');
+  const ht = document.getElementById('ui-hdtext'); if (document.activeElement !== ht) ht.value = ui.hdText || '';
+  ht.onchange = () => { const v = ht.value.trim(); if (v === (ui.hdText || '')) return; ui.hdText = v; saveUI(`맨 위 제목 "${v || HD_DEF}"`); };
+  document.getElementById('ui-hdcolor').innerHTML = HD_COLORS.map(([c, n]) => `<button type="button" class="${(ui.hdColor || '#ffffff') === c ? 'on' : ''}" data-hc="${c}" style="background:linear-gradient(180deg,#2b6cb0,#63b3ed);color:${c};font-weight:bold;text-shadow:${c === '#1a202c' ? '0 0 2px #fff' : '0 1px 2px #000'};">${n}</button>`).join('');
+  document.querySelectorAll('#ui-hdcolor [data-hc]').forEach(b => b.onclick = () => { ui.hdColor = b.dataset.hc; saveUI(`제목 색깔 ${HD_COLORS.find(x => x[0] === ui.hdColor)[1]}`); });
+  document.getElementById('ui-hdfont').innerHTML = HD_FONTS.map((f, i) => `<button type="button" class="${(ui.hdFont || '') === f.k ? 'on' : ''}" data-hf="${i}" style="${f.k ? `font-family:'${f.k}',sans-serif;` : ''}">${f.name}</button>`).join('');
+  HD_FONTS.filter(f => f.css).forEach(f => { if (!document.getElementById('hdf-' + f.css)) { const l = document.createElement('link'); l.id = 'hdf-' + f.css; l.rel = 'stylesheet'; l.href = `https://fonts.googleapis.com/css2?family=${f.css}&display=swap`; document.head.appendChild(l); } });
+  document.querySelectorAll('#ui-hdfont [data-hf]').forEach(b => b.onclick = () => { const f = HD_FONTS[+b.dataset.hf]; ui.hdFont = f.k; saveUI(`제목 글씨체 ${f.name}`); });
+  document.getElementById('ui-hdstyle').innerHTML = HD_STYLES.map(([k, n]) => `<button type="button" class="${(ui.hdStyle || 'shadow') === k ? 'on' : ''}" data-hs="${k}">${n}</button>`).join('');
+  document.querySelectorAll('#ui-hdstyle [data-hs]').forEach(b => b.onclick = () => { ui.hdStyle = b.dataset.hs; saveUI(`제목 꾸밈 ${HD_STYLES.find(x => x[0] === ui.hdStyle)[1]}`); });
   document.getElementById('ui-wxfx').innerHTML = tg('wxfx', true, '날씨 효과') + tg('wxfx', false, '날씨 효과');
   document.getElementById('ui-font').innerHTML = UI_FONTS.map((f, i) => `<button type="button" class="${ui.font === f.k ? 'on' : ''}" style="${f.k ? `font-family:'${f.k}',sans-serif;` : ''}" onclick="ui.font=UI_FONTS[${i}].k;saveUI('글씨체 ${f.name}')">${f.name}</button>`).join('');
 }
 function uiSize(d){ const n = Math.min(10, Math.max(1, ui.size + d)); if (n === ui.size) return notify(d > 0 ? '가장 큰 글씨예요 (10단계).' : '가장 작은 글씨예요 (1단계).'); ui.size = n; saveUI(`글씨 크기 ${n}단계`); }
-function uiReset(){ ui = { size: 5, weight: 'normal', font: '', wx: true, wxfx: true, theme: 'blue' }; saveUI('처음 설정으로'); }
+function uiReset(){ ui = { size: 5, weight: 'normal', font: '', wx: true, wxfx: true, theme: 'blue', hdText: '', hdColor: '#ffffff', hdFont: '', hdStyle: 'shadow' }; saveUI('처음 설정으로'); }
 // ---------- 👤 현장 점검자 정보 (이 휴대폰에만 저장) ----------
 let me = (() => { try { return JSON.parse(load('jinan_me')) || {}; } catch(e) { return {}; } })();
 const meName = () => me.name || '김장원';
@@ -3504,7 +3550,7 @@ function sitesOf(town){
 }
 // 면별 인원·경로당 수 (중도포기 빼고) — 게이트볼은 따로
 function townCount(t){
-  const ps = participants.filter(p => p.town === t && !stats(p).dropped), g = ps.filter(isGate).length;
+  const ps = participants.filter(p => p.town === t && counted(p)), g = ps.filter(isGate).length;
   const sites = [...new Set(ps.map(seniorOf))].filter(k => k !== '개별관리' && k !== NO_SENIOR), gs = sites.filter(k => k.includes('게이트볼')).length;
   return { act: ps.length - g, gate: g, all: ps.length, site: sites.length - gs, gsite: gs };
 }
@@ -4391,7 +4437,7 @@ function renderMates(p){
   const box = document.getElementById('mate-tabs'); if (!box) return;
   const ms = matesOf(p), d = document.getElementById('c-date').value || today();
   if (ms.length < 2) { box.innerHTML = ''; return; }
-  box.innerHTML = `<div class="mt-wrap"><div class="mt-lbl">👥 ${esc(seniorOf(p))} 같이 근무 ${ms.filter(q => !stats(q).dropped).length}명</div>${ms.map(q => { const pd = !!checkDrafts[q.id] && q.id !== p.id, done = q.logs.some(l => l.date===d), gone = stats(q).dropped;
+  box.innerHTML = `<div class="mt-wrap"><div class="mt-lbl">👥 ${esc(seniorOf(p))} 같이 근무 ${ms.filter(counted).length}명</div>${ms.map(q => { const pd = !!checkDrafts[q.id] && q.id !== p.id, done = q.logs.some(l => l.date===d), gone = stats(q).dropped;
     return `<button type="button" class="${q.id===p.id?'on':''} ${done?'done':''} ${gone?'quit':''}" data-mate="${q.id}">${done && !gone?'✔ ':''}<span class="nm">${nmH(q)}</span><small>${gone ? '중도포기' : q.id===p.id ? '지금 점검 중' : pd && !done ? '✏️ 저장 전' : done ? `${md(d)} 점검함` : '아직 안 함'}</small></button>`; }).join('')}</div>`;
   box.querySelectorAll('[data-mate]').forEach(b => b.onclick = () => switchMate(Number(b.dataset.mate)));
 }
@@ -5245,7 +5291,7 @@ function exportExcel(){
     [`안 간 경로당 (${curMonth}월)`, visibleTowns().flatMap(tw => [...new Set(list.filter(p => p.town===tw && !stats(p).dropped).map(seniorOf))].filter(k => !siteVisits(tw, k).some(d => d.startsWith(monthKey()))).map(k => `${tw.replace(/[면읍]$/,'')} ${k}`)).join(', ') || '없음 (모두 다녀옴)'],
     ['마지막 백업', load('jinan_last_backup') || '백업한 적 없음'],
     ['👑 우수 경로당', Object.keys(best).filter(k => list.some(p => p.town === k.split('|')[0])).map(k => k.replace('|', ' ')).join(', ') || '없음'],
-    ['구역', zones.map(z => `${z.name}: 경로당 ${z.sites.length}곳 ${z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(p => !stats(p).dropped).length, 0)}명`).join(' / ')],
+    ['구역', zones.map(z => `${z.name}: 경로당 ${z.sites.length}곳 ${z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(counted).length, 0)}명`).join(' / ')],
     ['출장 일정', Object.keys(trips).filter(d => d.startsWith(monthKey())).sort().map(d => `${dd(d)} ${tripLong(d)}`).join(' / ') || '없음'], [],
     ['읍면','경로당','인원','이탈 감점(점)','조끼 미착용(회)','명찰 미착용(회)']];
   const tot = {n:0, pen:0, vest:0, badge:0};
