@@ -344,6 +344,16 @@
   #hd-scene svg.main { z-index:1; }
   #hd-scene.still *, #hd-scene.still { animation:none !important; }
   @media (prefers-reduced-motion: reduce) { #hd-scene * { animation:none !important; } }
+  /* 🧩 화면 배치: 꾹 눌러 옮기기·묶기 */
+  #mv-area summary, #search-card { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  #search-card input { -webkit-user-select:text; user-select:text; }
+  .mv-in > .card.mv-sub { box-shadow:none; border:1px solid #e2e8f0; margin:8px 0 0; }
+  .mv-group > details > summary h3 { color:#2c5282; }
+  .card.mv-lift { transform:scale(1.03); box-shadow:0 12px 26px rgba(0,0,0,.28); transition:transform .15s, box-shadow .15s; position:relative; z-index:5; }
+  .card.mv-drag { opacity:.35; }
+  .mv-ghost { position:fixed; z-index:9999; pointer-events:none; background:#fff; border:2px solid #dd6b20; border-radius:12px; padding:10px 14px; font-weight:bold; box-shadow:0 10px 24px rgba(0,0,0,.3); max-width:80vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mv-line { position:fixed; height:5px; background:#dd6b20; border-radius:3px; z-index:9998; pointer-events:none; display:none; }
+  .card.mv-target { outline:3px dashed #dd6b20; outline-offset:2px; background:#fffaf0; }
 </style>
 </head>
 <body>
@@ -369,22 +379,23 @@
   </div>
   <div id="new-alert"></div>
   <div id="call-alert"></div>
-  <div class="card" style="padding:10px 14px;">
+  <div id="mv-area">
+  <div class="card" id="chg-card" data-mv="chg" style="padding:10px 14px;">
     <details id="chg-box" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3 id="chg-title"></h3><span class="chg-arrow"></span></summary>
       <div id="chg-list"></div>
     </details>
   </div>
-  <div class="card">
+  <div class="card" id="wd-card" data-mv="wd">
     <details class="chg-box" id="wd-box" style="margin-top:0;border-top:none;padding-top:0;">
     <summary><div class="wd-head" style="flex:1;min-width:0;"><h3 id="wd-title"></h3><span style="display:flex;gap:4px;"><span id="wd-lock" style="align-self:center;"></span><button class="small secondary" onclick="event.preventDefault();event.stopPropagation();openWorkdays()" style="white-space:nowrap;">활동일 수정</button></span></div><span class="chg-arrow" style="flex:none;margin-left:6px;"></span></summary>
     <div id="wd-chips" class="chips"></div>
     <div id="wd-note" class="muted hidden"></div>
     </details>
   </div>
-  <div class="card" id="zone-card" style="padding:12px 14px;">
+  <div class="card" id="zone-card" data-mv="zone" style="padding:12px 14px;">
     <details class="chg-box" id="zone-box" style="margin-top:0;border-top:none;padding-top:0;">
-    <summary><div style="display:flex;align-items:center;gap:6px;flex:1;"><div style="flex:1;font-weight:bold;">🗺 구역</div>
+    <summary><div style="display:flex;align-items:center;gap:6px;flex:1;"><div class="mv-t" style="flex:1;font-weight:bold;">🗺 구역</div>
       <button type="button" class="small secondary" id="zone-minus" onclick="event.preventDefault();event.stopPropagation();zoneCount(-1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">－</button><b id="zone-n" style="min-width:2.2em;text-align:center;"></b><button type="button" class="small" id="zone-plus" onclick="event.preventDefault();event.stopPropagation();zoneCount(1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">＋</button></div><span class="chg-arrow" style="flex:none;margin-left:6px;"></span></summary>
     <div id="zone-sum" style="font-size:.85rem;margin:-2px 0 4px;"></div>
     <details class="chg-box" id="zone-all" style="margin:0 0 6px;border-top:none;padding-top:0;"><summary><span class="muted" style="font-size:.85rem;" id="zone-all-sum">🗺 11개 읍·면 전체</span><span class="chg-arrow" style="width:26px;height:26px;"></span></summary><div id="zone-all-list" style="font-size:.82rem;"></div></details>
@@ -394,7 +405,7 @@
   </div>
 
 
-  <div class="card">
+  <div class="card" id="search-card" data-mv="search">
     <input type="search" id="search" placeholder="🔍 어르신 이름으로 바로 찾기 (모든 면)" oninput="renderList()" autocomplete="off" style="margin:0 0 4px;">
     <div id="participant-list"></div>
     <div id="town-wrap" class="hidden"><label style="margin-top:10px;">📍 읍·면 선택</label>
@@ -419,7 +430,7 @@
 
 
 
-  <div class="card">
+  <div class="card" id="board-card" data-mv="board">
     <details class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3 id="board-title">⚠️ 감점 현황</h3><span class="chg-arrow"></span></summary>
       <div class="close-sum" id="close-sum"></div>
@@ -427,7 +438,7 @@
     </details>
   </div>
 
-  <div class="card" id="diary-card">
+  <div class="card" id="diary-card" data-mv="diary">
     <details class="chg-box" id="diary-box" style="margin-top:0;border-top:none;padding-top:0;" ontoggle="if(this.open) renderDiary()">
       <summary><h3>📝 활동일지</h3><span class="chg-arrow"></span></summary>
       <div style="margin-top:8px;">
@@ -439,7 +450,7 @@
     </details>
   </div>
 
-  <div class="card" id="tools-card">
+  <div class="card" id="tools-card" data-mv="tools">
     <details class="chg-box" id="tools-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3>➕ 신규등록</h3><span class="chg-arrow"></span></summary>
       <div style="margin-top:8px;">
@@ -456,7 +467,7 @@
     <input type="file" id="bulk-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="sr-only" onchange="bulkImport(this)">
   </div>
 
-  <div class="card">
+  <div class="card" id="stats-card" data-mv="stats">
     <details class="chg-box" id="close-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3>📊 통계</h3><span class="chg-arrow"></span></summary>
       <div style="margin-top:8px;">
@@ -487,7 +498,7 @@
     </details>
   </div>
 
-  <div class="card" id="ui-card">
+  <div class="card" id="ui-card" data-mv="ui">
     <details class="chg-box" id="ui-box" style="margin-top:0;border-top:none;padding-top:0;" ontoggle="if(this.open) renderUI()">
       <summary><h3>🛠️ 설정</h3><span class="chg-arrow"></span></summary>
       <div style="margin-top:8px;">
@@ -519,6 +530,7 @@
         <div class="ui-opts" id="ui-wxfx" style="grid-template-columns:repeat(2,1fr);"></div>
         <div class="notice" id="ui-sample" style="font-size:1rem;">가나다 미리보기 — 동향면 고부 경로당 · 조끼 착용 · 10월 14일(수)</div>
         <button type="button" class="secondary full" onclick="uiReset()">처음 설정으로 되돌리기</button>
+        <button type="button" class="secondary full" onclick="mvReset()">↩ 화면 배치 처음으로</button>
         <details class="stat-box chg-box" id="bk-box">
           <summary><span style="font-weight:bold;">💾 백업</span><span class="chg-arrow"></span></summary>
           <div style="margin-top:6px;"></div>
@@ -532,7 +544,7 @@
     </details>
   </div>
 
-  <div class="card" id="me-card">
+  <div class="card" id="me-card" data-mv="me">
     <details class="chg-box" id="me-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3>👤 현장 점검자 정보</h3><span class="chg-arrow"></span></summary>
       <div style="margin-top:8px;">
@@ -543,9 +555,10 @@
       </div>
     </details>
   </div>
+  </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-17</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-18</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2844,7 +2857,7 @@ function openAddExclude(){
     picked.exclude = { year: exYear(), reason, memo, date: today() };
     logEvent('참여 제외 지정', picked, `${exYear()}년 · ${[reason, memo].filter(Boolean).join(' - ')}`);
     saveData(false); back.remove(); renderList();
-    document.getElementById('close-box').open = true; document.getElementById('ex-box').open = true;
+    document.getElementById('close-box').open = true; document.getElementById('ex-box').open = true; mvReveal(document.getElementById('close-box'));
     notify(`${picked.name} 어르신을 ${exYear()}년 참여 제외 대상으로 저장했어요.`);
   };
 }
@@ -3437,7 +3450,7 @@ function saveMe(){
   logEvent('점검자 정보 변경', null, `이름 ${me.name}${me.phone ? ' · 휴대폰 등록' : ''}${me.email ? ' · 이메일 등록' : ''}`);
   notify('저장했어요. 이제 활동일지를 내 휴대폰·이메일로 바로 보낼 수 있어요.');
 }
-function goMe(){ const b = document.getElementById('me-box'); b.open = true; fillMe(); b.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+function goMe(){ const b = document.getElementById('me-box'); b.open = true; mvReveal(b); fillMe(); b.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 async function shareDiary(){
   const date = diaryDate(), rows = diaryRows(date);
   if (!rows.length) return notify(`${md(date)}에는 점검한 경로당이 없어요.`);
@@ -5631,6 +5644,161 @@ eventLog.filter(h => h.type === '신규 등록' && (h.detail || '').startsWith('
 });
 document.getElementById('st-from').value = '1'; document.getElementById('st-to').value = String(curMonth);
 // 태어난 해를 적어 둔 분은 해가 바뀌면 나이도 저절로 바뀜
+// ---------- 🧩 화면 배치: 칸 제목을 꾹 눌러 옮기기·겹쳐서 묶기·이름 바꾸기 (이 휴대폰에만 저장, jinan_layout) ----------
+const MV_BASE = { chg: '🔄 근무일 변경', wd: '📅 활동일', zone: '🗺 구역', search: '🔍 이름 찾기', board: '⚠️ 감점 현황', diary: '📝 활동일지', tools: '➕ 신규등록', stats: '📊 통계', ui: '🛠️ 설정', me: '👤 현장 점검자 정보' };
+const MV_IDS = Object.keys(MV_BASE);
+let mvL = (() => { try { return JSON.parse(localStorage.getItem('jinan_layout')) || null; } catch(e) { return null; } })();
+function mvFix(){
+  // 잘못되거나 새로 생긴 칸도 빠짐없이
+  const L = mvL && Array.isArray(mvL.order) ? mvL : { order: [], groups: {}, names: {} };
+  L.groups = L.groups || {}; L.names = L.names || {};
+  const seen = new Set(), order = [];
+  L.order.forEach(k => { if (k.startsWith('g:')) { const g = L.groups[k.slice(2)]; if (!g) return; g.items = (g.items || []).filter(i => MV_IDS.includes(i) && !seen.has(i) && seen.add(i));
+      if (g.items.length > 1) order.push(k); else { g.items.forEach(i => order.push(i)); delete L.groups[k.slice(2)]; } }
+    else if (MV_IDS.includes(k) && !seen.has(k)) { seen.add(k); order.push(k); } });
+  Object.keys(L.groups).forEach(g => { if (!order.includes('g:' + g)) delete L.groups[g]; });
+  MV_IDS.forEach(i => { if (!seen.has(i)) order.push(i); });
+  L.order = order; mvL = L;
+}
+const mvCard = id => document.querySelector(`[data-mv="${id}"]`);
+const mvName = id => (mvL.names[id] || MV_BASE[id] || '');
+function mvSave(what){ try { localStorage.setItem('jinan_layout', JSON.stringify(mvL)); } catch(e) {} if (what) logEvent('화면 배치', null, what); }
+function mvApply(){
+  mvFix(); const area = document.getElementById('mv-area'); if (!area) return;
+  const openG = new Set([...area.querySelectorAll('.mv-group > details[open]')].map(d => d.parentElement.dataset.g));
+  mvL.order.forEach(k => {
+    if (k.startsWith('g:')) { const gid = k.slice(2), g = mvL.groups[gid];
+      let el = area.querySelector(`.mv-group[data-g="${gid}"]`);
+      if (!el) { el = document.createElement('div'); el.className = 'card mv-group'; el.dataset.g = gid;
+        el.innerHTML = `<details class="chg-box" style="margin-top:0;border-top:none;padding-top:0;"><summary><h3 class="mv-gt"></h3><span class="chg-arrow"></span></summary><div class="mv-in"></div></details>`; }
+      el.querySelector('.mv-gt').textContent = '📁 ' + (g.name || '묶음');
+      if (openG.has(gid)) el.firstElementChild.open = true;
+      area.appendChild(el); const inn = el.querySelector('.mv-in');
+      g.items.forEach(i => { const c = mvCard(i); if (c) { c.classList.add('mv-sub'); inn.appendChild(c); } });
+    } else { const c = mvCard(k); if (c) { c.classList.remove('mv-sub'); area.appendChild(c); } }
+  });
+  area.querySelectorAll('.mv-group').forEach(el => { if (!mvL.order.includes('g:' + el.dataset.g)) el.remove(); });
+  // 바꾼 이름
+  MV_IDS.forEach(id => { const c = mvCard(id); if (!c) return; const t = c.querySelector('.mv-t') || c.querySelector(':scope > details > summary h3'); if (!t) return;
+    let cn = t.parentElement.querySelector(':scope > .mv-cn'); const nm = mvL.names[id];
+    if (nm) { if (!cn) { cn = document.createElement(t.tagName === 'H3' ? 'h3' : 'div'); cn.className = 'mv-cn'; if (t.tagName !== 'H3') cn.style.cssText = 'flex:1;font-weight:bold;'; t.before(cn); } cn.textContent = nm; t.classList.add('hidden'); }
+    else { cn?.remove(); t.classList.remove('hidden'); } });
+}
+// 칸 안의 것을 열어 보여 줄 때: 묶음도 같이 펼침
+function mvReveal(el){ const g = el?.closest?.('.mv-group'); if (g) g.firstElementChild.open = true; }
+async function mvReset(){
+  if (!await ask('화면 칸 순서·묶음·이름을 처음대로 되돌릴까요?')) return;
+  mvL = null; mvFix(); mvSave('처음 배치로 되돌림'); mvApply(); notify('처음 배치로 되돌렸어요.');
+}
+function mvKey(el){ return el.classList.contains('mv-group') ? 'g:' + el.dataset.g : el.dataset.mv; }
+function mvGroupOf(id){ return Object.keys(mvL.groups).find(g => mvL.groups[g].items.includes(id)); }
+function mvRemove(key){ // 지금 자리에서 빼기
+  const i = mvL.order.indexOf(key); if (i >= 0) { mvL.order.splice(i, 1); return; }
+  const g = mvGroupOf(key); if (g) mvL.groups[g].items = mvL.groups[g].items.filter(x => x !== key);
+}
+function mvDrop(key, tgt){ // tgt = { kind:'before'|'after'|'merge', key, group? }
+  if (!tgt || tgt.key === key) return false;
+  const tName = tgt.key.startsWith('g:') ? null : mvName(tgt.key);
+  mvRemove(key);
+  if (tgt.group) { const it = mvL.groups[tgt.group].items; let i = it.indexOf(tgt.key); if (i < 0) i = it.length - 1; it.splice(tgt.kind === 'before' ? i : i + 1, 0, key); }
+  else if (tgt.kind === 'merge' && tgt.key.startsWith('g:')) mvL.groups[tgt.key.slice(2)].items.push(key);
+  else if (tgt.kind === 'merge') { const gid = String(Date.now()); mvL.groups[gid] = { name: tName.replace(/^\S+\s/, ''), items: [tgt.key, key] };
+    mvL.order[mvL.order.indexOf(tgt.key)] = 'g:' + gid; }
+  else { let i = mvL.order.indexOf(tgt.key); if (i < 0) { mvFix(); i = mvL.order.indexOf(tgt.key); } mvL.order.splice(tgt.kind === 'before' ? i : i + 1, 0, key); }
+  return true;
+}
+function mvLabel(key){ return key.startsWith('g:') ? '📁 ' + (mvL.groups[key.slice(2)]?.name || '묶음') : mvName(key); }
+// 꾹 눌렀다 뗐을 때(안 움직임): 메뉴
+function mvMenu(key){
+  const isG = key.startsWith('g:'), g = isG ? null : mvGroupOf(key), canName = key !== 'search';
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg"><div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">${esc(mvLabel(key))}</div>
+    ${canName ? '<button class="full" data-a="name">✏️ 이름 바꾸기</button>' : ''}
+    ${!isG && mvL.names[key] ? '<button class="secondary full" data-a="orig">↩ 처음 이름으로</button>' : ''}
+    ${g ? '<button class="warning full" data-a="out">📤 묶음에서 빼기</button>' : ''}
+    ${isG ? '<button class="warning full" data-a="ungroup">📂 묶음 풀기</button>' : ''}
+    <button class="secondary full" data-a="close">닫기</button></div>`;
+  document.body.appendChild(back);
+  back.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { const a = b.dataset.a; back.remove();
+    if (a === 'name') return mvRename(key);
+    if (a === 'orig') { const old = mvName(key); delete mvL.names[key]; mvSave(`이름 되돌림: ${old} → ${MV_BASE[key]}`); mvApply(); }
+    if (a === 'out') { const gg = mvL.groups[g]; gg.items = gg.items.filter(x => x !== key); mvL.order.splice(mvL.order.indexOf('g:' + g) + 1, 0, key); mvSave(`${mvName(key)} → 묶음(${gg.name})에서 뺌`); mvApply(); }
+    if (a === 'ungroup') { const gid = key.slice(2), gg = mvL.groups[gid], i = mvL.order.indexOf(key); mvL.order.splice(i, 1, ...gg.items); delete mvL.groups[gid]; mvSave(`묶음 풀기: ${gg.name}`); mvApply(); }
+  });
+}
+function mvRename(key){
+  const isG = key.startsWith('g:'), cur = isG ? mvL.groups[key.slice(2)].name : mvName(key);
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg"><div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">✏️ 이름 바꾸기</div>
+    <input type="text" id="mv-nm" maxlength="30" autocomplete="off">
+    <div class="grid-2" style="margin-top:8px;"><button class="secondary" data-v="0">취소</button><button id="mv-ok">저장</button></div></div>`;
+  document.body.appendChild(back); const inp = back.querySelector('#mv-nm'); inp.value = cur; setTimeout(() => inp.focus(), 50);
+  back.querySelector('[data-v="0"]').onclick = () => back.remove();
+  back.querySelector('#mv-ok').onclick = () => { const v = inp.value.trim(); back.remove(); if (!v || v === cur) return;
+    if (isG) mvL.groups[key.slice(2)].name = v; else if (v === MV_BASE[key]) delete mvL.names[key]; else mvL.names[key] = v;
+    mvSave(`이름 바꿈: ${cur} → ${v}`); mvApply(); };
+}
+// 끌기
+(function mvDrag(){
+  const area = document.getElementById('mv-area'); if (!area) return;
+  let st = null; // { el, key, x, y, timer, on, ghost, tgt, moved }
+  const handleOf = t => { if (t.closest('button,input,select,textarea,a,.dlg-back')) return null;
+    const sm = t.closest('#mv-area summary'); if (sm) { const el = sm.parentElement.parentElement; return el.matches('[data-mv],.mv-group') ? el : null; }
+    const sc = t.closest('#search-card'); return sc || null; };
+  const pt = e => e.touches ? e.touches[0] || e.changedTouches[0] : e;
+  function start(e){ if (st || (e.button != null && e.button !== 0)) return; const el = handleOf(e.target); if (!el) return; const p = pt(e);
+    st = { el, key: mvKey(el), x: p.clientX, y: p.clientY, cx: p.clientX, cy: p.clientY, on: false, moved: false };
+    st.timer = setTimeout(activate, 480); }
+  function activate(){ if (!st) return; st.on = true; mvFix();
+    if (ui.sound !== false) { try { navigator.vibrate && navigator.vibrate(30); } catch(e) {} }
+    st.el.classList.add('mv-lift'); }
+  function begin(){ // 실제로 끌기 시작
+    st.moved = true; st.el.classList.remove('mv-lift'); st.el.classList.add('mv-drag');
+    const g = document.createElement('div'); g.className = 'mv-ghost'; g.textContent = mvLabel(st.key); document.body.appendChild(g); st.ghost = g;
+    st.line = document.createElement('div'); st.line.className = 'mv-line'; document.body.appendChild(st.line);
+    st.scroll = setInterval(() => { if (!st) return; const h = innerHeight; if (st.cy < 70) scrollBy(0, -12); else if (st.cy > h - 70) scrollBy(0, 12); else return; find(); }, 16); }
+  function move(e){ if (!st) return; const p = pt(e); st.cx = p.clientX; st.cy = p.clientY;
+    if (!st.on) { if (Math.hypot(p.clientX - st.x, p.clientY - st.y) > 10) { clearTimeout(st.timer); st = null; } return; }
+    if (e.cancelable) e.preventDefault();
+    if (!st.moved) { if (Math.hypot(p.clientX - st.x, p.clientY - st.y) < 8) return; begin(); }
+    st.ghost.style.left = (st.cx - 20) + 'px'; st.ghost.style.top = (st.cy - 70) + 'px'; find(); }
+  function find(){
+    const y = st.cy, isG = st.key.startsWith('g:');
+    document.querySelectorAll('.mv-target').forEach(x => x.classList.remove('mv-target')); st.line.style.display = 'none'; st.tgt = null;
+    const vis = el => el.offsetParent !== null;
+    // 펼친 묶음 안의 칸 먼저
+    let hit = null;
+    if (!isG) for (const c of area.querySelectorAll('.mv-group > details[open] .mv-sub')) { if (c === st.el || !vis(c)) continue; const r = c.getBoundingClientRect(); if (y >= r.top && y <= r.bottom) { hit = { c, r, group: c.closest('.mv-group').dataset.g }; break; } }
+    if (!hit) { const tops = [...area.children].filter(c => c !== st.el && vis(c));
+      for (const c of tops) { const r = c.getBoundingClientRect(); if (y >= r.top - 6 && y <= r.bottom + 6) { hit = { c, r }; break; } }
+      if (!hit && tops.length) { const f = tops[0].getBoundingClientRect(), l = tops[tops.length - 1].getBoundingClientRect();
+        if (y < f.top) hit = { c: tops[0], r: f, force: 'before' }; else if (y > l.bottom) hit = { c: tops[tops.length - 1], r: l, force: 'after' }; } }
+    if (!hit) return;
+    const { c, r } = hit, k = mvKey(c), rel = (y - r.top) / Math.max(1, r.height);
+    let kind = hit.force || (hit.group ? (rel < .5 ? 'before' : 'after') : rel < .3 ? 'before' : rel > .7 ? 'after' : (isG ? (rel < .5 ? 'before' : 'after') : 'merge'));
+    // 큰 칸(펼친 칸)은 위·아래 40px 안쪽에서만 순서, 나머지는 묶기
+    if (!hit.force && !hit.group && !isG && r.height > 140) kind = y - r.top < 40 ? 'before' : r.bottom - y < 40 ? 'after' : 'merge';
+    if (c.contains(st.el) && kind === 'merge') return;   // 이미 그 묶음 안
+    st.tgt = { kind, key: k, group: hit.group };
+    if (kind === 'merge') c.classList.add('mv-target');
+    else { const L = st.line; L.style.display = 'block'; L.style.left = (r.left + 6) + 'px'; L.style.width = (r.width - 12) + 'px'; L.style.top = ((kind === 'before' ? r.top - 7 : r.bottom + 5)) + 'px'; }
+  }
+  function end(){ if (!st) return; clearTimeout(st.timer); const s0 = st; st = null;
+    clearInterval(s0.scroll); s0.ghost?.remove(); s0.line?.remove(); document.querySelectorAll('.mv-target').forEach(x => x.classList.remove('mv-target'));
+    s0.el.classList.remove('mv-lift', 'mv-drag'); if (!s0.on) return;
+    // 꾹 누른 뒤의 클릭(접기·펴기)은 막음
+    const stop = ev => { if (!area.contains(ev.target)) return; ev.preventDefault(); ev.stopPropagation(); }; document.addEventListener('click', stop, true); setTimeout(() => document.removeEventListener('click', stop, true), 350);
+    if (!s0.moved) return mvMenu(s0.key);
+    const t = s0.tgt; if (!t) return;
+    const what = t.kind === 'merge' ? `${mvLabel(s0.key)} → ${mvLabel(t.key)}에 묶음` : `${mvLabel(s0.key)} 옮김 (${mvLabel(t.key)} ${t.kind === 'before' ? '위' : '아래'})`;
+    if (mvDrop(s0.key, t)) { mvFix(); mvSave(what); mvApply(); const ge = s0.el.closest('.mv-group'); if (ge) ge.firstElementChild.open = true; }
+  }
+  area.addEventListener('touchstart', start, { passive: true }); area.addEventListener('mousedown', start);
+  document.addEventListener('touchmove', move, { passive: false }); document.addEventListener('mousemove', move);
+  document.addEventListener('touchend', end); document.addEventListener('touchcancel', end); document.addEventListener('mouseup', end);
+  area.addEventListener('contextmenu', e => { if (st) e.preventDefault(); });
+})();
+mvApply();
 participants.forEach(p => { if (p.birth) p.age = String(thisYear() - p.birth); });
 fillTownSelects();
 renderList();
@@ -5640,7 +5808,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) naviga
 fillMe();
 loadPhotos();
 renderBackup(); setTimeout(checkRestore, 900);
-if (!participants.length) document.getElementById('tools-box').open = true;
+if (!participants.length) { document.getElementById('tools-box').open = true; mvReveal(document.getElementById('tools-box')); }
 // 앱을 열 때: 오늘 안부 전화할 입원 어르신 알림
 setTimeout(() => {
   const due = callDue(), td = today(), chg = chgOn(td).filter(x => !dayCalled(x.p, td)), msg = [];
