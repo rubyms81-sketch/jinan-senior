@@ -7,7 +7,7 @@
 ## 파일
 - `index.html` — 앱 전체(화면·기능·데이터 처리). 고칠 때는 이 파일을 직접 고칩니다.
 - `sw.js` — 오프라인용. **배포할 때마다 `hyunjang-vN` 숫자를 1 올립니다.**
-- `manifest.webmanifest`, `icon-*.png` — 홈 화면 설치용.
+- `manifest.webmanifest`, `icon-*.png` — 홈 화면 설치용. 아이콘은 사용자가 준 빨간 말 캐릭터(하늘색 배경, 동그랗게 잘려도 보이게 가운데) (사용자 요청, 2026-10-20).
 
 ## 엑셀 라이브러리
 - 색 칠하기 때문에 `xlsx-js-style@1.2.0`(jsdelivr)을 쓰고, 못 불러오면 cdnjs `xlsx 0.18.5`로 대신합니다(색만 빠짐).
