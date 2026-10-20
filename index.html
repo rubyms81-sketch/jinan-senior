@@ -564,7 +564,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-19</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-20</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -860,7 +860,7 @@ const ptWord = k => PT[k] ? `-${PT[k]}점` : '경고';   // 화면·문자용: �
 function logItems(l){ const t = [], v = l.pv || PT_DEF;
   if (l.leave==='이탈') t.push('근무지 이탈' + ptTxt(v.이탈)); if (l.leave==='자리비움') t.push('잠깐 자리 비움' + ptTxt(v.자리비움));
   if (l.vest==='미착용') t.push('조끼 미착용' + ptTxt(v.조끼)); if (l.badge==='미착용') t.push('명찰 미착용' + ptTxt(v.명찰));
-  Object.values(l.ex || {}).forEach(x => { if (x.bad) t.push(`${x.n} ${x.v}` + ptTxt(x.pt)); });
+  Object.values(l.ex || {}).forEach(x => { if (x.bad) t.push((x.n === x.v ? x.v : `${x.n} ${x.v}`) + ptTxt(x.pt)); });
   return t; }
 const shortItems = l => logItems(l).map(x => x.replace(/ -[\d.]+점$/, '').replace('근무지 ', '').replace('잠깐 ', '')).join('·');
 const logPts = l => { const v = l.pv || PT_DEF;
@@ -907,18 +907,21 @@ function renderCheckItems(){
   document.querySelectorAll('#check-section [data-pt]').forEach(b => { b.dataset.base ||= b.textContent; b.textContent = b.dataset.base + (PT[b.dataset.pt] ? ` (-${PT[b.dataset.pt]}점)` : ' (경고)'); });
   const box = document.getElementById('ex-items'); if (!box) return;
   box.innerHTML = checkItems.map(it => `<label>${esc(it.name)}</label><input type="hidden" id="cx-${it.id}" value="정상">
-    <div class="seg" data-for="cx-${it.id}"><button type="button" data-v="정상">${esc(it.ok || '정상')}</button>${it.mid ? `<button type="button" data-v="mid" data-mid>${esc(it.mid)}${it.midPts != null && it.midPts !== '' ? ptLbl(Number(it.midPts)) : ''}</button>` : ''}<button type="button" data-v="bad" data-bad>${esc(it.bad)}${ptLbl(it.pts)}</button></div>`).join('');
-  box.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.onclick = () => { window._segTouched = true; setSeg(seg.dataset.for, b.dataset.v); }));
+    <div class="seg" data-for="cx-${it.id}">${it.single ? `<button type="button" data-v="bad" data-one ${it.pts != null && it.pts !== '' ? 'data-bad' : ''}>${esc(it.bad)}${it.pts != null && it.pts !== '' ? ptLbl(Number(it.pts)) : ''}</button></div>` : `<button type="button" data-v="정상">${esc(it.ok || '정상')}</button>${it.mid ? `<button type="button" data-v="mid" data-mid>${esc(it.mid)}${it.midPts != null && it.midPts !== '' ? ptLbl(Number(it.midPts)) : ''}</button>` : ''}<button type="button" data-v="bad" data-bad>${esc(it.bad)}${ptLbl(it.pts)}</button></div>`}`).join('');
+  box.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.onclick = () => { window._segTouched = true;
+    setSeg(seg.dataset.for, b.hasAttribute('data-one') && document.getElementById(seg.dataset.for).value === 'bad' ? '정상' : b.dataset.v); }));   // 1개짜리는 다시 누르면 꺼짐
   checkItems.forEach(it => setSeg('cx-' + it.id, '정상'));
 }
 const resetExItems = () => checkItems.forEach(it => setSeg('cx-' + it.id, '정상'));
 // 항목 값(정상·mid·bad) → 기록용 { n, v, bad, pt, mid } — 3개짜리는 가운데(mid)가 노랑, 가운데 점수 midPts(null=문제 아님)
 function exVal(it, v){
+  if (it.single) { if (v !== 'bad') return { n: it.name, v: '', bad: false, pt: 0 };   // 1개짜리(예: 조끼 교체): 누른 날만 기록
+    const w = it.pts != null && it.pts !== ''; return { n: it.name, v: it.bad, bad: w, pt: w ? Number(it.pts) || 0 : 0, rec: !w }; }
   if (v === 'bad') return { n: it.name, v: it.bad, bad: true, pt: it.pts || 0 };
   if (v === 'mid' && it.mid) { const w = it.midPts != null && it.midPts !== ''; return { n: it.name, v: it.mid, bad: w, pt: w ? Number(it.midPts) || 0 : 0, mid: true }; }
   return { n: it.name, v: it.ok || '정상', bad: false, pt: 0 };
 }
-const exSegV = x => x?.mid ? 'mid' : x?.bad ? 'bad' : '정상';
+const exSegV = x => x?.mid ? 'mid' : (x?.bad || x?.rec) ? 'bad' : '정상';
 const ptLbl = n => n ? ` (-${n}점)` : ' (경고)';
 // 지금 고른 새 항목 값 → 기록용 { id: {n, v, bad, pt} } (지난 기록에만 있는 항목은 keep 그대로)
 function exFromForm(keep){
@@ -926,11 +929,12 @@ function exFromForm(keep){
   checkItems.forEach(it => { ex[it.id] = exVal(it, document.getElementById('cx-' + it.id)?.value || '정상'); });
   return ex;
 }
-const exText = ex => Object.values(ex || {}).map(x => `${x.n} ${x.v}`).join('·');
+const exText = ex => Object.values(ex || {}).filter(x => x.v).map(x => x.n === x.v ? x.v : `${x.n} ${x.v}`).join('·');
 async function openItemCfg(focus){
-  let pt = Object.assign({}, PT), items = checkItems.map(x => ({ ...x, o1: x.ok || '정상', o2: x.mid || x.bad || '', o3: x.mid ? x.bad : '' }));
+  let pt = Object.assign({}, PT), items = checkItems.map(x => ({ ...x, o1: x.single ? x.bad : x.ok || '정상', o2: x.single ? '' : x.mid || x.bad || '', o3: x.mid ? x.bad : '' }));
   const OPTS = [0, 0.5, 1, 1.5, 2, 3];
-  const midSel = (v, attr) => `<select ${attr} style="margin:0;width:auto;"><option value="" ${v == null || v === '' ? 'selected' : ''}>문제 아님</option>${OPTS.map(o => `<option value="${o}" ${v != null && v !== '' && Number(v)===o ? 'selected' : ''}>${o ? '-' + o + '점' : '경고만'}</option>`).join('')}</select>`;
+  const nOpt = it => [it.o1, it.o2, it.o3].filter(x => String(x || '').trim()).length;
+  const midSel = (v, attr, none) => `<select ${attr} style="margin:0;width:auto;"><option value="" ${v == null || v === '' ? 'selected' : ''}>${none || '문제 아님'}</option>${OPTS.map(o => `<option value="${o}" ${v != null && v !== '' && Number(v)===o ? 'selected' : ''}>${o ? '-' + o + '점' : '경고만'}</option>`).join('')}</select>`;
   const sel = (v, attr) => `<select ${attr} style="margin:0;width:auto;">${OPTS.map(o => `<option value="${o}" ${Number(v)===o ? 'selected' : ''}>${o ? '-' + o + '점' : '경고만'}</option>`).join('')}</select>`;
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
@@ -951,12 +955,12 @@ async function openItemCfg(focus){
     $('#ic-items').innerHTML = items.length ? items.map((it, i) => `<div style="border:1px solid #e2e8f0;border-radius:8px;padding:8px;margin-top:6px;">
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;"><input type="text" data-i="${i}" data-f="name" value="${esc(it.name)}" placeholder="항목 이름" style="margin:0;font-weight:bold;"><button type="button" class="small secondary" data-del="${i}" style="width:auto;margin:0;color:var(--danger);white-space:nowrap;">🗑 삭제</button></div>
       <div style="display:flex;gap:6px;align-items:center;"><input type="text" data-i="${i}" data-f="o1" value="${esc(it.o1)}" placeholder="1 (예: 우수)" style="margin:0;"><input type="text" data-i="${i}" data-f="o2" value="${esc(it.o2)}" placeholder="2 (예: 보통)" style="margin:0;"><input type="text" data-i="${i}" data-f="o3" value="${esc(it.o3)}" placeholder="3 (예: 불량)" style="margin:0;"></div>
-      <div style="display:flex;gap:6px;align-items:center;margin-top:6px;font-size:.88rem;">${it.o3.trim() ? `<span style="color:#975a16;">2번</span>${midSel(it.midPts, `data-i="${i}" data-f="midPts"`)}<span style="color:var(--danger);">3번</span>` : '<span style="color:var(--danger);">2번</span>'}${sel(it.pts, `data-i="${i}" data-f="pts"`)}</div></div>`).join('')
+      <div style="display:flex;gap:6px;align-items:center;margin-top:6px;font-size:.88rem;">${nOpt(it) === 1 ? `<span style="color:#2b6cb0;">1번</span>${midSel(it.pts, `data-i="${i}" data-f="pts"`, '기록만')}` : it.o3.trim() ? `<span style="color:#975a16;">2번</span>${midSel(it.midPts, `data-i="${i}" data-f="midPts"`)}<span style="color:var(--danger);">3번</span>` : '<span style="color:var(--danger);">2번</span>'}${nOpt(it) === 1 ? '' : sel(it.pts, `data-i="${i}" data-f="pts"`)}</div></div>`).join('')
       : '<div class="muted" style="font-size:.88rem;">추가 항목이 없어요.</div>';
-    items.forEach(it => { it._3 = !!String(it.o3 || '').trim(); });
+    items.forEach(it => { it._3 = nOpt(it); });
     back.querySelectorAll('#ic-items [data-f]').forEach(x => { const f = x.dataset.f, it = items[+x.dataset.i];
-      x.oninput = x.onchange = () => { it[f] = f === 'pts' ? Number(x.value) : f === 'midPts' ? (x.value === '' ? null : Number(x.value)) : x.value; };
-      if (f === 'o3') x.onchange = () => { it.o3 = x.value; if (!!it.o3.trim() !== it._3) draw(); }; });
+      x.oninput = x.onchange = () => { it[f] = (f === 'pts' || f === 'midPts') ? (x.value === '' ? null : Number(x.value)) : x.value; };
+      if (/^o\d$/.test(f)) x.onchange = () => { it[f] = x.value; const k = nOpt(it); if (k !== it._3 && (k === 1 || it._3 === 1 || k === 3 || it._3 === 3)) { if (it._3 === 1 && k > 1 && it.pts == null) it.pts = 0; if (k === 1 && it._3 !== 1) it.pts = null; draw(); } }; });
     back.querySelectorAll('#ic-items [data-del]').forEach(b => b.onclick = async () => { const it = items[+b.dataset.del];
       if (!await ask(`"${it.name || '이름 없는 항목'}" 항목을 지울까요?\n(이미 저장된 점검 기록은 그대로 남아요)`)) return; items.splice(+b.dataset.del, 1); draw(); });
   };
@@ -965,11 +969,13 @@ async function openItemCfg(focus){
   $('#ic-cancel').onclick = () => back.remove();
   $('#ic-save').onclick = () => {
     items = items.map(({ o1, o2, o3, _3, ...it }) => { o1 = String(o1 || '').trim(); o2 = String(o2 || '').trim(); o3 = String(o3 || '').trim();
-      if (!o2 && o3) { o2 = o3; o3 = ''; }
-      const r = { ...it, name: String(it.name).trim(), ok: o1 || '정상', bad: o3 || o2 }; delete r.mid; delete r.midPts;
-      if (o3) { r.mid = o2; r.midPts = it.midPts == null || it.midPts === '' ? null : Number(it.midPts); } return r; });
-    const bad = items.find(it => !it.name || !it.bad); if (bad) return notify('항목 이름과 선택지를 2개 이상 적어 주세요.');
-    const optTxt = it => [it.ok, it.mid, it.bad].filter(Boolean).join('/') + ` ${it.pts ? '-' + it.pts + '점' : '경고'}`;
+      const os = [o1, o2, o3].filter(Boolean);
+      const r = { ...it, name: String(it.name).trim() }; delete r.mid; delete r.midPts; delete r.single;
+      if (os.length === 1) Object.assign(r, { single: true, ok: '정상', bad: os[0], pts: it.pts == null || it.pts === '' ? null : Number(it.pts) });   // 1개: 누르면 기록
+      else { Object.assign(r, { ok: os[0], bad: os[os.length - 1], pts: Number(it.pts) || 0 }); if (os.length === 3) { r.mid = os[1]; r.midPts = it.midPts == null || it.midPts === '' ? null : Number(it.midPts); } }
+      return r; });
+    const bad = items.find(it => !it.name || !it.bad); if (bad) return notify('항목 이름과 선택지를 1개 이상 적어 주세요.');
+    const optTxt = it => it.single ? `${it.bad} ${it.pts == null ? '기록만' : it.pts ? '-' + it.pts + '점' : '경고'}` : [it.ok, it.mid, it.bad].filter(Boolean).join('/') + ` ${it.pts ? '-' + it.pts + '점' : '경고'}`;
     const ch = [];
     BASE.forEach(([k, l]) => { if (pt[k] !== PT[k]) ch.push(`${l} ${PT[k] ? '-' + PT[k] + '점' : '경고'} → ${pt[k] ? '-' + pt[k] + '점' : '경고'}`); });
     items.forEach(it => { const o = checkItems.find(x => x.id === it.id);
@@ -3313,6 +3319,7 @@ function diaryAuto(site, date){
     const okN = n - new Set(bad.map(r => r.p.id)).size;
     if (okN > 0) out.push(`나머지 ${okN}명은 조끼·명찰 착용 및 근무 상태 양호함.`);
   }
+  site.rows.forEach(({ p, l }) => Object.values(l.ex || {}).filter(x => x.rec && x.v).forEach(x => out.push(`${p.name} 어르신 ${x.v}함.`)));   // 조끼 교체 등 기록
   site.rows.filter(r => r.l.memo).forEach(({ p, l }) => out.push(`${p.name} 어르신: ${endDot(l.memo)}`));
   const mk = date.slice(0, 7);
   site.rows.map(r => r.p).filter((p, i, a) => a.indexOf(p) === i).forEach(p => {
