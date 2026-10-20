@@ -515,7 +515,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-1</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-2</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -3659,7 +3659,7 @@ function leaderImport(input){
       const name = g(cN); if (!name) return;
       const town = normTown(g(cT)) || myTowns[0], phone = g(cP) ? fmtPhone(g(cP)) : '';
       const sites = g(cS).split(/[,，·/\n]+/).map(x => normSenior(town, x)).filter(Boolean);
-      let L = rows.find(x => x.name === name && (x.phone === phone || !phone || !x.phone));
+      let L = rows.find(x => x.name === name && x.town === town && (x.phone === phone || !phone || !x.phone));   // 같은 이름이라도 면이 다르면 따로
       if (!L) rows.push(L = { name, phone, town, zname: g(cZ), addr: g(cA), car: g(cC), carNo: g(cCN), sites: [] });
       sites.forEach(k => { if (!L.sites.some(x => x.town === town && x.senior === k)) L.sites.push({ town, senior: k }); });
     });
