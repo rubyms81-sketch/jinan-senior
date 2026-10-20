@@ -302,7 +302,7 @@
   /* 🏞 맨 위 파란 칸 안 날씨 그림 (마이산 · 소나무 · 호랑이 · 해·달·별 · 구름·비·눈·바람) */
   header { padding:0 !important; min-height:104px; overflow:hidden; background-image:none !important; }
   header .hd-text { position:relative; z-index:2; padding:12px 14px 0; text-shadow:0 1px 3px rgba(0,0,0,.55), 0 0 8px rgba(0,0,0,.25); }
-  #hd-scene { position:absolute; inset:0; z-index:1; overflow:hidden; transition:background 2s; }
+  #hd-scene { position:absolute; inset:0; overflow:hidden; transition:background 2s; }   /* z-index 없음: 해·구름 하나가 제목 글자 앞으로 지나갈 수 있게 */
   #hd-scene .sc-abs { position:absolute; }
   #hd-scene svg { position:absolute; display:block; }
   #hd-scene .far { left:0; right:0; bottom:0; width:100%; height:46%; }
@@ -310,7 +310,7 @@
   #hd-scene .ground { left:0; right:0; bottom:0; height:9px; }
   .sc-star { width:2px; height:2px; border-radius:50%; background:#fff; box-shadow:0 0 3px #fff; animation:scTw 2.4s ease-in-out infinite; }
   @keyframes scTw { 0%,100% { opacity:.25; } 50% { opacity:1; } }
-  .sc-sun { width:30px; height:30px; border-radius:50%; background:radial-gradient(circle,#fffbe0 0 35%,#fbd38d 60%,#f6ad55 100%); box-shadow:0 0 18px 6px rgba(251,211,141,.75); }
+  .sc-sun { z-index:3; width:30px; height:30px; border-radius:50%; background:radial-gradient(circle,#fffbe0 0 35%,#fbd38d 60%,#f6ad55 100%); box-shadow:0 0 18px 6px rgba(251,211,141,.75); }
   .sc-sun.rise { animation:scRise 9s ease-out both; }
   @keyframes scRise { from { transform:translateY(46px); } to { transform:translateY(0); } }
   .sc-moon { width:22px; height:22px; border-radius:50%; box-shadow:inset -6px -2px 0 0 #fefcbf; filter:drop-shadow(0 0 6px rgba(254,252,191,.7)); transform:rotate(-20deg); }
@@ -318,7 +318,8 @@
   @keyframes scSat { 0% { left:-5%; top:22%; opacity:0; } 3% { opacity:1; } 60% { opacity:1; } 64%,100% { left:105%; top:8%; opacity:0; } }
   .sc-meteor { width:70px; height:2px; background:linear-gradient(90deg,rgba(255,255,255,0),#fff); border-radius:2px; transform:rotate(-24deg); opacity:0; animation:scMet 11s linear infinite; }
   @keyframes scMet { 0%,88% { opacity:0; transform:translate(0,0) rotate(-24deg); } 89% { opacity:1; } 96% { opacity:0; transform:translate(-150px,66px) rotate(-24deg); } 100% { opacity:0; } }
-  .sc-cloud { top:8%; left:-30%; animation:scCloud linear infinite; opacity:.95; z-index:3; }   /* 마이산 앞으로 지나감 */
+  .sc-cloud { top:8%; left:-30%; animation:scCloud linear infinite; opacity:.95; z-index:1; }   /* 마이산 앞, 제목 뒤 */
+  .sc-cloud.front { z-index:3; }   /* 구름 하나는 제목 글자 앞으로 */
   @keyframes scCloud { from { left:-30%; } to { left:110%; } }
   .sc-bird { left:-10%; animation:scBird 20s linear infinite; }
   .sc-bird svg { position:static !important; animation:scFlap .5s ease-in-out infinite alternate; }
@@ -518,6 +519,8 @@
         <div class="ui-opts" id="ui-hdstyle"></div>
         <label>날씨 표시</label>
         <div class="ui-opts" id="ui-wx" style="grid-template-columns:repeat(2,1fr);"></div>
+        <label>⏰ 점검 결과 알람 (오전 11시 50분)</label>
+        <div class="ui-opts" id="ui-alarm" style="grid-template-columns:repeat(2,1fr);"></div>
         <label>날씨 효과</label>
         <div class="ui-opts" id="ui-wxfx" style="grid-template-columns:repeat(2,1fr);"></div>
         <div class="notice" id="ui-sample" style="font-size:1rem;">가나다 미리보기 — 동향면 고부 경로당 · 조끼 착용 · 10월 14일(수)</div>
@@ -527,7 +530,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-11</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-12</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -686,7 +689,7 @@ const UI_FONTS = [
   { k: 'Gowun Dodum', name: '고운돋움', css: 'Gowun+Dodum' },
   { k: 'Noto Sans KR', name: '본고딕 (노토)', css: 'Noto+Sans+KR:wght@300;400;600;800' },
 ];
-let ui = (() => { try { return Object.assign({ size: 5, weight: 'normal', font: '', wx: true, wxfx: true, theme: 'blue', hdText: '', hdColor: '#ffffff', hdFont: '', hdStyle: 'shadow' }, JSON.parse(load('jinan_ui')) || {}); } catch(e) { return { size: 5, weight: 'normal', font: '', wx: true, wxfx: true, theme: 'blue' }; } })();
+let ui = (() => { try { return Object.assign({ size: 5, weight: 'normal', font: '', wx: true, wxfx: true, alarm: true, theme: 'blue', hdText: '', hdColor: '#ffffff', hdFont: '', hdStyle: 'shadow' }, JSON.parse(load('jinan_ui')) || {}); } catch(e) { return { size: 5, weight: 'normal', font: '', wx: true, wxfx: true, theme: 'blue' }; } })();
 function applyUI(){
   const h = document.documentElement;
   h.style.fontSize = (13 + ui.size) + 'px';            // 5단계 = 18px
@@ -1363,6 +1366,7 @@ function issuesDialog(d){
 // ⏰ 점검한 날 오전 11시 50분: 알람 + 경고·벌점 받은 어르신 목록 (앱이 켜져 있을 때 / 늦게 열면 열 때)
 const ALARM_AT = '11:50';
 function checkAlarm(){
+  if (ui.alarm === false) return;   // 환경 설정에서 끔
   const d = today(); if (hhmm(new Date()) < ALARM_AT) return;
   const n = issuesOn(d).length; if (!n) return;
   const seen = (() => { try { return JSON.parse(load('jinan_alarm')) || {}; } catch(e) { return {}; } })();
@@ -3311,10 +3315,11 @@ function renderUI(){
   document.getElementById('ui-hdstyle').innerHTML = HD_STYLES.map(([k, n]) => `<button type="button" class="${(ui.hdStyle || 'shadow') === k ? 'on' : ''}" data-hs="${k}">${n}</button>`).join('');
   document.querySelectorAll('#ui-hdstyle [data-hs]').forEach(b => b.onclick = () => { ui.hdStyle = b.dataset.hs; saveUI(`제목 꾸밈 ${HD_STYLES.find(x => x[0] === ui.hdStyle)[1]}`); });
   document.getElementById('ui-wxfx').innerHTML = tg('wxfx', true, '날씨 효과') + tg('wxfx', false, '날씨 효과');
+  document.getElementById('ui-alarm').innerHTML = tg('alarm', true, '점검 결과 알람') + tg('alarm', false, '점검 결과 알람');
   document.getElementById('ui-font').innerHTML = UI_FONTS.map((f, i) => `<button type="button" class="${ui.font === f.k ? 'on' : ''}" style="${f.k ? `font-family:'${f.k}',sans-serif;` : ''}" onclick="ui.font=UI_FONTS[${i}].k;saveUI('글씨체 ${f.name}')">${f.name}</button>`).join('');
 }
 function uiSize(d){ const n = Math.min(10, Math.max(1, ui.size + d)); if (n === ui.size) return notify(d > 0 ? '가장 큰 글씨예요 (10단계).' : '가장 작은 글씨예요 (1단계).'); ui.size = n; saveUI(`글씨 크기 ${n}단계`); }
-function uiReset(){ ui = { size: 5, weight: 'normal', font: '', wx: true, wxfx: true, theme: 'blue', hdText: '', hdColor: '#ffffff', hdFont: '', hdStyle: 'shadow' }; saveUI('처음 설정으로'); }
+function uiReset(){ ui = { size: 5, weight: 'normal', font: '', wx: true, wxfx: true, alarm: true, theme: 'blue', hdText: '', hdColor: '#ffffff', hdFont: '', hdStyle: 'shadow' }; saveUI('처음 설정으로'); }
 // ---------- 👤 현장 점검자 정보 (이 휴대폰에만 저장) ----------
 let me = (() => { try { return JSON.parse(load('jinan_me')) || {}; } catch(e) { return {}; } })();
 const meName = () => me.name || '김장원';
@@ -4925,7 +4930,7 @@ function renderScene(kind){
   // 구름 (흐림·비·눈이면 많고 짙게, 바람 불면 빠르게)
   const nC = wet ? 6 : kind === 'cloud' ? 5 : dark ? 1 : 3, cc = wet ? '#718096' : grey ? '#cbd5e0' : '#fff';
   for (let i = 0; i < nC; i++) { const w = 46 + rnd() * 40, dur = (scWind ? 70 : 150) + rnd() * 60;   // 아주 천천히
-    out.push(`<span class="sc-abs sc-cloud" style="top:${(4 + rnd() * 48).toFixed(0)}%;animation-duration:${dur.toFixed(0)}s;animation-delay:${(-rnd() * dur).toFixed(0)}s;${dark ? 'opacity:.35;' : ''}"><svg width="${w.toFixed(0)}" height="${(w * .45).toFixed(0)}" viewBox="0 0 100 45" style="position:static"><g fill="${cc}"><circle cx="30" cy="28" r="16"/><circle cx="52" cy="20" r="20"/><circle cx="74" cy="29" r="14"/><rect x="18" y="28" width="68" height="16" rx="8"/></g></svg></span>`); }
+    out.push(`<span class="sc-abs sc-cloud ${i === 0 ? 'front' : ''}" style="top:${(i === 0 ? 8 + rnd() * 12 : 4 + rnd() * 48).toFixed(0)}%;animation-duration:${dur.toFixed(0)}s;animation-delay:${(-rnd() * dur).toFixed(0)}s;${dark ? 'opacity:.35;' : ''}"><svg width="${w.toFixed(0)}" height="${(w * .45).toFixed(0)}" viewBox="0 0 100 45" style="position:static"><g fill="${cc}"><circle cx="30" cy="28" r="16"/><circle cx="52" cy="20" r="20"/><circle cx="74" cy="29" r="14"/><rect x="18" y="28" width="68" height="16" rx="8"/></g></svg></span>`); }
   // 먼 산 (가로로 꽉)
   out.push(`<svg class="far" viewBox="0 0 400 46" preserveAspectRatio="none"><path d="M0 46 L0 26 Q40 10 80 22 T160 18 T240 24 T320 14 T400 22 L400 46 Z" fill="${M[2]}" opacity=".8"/><path d="M0 46 L0 34 Q60 22 120 32 T240 30 T360 28 T400 32 L400 46 Z" fill="${M[0]}" opacity=".9"/></svg>`);
   // 마이산 · 소나무 · 호랑이
