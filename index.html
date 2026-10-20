@@ -568,7 +568,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-24</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-25</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -968,12 +968,9 @@ async function openItemCfg(focus){
   const sel = (v, attr) => `<select ${attr} style="margin:0;width:auto;">${OPTS.map(o => `<option value="${o}" ${Number(v)===o ? 'selected' : ''}>${o ? '-' + o + '점' : '경고만'}</option>`).join('')}</select>`;
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">⚙️ 점검 항목 · 벌점</div>
-    <div id="ic-pts" style="font-weight:bold;margin-bottom:4px;">벌점</div>
-    <div id="ic-base"></div>
-    <div style="font-weight:bold;margin:12px 0 4px;">기본 항목</div>
+    <div id="ic-pts" style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">⚙️ 점검 항목 · 벌점</div>
     <div id="ic-base2"></div>
-    <div id="ic-items-h" style="font-weight:bold;margin:12px 0 4px;">추가 항목</div>
+    <div id="ic-items-h"></div>
     <div id="ic-items"></div>
     <button type="button" class="small full" id="ic-add" style="margin-top:6px;background:#805ad5;">＋ 새 항목</button>
     <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin:12px 0 0;"><input type="checkbox" id="ic-all" style="width:22px;height:22px;margin:0;"> <b>모든 인원 지난 기록에도 한 번에 적용</b></label>
@@ -981,13 +978,18 @@ async function openItemCfg(focus){
   document.body.appendChild(back);
   const $ = q => back.querySelector(q);
   const BASE = [['이탈','근무지 이탈'],['자리비움','잠깐 자리 비움'],['조끼','조끼 미착용'],['명찰','명찰 미착용']];
-  $('#ic-base').innerHTML = BASE.map(([k, l]) => `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #edf2f7;"><span style="flex:1;">${l}</span>${sel(pt[k], `data-k="${k}"`)}</div>`).join('');
-  back.querySelectorAll('#ic-base select').forEach(x => x.onchange = () => { pt[x.dataset.k] = Number(x.value); });
+  // 기본 항목 선택지별 점수 칸 (추가 항목처럼 한 칸 안에서): 선택지 값 → PT 이름
+  const BASE_PT = { leave: { 자리비움: '자리비움', 이탈: '이탈' }, vest: { 미착용: '조끼' }, badge: { 미착용: '명찰' }, attitude: {} };
+  const ptRow = k => { const vs = Object.keys(BASE_DEF[k].opts), last = vs.length - 1;
+    return `<div style="display:flex;gap:6px;align-items:center;margin-top:6px;font-size:.88rem;flex-wrap:wrap;">${vs.map((v, i) => { if (!i) return '';
+      const col = i === last ? 'var(--danger)' : '#975a16', K = BASE_PT[k][v];
+      return `<span style="color:${col};">${i + 1}번</span>${K ? sel(pt[K], `data-k="${K}"`) : `<span class="muted">${v === '보통' ? '문제 아님' : '경고만'}</span>`}`; }).join('')}</div>`; };
   const bc = JSON.parse(JSON.stringify(baseCfg));
   const drawBase = () => { $('#ic-base2').innerHTML = Object.keys(BASE_DEF).map(k => { const off = !!bc[k]?.off, c = bc[k] || {};
       return `<div style="border:1px solid #e2e8f0;border-radius:8px;padding:8px;margin-top:6px;${off ? 'opacity:.55;background:#f7fafc;' : ''}">
       <div style="display:flex;gap:6px;align-items:center;${off ? '' : 'margin-bottom:6px;'}"><input type="text" data-bk="${k}" value="${esc(c.label || BASE_DEF[k].label)}" style="margin:0;font-weight:bold;" ${off ? 'disabled' : ''}><button type="button" class="small secondary" data-boff="${k}" style="width:auto;margin:0;white-space:nowrap;${off ? '' : 'color:var(--danger);'}">${off ? '↩ 다시 넣기' : '🗑 삭제'}</button></div>
-      ${off ? '' : `<div style="display:flex;gap:6px;">${Object.keys(BASE_DEF[k].opts).map(v => `<input type="text" data-bk="${k}" data-bv="${esc(v)}" value="${esc(c.opts?.[v] || BASE_DEF[k].opts[v])}" style="margin:0;">`).join('')}</div>`}</div>`; }).join('');
+      ${off ? '' : `<div style="display:flex;gap:6px;">${Object.keys(BASE_DEF[k].opts).map(v => `<input type="text" data-bk="${k}" data-bv="${esc(v)}" value="${esc(c.opts?.[v] || BASE_DEF[k].opts[v])}" style="margin:0;">`).join('')}</div>${ptRow(k)}`}</div>`; }).join('');
+    back.querySelectorAll('#ic-base2 select[data-k]').forEach(x => x.onchange = () => { pt[x.dataset.k] = Number(x.value); });
     back.querySelectorAll('#ic-base2 input[data-bk]').forEach(x => x.oninput = () => { const k = x.dataset.bk; bc[k] ||= {};
       if (x.dataset.bv) { (bc[k].opts ||= {})[x.dataset.bv] = x.value; } else bc[k].label = x.value; });
     back.querySelectorAll('#ic-base2 [data-boff]').forEach(b => b.onclick = async () => { const k = b.dataset.boff; bc[k] ||= {};
