@@ -519,8 +519,10 @@
         <div class="ui-opts" id="ui-hdstyle"></div>
         <label>날씨 표시</label>
         <div class="ui-opts" id="ui-wx" style="grid-template-columns:repeat(2,1fr);"></div>
-        <label>⏰ 점검 결과 알람 (오전 11시 50분)</label>
-        <div class="ui-opts" id="ui-alarm" style="grid-template-columns:repeat(2,1fr);"></div>
+        <label>🔔 알림 소리 (모든 소리·진동)</label>
+        <div class="ui-opts" id="ui-sound" style="grid-template-columns:repeat(2,1fr);"></div>
+        <label>⏰ 점검 결과 알람 시간</label>
+        <input type="time" id="ui-alarmat" style="margin:5px 0 12px;">
         <label>날씨 효과</label>
         <div class="ui-opts" id="ui-wxfx" style="grid-template-columns:repeat(2,1fr);"></div>
         <div class="notice" id="ui-sample" style="font-size:1rem;">가나다 미리보기 — 동향면 고부 경로당 · 조끼 착용 · 10월 14일(수)</div>
@@ -530,7 +532,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-12</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-13</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -689,7 +691,7 @@ const UI_FONTS = [
   { k: 'Gowun Dodum', name: '고운돋움', css: 'Gowun+Dodum' },
   { k: 'Noto Sans KR', name: '본고딕 (노토)', css: 'Noto+Sans+KR:wght@300;400;600;800' },
 ];
-let ui = (() => { try { return Object.assign({ size: 5, weight: 'normal', font: '', wx: true, wxfx: true, alarm: true, theme: 'blue', hdText: '', hdColor: '#ffffff', hdFont: '', hdStyle: 'shadow' }, JSON.parse(load('jinan_ui')) || {}); } catch(e) { return { size: 5, weight: 'normal', font: '', wx: true, wxfx: true, theme: 'blue' }; } })();
+let ui = (() => { try { return Object.assign({ size: 5, weight: 'normal', font: '', wx: true, wxfx: true, sound: true, alarmAt: '11:50', theme: 'blue', hdText: '', hdColor: '#ffffff', hdFont: '', hdStyle: 'shadow' }, JSON.parse(load('jinan_ui')) || {}); } catch(e) { return { size: 5, weight: 'normal', font: '', wx: true, wxfx: true, theme: 'blue' }; } })();
 function applyUI(){
   const h = document.documentElement;
   h.style.fontSize = (13 + ui.size) + 'px';            // 5단계 = 18px
@@ -1363,20 +1365,20 @@ function issuesDialog(d){
       logDetail: `${d} ${pick.map(r => `${r.q.name}(${r.time}): ${r.t.join(', ')}`).join(' / ')}`, leaderOnly: true });
   });
 }
-// ⏰ 점검한 날 오전 11시 50분: 알람 + 경고·벌점 받은 어르신 목록 (앱이 켜져 있을 때 / 늦게 열면 열 때)
-const ALARM_AT = '11:50';
+// ⏰ 점검한 날 정해 둔 시간(기본 오전 11시 50분): 알람 + 경고·벌점 받은 어르신 목록 (앱이 켜져 있을 때 / 늦게 열면 열 때)
+const ALARM_DEF = '11:50';
+const alarmAt = () => /^\d{2}:\d{2}$/.test(ui.alarmAt || '') ? ui.alarmAt : ALARM_DEF;   // 환경 설정에서 바꿀 수 있음
 function checkAlarm(){
-  if (ui.alarm === false) return;   // 환경 설정에서 끔
-  const d = today(); if (hhmm(new Date()) < ALARM_AT) return;
+  const d = today(); if (hhmm(new Date()) < alarmAt()) return;
   const n = issuesOn(d).length; if (!n) return;
   const seen = (() => { try { return JSON.parse(load('jinan_alarm')) || {}; } catch(e) { return {}; } })();
   if (seen.d === d && seen.n >= n) return;
   store('jinan_alarm', JSON.stringify({ d, n }));
-  try { navigator.vibrate && navigator.vibrate([400, 150, 400, 150, 400]); } catch(e) {}
-  try { playDingDong(true); setTimeout(() => playDingDong(true), 1200); } catch(e) {}
+  if (ui.sound !== false) { try { navigator.vibrate && navigator.vibrate([400, 150, 400, 150, 400]); } catch(e) {}
+    try { playDingDong(true); setTimeout(() => playDingDong(true), 1200); } catch(e) {} }
   try { if (window.Notification && Notification.permission === 'granted' && navigator.serviceWorker)
-    navigator.serviceWorker.ready.then(r => r.showNotification('🔔 오늘 점검 결과', { body: `경고·벌점 ${n}건 · 팀장님께 문자를 보내 주세요.`, tag: 'jinan-alarm', icon: 'icon-192.png' })); } catch(e) {}
-  logEvent('점검 결과 알람', null, `${d} ${ALARM_AT} 경고·벌점 ${n}건`, d);
+    navigator.serviceWorker.ready.then(r => r.showNotification('🔔 오늘 점검 결과', { body: `경고·벌점 ${n}건 · 팀장님께 문자를 보내 주세요.`, tag: 'jinan-alarm', silent: ui.sound === false, icon: 'icon-192.png' })); } catch(e) {}
+  logEvent('점검 결과 알람', null, `${d} ${alarmAt()} 경고·벌점 ${n}건`, d);
   document.querySelectorAll('.dlg-back[data-alarm]').forEach(x => x.remove());
   issuesDialog(d); [...document.querySelectorAll('.dlg-back')].pop()?.setAttribute('data-alarm', '1');
 }
@@ -3315,11 +3317,15 @@ function renderUI(){
   document.getElementById('ui-hdstyle').innerHTML = HD_STYLES.map(([k, n]) => `<button type="button" class="${(ui.hdStyle || 'shadow') === k ? 'on' : ''}" data-hs="${k}">${n}</button>`).join('');
   document.querySelectorAll('#ui-hdstyle [data-hs]').forEach(b => b.onclick = () => { ui.hdStyle = b.dataset.hs; saveUI(`제목 꾸밈 ${HD_STYLES.find(x => x[0] === ui.hdStyle)[1]}`); });
   document.getElementById('ui-wxfx').innerHTML = tg('wxfx', true, '날씨 효과') + tg('wxfx', false, '날씨 효과');
-  document.getElementById('ui-alarm').innerHTML = tg('alarm', true, '점검 결과 알람') + tg('alarm', false, '점검 결과 알람');
+  document.getElementById('ui-sound').innerHTML = tg('sound', true, '알림 소리') + tg('sound', false, '알림 소리');
+  const at = document.getElementById('ui-alarmat'); if (document.activeElement !== at) at.value = alarmAt();
+  at.onchange = () => { if (!/^\d{2}:\d{2}$/.test(at.value) || at.value === alarmAt()) return; ui.alarmAt = at.value;
+    try { const v = JSON.parse(load('jinan_alarm')) || {}; if (v.d === today()) { delete v.n; store('jinan_alarm', JSON.stringify(v)); } } catch(e) {}   // 오늘 다시 울릴 수 있게
+    saveUI(`점검 결과 알람 ${Number(at.value.slice(0,2))}시 ${Number(at.value.slice(3,5))}분`); };
   document.getElementById('ui-font').innerHTML = UI_FONTS.map((f, i) => `<button type="button" class="${ui.font === f.k ? 'on' : ''}" style="${f.k ? `font-family:'${f.k}',sans-serif;` : ''}" onclick="ui.font=UI_FONTS[${i}].k;saveUI('글씨체 ${f.name}')">${f.name}</button>`).join('');
 }
 function uiSize(d){ const n = Math.min(10, Math.max(1, ui.size + d)); if (n === ui.size) return notify(d > 0 ? '가장 큰 글씨예요 (10단계).' : '가장 작은 글씨예요 (1단계).'); ui.size = n; saveUI(`글씨 크기 ${n}단계`); }
-function uiReset(){ ui = { size: 5, weight: 'normal', font: '', wx: true, wxfx: true, alarm: true, theme: 'blue', hdText: '', hdColor: '#ffffff', hdFont: '', hdStyle: 'shadow' }; saveUI('처음 설정으로'); }
+function uiReset(){ ui = { size: 5, weight: 'normal', font: '', wx: true, wxfx: true, sound: true, alarmAt: '11:50', theme: 'blue', hdText: '', hdColor: '#ffffff', hdFont: '', hdStyle: 'shadow' }; saveUI('처음 설정으로'); }
 // ---------- 👤 현장 점검자 정보 (이 휴대폰에만 저장) ----------
 let me = (() => { try { return JSON.parse(load('jinan_me')) || {}; } catch(e) { return {}; } })();
 const meName = () => me.name || '김장원';
@@ -4680,6 +4686,7 @@ function chimeWebAudio(notes){
       o.connect(g); g.connect(_ac.destination); o.start(t); o.stop(t + 0.95); }); } catch(e) {}
 }
 function playDingDong(sad){
+  if (ui.sound === false) return;   // 환경 설정 "🔔 알림 소리" 끔: 모든 소리·진동 끔
   const notes = [[1319, 0], [1047, 0.32]];   // 모든 저장에 같은 띵동 소리 (사용자 선택). 이탈은 진동만 두 번
   try {
     const k = 'ok'; _snd[k] = _snd[k] || makeChime(notes);
