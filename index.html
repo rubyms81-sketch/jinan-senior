@@ -376,17 +376,21 @@
     </details>
   </div>
   <div class="card">
-    <div class="wd-head"><h3 id="wd-title"></h3><span style="display:flex;gap:4px;"><span id="wd-lock" style="align-self:center;"></span><button class="small secondary" onclick="openWorkdays()" style="white-space:nowrap;">날짜 정하기</button></span></div>
+    <details class="chg-box" id="wd-box" style="margin-top:0;border-top:none;padding-top:0;">
+    <summary><div class="wd-head" style="flex:1;min-width:0;"><h3 id="wd-title"></h3><span style="display:flex;gap:4px;"><span id="wd-lock" style="align-self:center;"></span><button class="small secondary" onclick="event.preventDefault();event.stopPropagation();openWorkdays()" style="white-space:nowrap;">활동일 수정</button></span></div><span class="chg-arrow" style="flex:none;margin-left:6px;"></span></summary>
     <div id="wd-chips" class="chips"></div>
     <div id="wd-note" class="muted hidden"></div>
+    </details>
   </div>
   <div class="card" id="zone-card" style="padding:12px 14px;">
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><div style="flex:1;font-weight:bold;">🗺 구역</div>
-      <button type="button" class="small secondary" id="zone-minus" onclick="zoneCount(-1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">－</button><b id="zone-n" style="min-width:2.2em;text-align:center;"></b><button type="button" class="small" id="zone-plus" onclick="zoneCount(1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">＋</button></div>
+    <details class="chg-box" id="zone-box" style="margin-top:0;border-top:none;padding-top:0;">
+    <summary><div style="display:flex;align-items:center;gap:6px;flex:1;"><div style="flex:1;font-weight:bold;">🗺 구역</div>
+      <button type="button" class="small secondary" id="zone-minus" onclick="event.preventDefault();event.stopPropagation();zoneCount(-1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">－</button><b id="zone-n" style="min-width:2.2em;text-align:center;"></b><button type="button" class="small" id="zone-plus" onclick="event.preventDefault();event.stopPropagation();zoneCount(1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">＋</button></div><span class="chg-arrow" style="flex:none;margin-left:6px;"></span></summary>
     <div id="zone-sum" style="font-size:.85rem;margin:-2px 0 4px;"></div>
     <details class="chg-box" id="zone-all" style="margin:0 0 6px;border-top:none;padding-top:0;"><summary><span class="muted" style="font-size:.85rem;" id="zone-all-sum">🗺 11개 읍·면 전체</span><span class="chg-arrow" style="width:26px;height:26px;"></span></summary><div id="zone-all-list" style="font-size:.82rem;"></div></details>
     <div id="zone-lead" style="font-size:.85rem;margin:0 0 8px;padding:6px 8px;background:#f0fff4;border-radius:8px;"></div>
     <div class="zone-grid" id="zone-btns"></div>
+    </details>
   </div>
 
 
@@ -467,8 +471,7 @@
         </details>
         <details class="stat-box chg-box" id="edu-box">
           <summary><span style="font-weight:bold;">📚 교육 불참·시간 <span class="muted" style="font-weight:normal;font-size:.85rem;">(1~11월 · 안전 6시간 · 전체 12시간)</span></span><span class="chg-arrow"></span></summary>
-          <div class="grid-2" style="margin-top:8px;"><button class="secondary" onclick="showEduLack()">불참 인원 보기</button><button onclick="exportEduLack()" style="background:#2b6cb0;">불참 인원 엑셀</button></div>
-          <button class="warning full" onclick="openEduAttend()">🎓 교육 불참 체크</button>
+          <button class="secondary full" onclick="showEduLack()" style="margin-top:8px;">불참 인원 보기</button>
           <button class="secondary full" onclick="openEduHours()">⚙️ 교육별 시간 정하기</button>
         </details>
         <details id="ex-box" class="stat-box chg-box">
@@ -477,34 +480,16 @@
           <div id="ex-list"></div>
         </details>
         <details class="stat-box chg-box" id="bk-box">
-          <summary><span style="font-weight:bold;">💾 백업 · 기록 초기화</span><span class="chg-arrow"></span></summary>
-          <div style="margin-top:6px;"></div>
-          <div class="muted" id="bk-info" style="font-size:.85rem;margin-bottom:6px;"></div>
-          <div class="grid-2"><button onclick="saveBackup()">💾 백업 파일 저장</button><button class="warning" onclick="shareBackup()">📤 문자·카톡으로 보내기</button></div>
-          <button class="secondary full" onclick="document.getElementById('bk-file').click()">📂 백업 파일 불러오기 (복원)</button>
-          <input type="file" id="bk-file" accept=".json,application/json" class="hidden" onchange="loadBackupFile(this)">
-          <div id="bk-snap"></div>
+          <summary><span style="font-weight:bold;">🗑 기록 초기화</span><span class="chg-arrow"></span></summary>
           <button class="danger small full" id="btn-reset" onclick="resetMonth()" style="margin-top:6px;"></button>
         </details>
       </div>
     </details>
   </div>
 
-  <div class="card" id="me-card">
-    <details class="chg-box" id="me-box" style="margin-top:0;border-top:none;padding-top:0;">
-      <summary><h3>👤 현장 점검자 정보</h3><span class="chg-arrow"></span></summary>
-      <div style="margin-top:8px;">
-        <label style="margin-top:8px;">이름 (활동일지 작성자)</label><input type="text" id="me-name" autocomplete="off" placeholder="예: 김○○">
-        <label>내 휴대폰 번호</label><input type="tel" id="me-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off">
-        <label>내 이메일</label><input type="email" id="me-email" autocomplete="off" placeholder="예: name@naver.com">
-        <button class="full" onclick="saveMe()">저장</button>
-      </div>
-    </details>
-  </div>
-
   <div class="card" id="ui-card">
     <details class="chg-box" id="ui-box" style="margin-top:0;border-top:none;padding-top:0;" ontoggle="if(this.open) renderUI()">
-      <summary><h3>🛠️ 환경 설정</h3><span class="chg-arrow"></span></summary>
+      <summary><h3>🛠️ 설정</h3><span class="chg-arrow"></span></summary>
       <div style="margin-top:8px;">
         <label>글씨 크기</label>
         <div class="ui-row"><button type="button" class="secondary" onclick="uiSize(-1)">－ 작게</button>
@@ -534,12 +519,33 @@
         <div class="ui-opts" id="ui-wxfx" style="grid-template-columns:repeat(2,1fr);"></div>
         <div class="notice" id="ui-sample" style="font-size:1rem;">가나다 미리보기 — 동향면 고부 경로당 · 조끼 착용 · 10월 14일(수)</div>
         <button type="button" class="secondary full" onclick="uiReset()">처음 설정으로 되돌리기</button>
+        <details class="stat-box chg-box" id="bk-box">
+          <summary><span style="font-weight:bold;">💾 백업</span><span class="chg-arrow"></span></summary>
+          <div style="margin-top:6px;"></div>
+          <div class="muted" id="bk-info" style="font-size:.85rem;margin-bottom:6px;"></div>
+          <div class="grid-2"><button onclick="saveBackup()">💾 백업 파일 저장</button><button class="warning" onclick="shareBackup()">📤 문자·카톡으로 보내기</button></div>
+          <button class="secondary full" onclick="document.getElementById('bk-file').click()">📂 백업 파일 불러오기 (복원)</button>
+          <input type="file" id="bk-file" accept=".json,application/json" class="hidden" onchange="loadBackupFile(this)">
+          <div id="bk-snap"></div>
+        </details>
+      </div>
+    </details>
+  </div>
+
+  <div class="card" id="me-card">
+    <details class="chg-box" id="me-box" style="margin-top:0;border-top:none;padding-top:0;">
+      <summary><h3>👤 현장 점검자 정보</h3><span class="chg-arrow"></span></summary>
+      <div style="margin-top:8px;">
+        <label style="margin-top:8px;">이름 (활동일지 작성자)</label><input type="text" id="me-name" autocomplete="off" placeholder="예: 김○○">
+        <label>내 휴대폰 번호</label><input type="tel" id="me-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off">
+        <label>내 이메일</label><input type="email" id="me-email" autocomplete="off" placeholder="예: name@naver.com">
+        <button class="full" onclick="saveMe()">저장</button>
       </div>
     </details>
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-16</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-17</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1167,7 +1173,7 @@ function eduChip(p, e){
 function openEduAttend(){
   const y = viewYear(), t = today(), ps = participants.filter(p => visibleTowns().includes(p.town) && counted(p));
   const dates = [...new Set(ps.flatMap(p => eduOf(p).filter(e => e.date.startsWith(String(y)) && e.date <= t && eduInfo(e.name).c !== '행사').map(e => e.date)))].sort().reverse();
-  if (!dates.length) return notify('지금까지 교육 날이 없어요.\n"📅 활동일 → 날짜 정하기"에서 교육 날을 넣어 주세요.');
+  if (!dates.length) return notify('지금까지 교육 날이 없어요.\n"📅 활동일 → 활동일 수정"에서 교육 날을 넣어 주세요.');
   let d = dates[0];
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg"><div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">🎓 교육 불참 체크</div>
@@ -1197,7 +1203,7 @@ function openEduAttend(){
 }
 async function delEdu(id){
   const p = current(); const e = (p?.edu || []).find(x => x.id == id);
-  if (!e) return notify('모든 어르신(또는 팀장님) 교육·행사 일정이에요.\n고치려면 "날짜 정하기"(또는 문자 보내기 → 팀장) 달력에서 고쳐 주세요.');
+  if (!e) return notify('모든 어르신(또는 팀장님) 교육·행사 일정이에요.\n고치려면 "활동일 수정"(또는 문자 보내기 → 팀장) 달력에서 고쳐 주세요.');
   if (!await ask(`${dd(e.date)} ${e.name} 교육 날짜를 지울까요?`)) return;
   p.edu = p.edu.filter(x => x !== e); logEvent('교육 날짜 삭제', p, `${dd(e.date)} ${e.name}`, e.date); saveData(false); renderModal(); renderList();
 }
@@ -1219,7 +1225,7 @@ function renderWork(){
     return `<button type="button" class="chip daybtn ${cls} ${d===end?'end':''} ${set?'':'unset'} ${trips[d]?.none?'no-trip':''} ${d===today()?'is-today':''}" onclick="openTrip('${d}')">${d===today()?'<span class="today-arrow">▼</span>':''}${label}<span class="trip ${tr?'':'empty'}">${tr || '+ 출장'}</span></button>`;
   }).join('')
     + `<button type="button" class="chip daybtn sms-chip" onclick="openGroupSms()">📩 문자 보내기<span class="trip">활동일 안내</span></button>`;
-  document.getElementById('wd-note').innerHTML = (set ? '' : '아직 정하지 않아서 <b>월·수·금 기준 추천 날짜</b>를 보여 드려요. "날짜 정하기"에서 확정해 주세요.<br>') + '날짜를 누르면 <b>출장 지역·직원</b>을 적을 수 있어요.';
+  document.getElementById('wd-note').innerHTML = (set ? '' : '아직 정하지 않아서 <b>월·수·금 기준 추천 날짜</b>를 보여 드려요. "활동일 수정"에서 확정해 주세요.<br>') + '날짜를 누르면 <b>출장 지역·직원</b>을 적을 수 있어요.';
   // 근무일 변경한 어르신
   const town = lastTown;
   const ps = participants.filter(p => (town==='전체' ? visibleTowns().includes(p.town) : p.town===town));
@@ -1343,12 +1349,12 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable }){
   };
   draw();
 }
-// 🔒 날짜 정하기 잠금 (달마다): 잠그면 활동일을 실수로 못 바꿈
+// 🔒 활동일 수정 잠금 (달마다): 잠그면 활동일을 실수로 못 바꿈
 let wdLock = (() => { try { return JSON.parse(load('jinan_wdlock')) || {}; } catch(e) { return {}; } })();
 function drawWdLock(){ const b = document.getElementById('wd-lock'); if (b) b.textContent = wdLock[monthKey()] ? '🔒' : ''; }
 async function toggleWdLock(){
   const mk = monthKey(), on = !!wdLock[mk];
-  if (!await ask(on ? `${curMonth}월 활동일 잠금을 풀까요?` : `${curMonth}월 활동일을 잠글까요?\n잠그면 "날짜 정하기"로 바꿀 수 없어요.`)) return;
+  if (!await ask(on ? `${curMonth}월 활동일 잠금을 풀까요?` : `${curMonth}월 활동일을 잠글까요?\n잠그면 "활동일 수정"로 바꿀 수 없어요.`)) return;
   if (on) delete wdLock[mk]; else wdLock[mk] = today();
   store('jinan_wdlock', JSON.stringify(wdLock)); logEvent(on ? '활동일 잠금 풀기' : '활동일 잠금', null, `${curMonth}월`); drawWdLock();
 }
@@ -4303,7 +4309,7 @@ function openGroupSms(){
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">📩 ${curMonth}월 활동일 문자 보내기</div>
-    ${workdays[mk] ? '' : '<div class="notice red" style="margin-bottom:8px;">⚠️ 아직 활동일을 정하지 않아 <b>추천 날짜</b>로 문자가 만들어집니다. 먼저 "날짜 정하기"를 해 주세요.</div>'}
+    ${workdays[mk] ? '' : '<div class="notice red" style="margin-bottom:8px;">⚠️ 아직 활동일을 정하지 않아 <b>추천 날짜</b>로 문자가 만들어집니다. 먼저 "활동일 수정"를 해 주세요.</div>'}
     <div id="gs-groups">
       <label class="grp-chk" style="background:#ebf8ff;border-color:#90cdf4;margin-bottom:8px;"><input type="checkbox" id="gs-all"> <span style="flex:1;"><b>✅ 전체 선택</b></span></label>
       <button type="button" class="full" id="gs-leaders" style="background:#276749;text-align:left;margin:0 0 10px;">👤 <b>구역장(팀장)에게만 보내기</b> <span style="font-weight:normal;">· ${zoneLeaders().length}명</span><br><span style="font-size:.85rem;font-weight:normal;">${zoneLeaders().map(x => esc(x.name)).join(', ') || '팀장 연락처를 넣은 구역이 없어요 (구역 창에서 넣기)'}</span></button>
@@ -5242,19 +5248,23 @@ function eduRows(all){
     .filter(r => all || r.s.flag).sort((a, b) => b.s.missSafe - a.s.missSafe || a.s.safe - b.s.safe || a.s.total - b.s.total || TOWNS.indexOf(a.p.town) - TOWNS.indexOf(b.p.town) || a.p.name.localeCompare(b.p.name));
 }
 function showEduLack(){
-  const rows = eduRows(), y = viewYear(), nS = rows.filter(r => r.s.lackSafe).length;
+  // 읍·면별 인원만 먼저 → 누르면 그 면 자세히
+  const rows = eduRows(), y = viewYear(), towns = TOWNS.filter(t => rows.some(r => r.p.town === t));
+  const COL = ['#2b6cb0', '#b7791f', '#2f855a', '#805ad5', '#c53030', '#dd6b20'];
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg" style="max-width:560px;">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:2px;">📚 ${y}년 교육 불참 ${rows.length}명</div>
-    <div class="muted" style="font-size:.85rem;margin-bottom:6px;">안전교육 부족 <b style="color:var(--danger)">${nS}명</b> · 전체 시간만 부족 ${rows.length - nS}명</div>
-    ${rows.length ? rows.map((r, i) => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#fff;border-left-color:${r.s.lackSafe ? 'var(--danger)' : '#3182ce'};margin-top:4px;">
-      <b>${i + 1}. ${nmH(r.p)}</b> <span class="muted">${esc(r.p.town)} ${esc(seniorOf(r.p))}</span><br>
-      <span style="font-size:.88rem;">불참 ${r.s.missed.map(e => `${Number(e.date.slice(5,7))}/${Number(e.date.slice(8,10))} ${esc(e.name)} ${eduH(e)}h`).join(', ')}<br><b style="color:${r.s.lackSafe ? 'var(--danger)' : 'inherit'}">안전 ${r.s.safe}/${EDU_NEED.safe}시간</b> · 전체 ${r.s.total}/${EDU_NEED.total}시간 <span class="muted">(소양 ${r.s.by.소양} · 직무 ${r.s.by.직무} · 기타 ${r.s.by.기타})</span></span></button>`).join('')
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">📚 ${y}년 교육 불참 ${rows.length}명</div>
+    ${towns.length ? towns.map((t, i) => { const rs = rows.filter(r => r.p.town === t);
+      return `<button type="button" class="pen-row" data-go="${i}" style="background:#fff;border-left-color:${COL[i % 6]};margin-top:4px;font-size:1.05rem;"><b>📍 ${esc(t.replace(/[읍면]$/, ''))} - ${rs.length}명</b> <span class="arrow">›</span></button>
+      <div id="el-g${i}" class="sg-list hidden" style="margin:2px 0 8px 10px;">${rs.map((r, k) => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#fff;border-left-color:${r.s.lackSafe ? 'var(--danger)' : '#3182ce'};margin-top:4px;">
+        <b>${k + 1}. ${nmH(r.p)}</b> <span class="muted">🏠 ${esc(seniorOf(r.p))}</span><br>
+        <span style="font-size:.88rem;">불참 ${r.s.missed.map(e => `${Number(e.date.slice(5,7))}/${Number(e.date.slice(8,10))} ${esc(e.name)} ${eduH(e)}h`).join(', ')}<br><b style="color:${r.s.lackSafe ? 'var(--danger)' : 'inherit'}">안전 ${r.s.safe}/${EDU_NEED.safe}시간</b> · 전체 ${r.s.total}/${EDU_NEED.total}시간</span> <span class="arrow">›</span></button>`).join('')}</div>`; }).join('')
       : '<div class="pen-none">교육에 빠진 어르신이 없어요.</div>'}
-    <div class="grid-2" style="margin-top:10px;"><button class="secondary" id="el-close">닫기</button><button id="el-xls">엑셀로 내려받기</button></div></div>`;
+    <button class="secondary full" id="el-close" style="margin-top:10px;">닫기</button></div>`;
   document.body.appendChild(back);
   back.querySelector('#el-close').onclick = () => back.remove();
-  back.querySelector('#el-xls').onclick = () => exportEduLack();
+  back.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const el = back.querySelector('#el-g' + b.dataset.go), show = el.classList.contains('hidden');
+    back.querySelectorAll('.sg-list').forEach(x => x.classList.add('hidden')); el.classList.toggle('hidden', !show); });
   back.querySelectorAll('[data-id]').forEach(b => b.onclick = () => { back.remove(); openModal(Number(b.dataset.id)); });
 }
 function eduSheet(all){
