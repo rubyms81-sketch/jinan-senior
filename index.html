@@ -466,8 +466,9 @@
           <button class="full" id="btn-close-xls" onclick="exportExcel()" style="margin-top:12px;">📥 마감 엑셀 파일로 내려받기</button>
         </details>
         <details class="stat-box chg-box" id="edu-box">
-          <summary><span style="font-weight:bold;">📚 교육 시간 <span class="muted" style="font-weight:normal;font-size:.85rem;">(1~11월 · 안전 6시간 · 전체 12시간)</span></span><span class="chg-arrow"></span></summary>
-          <div class="grid-2" style="margin-top:8px;"><button class="secondary" onclick="showEduLack()">부족 인원 보기</button><button onclick="exportEduLack()" style="background:#2b6cb0;">부족 인원 엑셀</button></div>
+          <summary><span style="font-weight:bold;">📚 교육 불참·시간 <span class="muted" style="font-weight:normal;font-size:.85rem;">(1~11월 · 안전 6시간 · 전체 12시간)</span></span><span class="chg-arrow"></span></summary>
+          <div class="grid-2" style="margin-top:8px;"><button class="secondary" onclick="showEduLack()">불참 인원 보기</button><button onclick="exportEduLack()" style="background:#2b6cb0;">불참 인원 엑셀</button></div>
+          <button class="warning full" onclick="openEduAttend()">🎓 교육 불참 체크</button>
           <button class="secondary full" onclick="openEduHours()">⚙️ 교육별 시간 정하기</button>
         </details>
         <details id="ex-box" class="stat-box chg-box">
@@ -538,7 +539,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-14</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-15</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1086,17 +1087,23 @@ function eduInfo(name){
   const c = /안전/.test(n) ? '안전' : /소양/.test(n) ? '소양' : /직무/.test(n) ? '직무' : /문화|행사|나들이|체육대회/.test(n) ? '행사' : '기타';
   return { h: c === '행사' ? 0 : 2, c };
 }
-// 그해 1월~11월, 오늘까지 받은 교육 시간 (근무 시작 전·중도포기 뒤의 '모든 어르신' 교육은 빼고)
+// 그해 1월~11월, 오늘까지의 교육. 대규모 교육은 모두 받은 것으로 보고, 불참 표시(p.eduAbsent = [날짜])한 날만 빼고 셈
+const eduAbsent = (p, d) => (p.eduAbsent || []).includes(d);
+const eduH = e => e.h != null ? Number(e.h) : eduInfo(e.name).h;
 function eduStatus(p, y){
   y = y || viewYear(); const t = today(), from = `${y}-01-01`, to = `${y}-${String(EDU_NEED.toMonth).padStart(2,'0')}-30`;
   const st = p.startDay || (p.start ? p.start + '-01' : ''), qd = quitDayOf(p);
-  const list = eduOf(p).filter(e => e.date >= from && e.date <= to && e.date <= t && (e.own || ((!st || e.date >= st) && (!qd || e.date < qd))));
+  const offered = eduOf(p).filter(e => e.date >= from && e.date <= to && e.date <= t && (e.own || ((!st || e.date >= st) && (!qd || e.date < qd))) && eduInfo(e.name).c !== '행사' && eduH(e) > 0);
+  const missed = offered.filter(e => eduAbsent(p, e.date)), list = offered.filter(e => !eduAbsent(p, e.date));
   const by = { 안전: 0, 소양: 0, 직무: 0, 기타: 0 }; let total = 0;
-  list.forEach(e => { const i = eduInfo(e.name), h = e.h != null ? Number(e.h) : i.h; if (i.c === '행사' || !h) return; by[i.c] = (by[i.c] || 0) + h; total += h; });
-  return { by, safe: by.안전, total, list, lackSafe: Math.max(0, EDU_NEED.safe - by.안전), lackTotal: Math.max(0, EDU_NEED.total - total), ok: by.안전 >= EDU_NEED.safe && total >= EDU_NEED.total };
+  list.forEach(e => { const i = eduInfo(e.name), h = eduH(e); by[i.c] = (by[i.c] || 0) + h; total += h; });
+  const missH = missed.reduce((n, e) => n + eduH(e), 0), missSafe = missed.filter(e => eduInfo(e.name).c === '안전').reduce((n, e) => n + eduH(e), 0);
+  const ok = by.안전 >= EDU_NEED.safe && total >= EDU_NEED.total;
+  return { by, safe: by.안전, total, list, missed, missH, missSafe, lackSafe: Math.max(0, EDU_NEED.safe - by.안전), lackTotal: Math.max(0, EDU_NEED.total - total), ok,
+    flag: missed.length > 0 && !ok };   // 표시는 교육에 빠진 분만 (보충해서 채우면 사라짐)
 }
-const eduTag = p => { if (p.linking || p.quit) return ''; const s = eduStatus(p); if (s.ok) return '';
-  return `<span class="tag-edu" title="교육 안전 ${s.safe}/${EDU_NEED.safe}시간 · 전체 ${s.total}/${EDU_NEED.total}시간">📚${s.lackSafe ? `안전${s.safe}/${EDU_NEED.safe}` : `${s.total}/${EDU_NEED.total}`}</span>`; };
+const eduTag = p => { if (p.linking || p.quit) return ''; const s = eduStatus(p); if (!s.flag) return '';
+  return `<span class="tag-edu" title="교육 불참 ${s.missH}시간">📚불참${s.missSafe ? ` 안전${s.missSafe}h` : ` ${s.missH}h`}</span>`; };
 // 교육 날짜 고르기 창: 달력에서 날짜(여러 날) + 교육 이름 → onSave([{date, name}])
 function pickEdu({ title, mk, sub, onSave }){
   const y = Number(mk.slice(0,4)), m = Number(mk.slice(5,7)), last = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
@@ -1141,6 +1148,52 @@ function addEdu(){
     saveData(false); renderModal(); renderList();
     notify(`🎓 교육·행사 날짜를 넣었어요.\n${list.map(e => `${dd(e.date)} ${e.name}`).join('\n')}${targets.length > 1 ? `\n(${targets.length}명)` : ''}`);
   }});
+}
+// 교육 날 칩: 참석·불참 표시 (한 분씩 넣은 교육이면 지우기도)
+function eduChip(p, e){
+  const ab = eduAbsent(p, e.date), back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg" style="max-width:340px;"><div style="font-weight:bold;font-size:1.05rem;margin-bottom:8px;">🎓 ${Number(e.date.slice(5,7))}월 ${dd(e.date)} ${esc(e.name)} <span class="muted" style="font-weight:normal;">${eduH(e)}시간 · ${eduInfo(e.name).c}</span></div>
+    <div class="grid-2"><button type="button" id="ec-ok" class="${ab ? 'secondary' : ''}">✔ 참석</button><button type="button" id="ec-no" class="${ab ? 'danger' : 'secondary'}">✕ 불참</button></div>
+    ${e.own ? '<button type="button" class="secondary full" id="ec-del">🗑 이 교육 날짜 지우기</button>' : ''}
+    <button type="button" class="secondary full" id="ec-close">닫기</button></div>`;
+  document.body.appendChild(back);
+  const set = no => { back.remove(); if (no === ab) return; p.eduAbsent = (p.eduAbsent || []).filter(d => d !== e.date); if (no) p.eduAbsent.push(e.date);
+    logEvent(no ? '교육 불참' : '교육 참석', p, `${dd(e.date)} ${e.name} ${eduH(e)}시간${no ? ' 불참' : ' 참석으로 고침'}`, e.date); saveData(false); renderModal(); renderList(); };
+  back.querySelector('#ec-ok').onclick = () => set(false); back.querySelector('#ec-no').onclick = () => set(true);
+  back.querySelector('#ec-del')?.addEventListener('click', () => { back.remove(); delEdu(e.id); });
+  back.querySelector('#ec-close').onclick = () => back.remove();
+}
+// 🎓 교육 불참 체크: 교육 날을 고르고 빠진 분만 누름 (대규모 교육용)
+function openEduAttend(){
+  const y = viewYear(), t = today(), ps = participants.filter(p => visibleTowns().includes(p.town) && counted(p));
+  const dates = [...new Set(ps.flatMap(p => eduOf(p).filter(e => e.date.startsWith(String(y)) && e.date <= t && eduInfo(e.name).c !== '행사').map(e => e.date)))].sort().reverse();
+  if (!dates.length) return notify('지금까지 교육 날이 없어요.\n"📅 활동일 → 날짜 정하기"에서 교육 날을 넣어 주세요.');
+  let d = dates[0];
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg"><div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">🎓 교육 불참 체크</div>
+    <select id="ea-date" style="margin:0 0 6px;">${dates.map(x => { const e = ps.map(p => eduOn(p, x)).find(Boolean); return `<option value="${x}">${Number(x.slice(5,7))}월 ${dd(x)} ${esc(e?.name || '')} ${e ? eduH(e) + '시간' : ''}</option>`; }).join('')}</select>
+    <div id="ea-list"></div>
+    <div class="grid-2" style="margin-top:8px;"><button class="secondary" id="ea-cancel">닫기</button><button id="ea-save">저장</button></div></div>`;
+  document.body.appendChild(back);
+  let sel = new Set();
+  const draw = () => {
+    const who = ps.filter(p => eduOn(p, d)); sel = new Set(who.filter(p => eduAbsent(p, d)).map(p => p.id));
+    const groups = {}; who.forEach(p => (groups[p.town + ' ' + seniorOf(p)] ||= []).push(p));
+    back.querySelector('#ea-list').innerHTML = `<div class="muted" style="font-size:.85rem;margin-bottom:4px;">${who.length}명 · 불참 <b id="ea-n" style="color:var(--danger)">${sel.size}</b>명</div>` + Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0])).map(([g, arr]) =>
+      `<div style="font-size:.85rem;font-weight:bold;margin:6px 0 2px;">${esc(g)}</div><div style="display:flex;flex-wrap:wrap;gap:4px;">${arr.map(p => `<button type="button" class="small ${sel.has(p.id) ? 'danger' : 'secondary'}" data-id="${p.id}" style="width:auto;margin:0;">${sel.has(p.id) ? '✕ ' : ''}${esc(p.name)}</button>`).join('')}</div>`).join('');
+    back.querySelectorAll('#ea-list [data-id]').forEach(b => b.onclick = () => { const id = Number(b.dataset.id); sel.has(id) ? sel.delete(id) : sel.add(id);
+      b.className = `small ${sel.has(id) ? 'danger' : 'secondary'}`; b.textContent = (sel.has(id) ? '✕ ' : '') + participants.find(x => x.id === id).name; back.querySelector('#ea-n').textContent = sel.size; });
+  };
+  back.querySelector('#ea-date').onchange = e => { d = e.target.value; draw(); };
+  back.querySelector('#ea-cancel').onclick = () => back.remove();
+  back.querySelector('#ea-save').onclick = () => {
+    let n = 0;
+    ps.filter(p => eduOn(p, d)).forEach(p => { const was = eduAbsent(p, d), now = sel.has(p.id); if (was === now) return; n++;
+      p.eduAbsent = (p.eduAbsent || []).filter(x => x !== d); if (now) p.eduAbsent.push(d);
+      const e = eduOn(p, d); logEvent(now ? '교육 불참' : '교육 참석', p, `${dd(d)} ${e?.name || '교육'} ${e ? eduH(e) : ''}시간${now ? ' 불참' : ' 참석으로 고침'}`, d); });
+    saveData(false); back.remove(); renderList(); notify(n ? `저장했어요. (${n}명 바뀜)` : '바뀐 것이 없어요.');
+  };
+  draw();
 }
 async function delEdu(id){
   const p = current(); const e = (p?.edu || []).find(x => x.id == id);
@@ -1328,7 +1381,8 @@ function renderPersonDays(p){
   }
   // 교육 날은 보라색 🎓 (누르면 지우기)
   document.querySelectorAll('#m-days .chip.wd').forEach(c => { const e = eduOn(p, c.dataset.d); if (!e) return;
-    c.classList.add('edu'); c.classList.remove('wd'); c.innerHTML = `🎓 ${dd(c.dataset.d)} ${esc(e.name)}`; c.onclick = () => delEdu(e.id || 0); });
+    c.classList.add('edu'); c.classList.remove('wd'); c.innerHTML = `🎓 ${dd(c.dataset.d)} ${esc(e.name)}`; c.onclick = () => eduChip(p, e); });
+  document.querySelectorAll('#m-days .chip.edu').forEach(c => { if (eduAbsent(p, c.dataset.d)) { c.style.textDecoration = 'line-through'; c.style.opacity = '.7'; c.innerHTML += ' <b style="color:var(--danger)">불참</b>'; } });
   // 벌점으로 일당 미지급인 날: 빨간 "벌점" (근무 인정 안 됨)
   const un = unpaidDaysOf(p, mk);
   document.querySelectorAll('#m-days .chip.wd').forEach(c => { if (un.has(c.dataset.d)) { c.classList.add('pen'); c.innerHTML = `${dd(c.dataset.d)} 벌점`; } });
@@ -4546,7 +4600,8 @@ function renderModal(){
     n = `<div class="quit-box"><span class="quit-stamp">중도포기</span>
       <div style="margin-top:12px;font-weight:bold;color:#742a2a;">${s.quitNow ? esc(p.quitWhy || '본인 사정') : esc(s.status.replace(/^중도포기\(?/, '').replace(/\)$/, ''))}${qd ? ` · ${Number(qd.slice(5,7))}월 ${dd(qd)}부터` : ''}</div>
       ${s.quitNow ? `<button type="button" class="small secondary" onclick="toggleQuit()" style="width:auto;margin:8px auto 0;padding:4px 14px;">↩ 중도포기 해제</button>` : ''}</div>` + n; }
-  { const es = eduStatus(p); if (!es.ok && !p.linking && !s.dropped) n = `<div class="notice" style="background:#ebf8ff;border-color:#90cdf4;">📚 <b>교육 부족</b> (${viewYear()}년 1~${EDU_NEED.toMonth}월) · <b style="color:${es.lackSafe ? 'var(--danger)' : '#2c5282'}">안전 ${es.safe}/${EDU_NEED.safe}시간</b> · 전체 ${es.total}/${EDU_NEED.total}시간${es.lackSafe ? ` · <b style="color:var(--danger)">안전 ${es.lackSafe}시간 먼저</b>` : ''}</div>` + n; }
+  { const es = eduStatus(p); if (es.flag && !p.linking && !s.dropped) n = `<div class="notice" style="background:#ebf8ff;border-color:#90cdf4;">📚 <b>교육 불참</b> · ${es.missed.map(e => `${Number(e.date.slice(5,7))}월 ${dd(e.date)} ${esc(e.name)} <b style="color:var(--danger)">${eduH(e)}시간</b>`).join(', ')}
+      <br>받은 시간: <b style="color:${es.lackSafe ? 'var(--danger)' : '#2c5282'}">안전 ${es.safe}/${EDU_NEED.safe}시간</b> · 전체 ${es.total}/${EDU_NEED.total}시간${es.lackSafe ? ` → <b style="color:var(--danger)">안전 ${es.lackSafe}시간 더 필요</b>` : es.lackTotal ? ` → <b>${es.lackTotal}시간 더 필요</b>` : ''}</div>` + n; }
   if (p.guess) n = `<div class="notice">📍 경로당 <b>"${esc(p.senior)}"</b>은 주소(${esc(p.address||'')})를 보고 자동으로 넣은 <b>추정</b>입니다.<br>맞으면 아래 "어르신 정보 고치기"에서 그대로 <b>정보 저장</b>, 틀리면 경로당 이름을 고쳐서 저장해 주세요.</div>` + n;
   document.getElementById('modal-notice').innerHTML = n;
   document.getElementById('check-section').classList.toggle('hidden', s.dropped && !editingLogId);
@@ -5184,18 +5239,18 @@ function shortSheet(){
 // 📚 교육 부족 인원 (안전 시간 적은 순)
 function eduRows(all){
   return participants.filter(p => visibleTowns().includes(p.town) && counted(p)).map(p => ({ p, s: eduStatus(p) }))
-    .filter(r => all || !r.s.ok).sort((a, b) => a.s.safe - b.s.safe || a.s.total - b.s.total || TOWNS.indexOf(a.p.town) - TOWNS.indexOf(b.p.town) || a.p.name.localeCompare(b.p.name));
+    .filter(r => all || r.s.flag).sort((a, b) => b.s.missSafe - a.s.missSafe || a.s.safe - b.s.safe || a.s.total - b.s.total || TOWNS.indexOf(a.p.town) - TOWNS.indexOf(b.p.town) || a.p.name.localeCompare(b.p.name));
 }
 function showEduLack(){
   const rows = eduRows(), y = viewYear(), nS = rows.filter(r => r.s.lackSafe).length;
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg" style="max-width:560px;">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:2px;">📚 ${y}년 교육 부족 ${rows.length}명</div>
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:2px;">📚 ${y}년 교육 불참 ${rows.length}명</div>
     <div class="muted" style="font-size:.85rem;margin-bottom:6px;">안전교육 부족 <b style="color:var(--danger)">${nS}명</b> · 전체 시간만 부족 ${rows.length - nS}명</div>
     ${rows.length ? rows.map((r, i) => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#fff;border-left-color:${r.s.lackSafe ? 'var(--danger)' : '#3182ce'};margin-top:4px;">
       <b>${i + 1}. ${nmH(r.p)}</b> <span class="muted">${esc(r.p.town)} ${esc(seniorOf(r.p))}</span><br>
-      <span style="font-size:.88rem;"><b style="color:${r.s.lackSafe ? 'var(--danger)' : 'inherit'}">안전 ${r.s.safe}/${EDU_NEED.safe}시간</b> · 전체 ${r.s.total}/${EDU_NEED.total}시간 <span class="muted">(소양 ${r.s.by.소양} · 직무 ${r.s.by.직무} · 기타 ${r.s.by.기타})</span></span></button>`).join('')
-      : '<div class="pen-none">교육 시간이 모자란 어르신이 없어요.</div>'}
+      <span style="font-size:.88rem;">불참 ${r.s.missed.map(e => `${Number(e.date.slice(5,7))}/${Number(e.date.slice(8,10))} ${esc(e.name)} ${eduH(e)}h`).join(', ')}<br><b style="color:${r.s.lackSafe ? 'var(--danger)' : 'inherit'}">안전 ${r.s.safe}/${EDU_NEED.safe}시간</b> · 전체 ${r.s.total}/${EDU_NEED.total}시간 <span class="muted">(소양 ${r.s.by.소양} · 직무 ${r.s.by.직무} · 기타 ${r.s.by.기타})</span></span></button>`).join('')
+      : '<div class="pen-none">교육에 빠진 어르신이 없어요.</div>'}
     <div class="grid-2" style="margin-top:10px;"><button class="secondary" id="el-close">닫기</button><button id="el-xls">엑셀로 내려받기</button></div></div>`;
   document.body.appendChild(back);
   back.querySelector('#el-close').onclick = () => back.remove();
@@ -5204,20 +5259,20 @@ function showEduLack(){
 }
 function eduSheet(all){
   const rows = eduRows(all), y = viewYear();
-  const ws = XLSX.utils.aoa_to_sheet([[`${y}년 교육 시간 (1월~${EDU_NEED.toMonth}월, 오늘까지) · 안전교육 ${EDU_NEED.safe}시간 이상 + 전체 ${EDU_NEED.total}시간 이상 · ${all ? '전체' : '부족'} ${rows.length}명`]]);
+  const ws = XLSX.utils.aoa_to_sheet([[`${y}년 교육 시간 (1월~${EDU_NEED.toMonth}월, 오늘까지) · 안전교육 ${EDU_NEED.safe}시간 이상 + 전체 ${EDU_NEED.total}시간 이상 · ${all ? '전체' : '불참'} ${rows.length}명`]]);
   const data = rows.map((r, i) => ({ '번호': i + 1, '읍면': r.p.town, '경로당': seniorOf(r.p), '성명': r.p.name, '나이': r.p.age || '', '안전교육(시간)': r.s.by.안전, '소양교육': r.s.by.소양, '직무교육': r.s.by.직무, '기타교육': r.s.by.기타,
-    '합계(시간)': r.s.total, '안전 부족': r.s.lackSafe || '', '전체 부족': r.s.lackTotal || '', '상태': r.s.ok ? '충족' : r.s.lackSafe ? '안전교육 부족' : '전체 시간 부족',
+    '합계(시간)': r.s.total, '불참': r.s.missed.map(e => `${Number(e.date.slice(5,7))}/${Number(e.date.slice(8,10))} ${e.name} ${eduH(e)}h`).join(', '), '불참 시간': r.s.missH || '', '안전 부족': r.s.lackSafe || '', '전체 부족': r.s.lackTotal || '', '상태': r.s.ok ? '충족' : r.s.flag ? (r.s.lackSafe ? '불참 · 안전교육 부족' : '불참 · 전체 시간 부족') : '부족(교육 일정 남음)',
     '받은 교육': r.s.list.map(e => `${Number(e.date.slice(5,7))}/${Number(e.date.slice(8,10))} ${e.name} ${e.h != null ? e.h : eduInfo(e.name).h}h`).join(', ') }));
-  if (data.length) XLSX.utils.sheet_add_json(ws, data, { origin: 'A3' }); else XLSX.utils.sheet_add_aoa(ws, [['교육 시간이 모자란 어르신이 없습니다.']], { origin: 'A3' });
-  ws['!cols'] = [6,8,12,9,6,10,8,8,8,9,8,8,12,60].map(w => ({ wch: w }));
+  if (data.length) XLSX.utils.sheet_add_json(ws, data, { origin: 'A3' }); else XLSX.utils.sheet_add_aoa(ws, [['교육에 빠진 어르신이 없습니다.']], { origin: 'A3' });
+  ws['!cols'] = [6,8,12,9,6,10,8,8,8,9,30,8,8,8,16,60].map(w => ({ wch: w }));
   return { ws, rows };
 }
 function exportEduLack(){
   if (typeof XLSX === 'undefined') return notify('인터넷이 연결될 때 다시 눌러 주세요.');
   const { ws, rows } = eduSheet(false), wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '교육 부족');
-  XLSX.writeFile(wb, `교육부족_${viewYear()}년_${today()}.xlsx`);
-  logEvent('교육 부족 엑셀', null, `${viewYear()}년 ${rows.length}명`);
+  XLSX.utils.book_append_sheet(wb, ws, '교육 불참');
+  XLSX.writeFile(wb, `교육불참_${viewYear()}년_${today()}.xlsx`);
+  logEvent('교육 불참 엑셀', null, `${viewYear()}년 ${rows.length}명`);
 }
 // ⚙️ 교육별 시간·종류 정하기 (이름에 맞는 시간이 모든 교육 날짜에 적용)
 function openEduHours(){
