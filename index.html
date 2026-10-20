@@ -68,6 +68,7 @@
   .seg button { flex:1; margin:0; background:#edf2f7; color:#2d3748; border:2px solid transparent; padding:12px 4px; font-size:.98rem; }
   .seg button.on { background:var(--tint); border-color:var(--primary); color:var(--primary); font-weight:bold; }
   .seg button.on.bad { background:#fff5f5; border-color:var(--danger); color:var(--danger); }
+  .seg button.on.mid { background:#fefcbf; border-color:#d69e2e; color:#975a16; }   /* 3개 중 가운데(중간)는 노랑 */
   details.info { background:#f7fafc; border-radius:8px; padding:10px 12px; margin:12px 0; }
   details.info summary { font-weight:bold; cursor:pointer; }
   .done { color:var(--success); font-weight:bold; font-size:.85rem; }
@@ -220,6 +221,7 @@
   .pick2.writer { background:#c53030 !important; color:#fff !important; border-color:#9b2c2c !important; }
   .tr-writer { color:#c53030; }
   .tag-new { display:inline-block; background:#fefcbf; color:#975a16; border:1px solid #f6e05e; border-radius:6px; font-size:.72em; font-weight:bold; padding:0 5px; margin-left:3px; vertical-align:2px; }
+  .tag-doc { display:inline-flex; align-items:center; justify-content:center; width:1.25em; height:1.25em; background:#38a169; color:#fff; border-radius:50%; font-size:.75em; font-weight:900; margin-left:3px; vertical-align:2px; }
   .tag-edu { display:inline-block; background:#ebf8ff; color:#2c5282; border:1px solid #90cdf4; border-radius:6px; font-size:.68em; font-weight:bold; padding:0 4px; margin-left:3px; vertical-align:2px; white-space:nowrap; }
   .tag-pen { display:inline-block; background:#fff5f5; color:#c53030; border:1px solid #feb2b2; border-radius:6px; font-size:.72em; font-weight:bold; padding:0 5px; margin-left:3px; vertical-align:2px; }
   .quit-stamp { display:inline-block; color:#c53030; border:5px double #c53030; border-radius:8px; padding:2px 18px; font-size:2rem; font-weight:900; letter-spacing:.25em; transform:rotate(-7deg); background:rgba(255,245,245,.7); text-shadow:0 0 1px #c53030; }
@@ -490,7 +492,7 @@
           <button class="danger full" onclick="openAddExclude()" style="margin:8px 0 4px;">＋ 제외 대상 추가</button>
           <div id="ex-list"></div>
         </details>
-        <details class="stat-box chg-box" id="bk-box">
+        <details class="stat-box chg-box" id="rs-box">
           <summary><span style="font-weight:bold;">🗑 기록 초기화</span><span class="chg-arrow"></span></summary>
           <button class="danger small full" id="btn-reset" onclick="resetMonth()" style="margin-top:6px;"></button>
         </details>
@@ -531,15 +533,6 @@
         <div class="notice" id="ui-sample" style="font-size:1rem;">가나다 미리보기 — 동향면 고부 경로당 · 조끼 착용 · 10월 14일(수)</div>
         <button type="button" class="secondary full" onclick="uiReset()">처음 설정으로 되돌리기</button>
         <button type="button" class="secondary full" onclick="mvReset()">↩ 화면 배치 처음으로</button>
-        <details class="stat-box chg-box" id="bk-box">
-          <summary><span style="font-weight:bold;">💾 백업</span><span class="chg-arrow"></span></summary>
-          <div style="margin-top:6px;"></div>
-          <div class="muted" id="bk-info" style="font-size:.85rem;margin-bottom:6px;"></div>
-          <div class="grid-2"><button onclick="saveBackup()">💾 백업 파일 저장</button><button class="warning" onclick="shareBackup()">📤 문자·카톡으로 보내기</button></div>
-          <button class="secondary full" onclick="document.getElementById('bk-file').click()">📂 백업 파일 불러오기 (복원)</button>
-          <input type="file" id="bk-file" accept=".json,application/json" class="hidden" onchange="loadBackupFile(this)">
-          <div id="bk-snap"></div>
-        </details>
       </div>
     </details>
   </div>
@@ -555,10 +548,23 @@
       </div>
     </details>
   </div>
+  <div class="card" id="bk-card" data-mv="bk">
+    <details class="chg-box" id="bk-box" style="margin-top:0;border-top:none;padding-top:0;">
+      <summary><h3>💾 백업</h3><span class="chg-arrow"></span></summary>
+      <div style="margin-top:8px;">
+          <div style="margin-top:6px;"></div>
+          <div class="muted" id="bk-info" style="font-size:.85rem;margin-bottom:6px;"></div>
+          <div class="grid-2"><button onclick="saveBackup()">💾 백업 파일 저장</button><button class="warning" onclick="shareBackup()">📤 문자·카톡으로 보내기</button></div>
+          <button class="secondary full" onclick="document.getElementById('bk-file').click()">📂 백업 파일 불러오기 (복원)</button>
+          <input type="file" id="bk-file" accept=".json,application/json" class="hidden" onchange="loadBackupFile(this)">
+          <div id="bk-snap"></div>
+      </div>
+    </details>
+  </div>
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-18</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-19</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -586,7 +592,7 @@
     <input type="hidden" id="c-date">
     <label>근무지 이탈 (벌점)</label>
     <input type="hidden" id="c-leave">
-    <div class="seg" data-for="c-leave"><button type="button" data-v="정상">정상 근무</button><button type="button" data-v="자리비움" data-bad data-pt="자리비움">자리 비움</button><button type="button" data-v="이탈" data-bad data-pt="이탈">이탈</button></div>
+    <div class="seg" data-for="c-leave"><button type="button" data-v="정상">정상 근무</button><button type="button" data-v="자리비움" data-bad data-mid data-pt="자리비움">자리 비움</button><button type="button" data-v="이탈" data-bad data-pt="이탈">이탈</button></div>
 
     <label>조끼 착용</label>
     <input type="hidden" id="c-vest">
@@ -598,7 +604,7 @@
 
     <label>응대 태도</label>
     <input type="hidden" id="c-attitude">
-    <div class="seg" data-for="c-attitude"><button type="button" data-v="우수">우수</button><button type="button" data-v="보통">보통</button><button type="button" data-v="불량" data-bad>불량</button></div>
+    <div class="seg" data-for="c-attitude"><button type="button" data-v="우수">우수</button><button type="button" data-v="보통" data-mid>보통</button><button type="button" data-v="불량" data-bad>불량</button></div>
 
     <div id="ex-items"></div>
     <div class="grid-2" style="margin:2px 0 10px;"><button type="button" class="small secondary" onclick="openItemCfg('pts')" style="margin:0;">⚙️ 벌점 고치기</button><button type="button" class="small secondary" onclick="openItemCfg('items')" style="margin:0;">＋ 항목 추가·삭제</button></div>
@@ -832,7 +838,7 @@ const nm = p => (p.name || '') + (p.age ? `(${p.age})` : '') + (isNew(p) ? '(신
 // 화면용 이름: (신규)는 노란 칸, 이번 달 벌점은 빨간 (-1점) — 한 달 동안 이름 옆에
 function nmH(p){
   const pts = (p.logs || []).filter(l => l.date.startsWith(monthKey())).reduce((n, l) => n + logPts(l), 0);
-  return esc((p.name || '') + (p.age ? `(${p.age})` : '')) + (isNew(p) ? '<span class="tag-new">신규</span>' : '') + (pts ? `<span class="tag-pen">-${pts}점</span>` : '') + eduTag(p);
+  return esc((p.name || '') + (p.age ? `(${p.age})` : '')) + (isNew(p) ? '<span class="tag-new">신규</span>' : '') + (pts ? `<span class="tag-pen">-${pts}점</span>` : '') + (docWait(p) ? '<span class="tag-doc" title="비대면 교육 서류 확인 전">!</span>' : '') + eduTag(p);
 }
 // 그달 일당 미지급(벌점으로 근무 인정 안 되는) 날짜
 function unpaidDaysOf(p, mk){
@@ -901,22 +907,30 @@ function renderCheckItems(){
   document.querySelectorAll('#check-section [data-pt]').forEach(b => { b.dataset.base ||= b.textContent; b.textContent = b.dataset.base + (PT[b.dataset.pt] ? ` (-${PT[b.dataset.pt]}점)` : ' (경고)'); });
   const box = document.getElementById('ex-items'); if (!box) return;
   box.innerHTML = checkItems.map(it => `<label>${esc(it.name)}</label><input type="hidden" id="cx-${it.id}" value="정상">
-    <div class="seg" data-for="cx-${it.id}"><button type="button" data-v="정상">${esc(it.ok || '정상')}</button><button type="button" data-v="bad" data-bad>${esc(it.bad)}${it.pts ? ` (-${it.pts}점)` : ' (경고)'}</button></div>`).join('');
+    <div class="seg" data-for="cx-${it.id}"><button type="button" data-v="정상">${esc(it.ok || '정상')}</button>${it.mid ? `<button type="button" data-v="mid" data-mid>${esc(it.mid)}${it.midPts != null && it.midPts !== '' ? ptLbl(Number(it.midPts)) : ''}</button>` : ''}<button type="button" data-v="bad" data-bad>${esc(it.bad)}${ptLbl(it.pts)}</button></div>`).join('');
   box.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.onclick = () => { window._segTouched = true; setSeg(seg.dataset.for, b.dataset.v); }));
   checkItems.forEach(it => setSeg('cx-' + it.id, '정상'));
 }
 const resetExItems = () => checkItems.forEach(it => setSeg('cx-' + it.id, '정상'));
+// 항목 값(정상·mid·bad) → 기록용 { n, v, bad, pt, mid } — 3개짜리는 가운데(mid)가 노랑, 가운데 점수 midPts(null=문제 아님)
+function exVal(it, v){
+  if (v === 'bad') return { n: it.name, v: it.bad, bad: true, pt: it.pts || 0 };
+  if (v === 'mid' && it.mid) { const w = it.midPts != null && it.midPts !== ''; return { n: it.name, v: it.mid, bad: w, pt: w ? Number(it.midPts) || 0 : 0, mid: true }; }
+  return { n: it.name, v: it.ok || '정상', bad: false, pt: 0 };
+}
+const exSegV = x => x?.mid ? 'mid' : x?.bad ? 'bad' : '정상';
+const ptLbl = n => n ? ` (-${n}점)` : ' (경고)';
 // 지금 고른 새 항목 값 → 기록용 { id: {n, v, bad, pt} } (지난 기록에만 있는 항목은 keep 그대로)
 function exFromForm(keep){
   const ex = {}; Object.entries(keep || {}).forEach(([k, x]) => { if (!checkItems.some(it => it.id === k)) ex[k] = x; });
-  checkItems.forEach(it => { const bad = (document.getElementById('cx-' + it.id)?.value) === 'bad';
-    ex[it.id] = { n: it.name, v: bad ? it.bad : (it.ok || '정상'), bad, pt: bad ? (it.pts || 0) : 0 }; });
+  checkItems.forEach(it => { ex[it.id] = exVal(it, document.getElementById('cx-' + it.id)?.value || '정상'); });
   return ex;
 }
 const exText = ex => Object.values(ex || {}).map(x => `${x.n} ${x.v}`).join('·');
 async function openItemCfg(focus){
-  let pt = Object.assign({}, PT), items = checkItems.map(x => Object.assign({}, x));
+  let pt = Object.assign({}, PT), items = checkItems.map(x => ({ ...x, o1: x.ok || '정상', o2: x.mid || x.bad || '', o3: x.mid ? x.bad : '' }));
   const OPTS = [0, 0.5, 1, 1.5, 2, 3];
+  const midSel = (v, attr) => `<select ${attr} style="margin:0;width:auto;"><option value="" ${v == null || v === '' ? 'selected' : ''}>문제 아님</option>${OPTS.map(o => `<option value="${o}" ${v != null && v !== '' && Number(v)===o ? 'selected' : ''}>${o ? '-' + o + '점' : '경고만'}</option>`).join('')}</select>`;
   const sel = (v, attr) => `<select ${attr} style="margin:0;width:auto;">${OPTS.map(o => `<option value="${o}" ${Number(v)===o ? 'selected' : ''}>${o ? '-' + o + '점' : '경고만'}</option>`).join('')}</select>`;
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
@@ -936,23 +950,31 @@ async function openItemCfg(focus){
   const draw = () => {
     $('#ic-items').innerHTML = items.length ? items.map((it, i) => `<div style="border:1px solid #e2e8f0;border-radius:8px;padding:8px;margin-top:6px;">
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;"><input type="text" data-i="${i}" data-f="name" value="${esc(it.name)}" placeholder="항목 이름" style="margin:0;font-weight:bold;"><button type="button" class="small secondary" data-del="${i}" style="width:auto;margin:0;color:var(--danger);white-space:nowrap;">🗑 삭제</button></div>
-      <div style="display:flex;gap:6px;align-items:center;"><input type="text" data-i="${i}" data-f="ok" value="${esc(it.ok || '정상')}" placeholder="정상" style="margin:0;"><input type="text" data-i="${i}" data-f="bad" value="${esc(it.bad)}" placeholder="문제" style="margin:0;">${sel(it.pts, `data-i="${i}" data-f="pts"`)}</div></div>`).join('')
+      <div style="display:flex;gap:6px;align-items:center;"><input type="text" data-i="${i}" data-f="o1" value="${esc(it.o1)}" placeholder="1 (예: 우수)" style="margin:0;"><input type="text" data-i="${i}" data-f="o2" value="${esc(it.o2)}" placeholder="2 (예: 보통)" style="margin:0;"><input type="text" data-i="${i}" data-f="o3" value="${esc(it.o3)}" placeholder="3 (예: 불량)" style="margin:0;"></div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:6px;font-size:.88rem;">${it.o3.trim() ? `<span style="color:#975a16;">2번</span>${midSel(it.midPts, `data-i="${i}" data-f="midPts"`)}<span style="color:var(--danger);">3번</span>` : '<span style="color:var(--danger);">2번</span>'}${sel(it.pts, `data-i="${i}" data-f="pts"`)}</div></div>`).join('')
       : '<div class="muted" style="font-size:.88rem;">추가 항목이 없어요.</div>';
-    back.querySelectorAll('#ic-items [data-f]').forEach(x => x.oninput = x.onchange = () => { const it = items[+x.dataset.i]; it[x.dataset.f] = x.dataset.f === 'pts' ? Number(x.value) : x.value; });
+    items.forEach(it => { it._3 = !!String(it.o3 || '').trim(); });
+    back.querySelectorAll('#ic-items [data-f]').forEach(x => { const f = x.dataset.f, it = items[+x.dataset.i];
+      x.oninput = x.onchange = () => { it[f] = f === 'pts' ? Number(x.value) : f === 'midPts' ? (x.value === '' ? null : Number(x.value)) : x.value; };
+      if (f === 'o3') x.onchange = () => { it.o3 = x.value; if (!!it.o3.trim() !== it._3) draw(); }; });
     back.querySelectorAll('#ic-items [data-del]').forEach(b => b.onclick = async () => { const it = items[+b.dataset.del];
       if (!await ask(`"${it.name || '이름 없는 항목'}" 항목을 지울까요?\n(이미 저장된 점검 기록은 그대로 남아요)`)) return; items.splice(+b.dataset.del, 1); draw(); });
   };
   draw();
-  $('#ic-add').onclick = () => { items.push({ id: 'i' + Date.now(), name: '', ok: '정상', bad: '', pts: 0.5 }); draw(); const ins = back.querySelectorAll('#ic-items input[data-f="name"]'); ins[ins.length - 1]?.focus(); };
+  $('#ic-add').onclick = () => { items.push({ id: 'i' + Date.now(), name: '', o1: '', o2: '', o3: '', pts: 0.5, midPts: null }); draw(); const ins = back.querySelectorAll('#ic-items input[data-f="name"]'); ins[ins.length - 1]?.focus(); };
   $('#ic-cancel').onclick = () => back.remove();
   $('#ic-save').onclick = () => {
-    items = items.map(it => ({ ...it, name: String(it.name).trim(), ok: String(it.ok || '').trim() || '정상', bad: String(it.bad || '').trim() }));
-    const bad = items.find(it => !it.name || !it.bad); if (bad) return notify('항목 이름과 문제(예: 미리 씀)를 적어 주세요.');
+    items = items.map(({ o1, o2, o3, _3, ...it }) => { o1 = String(o1 || '').trim(); o2 = String(o2 || '').trim(); o3 = String(o3 || '').trim();
+      if (!o2 && o3) { o2 = o3; o3 = ''; }
+      const r = { ...it, name: String(it.name).trim(), ok: o1 || '정상', bad: o3 || o2 }; delete r.mid; delete r.midPts;
+      if (o3) { r.mid = o2; r.midPts = it.midPts == null || it.midPts === '' ? null : Number(it.midPts); } return r; });
+    const bad = items.find(it => !it.name || !it.bad); if (bad) return notify('항목 이름과 선택지를 2개 이상 적어 주세요.');
+    const optTxt = it => [it.ok, it.mid, it.bad].filter(Boolean).join('/') + ` ${it.pts ? '-' + it.pts + '점' : '경고'}`;
     const ch = [];
     BASE.forEach(([k, l]) => { if (pt[k] !== PT[k]) ch.push(`${l} ${PT[k] ? '-' + PT[k] + '점' : '경고'} → ${pt[k] ? '-' + pt[k] + '점' : '경고'}`); });
     items.forEach(it => { const o = checkItems.find(x => x.id === it.id);
-      if (!o) ch.push(`항목 추가: ${it.name}(${it.ok}/${it.bad} ${it.pts ? '-' + it.pts + '점' : '경고'})`);
-      else if (JSON.stringify(o) !== JSON.stringify(it)) ch.push(`항목 수정: ${o.name} → ${it.name}(${it.ok}/${it.bad} ${it.pts ? '-' + it.pts + '점' : '경고'})`); });
+      if (!o) ch.push(`항목 추가: ${it.name}(${optTxt(it)})`);
+      else if (JSON.stringify(o) !== JSON.stringify(it)) ch.push(`항목 수정: ${o.name} → ${it.name}(${optTxt(it)})`); });
     checkItems.filter(o => !items.some(it => it.id === o.id)).forEach(o => ch.push(`항목 삭제: ${o.name}`));
     const all = $('#ic-all').checked;
     back.remove(); if (!ch.length && !all) return;
@@ -961,7 +983,7 @@ async function openItemCfg(focus){
     if (all) {   // 모든 어르신의 지난 점검 기록도 지금 점수로 다시 계산
       let n = 0;
       participants.forEach(q => q.logs.forEach(l => { l.pv = Object.assign({}, PT);
-        Object.entries(l.ex || {}).forEach(([k, x]) => { const it = checkItems.find(i => i.id === k); if (it && x.bad) x.pt = it.pts || 0; }); n++; }));
+        Object.entries(l.ex || {}).forEach(([k, x]) => { const it = checkItems.find(i => i.id === k); if (it && x.bad) x.pt = x.mid ? Number(it.midPts) || 0 : it.pts || 0; }); n++; }));
       saveData(); logEvent('벌점 모두 적용', null, `점검 기록 ${n}건을 지금 점수로 다시 계산 (이탈 ${ptWord('이탈')} · 자리 비움 ${ptWord('자리비움')} · 조끼 ${ptWord('조끼')} · 명찰 ${ptWord('명찰')})`);
       return notify(`저장하고 모든 인원 점검 기록 ${n}건에 적용했어요.`);
     }
@@ -972,7 +994,7 @@ async function openItemCfg(focus){
 function setSeg(id, v){
   document.getElementById(id).value = v;
   document.querySelectorAll(`.seg[data-for="${id}"] button`).forEach(b => {
-    b.classList.toggle('on', b.dataset.v===v); b.classList.toggle('bad', b.dataset.v===v && b.hasAttribute('data-bad'));
+    b.classList.toggle('on', b.dataset.v===v); b.classList.toggle('bad', b.dataset.v===v && b.hasAttribute('data-bad') && !b.hasAttribute('data-mid')); b.classList.toggle('mid', b.dataset.v===v && b.hasAttribute('data-mid'));
   });
 }
 
@@ -1108,15 +1130,18 @@ function eduInfo(name){
 }
 // 그해 1월~11월, 오늘까지의 교육. 대규모 교육은 모두 받은 것으로 보고, 불참 표시(p.eduAbsent = [날짜])한 날만 빼고 셈
 const eduAbsent = (p, d) => (p.eduAbsent || []).includes(d);
-const eduH = e => e.h != null ? Number(e.h) : eduInfo(e.name).h;
+const eduH = e => e.hs ? Object.values(e.hs).reduce((n, h) => n + (Number(h) || 0), 0) : e.h != null ? Number(e.h) : eduInfo(e.name).h;
+// 교육 한 건의 종류별 시간 (비대면 의무교육은 안전·소양·직무로 나눠 넣음: e.hs)
+const eduCats = e => e.hs ? Object.fromEntries(Object.entries(e.hs).filter(([, h]) => Number(h) > 0).map(([c, h]) => [c, Number(h)])) : { [eduInfo(e.name).c]: eduH(e) };
+const docWait = p => !!(p.docNeed && !p.docOk && !p.quit);   // 비대면 교육 서류(조끼·서명) 확인 전
 function eduStatus(p, y){
   y = y || viewYear(); const t = today(), from = `${y}-01-01`, to = `${y}-${String(EDU_NEED.toMonth).padStart(2,'0')}-30`;
   const st = p.startDay || (p.start ? p.start + '-01' : ''), qd = quitDayOf(p);
   const offered = eduOf(p).filter(e => e.date >= from && e.date <= to && e.date <= t && (e.own || ((!st || e.date >= st) && (!qd || e.date < qd))) && eduInfo(e.name).c !== '행사' && eduH(e) > 0);
-  const missed = offered.filter(e => eduAbsent(p, e.date)), list = offered.filter(e => !eduAbsent(p, e.date));
+  const missed = offered.filter(e => eduAbsent(p, e.date)), list = offered.filter(e => !eduAbsent(p, e.date) && !(e.doc && !p.docOk));   // 서류 확인 전 비대면 교육은 아직 안 셈
   const by = { 안전: 0, 소양: 0, 직무: 0, 기타: 0 }; let total = 0;
-  list.forEach(e => { const i = eduInfo(e.name), h = eduH(e); by[i.c] = (by[i.c] || 0) + h; total += h; });
-  const missH = missed.reduce((n, e) => n + eduH(e), 0), missSafe = missed.filter(e => eduInfo(e.name).c === '안전').reduce((n, e) => n + eduH(e), 0);
+  list.forEach(e => Object.entries(eduCats(e)).forEach(([c, h]) => { by[c] = (by[c] || 0) + h; total += h; }));
+  const missH = missed.reduce((n, e) => n + eduH(e), 0), missSafe = missed.reduce((n, e) => n + (eduCats(e).안전 || 0), 0);
   const ok = by.안전 >= EDU_NEED.safe && total >= EDU_NEED.total;
   return { by, safe: by.안전, total, list, missed, missH, missSafe, lackSafe: Math.max(0, EDU_NEED.safe - by.안전), lackTotal: Math.max(0, EDU_NEED.total - total), ok,
     flag: missed.length > 0 && !ok };   // 표시는 교육에 빠진 분만 (보충해서 채우면 사라짐)
@@ -1171,8 +1196,10 @@ function addEdu(){
 // 교육 날 칩: 참석·불참 표시 (한 분씩 넣은 교육이면 지우기도)
 function eduChip(p, e){
   const ab = eduAbsent(p, e.date), back = document.createElement('div'); back.className = 'dlg-back';
-  back.innerHTML = `<div class="dlg" style="max-width:340px;"><div style="font-weight:bold;font-size:1.05rem;margin-bottom:8px;">🎓 ${Number(e.date.slice(5,7))}월 ${dd(e.date)} ${esc(e.name)} <span class="muted" style="font-weight:normal;">${eduH(e)}시간 · ${eduInfo(e.name).c}</span></div>
+  back.innerHTML = `<div class="dlg" style="max-width:340px;"><div style="font-weight:bold;font-size:1.05rem;margin-bottom:8px;">🎓 ${Number(e.date.slice(5,7))}월 ${dd(e.date)} ${esc(e.name)} <span class="muted" style="font-weight:normal;">${e.hs ? esc(vEduTxt(e.hs)) : `${eduH(e)}시간 · ${eduInfo(e.name).c}`}</span></div>
     <div class="grid-2"><button type="button" id="ec-ok" class="${ab ? 'secondary' : ''}">✔ 참석</button><button type="button" id="ec-no" class="${ab ? 'danger' : 'secondary'}">✕ 불참</button></div>
+    ${e.own && e.hs ? `<button type="button" class="full" id="ec-hrs" style="background:#805ad5;">⏱ 시간 고치기 (${esc(vEduTxt(e.hs))})</button>` : ''}
+    ${e.own && e.doc ? (p.docOk ? `<button type="button" class="secondary full" id="ec-doc">✔ 서류 확인 ${dd(p.docOk)} · 취소</button>` : '<button type="button" class="full" id="ec-doc" style="background:#38a169;">📄 서류 확인 (조끼·서명)</button>') : ''}
     ${e.own ? '<button type="button" class="secondary full" id="ec-del">🗑 이 교육 날짜 지우기</button>' : ''}
     <button type="button" class="secondary full" id="ec-close">닫기</button></div>`;
   document.body.appendChild(back);
@@ -1180,6 +1207,10 @@ function eduChip(p, e){
     logEvent(no ? '교육 불참' : '교육 참석', p, `${dd(e.date)} ${e.name} ${eduH(e)}시간${no ? ' 불참' : ' 참석으로 고침'}`, e.date); saveData(false); renderModal(); renderList(); };
   back.querySelector('#ec-ok').onclick = () => set(false); back.querySelector('#ec-no').onclick = () => set(true);
   back.querySelector('#ec-del')?.addEventListener('click', () => { back.remove(); delEdu(e.id); });
+  back.querySelector('#ec-doc')?.addEventListener('click', () => { back.remove(); docConfirm(p.id, !!p.docOk); });
+  back.querySelector('#ec-hrs')?.addEventListener('click', async () => { back.remove(); const o = (p.edu || []).find(x => x.id === e.id); if (!o) return;
+    const hs = await vEduDlg(p, o.date, o.hs); if (!hs || JSON.stringify(hs) === JSON.stringify(o.hs)) return;
+    const old = vEduTxt(o.hs); o.hs = hs; o.h = eduH(o); logEvent('교육 시간', p, `${dd(o.date)} ${o.name} ${old} → ${vEduTxt(hs)}`, o.date); saveData(false); renderModal(); renderList(); });
   back.querySelector('#ec-close').onclick = () => back.remove();
 }
 // 🎓 교육 불참 체크: 교육 날을 고르고 빠진 분만 누름 (대규모 교육용)
@@ -3107,6 +3138,27 @@ function renderLinking(){
     ${p.linking ? `<button class="small danger" onclick="linkDone(${p.id})" style="width:auto;margin:0;padding:8px 12px;white-space:nowrap;" title="연계 끝">✕ 연계 끝</button>`
       : `<span class="badge" style="background:#c6f6d5;color:#22543d;align-self:center;white-space:nowrap;">✔ 연계 끝</span>`}</div>`; }).join('');
 }
+// 🎓 비대면 의무교육: 안전·소양·직무 시간 정하기 → { 안전, 소양, 직무 } (취소면 null)
+const vEduTxt = hs => Object.entries(hs).filter(([, h]) => Number(h) > 0).map(([c, h]) => `${c} ${h}시간`).join(' · ') || '0시간';
+function vEduDlg(p, date, cur){
+  return new Promise(res => {
+    const hs = { 안전: 0, 소양: 0, 직무: 0, ...cur }, H = [0, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6];
+    const back = document.createElement('div'); back.className = 'dlg-back';
+    back.innerHTML = `<div class="dlg" style="max-width:360px;"><div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">🎓 의무교육(비대면) · ${Number(date.slice(5,7))}월 ${dd(date)}</div>
+      ${Object.keys(hs).map(c => `<div style="display:flex;align-items:center;gap:8px;margin:6px 0;"><b style="flex:1;">${c}교육</b><select data-c="${c}" style="width:auto;margin:0;">${H.map(h => `<option value="${h}" ${Number(hs[c]) === h ? 'selected' : ''}>${h}시간</option>`).join('')}</select></div>`).join('')}
+      <div class="grid-2" style="margin-top:10px;"><button class="secondary" data-v="0">취소</button><button id="ve-ok">저장</button></div></div>`;
+    document.body.appendChild(back);
+    back.querySelector('[data-v="0"]').onclick = () => { back.remove(); res(null); };
+    back.querySelector('#ve-ok').onclick = () => { back.querySelectorAll('[data-c]').forEach(x => hs[x.dataset.c] = Number(x.value)); back.remove(); res(hs); };
+  });
+}
+// 📄 비대면 교육 서류(조끼·서명) 확인
+async function docConfirm(id, undo){
+  const p = participants.find(x => x.id === id); if (!p) return;
+  if (undo) { if (!await ask(`${p.name} 어르신 서류 확인을 취소할까요?`)) return; delete p.docOk; logEvent('서류 확인 취소', p, '비대면 교육 서류(조끼·서명) 확인 취소'); }
+  else { if (!await ask(`${p.name} 어르신 비대면 교육 서류(조끼·서명)를 확인했나요?`)) return; p.docOk = today(); logEvent('서류 확인', p, '비대면 교육 서류(조끼·서명) 확인 · 교육 이수'); }
+  saveData(false); renderList(); if (current()?.id === p.id) renderModal();
+}
 async function linkDone(id){
   const p = participants.find(x => x.id === id); if (!p || !p.linking) return;
   if (!await ask(`${p.name} 어르신 전산 연계가 끝났나요?\n목록에서 빠지고, 명단에는 그대로 남아요.`)) return;
@@ -3117,10 +3169,11 @@ async function linkDone(id){
   // 첫 근무일은 의무교육(비대면 3시간)
   const mk0 = today().slice(0,7), nx = addDays(mk0 + '-28', 7).slice(0,7);
   const first = [...personDays(p, mk0), ...personDays(p, nx)].filter(d => d >= today()).sort()[0];
-  if (first && !(p.edu || []).some(e => /의무교육/.test(e.name))) { (p.edu ||= []).push({ id: Date.now(), date: first, name: '의무교육(비대면)', h: 3 });
-    logEvent('교육 날짜', p, `${dd(first)} 의무교육(비대면) 3시간 · 첫 근무일 (일한 날로 인정)`, first); }
+  let ve = null;
+  if (first && !(p.edu || []).some(e => /의무교육/.test(e.name))) { const hs = await vEduDlg(p, first, { 안전: 3, 소양: 0, 직무: 0 });
+    if (hs) { ve = { id: Date.now(), date: first, name: '의무교육(비대면)', hs, doc: true }; ve.h = eduH(ve); (p.edu ||= []).push(ve); p.docNeed = true; delete p.docOk;
+      logEvent('교육 날짜', p, `${dd(first)} 의무교육(비대면) ${vEduTxt(hs)} · 첫 근무일 (일한 날로 인정, 서류 확인 필요)`, first); } }
   saveData(false); renderList();
-  if (first) await notify(`🎓 첫 근무일 ${Number(first.slice(5,7))}월 ${dd(first)}을 의무교육(비대면 3시간)으로 넣었어요.`);
   welcomeSms(p);
 }
 // 🎉 환영 문자: 축하 + 활동일(달력) + 주의사항. 글은 한 번 고치면 다음에도 그대로 씀 (jinan_tpl.welcome)
@@ -4621,6 +4674,7 @@ function renderModal(){
       ${s.quitNow ? `<button type="button" class="small secondary" onclick="toggleQuit()" style="width:auto;margin:8px auto 0;padding:4px 14px;">↩ 중도포기 해제</button>` : ''}</div>` + n; }
   { const es = eduStatus(p); if (es.flag && !p.linking && !s.dropped) n = `<div class="notice" style="background:#ebf8ff;border-color:#90cdf4;">📚 <b>교육 불참</b> · ${es.missed.map(e => `${Number(e.date.slice(5,7))}월 ${dd(e.date)} ${esc(e.name)} <b style="color:var(--danger)">${eduH(e)}시간</b>`).join(', ')}
       <br>받은 시간: <b style="color:${es.lackSafe ? 'var(--danger)' : '#2c5282'}">안전 ${es.safe}/${EDU_NEED.safe}시간</b> · 전체 ${es.total}/${EDU_NEED.total}시간${es.lackSafe ? ` → <b style="color:var(--danger)">안전 ${es.lackSafe}시간 더 필요</b>` : es.lackTotal ? ` → <b>${es.lackTotal}시간 더 필요</b>` : ''}</div>` + n; }
+  if (docWait(p) && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;"><span class="tag-doc" style="font-size:1rem;">!</span><b style="flex:1;color:#22543d;">비대면 교육 서류</b><button type="button" class="small" onclick="docConfirm(${p.id})" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">📄 서류 확인</button></div>` + n;
   if (p.guess) n = `<div class="notice">📍 경로당 <b>"${esc(p.senior)}"</b>은 주소(${esc(p.address||'')})를 보고 자동으로 넣은 <b>추정</b>입니다.<br>맞으면 아래 "어르신 정보 고치기"에서 그대로 <b>정보 저장</b>, 틀리면 경로당 이름을 고쳐서 저장해 주세요.</div>` + n;
   document.getElementById('modal-notice').innerHTML = n;
   document.getElementById('check-section').classList.toggle('hidden', s.dropped && !editingLogId);
@@ -4711,7 +4765,7 @@ function editLog(logId){
   editingLogId = logId;
   setCheckDate(l.date);
   setSeg('c-leave', l.leave); setSeg('c-vest', l.vest); setSeg('c-badge', l.badge); setSeg('c-attitude', l.attitude);
-  checkItems.forEach(it => setSeg('cx-' + it.id, l.ex?.[it.id]?.bad ? 'bad' : '정상'));
+  checkItems.forEach(it => setSeg('cx-' + it.id, it.mid || exSegV(l.ex?.[it.id]) !== 'mid' ? exSegV(l.ex?.[it.id]) : '정상'));
   document.getElementById('c-memo').value = l.memo || '';
   document.getElementById('check-section').classList.remove('hidden');
   showEditBar();
@@ -4814,7 +4868,7 @@ function keepDraft(p){
   const g = id => document.getElementById(id).value;
   const dr = { leave: g('c-leave'), vest: g('c-vest'), badge: g('c-badge'), attitude: g('c-attitude'), memo: g('c-memo'),
     ex: Object.fromEntries(checkItems.map(it => [it.id, g('cx-' + it.id) || '정상'])) };
-  const plain = dr.leave === '정상' && dr.vest !== '미착용' && dr.badge !== '미착용' && dr.attitude === '우수' && !dr.memo.trim() && Object.values(dr.ex).every(v => v !== 'bad');
+  const plain = dr.leave === '정상' && dr.vest !== '미착용' && dr.badge !== '미착용' && dr.attitude === '우수' && !dr.memo.trim() && Object.values(dr.ex).every(v => v === '정상');
   if (plain && !window._segTouched) delete checkDrafts[p.id]; else checkDrafts[p.id] = dr;
 }
 async function saveCheck(){
@@ -4860,7 +4914,7 @@ async function saveCheck(){
     if (q.id === p.id || !dr || stats(q).dropped || q.logs.some(l => l.date===date)) continue;
     delete checkDrafts[q.id];
     const ql = { id: Date.now() + Math.random(), date, badge: dr.badge, vest: dr.vest, attitude: dr.attitude, leave: dr.leave, memo: (dr.memo || '').trim(), pv: Object.assign({}, PT), time: hhmm(new Date()),
-      ex: Object.fromEntries(checkItems.map(it => { const bad = dr.ex?.[it.id] === 'bad'; return [it.id, { n: it.name, v: bad ? it.bad : (it.ok || '정상'), bad, pt: bad ? (it.pts || 0) : 0 }]; })) };
+      ex: Object.fromEntries(checkItems.map(it => [it.id, exVal(it, dr.ex?.[it.id] || '정상')])) };
     pt += await commitLog(q, ql, true); saved.push(q);
   }
   const next = matesOf(p).find(q => q.id !== p.id && !stats(q).dropped && !q.logs.some(l => l.date===date));
@@ -5285,7 +5339,7 @@ function eduSheet(all){
   const ws = XLSX.utils.aoa_to_sheet([[`${y}년 교육 시간 (1월~${EDU_NEED.toMonth}월, 오늘까지) · 안전교육 ${EDU_NEED.safe}시간 이상 + 전체 ${EDU_NEED.total}시간 이상 · ${all ? '전체' : '불참'} ${rows.length}명`]]);
   const data = rows.map((r, i) => ({ '번호': i + 1, '읍면': r.p.town, '경로당': seniorOf(r.p), '성명': r.p.name, '나이': r.p.age || '', '안전교육(시간)': r.s.by.안전, '소양교육': r.s.by.소양, '직무교육': r.s.by.직무, '기타교육': r.s.by.기타,
     '합계(시간)': r.s.total, '불참': r.s.missed.map(e => `${Number(e.date.slice(5,7))}/${Number(e.date.slice(8,10))} ${e.name} ${eduH(e)}h`).join(', '), '불참 시간': r.s.missH || '', '안전 부족': r.s.lackSafe || '', '전체 부족': r.s.lackTotal || '', '상태': r.s.ok ? '충족' : r.s.flag ? (r.s.lackSafe ? '불참 · 안전교육 부족' : '불참 · 전체 시간 부족') : '부족(교육 일정 남음)',
-    '받은 교육': r.s.list.map(e => `${Number(e.date.slice(5,7))}/${Number(e.date.slice(8,10))} ${e.name} ${e.h != null ? e.h : eduInfo(e.name).h}h`).join(', ') }));
+    '받은 교육': r.s.list.map(e => `${Number(e.date.slice(5,7))}/${Number(e.date.slice(8,10))} ${e.name} ${eduH(e)}h`).join(', ') }));
   if (data.length) XLSX.utils.sheet_add_json(ws, data, { origin: 'A3' }); else XLSX.utils.sheet_add_aoa(ws, [['교육에 빠진 어르신이 없습니다.']], { origin: 'A3' });
   ws['!cols'] = [6,8,12,9,6,10,8,8,8,9,30,8,8,8,16,60].map(w => ({ wch: w }));
   return { ws, rows };
@@ -5469,7 +5523,7 @@ function exportExcel(){
 
   const kinds1 = list.map(p => monthKind(p, monthKey()));
   const sheet1 = list.map((p, i) => { const s = stats(p), m = mstats(p); return {
-    '표시':KIND_TXT[kinds1[i]] || '', '읍면':p.town, '경로당':p.senior, '우수 경로당':isBest(p.town, seniorOf(p)) ? '👑' : '', '구역':zoneOf(p)?.name || '', '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '성별':p.sex || '', '생일':bdayText(p.bday), '근무 시작':startTag(p) ? `${Number(p.start.slice(5))}월부터` : '', '신규 등록일':newUntil(p) ? p.regDay : '', '중도포기일':quitDayOf(p), '중도포기 사유':stats(p).dropped ? (p.quitWhy || stats(p).status) : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : p.linkDone ? `연계 끝 (${p.linkDone.day})` : '', '나이':p.age, '태어난 해':p.birth || '', '연락처':p.phone, '주소':p.address,
+    '표시':KIND_TXT[kinds1[i]] || '', '읍면':p.town, '경로당':p.senior, '우수 경로당':isBest(p.town, seniorOf(p)) ? '👑' : '', '구역':zoneOf(p)?.name || '', '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '성별':p.sex || '', '생일':bdayText(p.bday), '근무 시작':startTag(p) ? `${Number(p.start.slice(5))}월부터` : '', '신규 등록일':newUntil(p) ? p.regDay : '', '중도포기일':quitDayOf(p), '중도포기 사유':stats(p).dropped ? (p.quitWhy || stats(p).status) : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : p.linkDone ? `연계 끝 (${p.linkDone.day})` : '', '비대면 교육 서류':p.docNeed ? (p.docOk ? `확인 (${p.docOk})` : '미확인') : '', '나이':p.age, '태어난 해':p.birth || '', '연락처':p.phone, '주소':p.address,
     [`${curMonth}월 점검 횟수`]:mLogs(p).length, [`${curMonth}월 감점`]:-m.pts, [`${curMonth}월 자리 비움`]:m.aways.length, [`${curMonth}월 일당 미지급 일수`]:m.unpaid,
     [`${curMonth}월 조끼 미착용`]:m.vest, [`${curMonth}월 명찰 미착용`]:m.badge, '누적 이탈 횟수':s.leaves, '누적 감점':s.penalty, '상태':s.status, '마지막 점검일':s.last,
     [`${curMonth}월 활동 날짜`]: personDays(p, monthKey()).map(d => Number(d.slice(8,10))).join(', '),
@@ -5545,7 +5599,7 @@ function exportExcel(){
   XLSX.utils.book_append_sheet(wb, ws2, '점검 기록');
   // 그달 신규 인원
   const ncRows = nc.map(p => ({ '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '나이':p.age, '연락처':p.phone,
-    '근무 시작':p.start ? `${Number(p.start.slice(5))}월부터` : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : '연계 끝',
+    '근무 시작':p.start ? `${Number(p.start.slice(5))}월부터` : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : '연계 끝', '비대면 교육 서류':p.docNeed ? (p.docOk ? `확인 (${p.docOk})` : '미확인') : '',
     [`${curMonth}월 활동일 수`]: personDays(p, monthKey()).length }));
   const wsN = ncRows.length ? XLSX.utils.json_to_sheet(ncRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 신규 인원이 없습니다.`]]);
   wsN['!cols'] = [8,14,10,6,15,10,22,12].map(w=>({wch:w}));
@@ -5645,7 +5699,7 @@ eventLog.filter(h => h.type === '신규 등록' && (h.detail || '').startsWith('
 document.getElementById('st-from').value = '1'; document.getElementById('st-to').value = String(curMonth);
 // 태어난 해를 적어 둔 분은 해가 바뀌면 나이도 저절로 바뀜
 // ---------- 🧩 화면 배치: 칸 제목을 꾹 눌러 옮기기·겹쳐서 묶기·이름 바꾸기 (이 휴대폰에만 저장, jinan_layout) ----------
-const MV_BASE = { chg: '🔄 근무일 변경', wd: '📅 활동일', zone: '🗺 구역', search: '🔍 이름 찾기', board: '⚠️ 감점 현황', diary: '📝 활동일지', tools: '➕ 신규등록', stats: '📊 통계', ui: '🛠️ 설정', me: '👤 현장 점검자 정보' };
+const MV_BASE = { chg: '🔄 근무일 변경', wd: '📅 활동일', zone: '🗺 구역', search: '🔍 이름 찾기', board: '⚠️ 감점 현황', diary: '📝 활동일지', tools: '➕ 신규등록', stats: '📊 통계', ui: '🛠️ 설정', me: '👤 현장 점검자 정보', bk: '💾 백업' };
 const MV_IDS = Object.keys(MV_BASE);
 let mvL = (() => { try { return JSON.parse(localStorage.getItem('jinan_layout')) || null; } catch(e) { return null; } })();
 function mvFix(){
@@ -5799,7 +5853,8 @@ function mvRename(key){
   area.addEventListener('contextmenu', e => { if (st) e.preventDefault(); });
 })();
 mvApply();
-participants.forEach(p => { if (p.birth) p.age = String(thisYear() - p.birth); });
+participants.forEach(p => { if (p.birth) p.age = String(thisYear() - p.birth);
+  (p.edu || []).forEach(e => { if (e.name === '의무교육(비대면)' && !e.hs) { e.hs = { 안전: Number(e.h) || 3, 소양: 0, 직무: 0 }; e.doc = true; if (p.docNeed == null) p.docNeed = true; } }); });
 fillTownSelects();
 renderList();
 loadWeather();
