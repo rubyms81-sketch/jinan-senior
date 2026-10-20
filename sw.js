@@ -1,5 +1,5 @@
 // 현장점검 앱: 인터넷이 없어도 열리도록 파일을 휴대폰에 저장해 둡니다.
-const CACHE = 'hyunjang-v171';
+const CACHE = 'hyunjang-v172';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'];
 self.addEventListener('install', e => {
