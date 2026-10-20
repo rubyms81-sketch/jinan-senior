@@ -527,7 +527,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-9</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-10</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -3234,11 +3234,12 @@ async function photoJpeg(file){   // 사진을 줄여서 JPEG로 (칸에 꽉 차
 }
 function exportDiaryHwpx(){
   const date = diaryDate(), y = date.slice(0,4), m = Number(date.slice(5,7)), d = Number(date.slice(8,10));
-  let H = hwpxRows(date, false), filled = false, edit = false, roll = 0;   // 처음엔 점검한 곳만, "채우기"로 나머지 칸 채움
+  let H = hwpxRows(date, false), filled = false, edit = false, roll = 0;
+  let staffTxt = H.staff.join(', '), areaTxt = H.towns.join(', ');   // 맨 위 출장자·활동지역 (고칠 수 있음)   // 처음엔 점검한 곳만, "채우기"로 나머지 칸 채움
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📄 ${m}월 ${d}일 모니터링 일지</div>
-    <div style="font-size:.88rem;margin-bottom:6px;">👥 ${esc(H.staff.join(', '))} · 📍 ${esc(H.towns.join(', '))}</div>
+    <div id="hx-top" style="font-size:.88rem;margin-bottom:6px;"></div>
     <div id="hx-rows"></div>
     <div class="grid-2" style="margin:6px 0;"><button type="button" class="warning" id="hx-fill">🎲 채우기</button><button type="button" class="secondary" id="hx-edit">✏️ 내용 고치기</button></div>
     <label style="margin-top:8px;">📷 활동 사진 (3장까지)</label>
@@ -3247,6 +3248,11 @@ function exportDiaryHwpx(){
   document.body.appendChild(back);
   const drawRows = () => {
     const n = H.rows.filter(r => !r.fill).length;
+    back.querySelector('#hx-top').innerHTML = edit
+      ? `<div class="grid-2"><div><label style="margin:0;">👥 출장자</label><input type="text" id="hx-staff" value="${esc(staffTxt)}" style="margin:2px 0 4px;padding:6px;"></div><div><label style="margin:0;">📍 활동지역</label><input type="text" id="hx-area" value="${esc(areaTxt)}" style="margin:2px 0 4px;padding:6px;"></div></div>`
+      : `👥 ${esc(staffTxt)} · 📍 ${esc(areaTxt)}`;
+    back.querySelector('#hx-staff')?.addEventListener('input', e => { staffTxt = e.target.value; });
+    back.querySelector('#hx-area')?.addEventListener('input', e => { areaTxt = e.target.value; });
     back.querySelector('#hx-rows').innerHTML = (n || filled ? '' : `<div class="pen-none" style="margin:4px 0;">${m}/${d}에는 점검한 경로당이 없어요.</div>`)
       + H.rows.map((r, i) => edit
         ? `<div style="padding:4px 6px;margin:3px 0;border-radius:6px;background:${r.fill ? '#f7fafc' : '#f0fff4'};"><input type="text" data-l="${i}" value="${esc(r.label)}" placeholder="${i === 8 ? '게이트볼' : '경로당'}" style="margin:0 0 3px;padding:6px;font-weight:bold;"><textarea data-t="${i}" rows="2" style="margin:0;padding:6px;font-size:.88rem;">${esc(r.text)}</textarea></div>`
@@ -3274,15 +3280,15 @@ function exportDiaryHwpx(){
       const bin = Uint8Array.from(atob(HWPX_TPL), c => c.charCodeAt(0)), zip = await JSZip.loadAsync(bin);
       let sec = await zip.file('Contents/section0.xml').async('string');
       const put = (k, v) => { sec = sec.replace(`{${k}}`, xmlEsc(v)); };
-      put('STAFF', H.staff.join(', ')); put('AREA', H.towns.join(', ')); put('DATE', `${y} .  ${m} .  ${d} .`);
+      put('STAFF', staffTxt.trim()); put('AREA', areaTxt.trim()); put('DATE', `${y} .  ${m} .  ${d} .`);
       H.rows.forEach((r, i) => { put('S' + (i + 1), r.label); put('C' + (i + 1), r.text); });
       zip.file('Contents/section0.xml', sec);
-      zip.file('Preview/PrvText.txt', `<<${y}년 노인일자리사업 모니터링 일지>>\r\n<${H.staff.join(', ')}><${H.towns.join(', ')}><${y}.${m}.${d}>\r\n`);
+      zip.file('Preview/PrvText.txt', `<<${y}년 노인일자리사업 모니터링 일지>>\r\n<${staffTxt}><${areaTxt}><${y}.${m}.${d}>\r\n`);
       for (let i = 0; i < 3; i++) if (photos[i]) zip.file(`BinData/image${i + 1}.jpg`, await photoJpeg(photos[i]));
       zip.file('mimetype', 'application/hwp+zip', { compression: 'STORE' });
       const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/hwp+zip', compression: 'DEFLATE' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `모니터링일지_${date}.hwpx`; document.body.appendChild(a); a.click(); a.remove();
-      logEvent('활동일지 내려받기', null, `${date} 한글 파일 · ${H.towns.join(', ')} · 활동지 ${H.rows.filter(r => !r.fill).length}곳 + 채움 ${H.rows.filter(r => r.fill && r.label).length}곳 · 사진 ${photos.filter(Boolean).length}장`, date);
+      logEvent('활동일지 내려받기', null, `${date} 한글 파일 · ${areaTxt} · 👥 ${staffTxt} · 활동지 ${H.rows.filter(r => !r.fill).length}곳 + 채움 ${H.rows.filter(r => r.fill && r.label).length}곳 · 사진 ${photos.filter(Boolean).length}장`, date);
       back.remove();
     } catch(e) { btn.disabled = false; btn.textContent = '📥 내려받기'; notify('한글 파일을 만들지 못했어요.\n인터넷 연결을 확인한 뒤 다시 해 주세요.'); }
   };
