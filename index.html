@@ -515,7 +515,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-2</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-3</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -4797,7 +4797,9 @@ async function loadWeather(){
   // 시험용: 주소 뒤에 ?weather=rain 또는 ?weather=snow
   const force = new URLSearchParams(location.search).get('weather');
   if (force) { scWind = force === 'wind'; return showWeather(force === 'wind' ? 'sun' : force, null); }
-  try { const c = JSON.parse(load('jinan_weather')); if (c) { scWind = !!c.windy; showWeather(c.kind, c.temp); } } catch(e) {}
+  let had = false;
+  try { const c = JSON.parse(load('jinan_weather')); if (c) { scWind = !!c.windy; showWeather(c.kind, c.temp); had = true; } } catch(e) {}
+  if (!had) showWeather('', null);   // 날씨를 아직 못 받아도 그림(마이산·하늘)은 바로 보이게
   try {
     const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${WX_LAT}&longitude=${WX_LON}&current=temperature_2m,weather_code,wind_speed_10m&timezone=Asia%2FSeoul`);
     const j = await r.json();
