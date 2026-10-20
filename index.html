@@ -527,7 +527,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-10</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-11</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -3746,7 +3746,7 @@ function leaderImport(input){
     const nNew = rows.filter(L => !findM(L)).length, nUpd = rows.length - nNew;
     const mine = rows.filter(L => myTowns.includes(L.town) && L.sites.length);
     const byTown = TOWNS.map(t => [t, rows.filter(L => L.town === t)]).filter(([, v]) => v.length).map(([t, v]) => `${t} ${v.length}명: ${v.map(L => L.name).join(', ')}`).join('\n');
-    if (!await ask(`👤 팀장(시니어 안전 모니터링) ${rows.length}명을 등록할까요?\n새로 ${nNew}명 · 고침 ${nUpd}명\n\n${byTown}${mine.length && mine.length <= ZONE_MAX ? `\n\n내 담당 면 팀장 ${mine.length}명은 구역도 정리해요.` : ''}`)) return;
+    if (!await ask(`👤 팀장(시니어 안전 모니터링) ${rows.length}명을 등록할까요?\n새로 ${nNew}명 · 고침 ${nUpd}명\n\n${byTown}${mine.length && mine.length <= ZONE_MAX ? `\n\n구역을 팀장 ${mine.length}명에 맞춰 ${mine.length}구역으로 새로 나눠요.\n(${mine.map(L => `${L.name} ${L.sites.length}곳`).join(', ')})` : ''}`)) return;
     rows.forEach(L => { let m = findM(L);
       const v = { town: L.town, name: L.name, phone: L.phone || m?.phone || '', addr: L.addr || m?.addr || '', car: L.car || m?.car || '', carNo: L.carNo || m?.carNo || '', sites: L.sites.length ? L.sites : (m?.sites || []) };
       if (!m) { monitors.push({ id: Date.now() + Math.random(), ...v }); logEvent('팀장 등록', null, `${L.town} ${L.name}${L.phone ? ' ' + L.phone : ''}${L.sites.length ? ' · 경로당 ' + L.sites.map(x => x.senior).join(', ') : ''}`); }
@@ -3755,19 +3755,26 @@ function leaderImport(input){
         Object.assign(m, v); if (ch.length) logEvent('팀장 정보 수정', null, `${L.town} ${L.name}: ${ch.join('·')} (엑셀)`); } });
     saveMonitors();
     // 2) 내 담당 면 팀장은 구역(최대 6개)도 정리
-    if (mine.length > ZONE_MAX) { renderList(); return notify(`👤 팀장 ${rows.length}명을 등록했어요.\n내 담당 면 팀장이 ${mine.length}명이라 구역은 그대로 두었어요.`); }
-    mine.forEach(L => {
-      let z = zones.find(o => o.leaderName === L.name || o.name === L.name || o.name === L.zname) || zones.find(o => !o.sites.length && !o.leaderId && !o.leaderName);
-      if (!z) { if (zones.length >= ZONE_MAX) return; z = { id: Math.max(0, ...zones.map(o => o.id)) + 1, name: '', sites: [] }; zones.push(z); }
-      // 다른 구역에 있던 경로당은 이 구역으로 옮김
-      zones.forEach(o => { if (o !== z) o.sites = o.sites.filter(x => !L.sites.some(y => y.town === x.town && y.senior === x.senior)); });
-      z.name = L.zname || L.name; z.leaderName = L.name; if (L.phone) z.phone = L.phone; z.sites = L.sites;
-      if (L.addr) z.leaderAddr = L.addr; if (L.car) z.car = L.car; if (L.carNo) z.carNo = L.carNo;
-      const dg = x => String(x||'').replace(/[^0-9]/g,'');
-      const P = participants.find(q => q.name === L.name && (!L.phone || dg(q.phone) === dg(L.phone))) || participants.find(q => q.name === L.name && q.town === L.town);
-      if (P) z.leaderId = P.id; else delete z.leaderId;
-      logEvent('팀장 명단 등록', P || null, `${z.name} 구역 · 팀장 ${L.name}${L.phone ? ' ' + L.phone : ''} · 경로당 ${L.sites.map(x => x.senior).join(', ')}`);
-    });
+    if (mine.length > ZONE_MAX) { saveZones(); renderList(); return notify(`👤 팀장 ${rows.length}명을 등록했어요.\n내 담당 면 팀장이 ${mine.length}명이라(구역은 ${ZONE_MAX}개까지) 구역은 그대로 두었어요.`); }
+    // 팀장 수만큼 구역을 새로 맞춤 (예: 동향 2 + 상전 2 = 4구역, 진안읍 5명 = 5구역). 같은 팀장 구역은 번호·정보를 이어 씀
+    if (mine.length) {
+      const old = zones, used = new Set();
+      zones = mine.map((L, i) => {
+        let z = old.find(o => !used.has(o) && (o.leaderName === L.name || o.name === L.name || (L.zname && o.name === L.zname)));
+        if (!z) z = { id: 0, name: '', sites: [] };
+        used.add(z);
+        z = { ...z, name: L.zname || L.name, leaderName: L.name, sites: L.sites.map(x => ({ ...x })) };
+        if (L.phone) z.phone = L.phone; if (L.addr) z.leaderAddr = L.addr; if (L.car) z.car = L.car; if (L.carNo) z.carNo = L.carNo;
+        const dg = x => String(x||'').replace(/[^0-9]/g,'');
+        const P = participants.find(q => q.name === L.name && (!L.phone || dg(q.phone) === dg(L.phone))) || participants.find(q => q.name === L.name && q.town === L.town);
+        if (P) z.leaderId = P.id; else delete z.leaderId;
+        logEvent('팀장 명단 등록', P || null, `${z.name} 구역 · 팀장 ${L.name}${L.phone ? ' ' + L.phone : ''} · 경로당 ${L.sites.map(x => x.senior).join(', ')}`);
+        return z;
+      });
+      let nid = Math.max(0, ...old.map(o => o.id)) + 1;
+      zones.forEach(z => { if (!z.id || zones.filter(o => o.id === z.id).length > 1) z.id = nid++; });
+      logEvent('구역 정리', null, `팀장 엑셀로 ${zones.length}구역: ${zones.map(z => `${z.name} ${z.sites.length}곳`).join(', ')}`);
+    }
     saveZones(); renderList(); notify(`👤 팀장 ${rows.length}명을 등록했어요.${mine.length ? `\n구역 ${mine.length}개를 정리했어요.` : ''}`);
   };
   rd.readAsArrayBuffer(file);
