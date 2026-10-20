@@ -568,7 +568,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-23</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.20-24</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -3010,13 +3010,16 @@ function showClose(kind){
   const town = (document.getElementById('filter-town').value || '전체');
   const KIND = { leave:{title:'벌점', test:l => logPts(l) > 0},
                  vest:{title:'조끼 미착용', test:l => l.vest==='미착용'},
-                 badge:{title:'명찰 미착용', test:l => l.badge==='미착용'} }[kind];
+                 badge:{title:'명찰 미착용', test:l => l.badge==='미착용'},
+                 warn:{title:'경고', test:l => !logPts(l) && issueText(l).length > 0},
+                 fix:{title:'🔧 교체 필요'} }[kind];
+  const wTxt = l => issueText(l).map(x => x.replace(/\(경고\)$/, '').replace('잠깐 ', '').replace('근무지 ', '')).join('·');
   const list = participants.filter(p => town==='전체' ? visibleTowns().includes(p.town) : p.town===town)
-    .map(p => ({p, ls: mLogs(p).filter(KIND.test).sort((a,b)=>a.date.localeCompare(b.date))})).filter(x => x.ls.length)
+    .map(p => ({p, ls: kind === 'fix' ? fixList(p) : mLogs(p).filter(KIND.test).sort((a,b)=>a.date.localeCompare(b.date))})).filter(x => x.ls.length)
     .sort((a,b) => a.p.town.localeCompare(b.p.town) || seniorRank(seniorOf(a.p))-seniorRank(seniorOf(b.p)) || seniorOf(a.p).localeCompare(seniorOf(b.p)) || a.p.name.localeCompare(b.p.name));
   const ptOf = ls => kind==='leave' ? ls.reduce((n,l) => n + logPts(l), 0) : ls.length;
   const total = list.reduce((n,x) => n + ptOf(x.ls), 0);
-  const amount = n => kind==='leave' ? `-${n}점` : `${n}회`;
+  const amount = n => kind==='leave' ? `-${n}점` : kind === 'vest' || kind === 'badge' ? `${n}회` : `${n}건`;
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">${town==='전체'?'전체':esc(town)} · ${curMonth}월 ${KIND.title} <span style="color:var(--danger)">${amount(total)}</span></div>
@@ -3024,7 +3027,7 @@ function showClose(kind){
     ${list.map(({p, ls}) => `<button class="pen-row ${kind==='leave'?'':'warn'}" data-id="${p.id}">
         <span class="muted">🏠 ${town==='전체'?esc(p.town)+' · ':''}${esc(seniorOf(p))}</span><br>
         <b>${nmH(p)}</b> <b style="color:${kind==='leave'?'var(--danger)':'var(--warning)'}">${amount(ptOf(ls))}</b>
-        <span class="muted">(${ls.map(l => md(l.date) + (kind==='leave' ? ' ' + shortItems(l) : '')).join(', ')})</span></button>`).join('')}
+        <span class="muted">(${ls.map(l => md(l.date) + (kind==='leave' ? ' ' + shortItems(l) : kind === 'warn' ? ' ' + wTxt(l) : kind === 'fix' ? ' ' + esc(l.n) : '')).join(', ')})</span></button>`).join('')}
     <button class="secondary full" id="close-close">닫기</button></div>`;
   document.body.appendChild(back);
   back.querySelector('#close-close').onclick = () => back.remove();
@@ -3652,10 +3655,10 @@ function renderList(){
   const t = today();
   const all = town==='전체';
   const inTown = all ? participants.filter(p => visibleTowns().includes(p.town)) : participants.filter(p => p.town===town);
-  { let pen=0, vest=0, badge=0;
-    inTown.forEach(p => { const m = mstats(p); pen += m.pts; vest += m.vest; badge += m.badge; });
+  { let pen=0, warn=0, fix=0;   // 벌점(점수 합) · 경고(감점 없는 모든 항목) · 🔧 교체 필요
+    inTown.forEach(p => { const m = mstats(p); pen += m.pts; warn += m.wlogs.length; fix += fixList(p).length; });
     document.getElementById('close-sum').innerHTML =
-      `<button onclick="showClose('leave')"><b style="color:var(--danger)">${pen?'-'+pen:0}점</b>벌점 ›</button><button onclick="showClose('vest')"><b style="color:var(--warning)">${vest}회</b>조끼 미착용(${ptWord('조끼')}) ›</button><button onclick="showClose('badge')"><b style="color:var(--warning)">${badge}회</b>명찰 미착용(${ptWord('명찰')}) ›</button>`; }
+      `<button onclick="showClose('leave')"><b style="color:var(--danger)">${pen?'-'+pen:0}점</b>벌점 ›</button><button onclick="showClose('warn')"><b style="color:#b7791f">${warn}건</b>경고 ›</button><button onclick="showClose('fix')"><b style="color:#c05621">${fix}건</b>🔧 교체 필요 ›</button>`; }
   document.getElementById('export-desc').innerHTML = (all ? (showOthers ? '<b>전체 읍·면</b> 명단을' : `<b>내 담당(${myTowns.join('·')})</b> 명단을`) : `<b>${esc(town)}</b> 명단을`) +
     ` <b>${curMonth}월</b> 점검 내용을 내려받습니다.<br>엑셀 파일 안에 <b>마감 요약</b>(활동일·출장, 이탈·조끼·명찰 횟수), <b>참여자 현황</b>(어르신별 활동 날짜 · <span style="background:#FFC7CE">감점</span> <span style="background:#FFEB9C">근무일 적음</span> <span style="background:#E2EFDA">경고</span> 색 표시), <b>신규 인원</b>, <b>${curMonth}월 점검 기록</b>, <b>근무일 변경</b>, <b>보충 근무·입원</b>, <b>특이사항</b>, <b>활동일지</b>, <b>경로당 위치</b>, <b>${exYear()}년 참여 제외</b>, <b>변경 이력</b>(그달 바뀐 내용 전부)이 들어 있습니다.`;
 
