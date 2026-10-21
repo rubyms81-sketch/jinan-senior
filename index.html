@@ -400,6 +400,7 @@
       <div id="link-list" style="margin-top:6px;"></div>
     </details>
   </div>
+  <div id="photo-alert"></div>
   <div class="card hidden" id="rpt-card" style="padding:10px 14px;">
     <button type="button" class="small" onclick="openReport()" style="width:auto;margin:0 0 4px;">📣 인원 변동 보고</button>
     <div id="rpt-list"></div>
@@ -582,6 +583,7 @@
   <div class="card" id="bk-card" data-mv="bk">
     <details class="chg-box" id="bk-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3>💾 백업</h3><span class="chg-arrow"></span></summary>
+      <div id="stor-use" onclick="drawStorage()" style="font-size:.85rem;color:#4a5568;margin-top:8px;cursor:pointer;">📊 저장 공간 확인 (누르세요)</div>
       <div style="margin-top:8px;">
           <div style="margin-top:6px;"></div>
           <div class="muted" id="bk-info" style="font-size:.85rem;margin-bottom:6px;"></div>
@@ -595,7 +597,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-25</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-28</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2416,7 +2418,8 @@ function histBody(p, mk){
     + (extra.length || chg.length ? sec('🔄 날짜 변경·특이 사항', [...extra, ...chg.map(c => `🔄 ${dd(c.from)} → ${dd(c.to)}${c.reason ? ` (${esc(c.reason)})` : ''}`)].join('<br>')) : '')
     + sec('📋 점검 기록', logs.length ? logs.map(l => `<div class="log ${logPts(l) ? 'warn' : ''}" style="margin:4px 0;">${dd(l.date)} · ${issueText(l).length ? issueText(l).map(esc).join(', ') : '이상 없음'}${l.memo ? `<br><span class="muted">📝 ${esc(l.memo)}</span>` : ''}${l.time ? ` <span class="muted">· ${esc(l.time)}</span>` : ''}</div>`).join('') : none)
     + sec('🎓 교육', edus.length ? edus.map(e => `${dd(e.date)} · ${esc(e.name)}${eduAbsent(p, e.date) ? ' <b style="color:var(--danger)">불참</b>' : ' · 참석'}`).join('<br>') : none)
-    + (p.docNeed ? sec('📄 비대면 교육 서류', `${p.docOk ? '확인 완료' : '<b style="color:var(--danger)">미확인</b>'} <span class="muted">(지금 상태)</span>`) : '')
+    + (p.docNeed ? sec('📄 비대면 교육 서류', `${p.docOk ? '확인 완료' : '<b style="color:var(--danger)">미확인</b>'} <span class="muted">(지금 상태)</span>`
+      + (p.docOk ? (p.docPhoto ? ` · 📷 사진 있음 <button type="button" class="small secondary" style="width:auto;margin:0 0 0 4px;" onclick="docPhotoView(${p.id})">보기</button>` : ` · <b style="color:#c05621;">📷 사진 없음</b> <button type="button" class="small" style="width:auto;margin:0 0 0 4px;" onclick="docPhotoAdd(${p.id})">사진 넣기</button>`) : '')) : '')
     + sec('📒 변경 이력', evs.length ? evs.map(e => `${dd(e.date)} · ${esc(e.type)}${e.detail ? ` — ${esc(e.detail)}` : ''}`).join('<br>') : none);
   return h;
 }
@@ -3426,8 +3429,91 @@ function vEduDlg(p, date, cur){
 async function docConfirm(id, undo){
   const p = participants.find(x => x.id === id); if (!p) return;
   if (undo) { if (!await ask(`${p.name} 어르신 서류 확인을 취소할까요?`)) return; delete p.docOk; logEvent('서류 확인 취소', p, '비대면 교육 서류(조끼·서명) 확인 취소'); }
-  else { if (!await ask(`${p.name} 어르신 비대면 교육 서류(조끼·서명)를 확인했나요?`)) return; p.docOk = today(); logEvent('서류 확인', p, '비대면 교육 서류(조끼·서명) 확인 · 교육 이수'); }
+  else {
+    if (!await ask(`${p.name} 어르신 비대면 교육 서류(조끼·서명)를 확인했나요?`)) return;
+    const c = await docPhotoAsk(p);
+    if (c === 'x') return;
+    if (c === 'photo') {   // 사진을 고르지 않으면 확인하지 않음
+      const f = await pickImage(); if (!f) return;
+      try { await saveDocPhoto(p, f); } catch(e) { return notify('사진을 저장하지 못했어요. 다시 해 주세요.'); }
+    } else { p.docNoPhoto = true; }
+    p.docOk = today();
+    logEvent('서류 확인', p, p.docPhoto ? '비대면 교육 서류(조끼·서명) 확인 · 사진 있음 · 교육 이수' : '비대면 교육 서류(조끼·서명) 확인 · 사진 없음 · 교육 이수');
+  }
   saveData(false); renderList(); if (current()?.id === p.id) renderModal();
+}
+// 📷 서류 사진 (조끼·서명): 이 휴대폰의 사진 저장 공간에만 (저장소·백업 파일에는 넣지 않음)
+const docPhotoKey = p => 'doc' + p.id;
+function docPhotoAsk(p){
+  return new Promise(res => {
+    const back = document.createElement('div'); back.className = 'dlg-back';
+    back.innerHTML = `<div class="dlg" style="max-width:360px;"><div class="dlg-msg" style="white-space:pre-line;">${esc(p.name)} 어르신 서류 사진을 넣을까요?\n사진 없이 확인하면 이름 옆에 "📷 사진 없음"이 남아요.</div>
+      <button type="button" class="full" data-v="photo" style="margin-bottom:6px;">📷 사진 찍기 · 고르기</button>
+      <button type="button" class="secondary full" data-v="none" style="margin-bottom:6px;">사진 없이 확인</button>
+      <button type="button" class="secondary full" data-v="x">취소</button></div>`;
+    back.querySelectorAll('button').forEach(b => b.onclick = () => { back.remove(); res(b.dataset.v); });
+    document.body.appendChild(back);
+  });
+}
+function pickImage(){
+  return new Promise(res => { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.onchange = () => res(inp.files[0] || null); inp.click(); });
+}
+function shrinkImage(file){   // 가로·세로 1000px 이하, JPEG로 줄여서 용량을 아낌
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => { const k = Math.min(1, 1000 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.75)); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('image')); };
+    img.src = url;
+  });
+}
+async function saveDocPhoto(p, file){
+  const data = await shrinkImage(file);
+  await photoPut(docPhotoKey(p), data);
+  delete p.docNoPhoto; p.docPhoto = today();
+  logEvent('서류 사진 넣기', p, '비대면 교육 서류(조끼·서명) 사진 넣음', today());
+  saveData(false);
+}
+async function docPhotoAdd(id){
+  const p = participants.find(x => x.id === id); if (!p) return;
+  const f = await pickImage(); if (!f) return;
+  try { await saveDocPhoto(p, f); } catch(e) { return notify('사진을 저장하지 못했어요. 다시 해 주세요.'); }
+  renderList(); if (current()?.id === p.id) renderModal();
+}
+function docPhotoView(id){
+  const p = participants.find(x => x.id === id); if (!p) return;
+  const url = photos[docPhotoKey(p)]; if (!url) return notify('사진을 찾지 못했어요.');
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg" style="max-width:420px;"><div style="font-weight:bold;margin-bottom:6px;">📷 ${esc(p.name)} 어르신 서류 사진</div>
+    <img src="${url}" style="width:100%;border-radius:8px;margin-bottom:8px;">
+    <div class="grid-2"><button class="secondary" data-v="del">사진 지우기</button><button data-v="chg">사진 바꾸기</button></div>
+    <button class="secondary full" data-v="x" style="margin-top:6px;">닫기</button></div>`;
+  back.querySelectorAll('button').forEach(b => b.onclick = async () => {
+    const v = b.dataset.v; back.remove();
+    if (v === 'chg') return docPhotoAdd(id);
+    if (v === 'del') {
+      if (!await ask(`${p.name} 어르신 서류 사진을 지울까요?`)) return;
+      await photoPut(docPhotoKey(p), null); delete p.docPhoto; p.docNoPhoto = true;
+      logEvent('서류 사진 지움', p, '비대면 교육 서류(조끼·서명) 사진 지움 · 사진 없음', today()); saveData(false);
+      renderList(); if (current()?.id === p.id) renderModal();
+    }
+  });
+  document.body.appendChild(back);
+}
+// 📷 사진 없는 분 알림 (메인, 📣 칸 위)
+async function drawStorage(){
+  const el = document.getElementById('stor-use'); if (!el) return;
+  let ls = 0; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); ls += (k.length + (localStorage.getItem(k) || '').length) * 2; }
+  let est = '';
+  try { const e = await navigator.storage.estimate(); est = `사진 포함 전체 ${(e.usage / 1048576).toFixed(1)}MB (브라우저 한도 약 ${(e.quota / 1048576).toFixed(0)}MB)`; } catch(err) {}
+  el.textContent = `📊 글자 자료(명단·기록) 약 ${(ls / 1048576).toFixed(2)}MB${est ? ' · ' + est : ''} · 누르면 다시 확인`;
+}
+function renderPhotoAlert(){
+  const box = document.getElementById('photo-alert'); if (!box) return;
+  const ps = participants.filter(q => q.docOk && q.docNoPhoto && !q.docPhoto && !q.quit && !q.linking);
+  box.innerHTML = ps.length ? `<div class="notice" style="background:#fffaf0;border-color:#f6ad55;"><b style="color:#c05621;">📷 서류 사진 없는 분 ${ps.length}명</b> <span class="muted" style="font-size:.85rem;">이름을 누르면 사진을 넣을 수 있어요</span>
+    <div style="margin-top:4px;">${ps.map(q => `<button type="button" class="small secondary" style="width:auto;margin:2px 4px 2px 0;" onclick="openModal(${q.id})">${esc(q.name)}</button>`).join('')}</div></div>` : '';
 }
 // 줄 색·크기를 넣을 수 있는 확인 창 (글은 HTML로 넣음, 저장 값 없음)
 function askHtml(html){
@@ -3545,6 +3631,8 @@ function welcomeSms(p){
     <div id="wl-days" class="chips" style="margin-bottom:8px;"></div>
     <label>문자 글</label>
     <textarea id="wl-text" rows="12" style="font-size:.92rem;"></textarea>
+    <label style="margin-top:8px;">📱 보낼 글 미리 보기</label>
+    <div id="wl-prev" style="white-space:pre-wrap;background:#f7fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;font-size:.9rem;line-height:1.5;max-height:30vh;overflow:auto;margin-bottom:8px;"></div>
     <div style="display:flex;gap:6px;margin:-4px 0 8px;"><button type="button" class="small secondary" id="wl-reset" style="width:auto;margin:0;">↺ 처음 글로</button><span class="muted" id="wl-saved" style="font-size:.8rem;align-self:center;"></span></div>
     <div class="grid-2"><button class="secondary" id="wl-cancel">나중에</button><button id="wl-go">📩 문자 보내기</button></div></div>`;
   document.body.appendChild(back);
@@ -3553,17 +3641,21 @@ function welcomeSms(p){
   $('#wl-saved').textContent = smsTpl.welcome ? '✔ 저장한 글' : '';
   const days = () => { const mk = start.slice(0,7); return personDays(p, mk, true).filter(d => d >= start); };
   const drawDays = () => { $('#wl-days').innerHTML = days().map(d => `<span class="chip">${Number(d.slice(5,7))}/${dd(d)}</span>`).join('') || '<span class="muted">이 달 남은 활동일이 없어요.</span>'; };
-  drawDays();
-  $('#wl-start').onchange = () => { start = $('#wl-start').value || today(); drawDays(); };
+  const fillWelcome = () => { const tpl = $('#wl-text').value, ds = days(), m = Number(start.slice(5,7)), L = leaderOf(p);
+    return tpl.replace(/\{이름\}/g, p.name).replace(/\{월\}/g, m).replace(/\{일수\}/g, ds.length)
+      .replace(/\{활동일\}/g, ds.length ? `${m}월 ${dayList(ds)}` : '(담당자가 따로 알려 드립니다)')
+      .replace(/\{팀장\}/g, L ? `\n※ 팀장님: ${L.name} (${fmtPhone(L.num)})\n` : ''); };
+  const drawPrev = () => { $('#wl-prev').textContent = fillWelcome(); };
+  $('#wl-text').oninput = drawPrev;
+  drawDays(); drawPrev();
+  $('#wl-start').onchange = () => { start = $('#wl-start').value || today(); drawDays(); drawPrev(); };
   $('#wl-reset').onclick = () => { $('#wl-text').value = withStartNotice(WELCOME_DEF); };
   $('#wl-cancel').onclick = () => back.remove();
   $('#wl-go').onclick = () => {
-    const tpl = $('#wl-text').value, ds = days(), m = Number(start.slice(5,7)), L = leaderOf(p);
+    const tpl = $('#wl-text').value, ds = days(), m = Number(start.slice(5,7));
     if (tpl !== (smsTpl.welcome || WELCOME_DEF)) { smsTpl.welcome = tpl; store('jinan_tpl', JSON.stringify(smsTpl)); logEvent('환영 문자 글 저장', null, '다음에도 이 글로 보냄'); }
     if (start !== p.startDay) { p.startDay = start; p.start = start.slice(0,7); logEvent('근무 시작일', p, `${m}월 ${dd(start)}부터`, start); saveData(false); renderList(); }
-    const text = tpl.replace(/\{이름\}/g, p.name).replace(/\{월\}/g, m).replace(/\{일수\}/g, ds.length)
-      .replace(/\{활동일\}/g, ds.length ? `${m}월 ${dayList(ds)}` : '(담당자가 따로 알려 드립니다)')
-      .replace(/\{팀장\}/g, L ? `\n※ 팀장님: ${L.name} (${fmtPhone(L.num)})\n` : '');
+    const text = fillWelcome();
     back.remove();
     smsBox({ title: '🎉 환영 문자', people: [p], text, logType: '환영 문자', logDetail: `${m}월 ${dd(start)}부터 · 활동일 ${ds.length}일` });
   };
@@ -4694,19 +4786,25 @@ function rptInit(){
   store('jinan_rpt_init', '1');
 }
 const rptPerson = e => participants.find(x => x.name === e.name && x.town === e.town && seniorOf(x) === e.senior);
-function rptLine(e){
-  const p = rptPerson(e), base = `${e.town} ${e.senior} ${e.name}${p?.phone ? ' ' + p.phone : ''}`;
-  if (e.type === '신규 등록') return `${base} · 신규 등록 (${dd(e.date)})${p?.startDay ? ` · ${dd(p.startDay)}부터 근무` : ''}`;
-  return `${base} · ${dd(e.date)} 포기${p?.quitWhy ? ` (${p.quitWhy})` : ''}`;
-}
+// 포기 사유 나누기 (참여자 변경현황 양식과 같게): 타사업 / 건강 / 기타
+const quitKindOf = w => /타사업|다른 사업/.test(w) ? '타사업' : /건강|병원|입원|치료/.test(w) ? '건강' : '기타';
+// 보고 문구 (참여자 변경현황 양식대로): 동향 : 개별관리 / 박기천(전화번호) 참여1명(추가)_신규_시작일:21일.
+// 칸 위치를 맞추려고 글자 폭만큼 빈칸(한글 자리 빈칸 '\u3000')을 넣어 같은 열에 오도록 맞춤
+const wUnits = s => [...String(s)].reduce((n, c) => n + (c.charCodeAt(0) > 255 ? 2 : 1), 0);
+const padU = (s, width) => { let out = String(s), n = width - wUnits(out); while (n >= 2) { out += '\u3000'; n -= 2; } if (n === 1) out += ' '; return out; };
 function reportText(evs){
-  const L = [`[진안군 노인회] ${Number(today().slice(5,7))}월 인원 변동 보고`, ''];
+  const L = [`${Number(today().slice(5,7))}월 노인일자리 참여자 변경현황보고.`];
   if (!evs.length) L.push('보고할 변동이 없습니다.');
-  const news = evs.filter(e => e.type === '신규 등록'), quits = evs.filter(e => e.type !== '신규 등록');
-  if (news.length) { L.push('▶ 신규'); news.forEach(e => L.push('· ' + rptLine(e))); }
-  if (quits.length) { L.push('▶ 중도포기'); quits.forEach(e => L.push('· ' + rptLine(e))); }
-  const sites = [...new Map(evs.map(e => [e.town + '|' + e.senior, { town: e.town, senior: e.senior }])).values()];
-  if (sites.length) { L.push('', '▶ 현재 활동인원'); sites.forEach(x => L.push(`· ${x.town} ${x.senior} ${siteMembers(x.town, x.senior).filter(counted).length}명`)); }
+  const rows = evs.map(e => {
+    const p = rptPerson(e) || {}, isNew = e.type === '신규 등록';
+    return { town: String(e.town || '').replace(/[면읍]$/, ''), senior: e.senior, name: e.name,
+      phone: p.phone ? `(${p.phone})` : '', cnt: siteMembers(e.town, e.senior).filter(counted).length,
+      type: isNew ? '추가' : '중도포기', kind: isNew ? '신규' : quitKindOf(String(p.quitWhy || e.detail || '')),
+      label: isNew ? '시작일' : '포기일', date: dd(isNew ? (p.startDay || e.date) : (p.quitDay || e.date)).split('(')[0] };
+  });
+  const mx = k => Math.max(0, ...rows.map(r => wUnits(r[k])));
+  const W = { town: mx('town'), senior: mx('senior'), name: mx('name'), phone: mx('phone'), type: mx('type'), kind: mx('kind') };
+  rows.forEach(r => L.push(`${padU(r.town, W.town)} : ${padU(r.senior, W.senior)} / ${padU(r.name, W.name)}${padU(r.phone, W.phone)} 참여${r.cnt}명(${padU(r.type, W.type)})_${padU(r.kind, W.kind)}_${r.label}:${r.date}.`));
   L.push('', '진안군 노인회 드림');
   return L.join('\n');
 }
@@ -4715,11 +4813,11 @@ function renderRpt(){
   const box = document.getElementById('rpt-list'); if (!box) return;
   const pend = rptPending();
   document.getElementById('rpt-card')?.classList.toggle('hidden', !pend.length);   // 보고할 사람이 생길 때만 보임
+  renderPhotoAlert();
   box.innerHTML = pend.map(e => `<button type="button" class="small" data-k="${esc(rptKey(e))}" onclick="openReport([this.dataset.k])" style="width:100%;margin:4px 0;text-align:left;background:${e.type === '신규 등록' ? '#2b6cb0' : '#c53030'};">${e.type === '신규 등록' ? '🆕' : '🚪'} ${esc(e.name)} · ${esc(e.town)} ${esc(e.senior)} · ${e.type === '신규 등록' ? '신규 보고' : '중도포기 보고'}</button>`).join('');
 }
 // 📄 참여자 변경현황 엑셀 (노인일자리 양식): 이번 달 신규·중도포기를 양식 칸에 맞춰 채움 (엑셀 일괄 등록은 제외)
-function exportChangeForm(){
-  if (typeof XLSX === 'undefined') return notify('엑셀 기능을 불러오지 못했어요. 인터넷에 연결한 뒤 다시 눌러 주세요.');
+function buildChangeForm(){
   const mk = monthKey(), shortDay = d => d ? `${Number(d.slice(8, 10))}일` : '';
   const evs = eventLog.filter(e => (e.date || '').startsWith(mk) && RPT_TYPES.includes(e.type) && !/엑셀 명단/.test(e.detail || ''))
     .sort((a, b) => a.at.localeCompare(b.at));
@@ -4744,7 +4842,27 @@ function exportChangeForm(){
     { s: { r: 1, c: 8 }, e: { r: 1, c: 10 } }, { s: { r: 1, c: 11 }, e: { r: 1, c: 14 } }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, `${curMonth}월 변경현황`);
-  XLSX.writeFile(wb, `참여자_변경현황_${YEAR}년${curMonth}월.xlsx`);
+  return { wb, evs, fname: `참여자_변경현황_${YEAR}년${curMonth}월.xlsx` };
+}
+const XL_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+function exportChangeForm(){
+  if (typeof XLSX === 'undefined') return notify('엑셀 기능을 불러오지 못했어요. 인터넷에 연결한 뒤 다시 눌러 주세요.');
+  const { wb, fname } = buildChangeForm();
+  XLSX.writeFile(wb, fname);
+}
+// 담당 직원에게 보내기: 휴대폰 공유 창으로 엑셀 파일을 넘김 (카카오톡 선택) — 보내면 그 변동들은 보고 완료
+async function sendChangeForm(){
+  if (typeof XLSX === 'undefined') return notify('엑셀 기능을 불러오지 못했어요. 인터넷에 연결한 뒤 다시 눌러 주세요.');
+  const { wb, evs, fname } = buildChangeForm();
+  const file = new File([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })], fname, { type: XL_TYPE });
+  const text = `[진안군 노인회] ${curMonth}월 노인일자리 참여자 변경현황 (엑셀 첨부)\n\n진안군 노인회 드림`;
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: fname, text }); rptMarkSeen(evs); renderRpt(); } catch(e) {}   // 취소하면 그대로 대기
+    return;
+  }
+  // 파일을 바로 보낼 수 없는 휴대폰: 받아서 카톡에 직접 첨부
+  exportChangeForm();
+  notify('이 휴대폰에서는 파일을 바로 보낼 수 없어요.\n받은 엑셀 파일을 카카오톡에서 첨부해 주세요.');
 }
 function openReport(onlyKeys){
   const pend = rptPending();
@@ -4761,6 +4879,7 @@ function openReport(onlyKeys){
     <textarea id="rp-text" rows="9" style="font-size:.92rem;"></textarea>
     <div class="grid-2"><button id="rp-sms">💬 문자 앱 열기</button><button id="rp-copy" class="warning">📋 문구 복사</button></div>
     <button class="full" id="rp-kakao" style="background:#FEE500;color:#3c1e1e;font-weight:bold;margin-top:6px;">🟡 카카오톡으로 보내기</button>
+    <button class="full" id="rp-xl-send" style="background:#FEE500;color:#3c1e1e;font-weight:bold;margin-top:6px;">📤 참여자 변경현황 엑셀 담당자에게 보내기 (카톡)</button>
     <button class="secondary full" id="rp-excel" style="margin-top:6px;">📄 참여자 변경현황 엑셀 받기 (이번 달)</button>
     <button class="secondary full" id="rp-close" style="margin-top:6px;">닫기</button></div>`;
   document.body.appendChild(bg);
@@ -4784,6 +4903,7 @@ function openReport(onlyKeys){
     await copyText(t); sent(); notify('문구를 복사했어요. 카카오톡에 붙여넣으세요.');
   };
   $('#rp-excel').onclick = () => exportChangeForm();
+  $('#rp-xl-send').onclick = () => sendChangeForm();
   $('#rp-close').onclick = () => { bg.remove(); renderRpt(); };
 }
 function openSmsApp(nums, body){
@@ -5961,7 +6081,7 @@ function exportExcel(){
 
   const kinds1 = list.map(p => monthKind(p, monthKey()));
   const sheet1 = list.map((p, i) => { const s = stats(p), m = mstats(p); return {
-    '표시':KIND_TXT[kinds1[i]] || '', '읍면':p.town, '경로당':p.senior, '우수 경로당':isBest(p.town, seniorOf(p)) ? '👑' : '', '구역':zoneOf(p)?.name || '', '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '성별':p.sex || '', '생일':bdayText(p.bday), '근무 시작':startTag(p) ? `${Number(p.start.slice(5))}월부터` : '', '신규 등록일':newUntil(p) ? p.regDay : '', '중도포기일':quitDayOf(p), '중도포기 사유':stats(p).dropped ? (p.quitWhy || stats(p).status) : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : p.linkDone ? `연계 끝 (${p.linkDone.day})` : '', '비대면 교육 서류':p.docNeed ? (p.docOk ? `확인 (${p.docOk})` : '미확인') : '', '교체 필요':fixList(p).map(x => `${x.n} (${x.date})`).join(', '), '교체 완료':(p.fixDone || []).map(x => `${x.n.replace(/\s*파손$/, '')} ${x.day}`).join(', '), '나이':p.age, '태어난 해':p.birth || '', '연락처':p.phone, '주소':p.address,
+    '표시':KIND_TXT[kinds1[i]] || '', '읍면':p.town, '경로당':p.senior, '우수 경로당':isBest(p.town, seniorOf(p)) ? '👑' : '', '구역':zoneOf(p)?.name || '', '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '성별':p.sex || '', '생일':bdayText(p.bday), '근무 시작':startTag(p) ? `${Number(p.start.slice(5))}월부터` : '', '신규 등록일':newUntil(p) ? p.regDay : '', '중도포기일':quitDayOf(p), '중도포기 사유':stats(p).dropped ? (p.quitWhy || stats(p).status) : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : p.linkDone ? `연계 끝 (${p.linkDone.day})` : '', '비대면 교육 서류':p.docNeed ? (p.docOk ? `확인 (${p.docOk})` : '미확인') : '', '서류 사진':p.docNeed && p.docOk ? (p.docPhoto ? `있음 (${p.docPhoto})` : '없음') : '', '교체 필요':fixList(p).map(x => `${x.n} (${x.date})`).join(', '), '교체 완료':(p.fixDone || []).map(x => `${x.n.replace(/\s*파손$/, '')} ${x.day}`).join(', '), '나이':p.age, '태어난 해':p.birth || '', '연락처':p.phone, '주소':p.address,
     [`${curMonth}월 점검 횟수`]:mLogs(p).length, [`${curMonth}월 감점`]:-m.pts, [`${curMonth}월 자리 비움`]:m.aways.length, [`${curMonth}월 일당 미지급 일수`]:m.unpaid,
     [`${curMonth}월 조끼 미착용`]:m.vest, [`${curMonth}월 명찰 미착용`]:m.badge, '누적 이탈 횟수':s.leaves, '누적 감점':s.penalty, '상태':s.status, '마지막 점검일':s.last,
     [`${curMonth}월 활동 날짜`]: personDays(p, monthKey()).map(d => Number(d.slice(8,10))).join(', '),
@@ -6037,7 +6157,7 @@ function exportExcel(){
   XLSX.utils.book_append_sheet(wb, ws2, '점검 기록');
   // 그달 신규 인원
   const ncRows = nc.map(p => ({ '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '나이':p.age, '연락처':p.phone,
-    '근무 시작':p.start ? `${Number(p.start.slice(5))}월부터` : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : '연계 끝', '비대면 교육 서류':p.docNeed ? (p.docOk ? `확인 (${p.docOk})` : '미확인') : '',
+    '근무 시작':p.start ? `${Number(p.start.slice(5))}월부터` : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : '연계 끝', '비대면 교육 서류':p.docNeed ? (p.docOk ? `확인 (${p.docOk})` : '미확인') : '', '서류 사진':p.docNeed && p.docOk ? (p.docPhoto ? `있음 (${p.docPhoto})` : '없음') : '',
     [`${curMonth}월 활동일 수`]: personDays(p, monthKey()).length }));
   const wsN = ncRows.length ? XLSX.utils.json_to_sheet(ncRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 신규 인원이 없습니다.`]]);
   wsN['!cols'] = [8,14,10,6,15,10,22,12].map(w=>({wch:w}));
@@ -6295,6 +6415,7 @@ participants.forEach(p => { if (p.birth) p.age = String(thisYear() - p.birth);
   (p.edu || []).forEach(e => { if (e.name === '의무교육(비대면)' && !e.hs) { e.hs = { 안전: Number(e.h) || 3, 소양: 0, 직무: 0 }; e.doc = true; if (p.docNeed == null) p.docNeed = true; } }); });
 drawCkToggle();
 rptInit();
+drawStorage();
 migrateSiteNames();
 fillTownSelects();
 renderList();
