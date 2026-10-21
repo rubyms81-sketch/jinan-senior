@@ -380,12 +380,6 @@
   /* 🔒 비밀번호 키패드 */
   .pin-dlg { text-align:center; max-width:340px; }
   .pin-title { font-size:1.15rem; font-weight:700; margin-bottom:6px; }
-  .pin-head { font-size:1.05rem; font-weight:700; color:#2b6cb0; margin-bottom:10px; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; touch-action:none; cursor:pointer; }
-  .pin-dots { display:flex; justify-content:center; gap:14px; margin:12px 0 6px; }
-  .pin-dots i { width:16px; height:16px; border-radius:50%; border:2px solid #4a5568; display:inline-block; }
-  .pin-dots i.on { background:#2b6cb0; border-color:#2b6cb0; }
-  .pin-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px; }
-  .pin-pad button { margin:0; padding:14px 0; font-size:1.4rem; }
   .lock-opts button { display:block; width:100%; }
 </style>
 </head>
@@ -5763,7 +5757,7 @@ const LOCK_NAME = { none: '없음', each: '매번 켤 때', day: '하루 한 번
 const BK_EVERY_NAME = { '0': '끔', '7': '7일마다', '10': '10일마다', '30': '30일마다' };
 const pinHash = (salt, pin) => { let h = 2166136261; const s = salt + ':' + pin; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return String(h); };
 // 키패드 창: 네 자리를 누르면 그 값을 돌려줌. cancelable이면 취소 가능
-function pinEntry(title, cancelable, resetable){
+function pinEntry(title, cancelable){
   return new Promise(res => {
     const back = document.createElement('div'); back.className = 'dlg-back pin-back';
     back.innerHTML = `<div class="dlg pin-dlg"><div class="dlg-msg pin-title"></div>
@@ -5771,12 +5765,6 @@ function pinEntry(title, cancelable, resetable){
       <div class="pin-pad">${[1,2,3,4,5,6,7,8,9,'','0','←'].map(k => k === '' ? '<span></span>' : `<button type="button" data-k="${k}">${k}</button>`).join('')}</div>
       ${cancelable ? '<button type="button" class="secondary full" data-k="x" style="margin-top:10px;">취소</button>' : ''}</div>`;
     back.querySelector('.pin-title').textContent = title;
-    if (resetable) {   // 잠금 화면 맨 위 제목을 길게 누르면 재설정
-      const head = document.createElement('div'); head.className = 'pin-head';
-      head.textContent = document.getElementById('hd-title')?.textContent || '진안군 노인회 일자리 현장 점검';
-      back.querySelector('.dlg').prepend(head);
-      onLongPress(head, 1500, () => { back.remove(); res('RESET'); });
-    }
     let buf = '';
     const dots = [...back.querySelectorAll('.pin-dots i')];
     const paint = () => dots.forEach((d, i) => d.classList.toggle('on', i < buf.length));
@@ -5827,10 +5815,6 @@ async function setLockMode(){
     const b = await pinEntry('한 번 더 같은 번호를 입력하세요', true); if (b === null) return;
     if (a !== b) return notify('두 번이 달라요. 처음부터 다시 설정해 주세요.');
     c.salt = String(Date.now()); c.hash = pinHash(c.salt, a);
-    // 비밀번호를 잊었을 때 쓸 복구 질문과 답 (답은 해시로만 저장)
-    const q = await askText('비밀번호를 잊었을 때 쓸 질문을 적어 주세요\n(예: 어릴 때 살던 동네 이름은?)', '질문'); if (!q) return;
-    const an = await askText(`"${q}"\n이 질문의 답을 적어 주세요`, '답'); if (!an) return;
-    c.q = q; c.qHash = pinHash(c.salt, normAns(an));
   }
   saveLockCfg(c);
   const name = LOCK_NAME[m] + (m === 'idle' ? ' ' + idleH + '시간' : '');
@@ -5844,55 +5828,15 @@ function needLock(){
   if (c.mode === 'idle') return !c.last || Date.now() - c.last > (c.idleH || 1) * 3600000;
   return false;
 }
-// 길게 누르기 (ms 동안 누르고 있으면 fn 실행)
-function onLongPress(el, ms, fn){
-  let t = null, sx = 0, sy = 0; const stop = () => { clearTimeout(t); t = null; };
-  const start = (x, y) => { stop(); sx = x; sy = y; t = setTimeout(() => { t = null; fn(); }, ms); };
-  const far = (x, y) => Math.hypot(x - sx, y - sy) > 12;   // 손이 조금 흔들리는 것은 허용
-  el.addEventListener('pointerdown', e => start(e.clientX, e.clientY));
-  el.addEventListener('pointermove', e => { if (t && far(e.clientX, e.clientY)) stop(); });
-  el.addEventListener('touchstart', e => { const p = e.touches[0]; start(p.clientX, p.clientY); }, { passive: true });
-  el.addEventListener('touchmove', e => { const p = e.touches[0]; if (t && far(p.clientX, p.clientY)) stop(); }, { passive: true });
-  ['pointerup', 'pointerleave', 'pointercancel', 'touchend', 'touchcancel'].forEach(ev => el.addEventListener(ev, stop));
-  el.addEventListener('contextmenu', e => e.preventDefault());
-}
-// 글 한 줄 입력창 (취소하면 null)
-function askText(title, ph){
-  return new Promise(res => {
-    const back = document.createElement('div'); back.className = 'dlg-back';
-    back.innerHTML = `<div class="dlg"><div class="dlg-msg"></div><input type="text" maxlength="40" autocomplete="off" style="margin:8px 0;"><div class="grid-2"><button type="button" class="secondary" data-v="0">취소</button><button type="button" data-v="1">확인</button></div></div>`;
-    back.querySelector('.dlg-msg').textContent = title;
-    const inp = back.querySelector('input'); inp.placeholder = ph || '';
-    const done = v => { back.remove(); res(v); };
-    back.querySelector('[data-v="1"]').onclick = () => done(inp.value.trim() || null);
-    back.querySelector('[data-v="0"]').onclick = () => done(null);
-    document.body.appendChild(back); setTimeout(() => inp.focus(), 50);
-  });
-}
-const normAns = s => String(s).replace(/\s/g, '').toLowerCase();
-// 복구 질문 답을 맞추면 새 비밀번호를 정함 (성공하면 true)
-async function resetPin(){
-  const c = lockCfg();
-  if (!c.qHash) { await notify('복구 질문을 정해 두지 않아서 재설정할 수 없어요.\n백업 파일로 복원해 주세요.'); return false; }
-  const an = await askText(`복구 질문\n${c.q}`, '답'); if (!an) return false;
-  if (pinHash(c.salt, normAns(an)) !== c.qHash) { await notify('답이 달라요.'); return false; }
-  const a = await pinEntry('새 비밀번호 4자리를 입력하세요', false);
-  const b = await pinEntry('한 번 더 같은 번호를 입력하세요', false);
-  if (a !== b) { await notify('두 번이 달라요. 다시 시도해 주세요.'); return false; }
-  c.salt = String(Date.now()); c.hash = pinHash(c.salt, a); c.qHash = pinHash(c.salt, normAns(an));
-  saveLockCfg(c); logEvent('비밀번호 재설정', null, '복구 질문으로 새 비밀번호 설정');
-  await notify('🔓 새 비밀번호로 바꿨어요.'); return true;
-}
 async function runLock(){
   const c = lockCfg(); let fails = 0;
   for (;;) {
-    const v = await pinEntry(fails ? `틀렸어요. 다시 입력하세요 (${fails}/3)` : '비밀번호 4자리를 입력하세요', false, true);
-    if (v === 'RESET') { if (await resetPin()) break; continue; }
+    const v = await pinEntry(fails ? `틀렸어요. 다시 입력하세요 (${fails}/3)` : '비밀번호 4자리를 입력하세요', false);
     if (v !== null && pinHash(c.salt, v) === c.hash) break;
     fails++;
     if (fails >= 3) { await pinWait(30); fails = 0; }
   }
-  const cur = lockCfg(); cur.day = today(); cur.last = Date.now(); saveLockCfg(cur);   // 재설정했으면 새 값을 기준으로
+  c.day = today(); c.last = Date.now(); saveLockCfg(c);
 }
 // 화면을 떠났다가 돌아올 때: 일정 시간 지났으면 다시 잠금
 document.addEventListener('visibilitychange', () => {
