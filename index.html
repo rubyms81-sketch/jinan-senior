@@ -380,7 +380,7 @@
   /* 🔒 비밀번호 키패드 */
   .pin-dlg { text-align:center; max-width:340px; }
   .pin-title { font-size:1.15rem; font-weight:700; margin-bottom:6px; }
-  .pin-head { font-size:1.05rem; font-weight:700; color:#2b6cb0; margin-bottom:10px; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
+  .pin-head { font-size:1.05rem; font-weight:700; color:#2b6cb0; margin-bottom:10px; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; touch-action:none; cursor:pointer; }
   .pin-dots { display:flex; justify-content:center; gap:14px; margin:12px 0 6px; }
   .pin-dots i { width:16px; height:16px; border-radius:50%; border:2px solid #4a5568; display:inline-block; }
   .pin-dots i.on { background:#2b6cb0; border-color:#2b6cb0; }
@@ -5657,7 +5657,7 @@ function renderScene(kind){
     const y = h < 6 ? 52 + (6 - h) * 20 : h > 18 ? 52 + (h - 18) * 20 : 52 - Math.sin(Math.PI * k) * 44;
     out.push(`<span class="sc-abs sc-sun ${ph === 'dawn' && h < 6.5 ? 'rise' : ''}" style="left:calc(${x.toFixed(1)}% - 15px);top:${y.toFixed(1)}%;${grey ? 'opacity:.45;' : ''}"></span>`); }
   // 구름 (흐림·비·눈이면 많고 짙게, 바람 불면 빠르게)
-  const nC = wet ? 6 : kind === 'cloud' ? 5 : dark ? 1 : 3, cc = wet ? '#718096' : grey ? '#cbd5e0' : '#fff';
+  const nC = ph === 'night' ? 0 : wet ? 6 : kind === 'cloud' ? 5 : dark ? 1 : 3, cc = wet ? '#718096' : grey ? '#cbd5e0' : '#fff';
   for (let i = 0; i < nC; i++) { const w = 46 + rnd() * 40, dur = (scWind ? 70 : 150) + rnd() * 60;   // 아주 천천히
     out.push(`<span class="sc-abs sc-cloud ${i === 0 ? 'front' : ''}" style="top:${(i === 0 ? 8 + rnd() * 12 : 4 + rnd() * 48).toFixed(0)}%;animation-duration:${dur.toFixed(0)}s;animation-delay:${(-rnd() * dur).toFixed(0)}s;${dark ? 'opacity:.35;' : ''}"><svg width="${w.toFixed(0)}" height="${(w * .45).toFixed(0)}" viewBox="0 0 100 45" style="position:static">${s3 ? `<defs><radialGradient id="cg${i}" cx="45%" cy="25%" r="80%"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="${cc}"/><stop offset="1" stop-color="${wet ? '#4a5568' : '#9fb3c8'}"/></radialGradient></defs>` : ''}<g fill="${s3 ? `url(#cg${i})` : cc}"><circle cx="30" cy="28" r="16"/><circle cx="52" cy="20" r="20"/><circle cx="74" cy="29" r="14"/><rect x="18" y="28" width="68" height="16" rx="8"/></g></svg></span>`); }
   // 먼 산 (가로로 꽉)
@@ -5846,9 +5846,14 @@ function needLock(){
 }
 // 길게 누르기 (ms 동안 누르고 있으면 fn 실행)
 function onLongPress(el, ms, fn){
-  let t = null; const stop = () => { clearTimeout(t); t = null; };
-  el.addEventListener('pointerdown', () => { stop(); t = setTimeout(() => { t = null; fn(); }, ms); });
-  ['pointerup', 'pointerleave', 'pointercancel', 'pointermove'].forEach(ev => el.addEventListener(ev, stop));
+  let t = null, sx = 0, sy = 0; const stop = () => { clearTimeout(t); t = null; };
+  const start = (x, y) => { stop(); sx = x; sy = y; t = setTimeout(() => { t = null; fn(); }, ms); };
+  const far = (x, y) => Math.hypot(x - sx, y - sy) > 12;   // 손이 조금 흔들리는 것은 허용
+  el.addEventListener('pointerdown', e => start(e.clientX, e.clientY));
+  el.addEventListener('pointermove', e => { if (t && far(e.clientX, e.clientY)) stop(); });
+  el.addEventListener('touchstart', e => { const p = e.touches[0]; start(p.clientX, p.clientY); }, { passive: true });
+  el.addEventListener('touchmove', e => { const p = e.touches[0]; if (t && far(p.clientX, p.clientY)) stop(); }, { passive: true });
+  ['pointerup', 'pointerleave', 'pointercancel', 'touchend', 'touchcancel'].forEach(ev => el.addEventListener(ev, stop));
   el.addEventListener('contextmenu', e => e.preventDefault());
 }
 // 글 한 줄 입력창 (취소하면 null)
