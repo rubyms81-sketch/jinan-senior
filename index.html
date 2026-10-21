@@ -166,6 +166,12 @@
   .hist-sum { background:#f7fafc; border-radius:8px; padding:8px 10px; margin-bottom:4px; font-size:.95rem; }
   .hist-sec { border-top:1px solid #edf2f7; padding:8px 0; font-size:.92rem; line-height:1.6; }
   .hist-h { font-weight:bold; margin-bottom:4px; }
+  /* 점검 화면 근무일 칸: ◀ 전달 · N월 · 다음달 ▶ */
+  .day-nav { display:flex; align-items:center; justify-content:space-between; gap:6px; margin:6px 0 8px; }
+  .day-arrow { width:auto; margin:0; padding:6px 10px; border-radius:8px; background:#edf2f7; color:#2d3748; border:none; font-size:.9rem; box-shadow:none; }
+  .day-arrow:disabled { opacity:.35; }
+  .day-now { font-weight:bold; font-size:1rem; text-align:center; }
+  .day-back { width:auto; margin:0 0 0 6px; padding:3px 8px; font-size:.8rem; }
   .chg-box > summary { list-style:none; display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:4px 0; }
   .chg-box > summary::-webkit-details-marker { display:none; }
   .chg-box > summary h3, .chg-box > summary h4 { margin:0; }
@@ -585,7 +591,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-12</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-13</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1497,16 +1503,19 @@ function openWorkdays(){
 // 📅 점검 화면 근무일 칸의 월 탭 (1월~12월): 이번 달이 아닌 달을 고르면 그 달 근무일만 보여 줌(보기 전용)
 let dayTabMk = null;   // null = 이번 달(수정 가능)
 const DAY_ONLY_IDS = ['btn-addchg', 'btn-custom', 'sec-moved'];
+// ◀ 전달 / 다음달 ▶ 화살표로 달 옮기기 (1월~12월 안에서만)
 function drawDayTabs(){
   const box = document.getElementById('day-tabs'); if (!box) return;
-  const y = viewYear(), cur = monthKey(), act = dayTabMk || cur;
-  box.innerHTML = Array.from({ length: 12 }, (_, i) => { const mk = `${y}-${String(i + 1).padStart(2, '0')}`;
-    return `<button type="button" class="${mk === act ? 'on' : ''}" data-mk="${mk}">${i + 1}월</button>`; }).join('');
-  box.querySelectorAll('button').forEach(b => b.onclick = () => {
-    dayTabMk = b.dataset.mk === cur ? null : b.dataset.mk;
+  const y = viewYear(), cur = monthKey(), act = dayTabMk || cur, m = Number(act.slice(5)), isCur = act === cur;
+  box.className = 'day-nav';
+  box.innerHTML = `<button type="button" class="day-arrow" data-st="-1" ${m <= 1 ? 'disabled' : ''}>◀ 전달</button>
+    <span class="day-now">${m}월${isCur ? ' <span class="muted" style="font-weight:normal;font-size:.85rem;">(이번 달)</span>' : ` <button type="button" class="day-back" data-st="cur">이번 달로</button>`}</span>
+    <button type="button" class="day-arrow" data-st="1" ${m >= 12 ? 'disabled' : ''}>다음달 ▶</button>`;
+  box.querySelectorAll('button[data-st]').forEach(b => b.onclick = () => {
+    const nm = b.dataset.st === 'cur' ? cur : `${y}-${String(m + Number(b.dataset.st)).padStart(2, '0')}`;
+    dayTabMk = nm === cur ? null : nm;
     const p = current(); if (p) renderPersonDays(p);
   });
-  box.querySelector('button.on')?.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
 function setDayOnlyMode(on){
   DAY_ONLY_IDS.forEach(id => { const el = document.getElementById(id); if (!el) return;
