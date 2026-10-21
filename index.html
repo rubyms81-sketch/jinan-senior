@@ -400,7 +400,7 @@
       <div id="link-list" style="margin-top:6px;"></div>
     </details>
   </div>
-  <div class="card" id="rpt-card" style="padding:10px 14px;">
+  <div class="card hidden" id="rpt-card" style="padding:10px 14px;">
     <button type="button" class="small" onclick="openReport()" style="width:auto;margin:0 0 4px;">📣 인원 변동 보고</button>
     <div id="rpt-list"></div>
   </div>
@@ -595,7 +595,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-24</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-25</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -4714,7 +4714,37 @@ function reportText(evs){
 function renderRpt(){
   const box = document.getElementById('rpt-list'); if (!box) return;
   const pend = rptPending();
+  document.getElementById('rpt-card')?.classList.toggle('hidden', !pend.length);   // 보고할 사람이 생길 때만 보임
   box.innerHTML = pend.map(e => `<button type="button" class="small" data-k="${esc(rptKey(e))}" onclick="openReport([this.dataset.k])" style="width:100%;margin:4px 0;text-align:left;background:${e.type === '신규 등록' ? '#2b6cb0' : '#c53030'};">${e.type === '신규 등록' ? '🆕' : '🚪'} ${esc(e.name)} · ${esc(e.town)} ${esc(e.senior)} · ${e.type === '신규 등록' ? '신규 보고' : '중도포기 보고'}</button>`).join('');
+}
+// 📄 참여자 변경현황 엑셀 (노인일자리 양식): 이번 달 신규·중도포기를 양식 칸에 맞춰 채움 (엑셀 일괄 등록은 제외)
+function exportChangeForm(){
+  if (typeof XLSX === 'undefined') return notify('엑셀 기능을 불러오지 못했어요. 인터넷에 연결한 뒤 다시 눌러 주세요.');
+  const mk = monthKey(), shortDay = d => d ? `${Number(d.slice(8, 10))}일` : '';
+  const evs = eventLog.filter(e => (e.date || '').startsWith(mk) && RPT_TYPES.includes(e.type) && !/엑셀 명단/.test(e.detail || ''))
+    .sort((a, b) => a.at.localeCompare(b.at));
+  // 포기 사유 칸: 타사업 / 건강 / 기타 (사유 글로 나눔)
+  const body = evs.map((e, i) => {
+    const p = rptPerson(e) || {}, w = String(p.quitWhy || e.detail || '');
+    const cnt = siteMembers(e.town, e.senior).filter(counted).length;
+    const base = [i + 1, '경로당', String(e.town || '').replace(/[면읍]$/, ''), e.senior, e.name, p.phone || '', '', cnt];
+    if (e.type === '신규 등록') return [...base, shortDay(p.startDay || e.date), 1, '', '', '', '', ''];
+    const k = /타사업|다른 사업/.test(w) ? 0 : /건강|병원|입원|치료/.test(w) ? 1 : 2;   // 0 타사업, 1 건강, 2 기타
+    return [...base, '', '', '', shortDay(p.quitDay || e.date), k === 0 ? 1 : '', k === 1 ? 1 : '', k === 2 ? 1 : ''];
+  });
+  const head = [[`노인일자리사업 참여자 변경현황 // ${curMonth}월 기준`, ...Array(14).fill('')],
+    ['순번', '사업명', '읍.면', '활동장소', '성명', '전화번호', '배정', '참여', '시작 사유', '', '', '포기사유', '', '', ''],
+    ['', '', '', '', '', '', '', '', '일자', '추가', '교체', '일자', '타사업', '건강', '기타']];
+  const rows = [...head, ...(body.length ? body : [['이번 달 변동이 없습니다.', ...Array(14).fill('')]])];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [6, 8, 8, 14, 10, 15, 8, 6, 9, 6, 6, 9, 7, 6, 6].map(w => ({ wch: w }));
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 14 } },
+    ...[0, 1, 2, 3, 4, 5, 6, 7].map(c => ({ s: { r: 1, c }, e: { r: 2, c } })),
+    { s: { r: 1, c: 8 }, e: { r: 1, c: 10 } }, { s: { r: 1, c: 11 }, e: { r: 1, c: 14 } }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, `${curMonth}월 변경현황`);
+  XLSX.writeFile(wb, `참여자_변경현황_${YEAR}년${curMonth}월.xlsx`);
 }
 function openReport(onlyKeys){
   const pend = rptPending();
@@ -4731,6 +4761,7 @@ function openReport(onlyKeys){
     <textarea id="rp-text" rows="9" style="font-size:.92rem;"></textarea>
     <div class="grid-2"><button id="rp-sms">💬 문자 앱 열기</button><button id="rp-copy" class="warning">📋 문구 복사</button></div>
     <button class="full" id="rp-kakao" style="background:#FEE500;color:#3c1e1e;font-weight:bold;margin-top:6px;">🟡 카카오톡으로 보내기</button>
+    <button class="secondary full" id="rp-excel" style="margin-top:6px;">📄 참여자 변경현황 엑셀 받기 (이번 달)</button>
     <button class="secondary full" id="rp-close" style="margin-top:6px;">닫기</button></div>`;
   document.body.appendChild(bg);
   const $ = q => bg.querySelector(q);
@@ -4752,6 +4783,7 @@ function openReport(onlyKeys){
     if (navigator.share) { try { await navigator.share({ text: t }); sent(); } catch(e) {} return; }
     await copyText(t); sent(); notify('문구를 복사했어요. 카카오톡에 붙여넣으세요.');
   };
+  $('#rp-excel').onclick = () => exportChangeForm();
   $('#rp-close').onclick = () => { bg.remove(); renderRpt(); };
 }
 function openSmsApp(nums, body){
