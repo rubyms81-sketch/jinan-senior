@@ -591,7 +591,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-14</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-15</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -3377,7 +3377,7 @@ async function docConfirm(id, undo){
 }
 async function linkDone(id){
   const p = participants.find(x => x.id === id); if (!p || !p.linking) return;
-  if (!await ask(`${p.name} 어르신 전산 연계가 끝났나요?\n목록에서 빠지고, 명단에는 그대로 남아요.`)) return;
+  if (!await ask(`${p.name} 어르신 전산 연계가 끝났나요?\n목록에서 빠지고, 명단에는 그대로 남아요.\n\n★ 연계가 승인된 날에는 근무할 수 없고, 그 다음 날부터 근무할 수 있습니다.\n★ 잊지 않으셨죠?`)) return;
   logEvent('연계 완료', p, `${p.linking.since}부터 연계 → 끝남`);
   if (p.start && !(p.startDay && p.startDay > today())) p.startDay = addDays(today(), 1);   // 연계 승인 당일은 근무 안 함 → 다음 날부터
   p.linkDone = { since: p.linking.since, day: today() };
