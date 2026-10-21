@@ -591,7 +591,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-13</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-14</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -3379,12 +3379,12 @@ async function linkDone(id){
   const p = participants.find(x => x.id === id); if (!p || !p.linking) return;
   if (!await ask(`${p.name} 어르신 전산 연계가 끝났나요?\n목록에서 빠지고, 명단에는 그대로 남아요.`)) return;
   logEvent('연계 완료', p, `${p.linking.since}부터 연계 → 끝남`);
-  if (p.start && !(p.startDay && p.startDay > today())) p.startDay = today();   // 연계 끝난 날부터 근무
+  if (p.start && !(p.startDay && p.startDay > today())) p.startDay = addDays(today(), 1);   // 연계 승인 당일은 근무 안 함 → 다음 날부터
   p.linkDone = { since: p.linking.since, day: today() };
   delete p.linking;
   // 첫 근무일은 의무교육(비대면 3시간)
   const mk0 = today().slice(0,7), nx = addDays(mk0 + '-28', 7).slice(0,7);
-  const first = [...personDays(p, mk0), ...personDays(p, nx)].filter(d => d >= today()).sort()[0];
+  const first = [...personDays(p, mk0), ...personDays(p, nx)].filter(d => d > today()).sort()[0];
   let ve = null;
   if (first && !(p.edu || []).some(e => /의무교육/.test(e.name))) { const hs = await vEduDlg(p, first, { 안전: 3, 소양: 0, 직무: 0 });
     if (hs) { ve = { id: Date.now(), date: first, name: '의무교육(비대면)', hs, doc: true }; ve.h = eduH(ve); (p.edu ||= []).push(ve); p.docNeed = true; delete p.docOk;
@@ -3410,6 +3410,9 @@ const WELCOME_DEF = `[진안군노인회] 노인일자리 참여 안내
 {팀장}
 감사합니다.`;
 let smsTpl = (() => { try { return JSON.parse(load('jinan_tpl')) || {}; } catch(e) { return {}; } })();
+// 환영 문자 공지: 연계 승인 당일에는 근무할 수 없고 그 다음 날부터 근무 (예전에 고친 글에도 자동으로 넣음)
+const START_NOTICE = '▶ 근무 시작 안내\n· 연계가 승인된 날에는 근무할 수 없고, 그 다음 날부터 근무할 수 있습니다.\n\n';
+const withStartNotice = t => t.includes('연계가 승인된 날') ? t : t.replace('▶ 꼭 지켜 주세요', START_NOTICE + '▶ 꼭 지켜 주세요');
 // 🎂 생일 축하 문자: 계절 인사 + 노년의 삶 응원. 한 번 고친 글은 다음에도 그대로 (jinan_tpl.bday)
 const SEASON = m => m >= 3 && m <= 5 ? '따스한 봄바람처럼 어르신의 하루하루가 포근하고 환하게 피어나길 바랍니다.'
   : m >= 6 && m <= 8 ? '푸르른 여름날처럼 어르신의 삶이 늘 싱그럽고 활기차길 바랍니다.'
@@ -3476,13 +3479,13 @@ function welcomeSms(p){
     <div class="grid-2"><button class="secondary" id="wl-cancel">나중에</button><button id="wl-go">📩 문자 보내기</button></div></div>`;
   document.body.appendChild(back);
   const $ = q => back.querySelector(q);
-  $('#wl-text').value = smsTpl.welcome || WELCOME_DEF;
+  $('#wl-text').value = withStartNotice(smsTpl.welcome || WELCOME_DEF);
   $('#wl-saved').textContent = smsTpl.welcome ? '✔ 저장한 글' : '';
   const days = () => { const mk = start.slice(0,7); return personDays(p, mk, true).filter(d => d >= start); };
   const drawDays = () => { $('#wl-days').innerHTML = days().map(d => `<span class="chip">${Number(d.slice(5,7))}/${dd(d)}</span>`).join('') || '<span class="muted">이 달 남은 활동일이 없어요.</span>'; };
   drawDays();
   $('#wl-start').onchange = () => { start = $('#wl-start').value || today(); drawDays(); };
-  $('#wl-reset').onclick = () => { $('#wl-text').value = WELCOME_DEF; };
+  $('#wl-reset').onclick = () => { $('#wl-text').value = withStartNotice(WELCOME_DEF); };
   $('#wl-cancel').onclick = () => back.remove();
   $('#wl-go').onclick = () => {
     const tpl = $('#wl-text').value, ds = days(), m = Number(start.slice(5,7)), L = leaderOf(p);
