@@ -585,7 +585,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-6</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-7</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2278,10 +2278,21 @@ function histAllBody(p){
   const pens = logs.filter(l => logPts(l) > 0), warns = logs.filter(l => !logPts(l) && issueText(l).length);
   const total = logs.reduce((n,l) => n + logPts(l), 0), unpaid = Object.values(pi).reduce((n,v) => n + (v || 0), 0);
   const none = '<div class="muted">없음</div>', sec = (t, b) => `<div class="hist-sec"><div class="hist-h">${t}</div>${b}</div>`;
+  // 입원·보충 근무·중도포기·근무 시작 (날짜순)
+  const ev = [];
+  Object.entries(p.custom || {}).filter(([k]) => k.startsWith(String(y))).forEach(([k, c]) => {
+    const d = c.back || c.date || (c.days || [])[0] || `${k}-01`;
+    if (c.hosp?.length) ev.push({ d: c.hosp[0], h: `🏥 입원 ${rangeText([...c.hosp])}${c.inHosp ? ' · 지금 입원 중' : ''}` });
+    if (c.reason || c.days?.length) ev.push({ d, h: `🩹 ${Number(k.slice(5))}월 보충 근무${c.reason ? ` · ${esc(c.reason)}` : ''}${c.back ? ` · ${dd(c.back)} 복귀` : ''}` });
+  });
+  if (p.startDay?.startsWith(String(y))) ev.push({ d: p.startDay, h: `🆕 근무 시작 · ${dd(p.startDay)}` });
+  if (quitDayOf(p).startsWith(String(y))) ev.push({ d: quitDayOf(p), h: `🚪 중도포기 · ${dd(quitDayOf(p))}${p.quitWhy ? ` · ${esc(p.quitWhy)}` : ''}` });
+  const evRows = ev.sort((a, b) => a.d.localeCompare(b.d)).map(x => `<div class="log" style="margin:4px 0;">${x.h}</div>`).join('');
   let run = 0;
   const penRows = pens.map(l => { run += logPts(l); return `<div class="log warn" style="margin:4px 0;">${dd(l.date)} · ${issueText(l).map(esc).join(', ')}${pi[l.id] ? ` <b style="color:var(--danger)">· 일당 ${pi[l.id]}일 미지급</b>` : ''}<br><span class="muted">누적 ${run}점</span></div>`; }).join('');
   const warnRows = warns.map(l => `<div class="log" style="margin:4px 0;">${dd(l.date)} · ${issueText(l).map(esc).join(', ')}${l.memo ? `<br><span class="muted">📝 ${esc(l.memo)}</span>` : ''}</div>`).join('');
   return `<div class="hist-sum"><b>${y}년 전체</b> · 벌점 ${total ? `<b style="color:var(--danger)">${total}점</b>` : '없음'} · 경고 ${warns.length}건${unpaid ? ` · <b style="color:var(--danger)">일당 미지급 ${unpaid}일</b>` : ''}</div>`
+    + sec('🏥 입원·보충·시작·중도포기', evRows || none)
     + sec('⚠️ 벌점 이력', penRows || none)
     + sec('🔔 경고 이력 (감점 없음)', warnRows || none);
 }
