@@ -597,7 +597,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-28</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-30</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -3622,43 +3622,23 @@ function bdaySms(list){
     smsBox({ title: '🎂 생일 축하 문자', people: list, text, logType: '생일 축하 문자', logDetail: `${today()} ${list.map(p => p.name).join(', ')}` });
   };
 }
-function welcomeSms(p){
-  let start = p.startDay || today();
-  const back = document.createElement('div'); back.className = 'dlg-back';
-  back.innerHTML = `<div class="dlg">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">🎉 ${nmH(p)} 어르신 환영 문자</div>
-    <label>근무 시작 날짜</label><input type="date" id="wl-start" value="${start}" style="margin-bottom:6px;">
-    <div id="wl-days" class="chips" style="margin-bottom:8px;"></div>
-    <label>문자 글</label>
-    <textarea id="wl-text" rows="12" style="font-size:.92rem;"></textarea>
-    <label style="margin-top:8px;">📱 보낼 글 미리 보기</label>
-    <div id="wl-prev" style="white-space:pre-wrap;background:#f7fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;font-size:.9rem;line-height:1.5;max-height:30vh;overflow:auto;margin-bottom:8px;"></div>
-    <div style="display:flex;gap:6px;margin:-4px 0 8px;"><button type="button" class="small secondary" id="wl-reset" style="width:auto;margin:0;">↺ 처음 글로</button><span class="muted" id="wl-saved" style="font-size:.8rem;align-self:center;"></span></div>
-    <div class="grid-2"><button class="secondary" id="wl-cancel">나중에</button><button id="wl-go">📩 문자 보내기</button></div></div>`;
-  document.body.appendChild(back);
-  const $ = q => back.querySelector(q);
-  $('#wl-text').value = withStartNotice(smsTpl.welcome || WELCOME_DEF);
-  $('#wl-saved').textContent = smsTpl.welcome ? '✔ 저장한 글' : '';
-  const days = () => { const mk = start.slice(0,7); return personDays(p, mk, true).filter(d => d >= start); };
-  const drawDays = () => { $('#wl-days').innerHTML = days().map(d => `<span class="chip">${Number(d.slice(5,7))}/${dd(d)}</span>`).join('') || '<span class="muted">이 달 남은 활동일이 없어요.</span>'; };
-  const fillWelcome = () => { const tpl = $('#wl-text').value, ds = days(), m = Number(start.slice(5,7)), L = leaderOf(p);
-    return tpl.replace(/\{이름\}/g, p.name).replace(/\{월\}/g, m).replace(/\{일수\}/g, ds.length)
-      .replace(/\{활동일\}/g, ds.length ? `${m}월 ${dayList(ds)}` : '(담당자가 따로 알려 드립니다)')
-      .replace(/\{팀장\}/g, L ? `\n※ 팀장님: ${L.name} (${fmtPhone(L.num)})\n` : ''); };
-  const drawPrev = () => { $('#wl-prev').textContent = fillWelcome(); };
-  $('#wl-text').oninput = drawPrev;
-  drawDays(); drawPrev();
-  $('#wl-start').onchange = () => { start = $('#wl-start').value || today(); drawDays(); drawPrev(); };
-  $('#wl-reset').onclick = () => { $('#wl-text').value = withStartNotice(WELCOME_DEF); };
-  $('#wl-cancel').onclick = () => back.remove();
-  $('#wl-go').onclick = () => {
-    const tpl = $('#wl-text').value, ds = days(), m = Number(start.slice(5,7));
-    if (tpl !== (smsTpl.welcome || WELCOME_DEF)) { smsTpl.welcome = tpl; store('jinan_tpl', JSON.stringify(smsTpl)); logEvent('환영 문자 글 저장', null, '다음에도 이 글로 보냄'); }
-    if (start !== p.startDay) { p.startDay = start; p.start = start.slice(0,7); logEvent('근무 시작일', p, `${m}월 ${dd(start)}부터`, start); saveData(false); renderList(); }
-    const text = fillWelcome();
-    back.remove();
-    smsBox({ title: '🎉 환영 문자', people: [p], text, logType: '환영 문자', logDetail: `${m}월 ${dd(start)}부터 · 활동일 ${ds.length}일` });
+function welcomeSms(p){   // 환영 문자: 글 편집 창을 건너뛰고 바로 문자 화면 (그 화면에서 글을 고쳐 보낼 수 있음)
+  const start = p.startDay || today(), m = Number(start.slice(5,7));
+  const ds = personDays(p, start.slice(0,7), true).filter(d => d >= start), L = leaderOf(p);
+  const text = withStartNotice(smsTpl.welcome || WELCOME_DEF)
+    .replace(/\{이름\}/g, p.name).replace(/\{월\}/g, m).replace(/\{일수\}/g, ds.length)
+    .replace(/\{활동일\}/g, ds.length ? `${m}월 ${dayList(ds)}` : '(담당자가 따로 알려 드립니다)')
+    .replace(/\{팀장\}/g, L ? `\n※ 팀장님: ${L.name} (${fmtPhone(L.num)})\n` : '');
+  // 문자 화면에서 글을 고쳐 보내면, 그 글을 다음부터 기본 글로 자동 저장 (이름·날짜는 다시 자리표시로 바꿔 저장)
+  const onSendText = edited => {
+    if (edited === text) return;
+    let t = edited.split(p.name).join('{이름}');
+    if (ds.length) { t = t.split(`${m}월 ${dayList(ds)}`).join('{활동일}').split(`${m}월 활동일 (${ds.length}일)`).join('{월}월 활동일 ({일수}일)'); }
+    if (L) t = t.split(`\n※ 팀장님: ${L.name} (${fmtPhone(L.num)})\n`).join('{팀장}');
+    smsTpl.welcome = t; store('jinan_tpl', JSON.stringify(smsTpl));
+    logEvent('환영 문자 글 저장', null, '문자 화면에서 고친 글을 다음부터 기본 글로 씀');
   };
+  smsBox({ title: '🎉 환영 문자', people: [p], text, logType: '환영 문자', logDetail: `${m}월 ${dd(start)}부터 · 활동일 ${ds.length}일`, onSendText });
 }
 // ---------- 📝 활동일지 (그날 점검한 경로당별 보고용 글) ----------
 // 고쳐 쓴 글은 jinan_diary 에 저장 { '날짜|면|경로당': 글 }
@@ -5058,7 +5038,7 @@ function leaderMenu(p){
     logEvent('팀장 문자', p, `${L.name} 팀장 (${p.name} 어르신 점검 중)`);
     openSmsApp([L.num], `[진안군노인회] ${L.name} 팀장님, ${p.name} 어르신(${seniorOf(p)}) 관련 연락드립니다.\n`); });
 }
-function smsBox({ title, people, text, logType, logDetail, free, leaderOnly }){
+function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, onSendText }){
   return new Promise(resolve => {
     const recips = people.filter(p => telOf(p)).map(p => ({ key: 'p'+p.id, label: `${p.name} 어르신`, num: telOf(p), p }));
     const noTel = people.filter(p => !telOf(p));
@@ -5087,6 +5067,7 @@ function smsBox({ title, people, text, logType, logDetail, free, leaderOnly }){
     if (free) { ta.rows = 8; ta.placeholder = '보낼 내용을 적으세요'; setTimeout(() => { const at = ta.value.indexOf('\n\n') + 2; ta.focus(); ta.setSelectionRange(at, at); }, 80); }
     const picked = () => recips.filter(r => back.querySelector(`input[data-k="${r.key}"]`).checked);
     back.querySelector('#sb-copy').onclick = async () => {
+      if (onSendText) onSendText(ta.value);
       const ok = await copyText(ta.value);
       back.querySelector('#sb-help').innerHTML = ok ? '<b style="color:var(--success)">✔ 복사되었습니다.</b> 문자 창에서 길게 눌러 "붙여넣기" 하세요.' : '복사가 안 되면 위 글을 길게 눌러 "전체 선택 → 복사" 하세요.';
       if (!ok) { ta.focus(); ta.select(); }
@@ -5104,6 +5085,7 @@ function smsBox({ title, people, text, logType, logDetail, free, leaderOnly }){
     imgIn.onchange = () => setImg(imgIn.files[0]);
     back.querySelector('#sb-img-del').onclick = () => setImg(null);
     back.querySelector('#sb-open').onclick = async () => {
+      if (onSendText) onSendText(ta.value);
       const rs = picked(); if (!rs.length) return notify('받는 사람을 골라 주세요.');
       if (img) {
         if (!(navigator.canShare && navigator.canShare({ files: [img] }))) return notify('이 휴대폰(브라우저)에서는 앱에서 사진을 바로 보낼 수 없어요.\n"문구 복사" 후 문자 앱에서 사진을 직접 첨부해 주세요.');
@@ -5117,6 +5099,7 @@ function smsBox({ title, people, text, logType, logDetail, free, leaderOnly }){
     };
     // 카톡: 휴대폰 공유 창 → 카카오톡 → 받는 사람(팀장 등) 고르기
     back.querySelector('#sb-kakao').onclick = async () => {
+      if (onSendText) onSendText(ta.value);
       if (logType) logEvent(logType, people.length === 1 ? people[0] : null, `${logDetail || ''} → 카카오톡`);
       try { if (navigator.share) { await navigator.share(img && navigator.canShare && navigator.canShare({ files: [img] }) ? { files: [img], text: ta.value } : { text: ta.value }); return; } }
       catch(e) { if (e.name === 'AbortError') return; }
