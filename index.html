@@ -585,7 +585,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-7</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-8</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1375,9 +1375,11 @@ function renderWork(){
     const ps = people.filter(x => x.p.town === t).sort((a,b) => seniorRank(seniorOf(a.p)) - seniorRank(seniorOf(b.p)) || seniorOf(a.p).localeCompare(seniorOf(b.p)) || a.p.name.localeCompare(b.p.name));
     return `<div style="font-weight:bold;margin:10px 0 4px;color:#2c5282;">📍 ${esc(t)} <span class="muted" style="font-weight:normal;">${ps.length}명</span></div>` + ps.map(x => {
       const ds = personDays(x.p, mk), moved = new Set(x.cs.map(c => c.to)), un = unpaidDaysOf(x.p, mk);
-      return `<button class="pen-row warn" onclick="openModal(${x.p.id})" style="margin-top:4px;"><b>${nmH(x.p)}</b> <span class="muted">${esc(seniorOf(x.p))}</span><br>
-        <span style="font-size:.9rem;">${x.cs.sort((a,b) => a.from.localeCompare(b.from)).map(c => `${dd(c.from)} → <b style="color:${c.to ? 'var(--warning)' : 'var(--danger)'}">${c.to ? dd(c.to) : '빠짐'}</b>`).join(', ')}${[...new Set(x.cs.map(c => c.reason).filter(Boolean))].map(r => ` <span class="muted">(${esc(r)})</span>`).join('')}</span><br>
-        <span style="font-size:.85rem;">📅 ${ds.map(d => `<span style="${moved.has(d) ? 'color:var(--warning);font-weight:bold;' : un.has(d) ? 'color:var(--danger);text-decoration:line-through;' : ''}">${Number(d.slice(8,10))}</span>`).join(', ')}일 · <b>총 ${ds.length - un.size}일</b></span></button>`;
+      // 줄에는 이름·총 일수만, 자세한 날짜는 눌러서 펼쳐 보기
+      return `<details class="pen-row warn" style="margin-top:4px;"><summary style="cursor:pointer;"><b>${nmH(x.p)}</b> <span class="muted">${esc(seniorOf(x.p))}</span> · <b>총 ${ds.length - un.size}일</b></summary>
+        <div style="margin-top:6px;"><span style="font-size:.9rem;">${x.cs.sort((a,b) => a.from.localeCompare(b.from)).map(c => `${dd(c.from)} → <b style="color:${c.to ? 'var(--warning)' : 'var(--danger)'}">${c.to ? dd(c.to) : '빠짐'}</b>`).join(', ')}${[...new Set(x.cs.map(c => c.reason).filter(Boolean))].map(r => ` <span class="muted">(${esc(r)})</span>`).join('')}</span><br>
+        <span style="font-size:.85rem;">📅 ${ds.map(d => `<span style="${moved.has(d) ? 'color:var(--warning);font-weight:bold;' : un.has(d) ? 'color:var(--danger);text-decoration:line-through;' : ''}">${Number(d.slice(8,10))}</span>`).join(', ')}일</span><br>
+        <button type="button" class="small secondary" onclick="openModal(${x.p.id})" style="margin-top:6px;">👤 정보 열기</button></div></details>`;
     }).join('');
   }).join('') : (cus.length ? '' : '<div class="muted">변경한 어르신이 없습니다.</div>'));
 }
