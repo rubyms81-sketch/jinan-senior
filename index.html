@@ -597,7 +597,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-30</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-32</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -3512,7 +3512,7 @@ async function drawStorage(){
 function renderPhotoAlert(){
   const box = document.getElementById('photo-alert'); if (!box) return;
   const ps = participants.filter(q => q.docOk && q.docNoPhoto && !q.docPhoto && !q.quit && !q.linking);
-  box.innerHTML = ps.length ? `<div class="notice" style="background:#fffaf0;border-color:#f6ad55;"><b style="color:#c05621;">📷 서류 사진 없는 분 ${ps.length}명</b> <span class="muted" style="font-size:.85rem;">이름을 누르면 사진을 넣을 수 있어요</span>
+  box.innerHTML = ps.length ? `<div class="notice" style="background:#fffaf0;border-color:#f6ad55;"><b style="color:#c05621;">📷 신규 비대면 서류 사진 없음 ${ps.length}명</b> <span class="muted" style="font-size:.85rem;">이름을 누르면 사진을 넣을 수 있어요</span>
     <div style="margin-top:4px;">${ps.map(q => `<button type="button" class="small secondary" style="width:auto;margin:2px 4px 2px 0;" onclick="openModal(${q.id})">${esc(q.name)}</button>`).join('')}</div></div>` : '';
 }
 // 줄 색·크기를 넣을 수 있는 확인 창 (글은 HTML로 넣음, 저장 값 없음)
@@ -3625,7 +3625,8 @@ function bdaySms(list){
 function welcomeSms(p){   // 환영 문자: 글 편집 창을 건너뛰고 바로 문자 화면 (그 화면에서 글을 고쳐 보낼 수 있음)
   const start = p.startDay || today(), m = Number(start.slice(5,7));
   const ds = personDays(p, start.slice(0,7), true).filter(d => d >= start), L = leaderOf(p);
-  const text = withStartNotice(smsTpl.welcome || WELCOME_DEF)
+  // 근무 시작 안내 문단은 넣지 않음 (예전에 저장된 글에 있으면 지움)
+  const text = (smsTpl.welcome || WELCOME_DEF).replace(/▶ 근무 시작 안내\n[^\n]*\n\n?/g, '')
     .replace(/\{이름\}/g, p.name).replace(/\{월\}/g, m).replace(/\{일수\}/g, ds.length)
     .replace(/\{활동일\}/g, ds.length ? `${m}월 ${dayList(ds)}` : '(담당자가 따로 알려 드립니다)')
     .replace(/\{팀장\}/g, L ? `\n※ 팀장님: ${L.name} (${fmtPhone(L.num)})\n` : '');
@@ -3638,7 +3639,7 @@ function welcomeSms(p){   // 환영 문자: 글 편집 창을 건너뛰고 바�
     smsTpl.welcome = t; store('jinan_tpl', JSON.stringify(smsTpl));
     logEvent('환영 문자 글 저장', null, '문자 화면에서 고친 글을 다음부터 기본 글로 씀');
   };
-  smsBox({ title: '🎉 환영 문자', people: [p], text, logType: '환영 문자', logDetail: `${m}월 ${dd(start)}부터 · 활동일 ${ds.length}일`, onSendText });
+  smsBox({ title: '🎉 환영 문자', people: [p], text, logType: '환영 문자', logDetail: `${m}월 ${dd(start)}부터 · 활동일 ${ds.length}일`, onSendText, noPhoto: true });
 }
 // ---------- 📝 활동일지 (그날 점검한 경로당별 보고용 글) ----------
 // 고쳐 쓴 글은 jinan_diary 에 저장 { '날짜|면|경로당': 글 }
@@ -5038,7 +5039,7 @@ function leaderMenu(p){
     logEvent('팀장 문자', p, `${L.name} 팀장 (${p.name} 어르신 점검 중)`);
     openSmsApp([L.num], `[진안군노인회] ${L.name} 팀장님, ${p.name} 어르신(${seniorOf(p)}) 관련 연락드립니다.\n`); });
 }
-function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, onSendText }){
+function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, onSendText, noPhoto }){
   return new Promise(resolve => {
     const recips = people.filter(p => telOf(p)).map(p => ({ key: 'p'+p.id, label: `${p.name} 어르신`, num: telOf(p), p }));
     const noTel = people.filter(p => !telOf(p));
@@ -5064,6 +5065,7 @@ function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, onS
       <button class="secondary full" id="sb-close">닫기</button></div>`;
     document.body.appendChild(back);
     const ta = back.querySelector('#sb-text'); ta.value = text;
+    if (noPhoto) { back.querySelector('#sb-img-btn').style.display = 'none'; }
     if (free) { ta.rows = 8; ta.placeholder = '보낼 내용을 적으세요'; setTimeout(() => { const at = ta.value.indexOf('\n\n') + 2; ta.focus(); ta.setSelectionRange(at, at); }, 80); }
     const picked = () => recips.filter(r => back.querySelector(`input[data-k="${r.key}"]`).checked);
     back.querySelector('#sb-copy').onclick = async () => {
@@ -5202,6 +5204,7 @@ function renderModal(){
       <br>받은 시간: <b style="color:${es.lackSafe ? 'var(--danger)' : '#2c5282'}">안전 ${es.safe}/${EDU_NEED.safe}시간</b> · 전체 ${es.total}/${EDU_NEED.total}시간${es.lackSafe ? ` → <b style="color:var(--danger)">안전 ${es.lackSafe}시간 더 필요</b>` : es.lackTotal ? ` → <b>${es.lackTotal}시간 더 필요</b>` : ''}</div>` + n; }
   if (fixList(p).length) n = fixList(p).map(x => `<div class="notice" style="background:#fffaf0;border-color:#f6ad55;display:flex;align-items:center;gap:8px;"><b style="flex:1;color:#c05621;">🔧 ${esc(x.n)} <span class="muted" style="font-weight:normal;font-size:.85rem;">${md(x.date)}</span></b><button type="button" class="small" onclick="fixDone(${p.id}, '${x.id}')" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">✔ 교체함</button></div>`).join('') + n;
   if (docWait(p) && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;"><span class="tag-doc" style="font-size:1rem;">!</span><b style="flex:1;color:#22543d;">비대면 교육 서류</b><button type="button" class="small" onclick="docConfirm(${p.id})" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">📄 서류 확인</button></div>` + n;
+  if (p.docNeed && p.docOk && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="color:#22543d;">📄 비대면 서류 확인 완료</b>${p.docPhoto ? ` <span>📷 사진 있음</span> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docPhotoView(${p.id})">보기</button>` : ` <b style="color:#c05621;">📷 사진 없음</b> <button type="button" class="small" style="width:auto;margin:0;" onclick="docPhotoAdd(${p.id})">사진 넣기</button>`}</div>` + n;
   if (p.guess) n = `<div class="notice">📍 경로당 <b>"${esc(p.senior)}"</b>은 주소(${esc(p.address||'')})를 보고 자동으로 넣은 <b>추정</b>입니다.<br>맞으면 아래 "어르신 정보 고치기"에서 그대로 <b>정보 저장</b>, 틀리면 경로당 이름을 고쳐서 저장해 주세요.</div>` + n;
   document.getElementById('modal-notice').innerHTML = n;
   document.getElementById('check-section').classList.toggle('hidden', s.dropped && !editingLogId);
