@@ -377,6 +377,15 @@
   #hd-scene.sc3d .far { filter:drop-shadow(0 -2px 2px rgba(255,255,255,.18)) drop-shadow(0 3px 3px rgba(0,0,0,.25)); }
   #hd-scene.sc3d .sc-star { box-shadow:0 0 4px 1px #fff; }
   #hd-scene.sc3d::after { content:''; position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.16), rgba(255,255,255,0) 60%), linear-gradient(180deg, rgba(0,0,0,0) 70%, rgba(0,0,0,.18)); }
+  /* 🔒 비밀번호 키패드 */
+  .pin-dlg { text-align:center; max-width:340px; }
+  .pin-title { font-size:1.15rem; font-weight:700; margin-bottom:6px; }
+  .pin-dots { display:flex; justify-content:center; gap:14px; margin:12px 0 6px; }
+  .pin-dots i { width:16px; height:16px; border-radius:50%; border:2px solid #4a5568; display:inline-block; }
+  .pin-dots i.on { background:#2b6cb0; border-color:#2b6cb0; }
+  .pin-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px; }
+  .pin-pad button { margin:0; padding:14px 0; font-size:1.4rem; }
+  .lock-opts button { display:block; width:100%; }
 </style>
 </head>
 <body>
@@ -530,6 +539,8 @@
     <details class="chg-box" id="ui-box" style="margin-top:0;border-top:none;padding-top:0;" ontoggle="if(this.open) renderUI()">
       <summary><h3>🛠️ 설정</h3><span class="chg-arrow"></span></summary>
       <div style="margin-top:8px;">
+        <label>🔒 비밀번호 잠금</label>
+        <button type="button" class="secondary full" id="lk-btn" onclick="setLockMode()">🔒 잠금 설정</button>
         <label>글씨 크기</label>
         <div class="ui-row"><button type="button" class="secondary" onclick="uiSize(-1)">－ 작게</button>
           <b id="ui-size" style="flex:1;text-align:center;font-size:1.4rem;"></b>
@@ -590,6 +601,7 @@
           <div class="grid-2"><button onclick="saveBackup()">💾 백업 파일 저장</button><button class="warning" onclick="shareBackup()">📤 문자·카톡으로 보내기</button></div>
           <button class="secondary full" onclick="document.getElementById('bk-file').click()">📂 백업 파일 불러오기 (복원)</button>
           <input type="file" id="bk-file" accept=".json,application/json" class="hidden" onchange="loadBackupFile(this)">
+          <button class="secondary full" id="bk-every-btn" onclick="setBkEvery()">🔔 백업 알림</button>
           <div id="bk-snap"></div>
       </div>
     </details>
@@ -597,7 +609,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-32</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-33</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -804,7 +816,7 @@ function notify(msg){ return showDialog(msg, false); }
 // 모든 창: 창 바깥(어두운 곳)을 누르면 닫힘 — 취소·닫기 단추가 있으면 그걸 누른 것과 같게
 document.addEventListener('pointerdown', e => { window._bgDown = e.target.classList?.contains('dlg-back') ? e.target : null; }, true);
 document.addEventListener('click', e => {
-  const bk = e.target; if (!bk.classList?.contains('dlg-back') || window._bgDown !== bk) return;
+  const bk = e.target; if (!bk.classList?.contains('dlg-back') || bk.classList.contains('pin-back') || window._bgDown !== bk) return;
   const bs = [...bk.querySelectorAll('.dlg button')];
   const btn = bk.querySelector('.dlg button[data-v="0"]') || bs.reverse().find(b => /^(취소|닫기|나중에|◀ 돌아가기)$/.test(b.textContent.trim()))
     || (bs.length === 1 && bs[0].dataset.v === '1' ? bs[0] : null);
@@ -5719,6 +5731,8 @@ function loadBackupFile(input){
   rd.readAsText(f);
 }
 async function renderBackup(){
+  const lb = document.getElementById('lk-btn'); if (lb) { const c = lockCfg(); lb.textContent = `🔒 잠금 설정 (지금: ${LOCK_NAME[c.mode] || '없음'}${c.mode === 'idle' && c.idleH ? ' ' + c.idleH + '시간' : ''})`; }
+  const be = document.getElementById('bk-every-btn'); if (be) be.textContent = `🔔 백업 알림 (지금: ${BK_EVERY_NAME[load('jinan_bk_every') || '0'] || '끔'})`;
   const last = load('jinan_last_backup'), info = document.getElementById('bk-info'); if (!info) return;
   const days = last ? daysBetween(last.slice(0,10), today()) : null;
   info.innerHTML = last ? `마지막 백업: <b>${last}</b>${days >= 30 ? ' <b style="color:var(--danger)">· 한 달이 지났어요. 백업해 주세요</b>' : ''}` : '<b style="color:var(--danger)">아직 백업한 적이 없어요.</b>';
@@ -5731,12 +5745,118 @@ async function checkRestore(){
   if (participants.length) { snapSave();   // 하루 한 번 자동으로 이 휴대폰 안에 백업
     // 하루에 한 번: 백업 파일도 저장할지 물어봄 (휴대폰이 바뀌어도 되살릴 수 있게)
     const last = load('jinan_last_backup') || '';
-    if (load('jinan_bk_ask') !== today() && !last.startsWith(today())) { store('jinan_bk_ask', today());
+    const every = Number(load('jinan_bk_every') || 0), lastDay = last ? last.slice(0,10) : '';
+    const due = every > 0 && (!lastDay || daysBetween(lastDay, today()) >= every);
+    if (due && load('jinan_bk_ask') !== today()) { store('jinan_bk_ask', today());
       setTimeout(async () => { if (await showDialog(`💾 오늘 백업 파일을 저장할까요?\n(어르신 ${participants.length}명 · 마지막 저장 ${last || '없음'})`, true, ['저장하기', '나중에'])) saveBackup(); }, 1200); }
     return; }
   const sn = await snapLatest(); if (!sn) return;
   if (await ask(`📱 이 휴대폰에 백업 자료가 남아 있어요.\n${sn.at} 백업 · 어르신 ${sn.count}명\n\n복원시켜 드릴까요?`)) restoreFrom(sn);
 }
+// ---------- 🔒 비밀번호 잠금 · 🔔 백업 알림 주기 ----------
+// 저장: jinan_lock = {mode, idleH, salt, hash, day, last}, jinan_bk_every = '0'|'7'|'10'|'30'
+// 비밀번호는 글자 그대로 저장하지 않고 섞은 값(해시)만 저장. 가벼운 잠금(남이 우연히 열어 보는 것을 막는 용도)
+const lockCfg = () => { try { return JSON.parse(load('jinan_lock')) || { mode: 'none' }; } catch(e) { return { mode: 'none' }; } };
+const saveLockCfg = c => store('jinan_lock', JSON.stringify(c));
+const LOCK_NAME = { none: '없음', each: '매번 켤 때', day: '하루 한 번', idle: '일정 시간 뒤' };
+const BK_EVERY_NAME = { '0': '끔', '7': '7일마다', '10': '10일마다', '30': '30일마다' };
+const pinHash = (salt, pin) => { let h = 2166136261; const s = salt + ':' + pin; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return String(h); };
+// 키패드 창: 네 자리를 누르면 그 값을 돌려줌. cancelable이면 취소 가능
+function pinEntry(title, cancelable){
+  return new Promise(res => {
+    const back = document.createElement('div'); back.className = 'dlg-back pin-back';
+    back.innerHTML = `<div class="dlg pin-dlg"><div class="dlg-msg pin-title"></div>
+      <div class="pin-dots"><i></i><i></i><i></i><i></i></div>
+      <div class="pin-pad">${[1,2,3,4,5,6,7,8,9,'','0','←'].map(k => k === '' ? '<span></span>' : `<button type="button" data-k="${k}">${k}</button>`).join('')}</div>
+      ${cancelable ? '<button type="button" class="secondary full" data-k="x" style="margin-top:10px;">취소</button>' : ''}</div>`;
+    back.querySelector('.pin-title').textContent = title;
+    let buf = '';
+    const dots = [...back.querySelectorAll('.pin-dots i')];
+    const paint = () => dots.forEach((d, i) => d.classList.toggle('on', i < buf.length));
+    back.addEventListener('click', e => {
+      const b = e.target.closest('button[data-k]'); if (!b) return;
+      const k = b.dataset.k;
+      if (k === 'x') { back.remove(); return res(null); }
+      if (k === '←') { buf = buf.slice(0, -1); return paint(); }
+      if (buf.length >= 4) return;
+      buf += k; paint();
+      if (buf.length === 4) { const v = buf; setTimeout(() => { back.remove(); res(v); }, 150); }
+    });
+    document.body.appendChild(back);
+  });
+}
+// 3번 틀리면 30초 동안 화면을 가리고 기다림 (뒤의 기록은 안 보임)
+function pinWait(sec){
+  return new Promise(res => {
+    const back = document.createElement('div'); back.className = 'dlg-back pin-back';
+    back.innerHTML = `<div class="dlg pin-dlg"><div class="dlg-msg pin-title">3번 틀렸어요</div><div style="font-size:1rem;">잠시 뒤에 다시 입력할 수 있어요: <b class="pin-sec"></b>초</div></div>`;
+    document.body.appendChild(back);
+    let left = sec; const show = () => { back.querySelector('.pin-sec').textContent = left; }; show();
+    const t = setInterval(() => { left--; show(); if (left <= 0) { clearInterval(t); back.remove(); res(); } }, 1000);
+  });
+}
+// 몇 가지 중에서 하나 고르기 (값 또는 null)
+function choose(title, opts){
+  return new Promise(res => {
+    const back = document.createElement('div'); back.className = 'dlg-back';
+    back.innerHTML = `<div class="dlg"><div class="dlg-msg"></div><div class="lock-opts"></div><button type="button" class="secondary full" data-v="0" style="margin-top:8px;">취소</button></div>`;
+    back.querySelector('.dlg-msg').textContent = title;
+    const box = back.querySelector('.lock-opts');
+    opts.forEach(([v, l]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = l; b.style.marginTop = '6px'; b.onclick = () => { back.remove(); res(v); }; box.appendChild(b); });
+    back.querySelector('[data-v="0"]').onclick = () => { back.remove(); res(null); };
+    document.body.appendChild(back);
+  });
+}
+async function setLockMode(){
+  const old = lockCfg();
+  const m = await choose(`🔒 비밀번호 잠금 (지금: ${LOCK_NAME[old.mode] || '없음'})`, [['none','없음 (잠그지 않음)'],['each','매번 켤 때마다'],['day','하루 한 번 (그날 처음 켤 때)'],['idle','일정 시간 안 쓴 뒤']]);
+  if (!m) return;
+  if (m === 'none') { saveLockCfg({ mode: 'none' }); logEvent('비밀번호 잠금', null, '잠금 없음'); renderBackup(); return notify('🔒 비밀번호 잠금을 껐어요.'); }
+  let idleH = 0;
+  if (m === 'idle') { const h = await choose('몇 시간 동안 안 쓰면 잠글까요?', [['1','1시간'],['3','3시간'],['5','5시간']]); if (!h) return; idleH = Number(h); }
+  const c = { ...old, mode: m, idleH, day: today(), last: Date.now() };
+  if (!old.hash) {   // 처음 설정: 같은 번호를 두 번 입력해서 확인
+    const a = await pinEntry('새 비밀번호 4자리를 입력하세요', true); if (a === null) return;
+    const b = await pinEntry('한 번 더 같은 번호를 입력하세요', true); if (b === null) return;
+    if (a !== b) return notify('두 번이 달라요. 처음부터 다시 설정해 주세요.');
+    c.salt = String(Date.now()); c.hash = pinHash(c.salt, a);
+  }
+  saveLockCfg(c);
+  const name = LOCK_NAME[m] + (m === 'idle' ? ' ' + idleH + '시간' : '');
+  logEvent('비밀번호 잠금', null, name); renderBackup();
+  notify(`🔒 잠금을 "${name}"으로 설정했어요.`);
+}
+function needLock(){
+  const c = lockCfg(); if (!c.hash || c.mode === 'none') return false;
+  if (c.mode === 'each') return true;
+  if (c.mode === 'day') return c.day !== today();
+  if (c.mode === 'idle') return !c.last || Date.now() - c.last > (c.idleH || 1) * 3600000;
+  return false;
+}
+async function runLock(){
+  const c = lockCfg(); let fails = 0;
+  for (;;) {
+    const v = await pinEntry(fails ? `틀렸어요. 다시 입력하세요 (${fails}/3)` : '비밀번호 4자리를 입력하세요', false);
+    if (v !== null && pinHash(c.salt, v) === c.hash) break;
+    fails++;
+    if (fails >= 3) { await pinWait(30); fails = 0; }
+  }
+  c.day = today(); c.last = Date.now(); saveLockCfg(c);
+}
+// 화면을 떠났다가 돌아올 때: 일정 시간 지났으면 다시 잠금
+document.addEventListener('visibilitychange', () => {
+  const c = lockCfg(); if (!c.hash || c.mode === 'none') return;
+  if (document.hidden) { c.last = Date.now(); saveLockCfg(c); }
+  else if ((c.mode === 'idle' || c.mode === 'day') && needLock() && !document.querySelector('.pin-back')) runLock();
+});
+async function setBkEvery(){
+  const cur = load('jinan_bk_every') || '0';
+  const v = await choose(`🔔 백업 알림 (지금: ${BK_EVERY_NAME[cur] || '끔'})`, [['0','끔'],['7','7일마다'],['10','10일마다'],['30','30일마다']]);
+  if (v === null) return;
+  store('jinan_bk_every', v); logEvent('백업 알림 설정', null, BK_EVERY_NAME[v]); renderBackup();
+  if (v !== '0') notify(`🔔 ${BK_EVERY_NAME[v]} 백업 알림을 켰어요.\n마지막 백업한 날부터 정한 날이 지나면, 앱을 열 때 백업을 물어봐요.`);
+}
+
 // ---------- 📊 기간 통계 (예: 1월~12월) ----------
 document.querySelectorAll('#st-from, #st-to').forEach(sel => sel.innerHTML = [1,2,3,4,5,6,7,8,9,10,11,12].map(m => `<option value="${m}">${m}월</option>`).join(''));
 const stRange = () => { let a = Number(document.getElementById('st-from').value), b = Number(document.getElementById('st-to').value); if (a > b) [a, b] = [b, a]; return [a, b]; };
@@ -6410,7 +6530,8 @@ if (!participants.length) notify('처음 사용하시는군요!\n\n아래 "명�
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
 fillMe();
 loadPhotos();
-renderBackup(); setTimeout(checkRestore, 900);
+renderBackup();
+(async () => { if (needLock()) await runLock(); setTimeout(checkRestore, 900); })();
 if (!participants.length) { document.getElementById('tools-box').open = true; mvReveal(document.getElementById('tools-box')); }
 // 앱을 열 때: 오늘 안부 전화할 입원 어르신 알림
 setTimeout(() => {
