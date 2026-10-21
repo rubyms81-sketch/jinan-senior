@@ -585,7 +585,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-5</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-6</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2271,7 +2271,22 @@ function histHasIssue(p, mk){
   return (p.logs || []).some(l => l.date.startsWith(mk) && issueText(l).length) || changesIn(p, mk).length > 0
     || eduOf(p, mk).some(e => eduAbsent(p, e.date));
 }
+// 📊 전체: 그해 벌점 이력(누적 점수)과 경고 이력을 한눈에
+function histAllBody(p){
+  const y = viewYear(), pi = payInfo(p, y);
+  const logs = (p.logs || []).filter(l => l.date.startsWith(String(y))).sort((a,b) => a.date.localeCompare(b.date) || a.id - b.id);
+  const pens = logs.filter(l => logPts(l) > 0), warns = logs.filter(l => !logPts(l) && issueText(l).length);
+  const total = logs.reduce((n,l) => n + logPts(l), 0), unpaid = Object.values(pi).reduce((n,v) => n + (v || 0), 0);
+  const none = '<div class="muted">없음</div>', sec = (t, b) => `<div class="hist-sec"><div class="hist-h">${t}</div>${b}</div>`;
+  let run = 0;
+  const penRows = pens.map(l => { run += logPts(l); return `<div class="log warn" style="margin:4px 0;">${dd(l.date)} · ${issueText(l).map(esc).join(', ')}${pi[l.id] ? ` <b style="color:var(--danger)">· 일당 ${pi[l.id]}일 미지급</b>` : ''}<br><span class="muted">누적 ${run}점</span></div>`; }).join('');
+  const warnRows = warns.map(l => `<div class="log" style="margin:4px 0;">${dd(l.date)} · ${issueText(l).map(esc).join(', ')}${l.memo ? `<br><span class="muted">📝 ${esc(l.memo)}</span>` : ''}</div>`).join('');
+  return `<div class="hist-sum"><b>${y}년 전체</b> · 벌점 ${total ? `<b style="color:var(--danger)">${total}점</b>` : '없음'} · 경고 ${warns.length}건${unpaid ? ` · <b style="color:var(--danger)">일당 미지급 ${unpaid}일</b>` : ''}</div>`
+    + sec('⚠️ 벌점 이력', penRows || none)
+    + sec('🔔 경고 이력 (감점 없음)', warnRows || none);
+}
 function histBody(p, mk){
+  if (mk === 'all') return histAllBody(p);
   const y = mk.slice(0,4), days = personDays(p, mk), chg = changesIn(p, mk), cu = customOf(p, mk);
   const logs = (p.logs || []).filter(l => l.date.startsWith(mk)).sort((a,b) => a.date.localeCompare(b.date) || a.id - b.id);
   const pts = logs.reduce((n,l) => n + logPts(l), 0), pi = payInfo(p, y);
@@ -2300,7 +2315,7 @@ function openHistory(p){
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.2rem;margin-bottom:6px;">📜 ${nmH(p)} 지난 행적</div>
-    <div class="hist-tabs">${months.map(mk => `<button type="button" data-mk="${mk}">${Number(mk.slice(5))}월${histHasIssue(p, mk) ? ' <span class="dot">●</span>' : ''}</button>`).join('')}</div>
+    <div class="hist-tabs">${months.map(mk => `<button type="button" data-mk="${mk}">${Number(mk.slice(5))}월${histHasIssue(p, mk) ? ' <span class="dot">●</span>' : ''}</button>`).join('')}<button type="button" data-mk="all">📊 전체</button></div>
     <div id="hist-body"></div>
     <div style="margin-top:10px;"><button class="secondary full" id="hist-close">닫기</button></div></div>`;
   document.body.appendChild(bg);
