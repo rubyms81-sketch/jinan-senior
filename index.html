@@ -577,7 +577,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-3</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-4</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1521,6 +1521,8 @@ function renderPersonDays(p){
   document.getElementById('btn-custom').textContent = cu ? '🏥 입원 체크 고치기' : '🏥 입원 체크';
   const nMv = chg.length + (cu ? 1 : 0) + (p.hospCall ? 1 : 0);
   document.getElementById('sec-moved').classList.toggle('hidden', !nMv);
+  // 다른 어르신으로 바뀌면 "이동한 날짜" 칸은 접힌 채로 시작
+  { const sm = document.getElementById('sec-moved'); if (sm.dataset.pid !== String(p.id)) { sm.open = false; sm.dataset.pid = String(p.id); } }
   document.getElementById('m-chg-title').innerHTML = `🔄 이동한 날짜 ${chg.length}건${cu ? (cu.inHosp ? ' · 🏥 입원' : ' · 🩹 보충') : ''}`;
 }
 
