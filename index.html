@@ -585,7 +585,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-11</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.21-12</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -599,6 +599,7 @@
   <div class="chg-box" id="sec-days"><div class="days-head"><h4 id="m-days-title">📅 이달 근무일</h4>
     <button type="button" class="small warning" onclick="addChange()" style="width:auto;margin:0 auto 0 0;padding:4px 10px;font-size:.85rem;">🔄 근무일 변경</button>
     <button type="button" class="date-btn" id="c-date-btn" onclick="pickCheckDate()"></button></div>
+  <div id="day-tabs" class="hist-tabs"></div>
   <div id="m-days" class="chips"></div>
   <details class="chg-box m-sec hidden" id="sec-moved" style="margin-top:8px;"><summary><h4 id="m-chg-title" style="font-size:.95rem;">🔄 이동한 날짜</h4><span class="chg-arrow"></span></summary>
   <div id="m-chg"></div></details>
@@ -1493,7 +1494,41 @@ function openWorkdays(){
       store('jinan_edu', JSON.stringify(eduAll)); renderList();
     } });
 }
+// 📅 점검 화면 근무일 칸의 월 탭 (1월~12월): 이번 달이 아닌 달을 고르면 그 달 근무일만 보여 줌(보기 전용)
+let dayTabMk = null;   // null = 이번 달(수정 가능)
+const DAY_ONLY_IDS = ['btn-addchg', 'btn-custom', 'sec-moved'];
+function drawDayTabs(){
+  const box = document.getElementById('day-tabs'); if (!box) return;
+  const y = viewYear(), cur = monthKey(), act = dayTabMk || cur;
+  box.innerHTML = Array.from({ length: 12 }, (_, i) => { const mk = `${y}-${String(i + 1).padStart(2, '0')}`;
+    return `<button type="button" class="${mk === act ? 'on' : ''}" data-mk="${mk}">${i + 1}월</button>`; }).join('');
+  box.querySelectorAll('button').forEach(b => b.onclick = () => {
+    dayTabMk = b.dataset.mk === cur ? null : b.dataset.mk;
+    const p = current(); if (p) renderPersonDays(p);
+  });
+  box.querySelector('button.on')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+}
+function setDayOnlyMode(on){
+  DAY_ONLY_IDS.forEach(id => { const el = document.getElementById(id); if (!el) return;
+    if (on && !el.classList.contains('hidden')) { el.classList.add('hidden'); el.dataset.tabHid = '1'; }
+    if (!on && el.dataset.tabHid) { el.classList.remove('hidden'); delete el.dataset.tabHid; } });
+  const hdr = document.querySelector('#sec-days .days-head .small.warning'); if (hdr) hdr.style.display = on ? 'none' : '';
+}
+function renderOtherDays(p, mk){
+  setDayOnlyMode(true);
+  const days = personDays(p, mk), chg = changesIn(p, mk), cu = customOf(p, mk), moved = new Set(chg.map(c => c.to));
+  document.getElementById('m-days-title').innerHTML = `📅 ${Number(mk.slice(5))}월 근무일 (${days.length}일) <span class="muted" style="font-size:.85rem;">· 보기만</span>`;
+  document.getElementById('m-days').innerHTML = days.map(d => {
+    const e = eduOn(p, d);
+    return e ? `<span class="chip edu">🎓 ${dd(d)} ${esc(e.name)}</span>`
+      : `<span class="chip wd ${moved.has(d) ? 'moved' : ''} ${d < today() ? 'past' : ''}">${dd(d)}${moved.has(d) ? ' 변경' : ''}</span>`; }).join('')
+    + chg.filter(c => !days.includes(c.from)).map(c => `<span class="chip off">${dd(c.from)}</span>`).join('')
+    + (cu ? `<div class="muted" style="width:100%;margin-top:6px;">${cu.inHosp ? '🏥 입원 중' : '🩹 보충 근무'}${cu.reason ? ` · ${esc(cu.reason)}` : ''}${cu.hosp?.length ? ` · 🏥 입원 ${rangeText([...cu.hosp])}` : ''}</div>` : '');
+  drawDayTabs();
+}
 function renderPersonDays(p){
+  if (dayTabMk && dayTabMk !== monthKey()) { renderOtherDays(p, dayTabMk); return; }
+  setDayOnlyMode(false); drawDayTabs();
   const mk = monthKey(), days = personDays(p, mk), chg = changesIn(p, mk), cu = customOf(p, mk), reg = monthDays(mk);
   const moved = new Set(chg.map(c => c.to));
   const hosp = new Set(cu?.hosp || []);
@@ -4800,6 +4835,7 @@ function changeText(p, from, to, reason, lp){
 function current(){ const id = Number(document.getElementById('edit-id').value); return participants.find(p => p.id===id); }
 
 function openModal(id){
+  dayTabMk = null;   // 점검 화면을 열 때는 이번 달로
   document.querySelectorAll('.m-sec').forEach(d => d.open = false);   // 목록은 접힌 채로 시작
   const p = participants.find(x => x.id===id); if(!p) return;
   document.getElementById('edit-id').value = p.id;
