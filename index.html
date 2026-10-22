@@ -604,7 +604,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-8</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-9</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -4571,7 +4571,9 @@ async function schedApply(P, fname){
   logEvent('일정표 적용', null, `${mo}월 활동일 ${P.workdays.length}일: ${P.workdays.map(d => dd(d)).join(', ')}${P.edu.length ? ` / 역량강화교육 ${P.edu.length}일: ${P.edu.map(e => dd(e.date)).join(', ')}` : ''}`, P.workdays[0]);
   renderList();
   await notify(`${mo}월 활동일 ${P.workdays.length}일을 넣었어요.${P.edu.length ? `\n역량강화교육 ${P.edu.length}일도 넣었어요.` : ''}`);
-  if (P.mk === monthKey()) openWorkdays();
+  // 파일의 달로 옮겨서 그 달 활동일 정하기를 바로 보여 줌 (10월에서 올려도 11월에 반영되어 보임)
+  if (P.mk !== monthKey()) moveMonth(Number(P.mk.slice(5)) - curMonth);
+  openWorkdays();
 }
 // 엑셀 고르기 (사용자 누름 직후에 바로 열어야 휴대폰에서 막히지 않음)
 function pickSchedule(onPick){
