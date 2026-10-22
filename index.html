@@ -432,7 +432,6 @@
     <div id="zone-sum" style="font-size:.85rem;margin:-2px 0 4px;"></div>
     <details class="chg-box" id="zone-all" style="margin:0 0 6px;border-top:none;padding-top:0;"><summary><span class="muted" style="font-size:.85rem;" id="zone-all-sum">🗺 11개 읍·면 전체</span><span class="chg-arrow" style="width:26px;height:26px;"></span></summary><div id="zone-all-list" style="font-size:.82rem;"></div></details>
     <div id="zone-lead" style="font-size:.85rem;margin:0 0 8px;padding:6px 8px;background:#f0fff4;border-radius:8px;"></div>
-    <button type="button" class="small secondary full" onclick="zoneReset()" style="margin:0 0 8px;">↩ 구역 리셋 (1~4구역 비우기)</button>
     <div class="zone-grid" id="zone-btns"></div>
     </details>
   </div>
@@ -605,7 +604,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-11</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-12</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2057,14 +2056,6 @@ async function zoneCount(d){
   }
   saveZones(); renderZones();
 }
-// ↩ 구역 리셋: 구역에 넣은 경로당 배정과 구역 팀장 이름을 지우고 1~4구역 빈 상태로 (어르신·팀장 명단은 그대로)
-async function zoneReset(){
-  const n = zones.reduce((a, z) => a + z.sites.length, 0);
-  if (!await ask(`구역을 처음처럼(1~4구역, 비어 있음)으로 되돌릴까요?\n구역에 넣은 경로당 ${n}곳의 배정이 지워져요.\n(어르신·팀장 명단은 그대로예요)`)) return;
-  logEvent('구역 리셋', null, `1~4구역 처음대로 (경로당 배정 ${n}곳 지움)`);
-  zones = [1,2,3,4].map(i => ({ id: i, name: `${i}구역`, sites: [] }));
-  saveZones(); renderZones();
-}
 // 🗺 11개 읍·면 전체: 면마다 경로당·게이트볼장 이름(배치 인원)과 팀장(시니어 안전 모니터링)
 const townOpen = {};
 function townSites(t){   // [{ name, gate, placed, n(앱 인원) }]
@@ -2181,6 +2172,7 @@ function openZone(id){
       <div id="zn-list"></div>
       <div class="grid-2" style="margin-top:8px;"><button type="button" class="secondary" id="zn-pick-back">◀ 돌아가기</button><button type="button" id="zn-pick-save">선택 저장</button></div>
     </div>
+    <button type="button" class="secondary full" id="zn-reset" style="margin-top:8px;">↩ 이 구역 리셋 (경로당 배정·팀장 이름 지우기)</button>
     <button type="button" class="secondary full" id="zn-close" style="margin-top:8px;">닫기</button></div>`;
   document.body.appendChild(bg);
   const $ = q => bg.querySelector(q);
@@ -2216,6 +2208,12 @@ function openZone(id){
         Object.assign(m, { phone: ph || m.phone || '', addr: z.leaderAddr || m.addr || '', car: z.car || m.car || '', carNo: z.carNo || m.carNo || '' }); if (z.sites.length) m.sites = z.sites.map(x => ({ ...x })); saveMonitors(); }
       saveZones(); d2.remove(); $('#zn-phone').value = z.phone; drawMain(); renderZones();
     };
+  };
+  $('#zn-reset').onclick = async () => {
+    if (!await ask(`${z.name}을(를) 리셋할까요?\n이 구역의 경로당 ${z.sites.length}곳 배정과 팀장 이름이 지워져요.\n(어르신·팀장 명단은 그대로예요)`)) return;
+    logEvent('구역 리셋', null, `${z.name} 리셋 (경로당 ${z.sites.length}곳 배정 지움${z.leaderName ? `, 팀장 ${z.leaderName} 해제` : ''})`);
+    z.sites = []; delete z.leaderName; delete z.leaderId; delete z.phone; delete z.leaderAddr; delete z.car; delete z.carNo;
+    saveZones(); bg.remove(); renderZones();
   };
   $('#zn-range').value = nvRange; $('#zn-range').onchange = () => { nvRange = $('#zn-range').value; drawMain(); renderZones(); };
   const drawMain = () => {
