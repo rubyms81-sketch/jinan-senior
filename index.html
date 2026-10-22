@@ -432,6 +432,7 @@
     <div id="zone-sum" style="font-size:.85rem;margin:-2px 0 4px;"></div>
     <details class="chg-box" id="zone-all" style="margin:0 0 6px;border-top:none;padding-top:0;"><summary><span class="muted" style="font-size:.85rem;" id="zone-all-sum">🗺 11개 읍·면 전체</span><span class="chg-arrow" style="width:26px;height:26px;"></span></summary><div id="zone-all-list" style="font-size:.82rem;"></div></details>
     <div id="zone-lead" style="font-size:.85rem;margin:0 0 8px;padding:6px 8px;background:#f0fff4;border-radius:8px;"></div>
+    <button type="button" class="small secondary full" onclick="zoneReset()" style="margin:0 0 8px;">↩ 구역 리셋 (1~4구역 비우기)</button>
     <div class="zone-grid" id="zone-btns"></div>
     </details>
   </div>
@@ -604,7 +605,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-10</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-11</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2054,6 +2055,14 @@ async function zoneCount(d){
     if (!await ask(`맨 끝 "${z.name}"을(를) 없앨까요?${z.sites.length ? `\n들어 있던 경로당 ${z.sites.length}곳은 구역이 없어져요.\n(어르신 명단은 그대로예요)` : ''}`)) return;
     zones.pop(); logEvent('구역 줄이기', null, `${z.name} 삭제${z.sites.length ? ` (경로당 ${z.sites.length}곳: ${z.sites.map(x => x.senior).join(', ')})` : ''} (모두 ${zones.length}개)`);
   }
+  saveZones(); renderZones();
+}
+// ↩ 구역 리셋: 구역에 넣은 경로당 배정과 구역 팀장 이름을 지우고 1~4구역 빈 상태로 (어르신·팀장 명단은 그대로)
+async function zoneReset(){
+  const n = zones.reduce((a, z) => a + z.sites.length, 0);
+  if (!await ask(`구역을 처음처럼(1~4구역, 비어 있음)으로 되돌릴까요?\n구역에 넣은 경로당 ${n}곳의 배정이 지워져요.\n(어르신·팀장 명단은 그대로예요)`)) return;
+  logEvent('구역 리셋', null, `1~4구역 처음대로 (경로당 배정 ${n}곳 지움)`);
+  zones = [1,2,3,4].map(i => ({ id: i, name: `${i}구역`, sites: [] }));
   saveZones(); renderZones();
 }
 // 🗺 11개 읍·면 전체: 면마다 경로당·게이트볼장 이름(배치 인원)과 팀장(시니어 안전 모니터링)
