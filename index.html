@@ -600,7 +600,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-18</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-19</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2175,7 +2175,6 @@ function openZone(id){
         <div id="zn-leader" style="margin-bottom:6px;font-size:.92rem;"></div>
         <label>팀장 연락처</label>
         <input type="tel" id="zn-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off" style="margin-bottom:10px;">
-        <button type="button" class="full" id="zn-sms" style="margin:0;">📩 이 구역 단체 문자 (내용 직접 쓰기)</button>
       </div>
     </div>
     <div id="zn-pick" class="hidden">
@@ -2265,7 +2264,6 @@ function openZone(id){
       const [town, senior] = b.dataset.best.split('|'); await toggleBest(town, senior); drawMain();
       const det = [...bg.querySelectorAll('#zn-sites details')].find(d => d.querySelector(`[data-best="${CSS.escape(town+'|'+senior)}"]`)); if (det) det.open = true;
     });
-    $('#zn-sms').disabled = !z.sites.length;
     // 이 경로당에 어르신 넣기: 이름으로 찾아서 누르면 이 경로당으로 옮김
     bg.querySelectorAll('.zs-q').forEach(inp => inp.oninput = () => {
       const [town, senior] = inp.dataset.site.split('|'), box = inp.nextElementSibling, t = inp.value.replace(/\s+/g,'');
@@ -2388,14 +2386,6 @@ function openZone(id){
     if (!z.sites.length) return notify('이 구역에 경로당이 없어요.');
     if (typeof XLSX === 'undefined') return notify('엑셀 기능을 불러오지 못했어요. 인터넷에 연결한 뒤 다시 눌러 주세요.');
     downloadCourse(z);
-  };
-  // 이 구역 어르신 모두에게 단체 문자 (내용은 직접 씀)
-  $('#zn-sms').onclick = () => {
-    const ps = participants.filter(p => z.sites.some(x => x.town===p.town && x.senior===seniorOf(p)) && !stats(p).dropped && seniorOf(p) !== '개별관리')
-      .sort((a,b) => seniorRank(seniorOf(a))-seniorRank(seniorOf(b)) || seniorOf(a).localeCompare(seniorOf(b)) || a.name.localeCompare(b.name));
-    if (!ps.length) return notify('이 구역에 문자 보낼 어르신이 없어요.');
-    const dayText = monthSmsText(monthKey(), z.name);
-    smsBox({ title: `${z.name} 단체 문자 (${ps.length}명)`, people: ps, text: dayText, logType: '구역 단체 문자', logDetail: z.name, free: true });
   };
   drawMain();
 }
