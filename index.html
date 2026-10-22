@@ -536,10 +536,6 @@
       <div style="margin-top:8px;">
         <label>🔒 비밀번호 잠금</label>
         <button type="button" class="secondary full" id="lk-btn" onclick="setLockMode()">🔒 잠금 설정</button>
-        <label>글씨 크기</label>
-        <div class="ui-row"><button type="button" class="secondary" onclick="uiSize(-1)">－ 작게</button>
-          <b id="ui-size" style="flex:1;text-align:center;font-size:1.4rem;"></b>
-          <button type="button" onclick="uiSize(1)">＋ 크게</button></div>
         <label>화면 색깔</label>
         <div class="ui-opts" id="ui-theme"></div>
         <label>글씨 두께</label>
@@ -604,7 +600,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-13</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-14</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -781,7 +777,7 @@ const UI_FONTS = [
 let ui = (() => { try { return Object.assign({ size: 5, weight: 'normal', font: '', wx: true, wxfx: true, sound: true, alarmAt: '11:50', theme: 'blue', hdText: '', hdColor: '#ffffff', hdFont: '', hdStyle: 'shadow' }, JSON.parse(load('jinan_ui')) || {}); } catch(e) { return { size: 5, weight: 'normal', font: '', wx: true, wxfx: true, theme: 'blue' }; } })();
 function applyUI(){
   const h = document.documentElement;
-  h.style.fontSize = (13 + ui.size) + 'px';            // 5단계 = 18px
+  ui.size = 1; h.style.fontSize = '14px';            // 글씨 크기 1단계 고정 (버튼 없앰)
   h.classList.toggle('th-warm', ui.theme === 'warm'); h.classList.toggle('th-dark', ui.theme === 'dark');
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', ui.theme === 'warm' ? '#c05621' : ui.theme === 'dark' ? '#1a202c' : '#2b6cb0');
   h.classList.toggle('fw-thin', ui.weight === 'thin'); h.classList.toggle('fw-bold', ui.weight === 'bold');
