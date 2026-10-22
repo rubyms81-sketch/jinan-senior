@@ -604,7 +604,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-2</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-3</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1718,6 +1718,42 @@ function quitsIn(mk){
     return date ? { p, date, why: p.quitWhy || stats(p).status.replace(/^중도포기/, '').replace(/[()]/g, '') || '본인 사정' } : null;
   }).filter(Boolean);
 }
+// 🟢 비대면 교육 미실시: 연계 끝 신규인데 아직 비대면 교육을 하지 않은 분
+const needNF = p => !!(p.linkDone && !p.nfDone && !p.quit && !p.docOk && !(p.edu || []).some(e => /의무교육/.test(e.name)));
+// 1) 비대면 교육 준비 확인 → 2) 서류 사진 → 3) 교육 시간 입력 (순서대로, 뒤로 가기 가능)
+async function nfDialog(id){
+  const p = participants.find(x => x.id === id); if (!p) return;
+  let s = p.nfStep || 0;
+  if (s < 1) {
+    if (!await ask(`${p.name} 어르신\n비대면 교육 준비되셨나요?\n(수료증 및 교육자료)`)) return;
+    s = 1; p.nfStep = 1; saveData(false);
+  }
+  const mk0 = today().slice(0,7), nx = addDays(mk0 + '-28', 7).slice(0,7);
+  const first = [...personDays(p, mk0), ...personDays(p, nx)].filter(d => d > today()).sort()[0];
+  if (!first) return notify('다음 근무일이 없어요. 근무일을 먼저 정해 주세요.');
+  for (;;) {
+    if (s < 2) {   // 2) 서류 사진
+      const c = await docPhotoAsk(p);
+      if (c === 'x') return;
+      if (c === 'photo') {
+        const f = await pickImage(); if (!f) continue;
+        try { await saveDocPhoto(p, f); } catch(e) { await notify('사진을 저장하지 못했어요. 다시 해 주세요.'); continue; }
+      } else { p.docNoPhoto = true; }
+      p.docOk = today(); s = 2; p.nfStep = 2; saveData(false);
+    }
+    const hs = await vEduDlg(p, first, { 안전: 2, 소양: 0, 직무: 1 }, true);   // 3) 교육 시간
+    if (hs === 'BACK') { s = 1; continue; }
+    if (!hs) return;
+    if (!(p.edu || []).some(e => /의무교육/.test(e.name))) {
+      const ve = { id: Date.now(), date: first, name: '의무교육(비대면)', hs, doc: true }; ve.h = eduH(ve); (p.edu ||= []).push(ve);
+      logEvent('교육 날짜', p, `${dd(first)} 의무교육(비대면) ${vEduTxt(hs)} · 첫 근무일 (일한 날로 인정)`, first);
+    }
+    p.nfDone = true; p.nfStep = 3; p.docNeed = true;
+    logEvent('비대면 교육', p, '준비 확인 · 서류 사진 · 교육 시간 입력 완료', today());
+    saveData(false); renderNewAlert(); renderList(); if (current()?.id === p.id) renderModal();
+    return notify('✔ 비대면 교육 처리를 마쳤어요.');
+  }
+}
 function renderNewAlert(){
   const box = document.getElementById('new-alert'); if (!box) return;
   const mk = monthKey(), m = Number(mk.slice(5)), ps = sortPs(participants.filter(p => p.start === mk && visibleTowns().includes(p.town)));
@@ -1726,7 +1762,10 @@ function renderNewAlert(){
   const todayIs = issuesOn(today());
   const tmd = today().slice(5), bd = sortPs(participants.filter(p => p.bday === tmd && visibleTowns().includes(p.town) && !stats(p).dropped));   // 내 담당 읍·면 어르신
   const fx = sortPs(participants.filter(p => fixList(p).length && !stats(p).dropped));
-  box.innerHTML = (fx.length ? alertCard('fix', 'background:#fffaf0;border-color:#dd6b20;padding:8px 12px;', `<b style="color:#c05621;">🔧 교체 필요 ${fx.length}명</b>`,
+  const nf = sortPs(participants.filter(p => needNF(p) && visibleTowns().includes(p.town)));
+  box.innerHTML = (nf.length ? alertCard('nf', 'background:#f0fff4;border-color:#38a169;padding:8px 12px;', `<b style="color:#22543d;"><span class="tag-doc">!</span> 비대면 교육 미실시 ${nf.length}명</b>`,
+      nf.map(p => `<button type="button" class="small" onclick="nfDialog(${p.id})" style="width:auto;margin:4px 4px 0 0;background:#38a169;white-space:nowrap;">${esc(p.name)} <span style="font-size:.82rem;">(${esc(p.town.replace(/[면읍]$/,''))} ${esc(seniorOf(p))})</span></button>`).join('')) : '')
+    + (fx.length ? alertCard('fix', 'background:#fffaf0;border-color:#dd6b20;padding:8px 12px;', `<b style="color:#c05621;">🔧 교체 필요 ${fx.length}명</b>`,
       fx.map(p => `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-top:1px dashed #fbd38d;font-size:.9rem;"><a href="#" data-open="${p.id}" style="flex:1;color:#7b341e;">${esc(p.name)}<span class="muted" style="font-size:.82rem;">(${esc(p.town.replace(/[면읍]$/,''))} ${esc(seniorOf(p))})</span><br>${fixList(p).map(x => `<b>${esc(x.n)}</b> <span class="muted" style="font-size:.82rem;">${md(x.date)}</span>`).join(' · ')}</a>
         ${fixList(p).map(x => `<button type="button" class="small" data-fix="${p.id}|${x.id}" style="width:auto;margin:0;padding:6px 10px;background:#38a169;white-space:nowrap;">✔ ${esc(x.n.replace(/\s*파손$/, ''))} 교체</button>`).join('')}</div>`).join('')) : '')
     + (bd.length ? alertCard('bday', 'background:#fff5f7;border-color:#ed64a6;padding:8px 12px;', `<b style="color:#b83280;">🎂 오늘 생일 ${bd.length}명</b>`,
