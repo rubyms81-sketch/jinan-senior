@@ -600,7 +600,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-16</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-18</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2150,7 +2150,7 @@ function wxMoodText(){
 function monthSmsText(mk, zname){
   const m = Number(mk.slice(5,7)), dl = monthDays(mk), en = endDay(mk);
   const dayLines = dl.length ? dl.map(d => `· ${dd(d)}`).join('\n') : '· (아직 정한 날짜 없음)';
-  return `안녕하세요. 진안군 노인회입니다.\n\n${wxMoodText()}\n\n▶ ${m}월 활동일\n${dayLines}\n${en ? `※ 마지막 날(마감): ${dd(en)}\n` : ''}\n▶ 꼭 지켜 주세요\n· 근무지를 이탈하면 1회 -1점이 되고, 그날 일당은 지급되지 않습니다.\n· 명찰과 조끼를 꼭 착용해 주세요.\n· 날짜를 바꿀 때는 반드시 팀장님께 먼저 보고해 주세요.\n· 무엇보다 안전이 최우선입니다. 무리하지 마시고 몸 상태를 먼저 살펴 주세요.\n\n감사합니다.\n진안군 노인회 드림\n\n※ 단체 문자라 답장은 안 하셔도 됩니다.`;
+  return `안녕하세요. 진안군 노인회입니다.\n\n${wxMoodText()}\n\n▶ ${m}월 활동일\n${dayLines}\n${en ? `※ 마지막 날(마감): ${dd(en)}\n` : ''}\n▶ 꼭 지켜 주세요\n· 근무지를 이탈하면 -1점이 되고, 그날 일당이 하루치 삭감됩니다.\n· 명찰과 조끼를 꼭 착용해 주세요.\n· 날짜를 바꿀 때는 반드시 팀장님께 먼저 보고해 주세요.\n· 무엇보다 안전이 최우선입니다. 무리하지 마시고 몸 상태를 먼저 살펴 주세요.\n\n감사합니다.\n진안군 노인회 드림\n\n※ 단체 문자라 답장은 안 하셔도 됩니다.`;
 }
 function openZone(id){
   const z = zones.find(x => x.id === id); if (!z) return;
