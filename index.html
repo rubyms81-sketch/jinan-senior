@@ -604,7 +604,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-7</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-8</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1183,7 +1183,7 @@ function suggestDays(mk, n = WORK_TARGET, skip = new Set()){
 }
 const isShifted = d => ![1,3,5].includes(dObj(d).getDay());   // 월·수·금이 아닌 날 = 옮긴 날
 const monthDays = mk => workdays[mk] || suggestDays(mk);
-const endDay = mk => { const d = [...monthDays(mk), ...((typeof eduAll !== 'undefined' && eduAll[mk]) || []).map(e => e.date)].sort(); return d[d.length-1] || ''; };   // 열흘째 = 마감일
+const endDay = mk => { const d = [...monthDays(mk), ...((typeof eduAll !== 'undefined' && eduAll[mk]) || []).filter(e => !e.ext).map(e => e.date)].sort(); return d[d.length-1] || ''; };   // 열흘째 = 마감일
 const quitDayOf = p => (p.quit && p.quitDay && Number(p.quitDay.slice(0,4)) === (p.quitYear || 0)) ? p.quitDay : '';
 const changesIn = (p, mk) => (p.changes || []).filter(c => c.from.startsWith(mk) || c.to.startsWith(mk));
 // 🩹 보충 근무(개인 일정): 사고·입원 등으로 쉬다가 돌아와 남은 날을 몰아서 일할 때
@@ -1412,7 +1412,9 @@ function renderWork(){
 function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched }){
   let locked = !!(lockable && wdLock[mk]);
   const y = Number(mk.slice(0,4)), m = Number(mk.slice(5,7)), last = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
-  let sel = new Set(days), ed = new Map((edu || []).map(e => [e.date, e.name])), curEdu = '';   // '' = 근무일, 이름 = 그 교육·행사
+  let sel = new Set(days), ed = new Map((edu || []).map(e => [e.date, e.name])), curEdu = '';
+  const extD = new Set((edu || []).filter(e => e.ext).map(e => e.date));   // 일정표 역량강화교육: 10일에 안 셈
+  const cntE = () => [...ed.keys()].filter(k => !extD.has(k)).length;   // '' = 근무일, 이름 = 그 교육·행사
   const snap = () => [...sel].sort().join() + '|' + [...ed].sort().join();
   const s0 = snap();
   const back = document.createElement('div'); back.className = 'dlg-back';
@@ -1439,7 +1441,7 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
     $('#sc-edu-names').innerHTML = `<button type="button" class="small ${curEdu ? 'secondary' : ''}" data-n="" style="width:auto;margin:0;${curEdu ? '' : 'background:#2b6cb0;'}">📅 근무일</button>` + names.map(n => `<button type="button" class="small ${n === curEdu ? '' : 'secondary'}" data-n="${esc(n)}" style="width:auto;margin:0;${n === curEdu ? 'background:#805ad5;' : ''}">🎓 ${esc(n)}</button>`).join('');
     back.querySelectorAll('#sc-edu-names button').forEach(b => b.onclick = () => { curEdu = b.dataset.n; draw(); });
     let h = WEEK.map(w => `<div class="h">${w}</div>`).join('') + '<div></div>'.repeat(first);
-    const endD = [...sel, ...ed.keys()].sort().pop();
+    const endD = [...sel, ...[...ed.keys()].filter(k => !extD.has(k))].sort().pop();
     for (let d = 1; d <= last; d++) {
       const k = ymd(y,m,d), w = new Date(y, m-1, d).getDay(), en2 = ed.get(k);
       const hn = HOLIDAY_NAMES[k] ? HOLIDAY_NAMES[k].replace('대체공휴일','대체휴일').slice(0,4) : '';
@@ -1447,7 +1449,7 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
       h += `<button data-k="${k}" class="${en2 ? 'edu' : sel.has(k) ? 'on' : ''} ${(w===0 || w===6 || HOLIDAYS.has(k)) ? 'red' : ''} ${k === endD ? 'end' : ''}">${d}${tag ? `<small>${esc(tag)}</small>` : ''}</button>`;
     }
     $('#sc-cal').innerHTML = h;
-    $('#sc-n').textContent = sel.size; $('#sc-e').textContent = ed.size; $('#sc-t').textContent = sel.size + ed.size;
+    $('#sc-n').textContent = sel.size; $('#sc-e').textContent = cntE(); $('#sc-t').textContent = sel.size + cntE();
     const byName = {}; [...ed].sort().forEach(([d, n]) => (byName[n] ||= []).push(d));
     $('#sc-list').innerHTML = Object.keys(byName).length ? Object.entries(byName).map(([n, ds]) => `<div style="display:flex;align-items:center;gap:6px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:5px 8px;margin-top:4px;">
       <span style="flex:1;">🎓 <b>${esc(n)}</b> <span class="muted">${ds.map(dd).join(', ')}</span></span>
@@ -1463,13 +1465,13 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
       const full = () => notify(`근무일이 이미 ${WORK_TARGET}일이에요. (교육·행사 포함)\n다른 근무일을 먼저 눌러서 빼 주세요.\n(교육·행사는 상관없이 더 넣을 수 있어요)`);
       if (curEdu) {   // 🎓 교육·행사 넣기
         if (ed.get(k) === curEdu) ed.delete(k);                 // 같은 것 → 빼기
-        else { ed.set(k, curEdu); sel.delete(k); }   // 교육·행사는 근무 10일과 상관없이 넣을 수 있음
+        else { ed.set(k, curEdu); extD.delete(k); sel.delete(k); }   // 교육·행사는 근무 10일과 상관없이 넣을 수 있음
       } else {        // 📅 근무일 넣기
         const w = new Date(y, m-1, Number(k.slice(8))).getDay();
         if (!sel.has(k) && (w === 0 || w === 6 || HOLIDAYS.has(k))) return notify(`${dd(k)}은 토·일·공휴일이라 근무일로 넣을 수 없어요.`);
         if (sel.has(k)) sel.delete(k);
         else if (ed.has(k)) { ed.delete(k); sel.add(k); }    // 교육·행사 날 → 근무일로 바꾸기
-        else if (sel.size + ed.size >= WORK_TARGET) return full();
+        else if (sel.size + cntE() >= WORK_TARGET) return full();
         else sel.add(k);
       }
       draw();
@@ -1490,7 +1492,7 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
     });
   });
   // 월·수·금 자동: 교육·행사 날은 그대로 두고 남은 칸을 월·수·금(공휴일이면 다음 날)으로 채움
-  $('#sc-auto').onclick = () => { sel = new Set(suggestDays(mk, Math.max(0, WORK_TARGET - ed.size), new Set(ed.keys()))); draw(); };
+  $('#sc-auto').onclick = () => { sel = new Set(suggestDays(mk, Math.max(0, WORK_TARGET - cntE()), new Set(ed.keys()))); draw(); };
   $('#sc-lock')?.addEventListener('click', async () => {
     if (!locked && snap() !== s0 && !await ask('고친 내용이 아직 저장되지 않았어요.\n저장하지 않고 잠글까요?')) return;
     locked = !locked; if (locked) wdLock[mk] = today(); else delete wdLock[mk];
@@ -1502,8 +1504,8 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
   $('#sc-prev')?.addEventListener('click', () => go(-1)); $('#sc-next')?.addEventListener('click', () => go(1));
   $('#sc-save').onclick = async () => {
     if (!sel.size) return notify('근무일을 하루 이상 골라 주세요.');
-    if (sel.size + ed.size < WORK_TARGET && !await ask(`근무일이 교육·행사 포함 ${sel.size + ed.size}일입니다. (보통 ${WORK_TARGET}일)\n이대로 저장할까요?`)) return;
-    back.remove(); onSave({ days: [...sel].sort(), edu: [...ed].sort().map(([date, name]) => ({ date, name })) });
+    if (sel.size + cntE() < WORK_TARGET && !await ask(`근무일이 교육·행사 포함 ${sel.size + cntE()}일입니다. (보통 ${WORK_TARGET}일)\n이대로 저장할까요?`)) return;
+    back.remove(); onSave({ days: [...sel].sort(), edu: [...ed].sort().map(([date, name]) => ({ date, name, ...(extD.has(date) ? { ext: true } : {}) })) });
   };
   draw();
 }
@@ -4555,7 +4557,7 @@ function schedPlan(sheets, mk){
   const tmk = `${y}-${String(m).padStart(2,'0')}`;
   const workdays = mainS ? [...new Set(mainS.items.filter(it => it.text.includes('활동일')).map(it => ymd(y, m, it.day)))].sort() : [];
   const eduMap = new Map();
-  sheets.forEach(s => s.items.forEach(it => { if (it.text.includes('역량회의')) { const d = ymd(y, m, it.day); eduMap.set(d, { date: d, name: '역량강화교육' }); } }));
+  sheets.forEach(s => s.items.forEach(it => { if (it.text.includes('역량회의')) { const d = ymd(y, m, it.day); eduMap.set(d, { date: d, name: '역량강화교육', ext: true }); } }));
   return { mk: tmk, workdays, edu: [...eduMap.values()].sort((a, b) => a.date.localeCompare(b.date)) };
 }
 async function schedApply(P, fname){
