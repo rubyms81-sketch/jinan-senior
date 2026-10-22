@@ -491,9 +491,14 @@
           <button type="button" class="filebtn" onclick="openBulkGuide()" style="margin:0;">📂 엑셀로 한번에 등록</button>
         </div>
         <button type="button" class="secondary full" onclick="openAddrGuide()" style="margin-top:8px;">🗺️ 경로당 주소 엑셀로 넣기</button>
+        <div class="grid-2" style="margin-top:8px;">
+          <button type="button" class="secondary" onclick="document.getElementById('sched-file').click()" style="margin:0;">📆 일정표 엑셀 올리기</button>
+          <button type="button" class="secondary" onclick="openSched()" style="margin:0;">📆 일정표 보기</button>
+        </div>
         <button class="warning full hidden" id="btn-guess" onclick="openGuessFix()"></button>
       </div>
     </details>
+    <input type="file" id="sched-file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="sr-only" onchange="schedImport(this)">
     <input type="file" id="addr-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="sr-only" onchange="addrImport(this)">
     <input type="file" id="lead-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="sr-only" onchange="leaderImport(this)">
     <input type="file" id="bulk-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="sr-only" onchange="bulkImport(this)">
@@ -604,7 +609,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-5</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.22-6</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -4516,6 +4521,60 @@ function normTown(t){
   return TOWNS.find(x => t.includes(x)) || TOWNS.find(x => t.startsWith(x.slice(0,2))) || '';
 }
 
+// ---------- 📆 일정표 엑셀: 올린 시트를 그대로 저장해 두고 탭으로 보기 (jinan_sched, 이 휴대폰에만) ----------
+function schedLoad(){ try { return JSON.parse(load('jinan_sched')) || null; } catch(e) { return null; } }
+function schedImport(input){
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { input.value=''; return notify('엑셀을 읽는 기능을 불러오지 못했습니다.\n인터넷 연결을 확인한 뒤 앱을 새로고침하고 다시 시도해 주세요.'); }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      const sheets = wb.SheetNames.map(nm => {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[nm], {header:1, defval:'', blankrows:false})
+          .map(r => r.map(c => String(c ?? '').trim()));
+        return { name: nm, title: (rows.flat().find(c => c)) || nm, rows };
+      }).filter(s => s.rows.length);
+      if (!sheets.length) return notify('읽을 내용이 있는 시트가 없어요.');
+      store('jinan_sched', JSON.stringify({ at: today(), file: file.name, sheets }));
+      logEvent('일정표', null, `${file.name} 올림 (시트 ${sheets.length}개: ${sheets.map(s => s.name).join(', ')})`, today());
+      renderList();
+      openSched();
+    } catch(err) {
+      notify('일정표 파일을 읽지 못했습니다.\n엑셀 파일이 맞는지 확인해 주세요.');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value = '';
+}
+function openSched(){
+  const S = schedLoad();
+  if (!S || !S.sheets || !S.sheets.length) return notify('아직 올린 일정표가 없어요.\n"📆 일정표 엑셀 올리기"로 파일을 올려 주세요.');
+  let cur = 0;
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg" style="max-width:680px;width:100%;max-height:88vh;overflow:auto;">
+    <div style="font-weight:bold;font-size:1.05rem;margin-bottom:2px;">📆 일정표</div>
+    <div class="muted" style="font-size:.85rem;margin-bottom:8px;">올린 날 ${esc(S.at)} · ${esc(S.file)}</div>
+    <div id="sc-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"></div>
+    <div id="sc-body" style="overflow-x:auto;"></div>
+    <button type="button" class="secondary full" id="sc-close" style="margin-top:10px;">닫기</button></div>`;
+  document.body.appendChild(back);
+  const draw = () => {
+    back.querySelector('#sc-tabs').innerHTML = S.sheets.map((s, i) =>
+      `<button type="button" class="small ${i === cur ? '' : 'secondary'}" data-i="${i}" style="margin:0;">${esc(s.name)}</button>`).join('');
+    const s = S.sheets[cur];
+    back.querySelector('#sc-body').innerHTML = `<div style="font-weight:bold;margin-bottom:6px;">${esc(s.title)}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:.9rem;">` +
+      s.rows.map(r => `<tr>${r.map(c => {
+        const act = c.includes('활동일') || c.includes('방문') || c.includes('전화');
+        return `<td style="border:1px solid #cbd5e0;padding:4px 5px;vertical-align:top;white-space:pre-line;${act ? 'background:#e6fffa;font-weight:bold;' : ''}">${esc(c)}</td>`;
+      }).join('')}</tr>`).join('') + '</table>';
+  };
+  back.querySelector('#sc-tabs').onclick = ev => { const b = ev.target.closest('button[data-i]'); if (b) { cur = Number(b.dataset.i); draw(); } };
+  back.querySelector('#sc-close').onclick = () => back.remove();
+  draw();
+}
 function bulkImport(input){
   const file = input.files && input.files[0];
   if (!file) return;
@@ -6373,6 +6432,13 @@ function exportExcel(){
   ws5['!cols'] = [17,11,14,8,14,10,60].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, shortSheet().ws, '근무 미달(1~11월)');
   XLSX.utils.book_append_sheet(wb, ws5, '변경 이력');
+  // 올린 일정표 (시트별 줄 그대로)
+  const sch = schedLoad();
+  const sRows = [];
+  (sch?.sheets || []).forEach(s => s.rows.forEach((r, i) => sRows.push({ '시트':s.name, '줄':i+1, '내용':r.filter(c => c).join(' | ') })));
+  const wsS = sRows.length ? XLSX.utils.json_to_sheet(sRows) : XLSX.utils.aoa_to_sheet([['올린 일정표가 없습니다.']]);
+  wsS['!cols'] = [{wch:14},{wch:6},{wch:90}];
+  XLSX.utils.book_append_sheet(wb, wsS, '일정표');
   XLSX.writeFile(wb, fname + '.xlsx');
 }
 
