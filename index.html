@@ -602,7 +602,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.23-1</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.23-2</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -5357,7 +5357,7 @@ function renderModal(){
   if (docWait(p) && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;"><span class="tag-doc" style="font-size:1rem;">!</span><b style="flex:1;color:#22543d;">비대면 교육 서류</b><button type="button" class="small" onclick="docConfirm(${p.id})" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">📄 서류 확인</button></div>` + n;
   if (p.docNeed && p.docOk && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="color:#22543d;">📄 비대면 서류 확인 완료</b>${p.docPhoto ? ` <span>📷 사진 있음</span> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docPhotoView(${p.id})">보기</button>` : ` <b style="color:#c05621;">📷 사진 없음</b> <button type="button" class="small" style="width:auto;margin:0;" onclick="docPhotoAdd(${p.id})">사진 넣기</button>`}</div>` + n;
   if (p.guess) n = `<div class="notice">📍 경로당 <b>"${esc(p.senior)}"</b>은 주소(${esc(p.address||'')})를 보고 자동으로 넣은 <b>추정</b>입니다.<br>맞으면 아래 "어르신 정보 고치기"에서 그대로 <b>정보 저장</b>, 틀리면 경로당 이름을 고쳐서 저장해 주세요.</div>` + n;
-  if (!s.dropped) n = (p.pause ? `<div class="notice" style="background:#fff5f5;border-color:#742a2a;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="flex:1;color:#742a2a;">💀 활동 중단 ${mdK(p.pause)} 시작 · 만료 ${mdK(pauseEnd(p))} (${leftTxt(pauseLeft(p))})</b><button type="button" class="small secondary" onclick="pauseToggle(${p.id})" style="width:auto;margin:0;">▶ 활동 복귀</button></div>` : `<div style="margin-bottom:6px;"><button type="button" class="small secondary" onclick="pauseToggle(${p.id})" style="width:auto;">⏸ 활동 중단 (오늘부터)</button></div>`) + n;
+  if (!s.dropped) n = (p.pause ? `<div class="notice" style="background:#fff5f5;border-color:#742a2a;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="flex:1;color:#742a2a;">💀 활동 중단 ${mdK(p.pause)} 시작 · 만료 ${mdK(pauseEnd(p))} (${leftTxt(pauseLeft(p))})</b><button type="button" class="small secondary" onclick="pauseEditDate(${p.id})" style="width:auto;margin:0;">📅 시작일 고치기</button> <button type="button" class="small secondary" onclick="pauseToggle(${p.id})" style="width:auto;margin:0;">▶ 활동 복귀</button></div>` : `<div style="margin-bottom:6px;"><button type="button" class="small secondary" onclick="pauseToggle(${p.id})" style="width:auto;">⏸ 활동 중단 (오늘부터)</button></div>`) + n;
   if (!s.dropped) n = `<div style="margin-bottom:6px;"><button type="button" class="small secondary" onclick="ltcCheck(${p.id})" style="width:auto;">🏥 장기요양 등급 확인</button></div>` + n;
   document.getElementById('modal-notice').innerHTML = n;
   document.getElementById('check-section').classList.toggle('hidden', s.dropped && !editingLogId);
@@ -5626,6 +5626,22 @@ async function pauseToggle(pid){
     p.pause = today();
     logEvent('활동 중단', p, `${mdK(today())}부터 · 만료 ${mdK(addDays(today(), qDays()))} (기준 ${qDays()}일)`, today());
   }
+  saveData(false); renderList(); renderNewAlert(); if (current()?.id === p.id) renderModal();
+}
+// 📅 활동 중단 시작일을 지난 날짜로 고치기 (오늘 이후는 안 됨)
+async function pauseEditDate(pid){
+  const p = participants.find(x => x.id === pid); if (!p?.pause) return;
+  const t = today(), ph = `예: ${Number(t.slice(5,7))}/${Number(t.slice(8,10))}`;
+  const v = await askInput(`${p.name} 어르신 활동 중단 시작일 (현재 ${mdK(p.pause)})\n쉬기 시작한 날짜를 적으세요. 오늘 이전 날짜만 됩니다.`, ph);
+  if (!v) return;
+  const m = v.match(/(\d{4})?\D*?(\d{1,2})\s*[\/.\-월]\s*(\d{1,2})/);
+  const mo = m ? Number(m[2]) : 0, dy = m ? Number(m[3]) : 0;
+  if (!m || mo < 1 || mo > 12 || dy < 1 || dy > 31) return notify('날짜를 알아보지 못했어요. 예: 10/21');
+  const k = `${m[1] || t.slice(0,4)}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;
+  if (k > t) return notify('오늘보다 뒤 날짜는 넣을 수 없어요.');
+  if (k === p.pause) return;
+  logEvent('활동 중단 날짜 고침', p, `${mdK(p.pause)} → ${mdK(k)} 시작으로 고침 (만료 ${mdK(addDays(k, qDays()))})`, t);
+  p.pause = k;
   saveData(false); renderList(); renderNewAlert(); if (current()?.id === p.id) renderModal();
 }
 // 만료 임박 보고: 보고·전산 처리 확인 → 네 = 중도포기 성립(인원에서 제외)
