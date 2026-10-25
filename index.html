@@ -603,7 +603,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.25-2</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.25-3</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -5681,6 +5681,7 @@ async function ltcCheck(pid){
 }
 // 📖 사용법 찾기: 검색하면 제목만 나오고, 누르면 단계가 펼쳐집니다
 const HELP = [
+  { t: '신규 어르신 등록하기', k: '신규 등록 추가 새로 어르신 새 사람 등록', steps: ['메인 화면의 ➕ 신규등록 칸을 펼칩니다.', '성명, 성별, 나이, 소속 면, 경로당을 적습니다.', '저장을 누르면 명단에 들어갑니다. 여러 명은 📂 엑셀로 한번에 등록을 씁니다.'] },
   { t: '팀장 명단 올리기', k: '팀장 명단 엑셀 구역 올리기 등록', steps: ['📂 엑셀로 한번에 등록을 누릅니다.', '창 맨 아래 👤 팀장 명단 올리기를 누릅니다.', '팀장 파일을 고르면 구역이 자동으로 나뉩니다.'], open: () => openBulkGuide() },
   { t: '어르신 명단 올리기', k: '어르신 명단 엑셀 등록 올리기 참여자', steps: ['📂 엑셀로 한번에 등록을 누릅니다.', '올리는 방법에서 📋 올해 명단으로 정리 또는 ✏️ 추가 정보만 넣기를 고릅니다.', '명단 파일을 고르면 끝납니다.'], open: () => openBulkGuide() },
   { t: '팀장 정보 고치기', k: '팀장 이름 연락처 구역 고치기', steps: ['구역 칸에서 구역을 누릅니다.', '구역 창의 👤 팀장 정보를 누릅니다.', '이름과 연락처를 고치고 저장합니다.'] },
@@ -5701,7 +5702,9 @@ function helpToggleDone(id){
 }
 function openHelp(){
   const bg = document.createElement('div'); bg.className = 'dlg-back';
-  bg.innerHTML = `<div class="dlg" style="max-height:88vh;overflow:auto;">
+  // 아이패드 자판이 올라와도 가리지 않도록 창을 화면 위쪽에 붙이고, 높이를 줄임
+  bg.style.cssText = 'align-items:flex-start;justify-content:center;padding-top:10px;';
+  bg.innerHTML = `<div class="dlg" style="max-height:42vh;overflow:auto;margin:0 auto;">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">📖 사용법 찾기</div>
     <input type="text" id="hp-q" placeholder="예: 팀장, 엑셀, 백업" autocomplete="off" style="margin:0 0 6px;">
     <div id="hp-list"></div>
@@ -5711,7 +5714,7 @@ function openHelp(){
   let openId = -1;
   const draw = () => {
     const found = helpSearch(inp.value);
-    if (!found.length) { list.innerHTML = '<div class="muted" style="padding:10px 2px;">찾는 사용법이 없습니다. 다른 말로 찾아 보세요.</div>'; return; }
+    if (!found.length) { list.innerHTML = '<div class="muted" style="padding:6px 2px 4px;">찾는 사용법이 없습니다. 아래 목록에서 골라 보세요.</div>' + HELP.map(h => `<div style="border-top:1px solid #e2e8f0;padding:8px 2px;"><button type="button" class="secondary" data-all="${HELP.indexOf(h)}" style="margin:0;width:100%;text-align:left;font-weight:bold;">${esc(h.t)}</button></div>`).join(''); list.querySelectorAll('[data-all]').forEach(b => b.onclick = () => { inp.value = HELP[Number(b.dataset.all)].t; inp.dispatchEvent(new Event('input')); }); return; }
     const done = helpDoneList();
     list.innerHTML = found.map(h => {
       const id = HELP.indexOf(h), ok = done.includes(id);
@@ -5731,7 +5734,7 @@ function openHelp(){
   inp.addEventListener('input', () => { openId = -1; draw(); });
   bg.querySelector('#hp-close').onclick = () => bg.remove();
   draw();
-  setTimeout(() => inp.focus(), 50);
+  setTimeout(() => { inp.focus(); inp.scrollIntoView({block:'center'}); }, 50);
 }
 async function fixDone(pid, id){
   const p = participants.find(x => x.id === pid), x = p?.fix?.[id]; if (!x) return;
