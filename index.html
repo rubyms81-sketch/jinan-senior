@@ -381,6 +381,7 @@
   .pin-dlg { text-align:center; max-width:340px; }
   .pin-title { font-size:1.15rem; font-weight:700; margin-bottom:6px; }
   .lock-opts button { display:block; width:100%; }
+.help-fab{position:fixed;right:14px;bottom:14px;width:52px;height:52px;border-radius:26px;border:none;background:#2b6cb0;color:#fff;font-size:24px;box-shadow:0 4px 10px rgba(43,108,176,.45);z-index:40;margin:0;padding:0;display:flex;align-items:center;justify-content:center;}
 </style>
 </head>
 <body>
@@ -602,7 +603,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.25-1</span></footer>
+<footer style="margin:0 auto;text-align:left;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;">제작자:김장원 <span style="opacity:.7;">· 버전 2026.10.25-2</span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -5678,6 +5679,60 @@ async function ltcCheck(pid){
   logEvent('장기요양 탈락', p, `${mdK(today())} 탈락 · 장기요양 1~5등급 판정 (사업별 참여자 관리에서 참여상태 "탈락"으로 고치기)`, today());
   saveData(false); renderList(); renderNewAlert(); if (current()?.id === p.id) renderModal();
 }
+// 📖 사용법 찾기: 검색하면 제목만 나오고, 누르면 단계가 펼쳐집니다
+const HELP = [
+  { t: '팀장 명단 올리기', k: '팀장 명단 엑셀 구역 올리기 등록', steps: ['📂 엑셀로 한번에 등록을 누릅니다.', '창 맨 아래 👤 팀장 명단 올리기를 누릅니다.', '팀장 파일을 고르면 구역이 자동으로 나뉩니다.'], open: () => openBulkGuide() },
+  { t: '어르신 명단 올리기', k: '어르신 명단 엑셀 등록 올리기 참여자', steps: ['📂 엑셀로 한번에 등록을 누릅니다.', '올리는 방법에서 📋 올해 명단으로 정리 또는 ✏️ 추가 정보만 넣기를 고릅니다.', '명단 파일을 고르면 끝납니다.'], open: () => openBulkGuide() },
+  { t: '팀장 정보 고치기', k: '팀장 이름 연락처 구역 고치기', steps: ['구역 칸에서 구역을 누릅니다.', '구역 창의 👤 팀장 정보를 누릅니다.', '이름과 연락처를 고치고 저장합니다.'] },
+  { t: '활동 중단 하기', k: '활동 중단 쉬기 45일 중도포기 복귀', steps: ['어르신 이름을 눌러 점검 화면을 엽니다.', '⏸ 활동 중단 (오늘부터)를 누릅니다.', '복귀는 ▶ 활동 복귀를 누릅니다. 기준 일수는 설정에서 바꿉니다.'] },
+  { t: '장기요양 등급 탈락 처리', k: '장기요양 등급 탈락 1~5등급', steps: ['어르신 이름을 눌러 점검 화면을 엽니다.', '🏥 장기요양 등급 확인을 누릅니다.', '1~5등급이면 "1~5등급 있음"을 누르고 확인을 누릅니다.'] },
+  { t: '백업 저장하기', k: '백업 저장 불러오기 자료 보관', steps: ['설정 아래쪽의 💾 백업 칸을 찾습니다.', '저장 단추를 누르면 백업 파일이 만들어집니다.', '문제가 생기면 불러오기로 되돌립니다.'] },
+  { t: '활동일지 내려받기', k: '활동일지 한글 내용 출장 일지', steps: ['메인 📅 활동일에서 날짜를 누릅니다.', '출장 지역과 직원을 고르고 저장합니다.', '활동일지 내려받기 단추를 누릅니다.'] },
+];
+const helpNorm = s => String(s).replace(/\s+/g, '').toLowerCase();
+function helpSearch(q){
+  const words = String(q).trim().split(/\s+/).filter(Boolean).map(helpNorm);
+  return HELP.filter(h => { const hay = helpNorm(h.t + ' ' + h.k); return words.every(w => hay.includes(w)); });
+}
+function helpDoneList(){ try { return JSON.parse(load('jinan_help_done')) || []; } catch(e) { return []; } }
+function helpToggleDone(id){
+  let l = helpDoneList(); l = l.includes(id) ? l.filter(x => x !== id) : [...l, id];
+  try { store('jinan_help_done', JSON.stringify(l)); } catch(e) {}
+}
+function openHelp(){
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = `<div class="dlg" style="max-height:88vh;overflow:auto;">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">📖 사용법 찾기</div>
+    <input type="text" id="hp-q" placeholder="예: 팀장, 엑셀, 백업" autocomplete="off" style="margin:0 0 6px;">
+    <div id="hp-list"></div>
+    <button class="secondary full" id="hp-close" style="margin-top:10px;">닫기</button></div>`;
+  document.body.appendChild(bg);
+  const list = bg.querySelector('#hp-list'), inp = bg.querySelector('#hp-q');
+  let openId = -1;
+  const draw = () => {
+    const found = helpSearch(inp.value);
+    if (!found.length) { list.innerHTML = '<div class="muted" style="padding:10px 2px;">찾는 사용법이 없습니다. 다른 말로 찾아 보세요.</div>'; return; }
+    const done = helpDoneList();
+    list.innerHTML = found.map(h => {
+      const id = HELP.indexOf(h), ok = done.includes(id);
+      return `<div style="border-top:1px solid #e2e8f0;padding:8px 2px;">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button type="button" class="secondary" data-hi="${id}" style="margin:0;flex:1;text-align:left;font-weight:bold;">${ok ? '✔ ' : ''}${esc(h.t)}</button>
+          ${h.open ? `<button type="button" class="small" data-go="${id}" style="margin:0;width:auto;white-space:nowrap;">열기</button>` : ''}
+        </div>
+        ${openId === id ? `<ol style="margin:8px 0 0 18px;padding:0;line-height:1.7;font-size:.95rem;">${h.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+          <button type="button" class="small secondary" data-done="${id}" style="margin:6px 0 0;width:auto;">${ok ? '✔ 했어요 (취소)' : '✔ 했어요'}</button>` : ''}
+      </div>`;
+    }).join('');
+    list.querySelectorAll('[data-hi]').forEach(b => b.onclick = () => { const id = Number(b.dataset.hi); openId = openId === id ? -1 : id; draw(); });
+    list.querySelectorAll('[data-done]').forEach(b => b.onclick = () => { helpToggleDone(Number(b.dataset.done)); draw(); });
+    list.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { bg.remove(); HELP[Number(b.dataset.go)].open(); });
+  };
+  inp.addEventListener('input', () => { openId = -1; draw(); });
+  bg.querySelector('#hp-close').onclick = () => bg.remove();
+  draw();
+  setTimeout(() => inp.focus(), 50);
+}
 async function fixDone(pid, id){
   const p = participants.find(x => x.id === pid), x = p?.fix?.[id]; if (!x) return;
   if (!await ask(`${p.name} 어르신 ${x.n} → 교체했나요?`)) return;
@@ -6754,5 +6809,6 @@ setTimeout(() => {
   if (msg.length) notify(msg.join('\n\n') + '\n\n맨 위 칸에서 번호를 누르면 바로 전화돼요.');
 }, 400);
 </script>
+<button type="button" class="help-fab" onclick="openHelp()" aria-label="사용법 찾기">📖</button>
 </body>
 </html>
