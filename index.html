@@ -603,7 +603,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.26-1</span></span><button type="button" onclick="openHelp()" aria-label="사용법 찾기" style="width:auto;margin:0;padding:6px 14px;border-radius:14px;background:#2b6cb0;color:#fff;font-size:.9rem;">📖 사용법 찾기</button></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.26-2</span></span><button type="button" onclick="openHelp()" aria-label="사용법 찾기" style="width:auto;margin:0;padding:6px 14px;border-radius:14px;background:#2b6cb0;color:#fff;font-size:.9rem;">📖 사용법 찾기</button></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -629,6 +629,7 @@
   <input type="hidden" id="edit-id">
 
   <div id="check-section">
+    <div id="lead-board" class="hidden"></div>
     <input type="hidden" id="c-date">
     <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 6px;"><b>📋 점검 항목</b><button type="button" id="ck-toggle" class="small" onclick="ckToggle()" style="width:auto;margin:0;"></button></div>
     <div id="ck-body">
@@ -1015,20 +1016,51 @@ function exFromForm(keep){
   return ex;
 }
 // 📞 팀장님 보고 점검 (사용자 요청, 2026-10-26): 직접 나가지 않은 날은 근무지 이탈·조끼·명찰과 "보고로도 체크"가 꺼진 항목을 보여 주지도, 기록하지도 않음
-const leadOK = it => it.lead ?? it.id === 'diary';   // 보고로도 체크하는 항목 (기본: 활동일지만)
+const leadOK = it => !!it.lead;   // 보고로도 체크하는 항목 (기본: 없음, 편집 창에서 켬)
 const isLeadMode = () => document.getElementById('c-how')?.value === '보고';
 function applyHow(){
   const lead = isLeadMode();
-  ['leave', 'vest', 'badge'].forEach(k => { const el = document.querySelector(`#check-section .base-it[data-k="${k}"]`); if (el) el.style.display = lead ? 'none' : ''; });
-  document.querySelectorAll('#ex-items .ex-it').forEach(el => { const it = checkItems.find(x => x.id === el.dataset.lid); el.style.display = lead && it && !leadOK(it) ? 'none' : ''; });
+  ['vest', 'badge'].forEach(k => { const el = document.querySelector(`#check-section .base-it[data-k="${k}"]`); if (el) el.style.display = lead ? 'none' : ''; });
+  document.querySelectorAll('#ex-items .ex-it').forEach(el => { const it = checkItems.find(x => x.id === el.dataset.lid); el.style.display = lead && !(it && leadOK(it)) ? 'none' : ''; });
+  renderLeadBoard();
 }
+// 📞 팀장님 보고 맨 위 큰 칸: 현재까지 근무 일수 · 입원 · 이번 달 특이사항 (사용자 요청, 2026-10-26)
+function renderLeadBoard(){
+  const box = document.getElementById('lead-board'); if (!box) return;
+  const p = current();
+  if (!isLeadMode() || !p) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+  box.classList.remove('hidden');
+  const mk = monthKey(), t0 = today();
+  const worked = personDays(p, mk).filter(d => d <= t0).length;
+  const notes = (p.notes || []).filter(n => n.date.startsWith(mk)).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+  box.innerHTML = `<div style="background:#ebf8ff;border:2px solid #2b6cb0;border-radius:14px;padding:14px;margin-bottom:10px;">
+    <div style="font-size:20px;font-weight:700;">📞 팀장님 보고 · ${esc(p.name)}</div>
+    <div style="font-size:19px;margin-top:8px;">현재까지 <b style="font-size:26px;color:#2b6cb0;">${worked}일</b> 근무 중</div>
+    ${inHospNow(p) ? '<div style="font-size:19px;color:#c53030;font-weight:700;margin-top:6px;">🏥 현재 입원 중</div>' : ''}
+    <div style="font-size:16px;font-weight:700;margin-top:10px;">📝 이번 달 특이사항</div>
+    ${notes.length ? notes.map(n => `<div style="font-size:16px;margin-top:4px;line-height:1.5;">· ${Number(n.date.slice(5,7))}/${Number(n.date.slice(8,10))} ${esc(n.text)}</div>`).join('') : '<div class="muted" style="font-size:15px;margin-top:4px;">없음</div>'}
+    <button type="button" class="small" onclick="openNote(null)" style="width:auto;margin-top:8px;">＋ 특이사항 적기</button></div>`;
+}
+// 보고로 받은 자리 비움은 -1점 (직접 나간 날의 자리 비움은 지금처럼 경고) (사용자 요청, 2026-10-26)
+const pvFor = (how, leave) => (how === '보고' && leave === '자리비움') ? Object.assign({}, PT, { 자리비움: 1 }) : null;
 function formRecord(keep){
   const g = id => document.getElementById(id).value;
   const how = isLeadMode() ? '보고' : '직접';
   const ex = exFromForm(keep);
   if (how === '보고') checkItems.forEach(it => { if (!leadOK(it)) ex[it.id] = exVal(it, '정상'); });
-  const lead = how === '보고';
-  return { how, ex, leave: lead ? '정상' : g('c-leave'), vest: lead ? '정상' : g('c-vest'), badge: lead ? '정상' : g('c-badge') };
+  const leave = document.getElementById('c-leave').value;
+  return { how, ex, leave, vest: how === '보고' ? '정상' : g('c-vest'), badge: how === '보고' ? '정상' : g('c-badge'), pv: pvFor(how, leave) };
+}
+// 메모에 "이탈"·"자리 비움"이 있으면 그 점수로 등록할지 확인 후 등록 (사용자 요청, 2026-10-26). "이탈 없음"처럼 부정하면 무시
+async function memoAuto(text, fr){
+  const t = String(text || ''), neg = i => /없|아님|아니|안\s?(했|함|나)/.test(t.slice(i, i + 12));
+  let hit = null;
+  const mi = t.search(/이탈/); if (mi >= 0 && !neg(mi)) hit = { leave: '이탈', word: '근무지 이탈' };
+  if (!hit) { const ma = t.search(/자리\s?비움/); if (ma >= 0 && !neg(ma)) hit = { leave: '자리비움', word: '자리 비움' }; }
+  if (!hit || fr.leave === hit.leave || fr.leave === '이탈') return fr;
+  const pts = hit.leave === '이탈' ? PT.이탈 : (fr.how === '보고' ? 1 : PT.자리비움);
+  if (!await showDialog(`메모에 "${hit.word}"이(가) 적혀 있어요.\n이 날 ${hit.word} ${pts ? `-${pts}점` : '(경고)'}을(를) 기록으로 등록할까요?`, true, ['등록', '안 함'])) return fr;
+  return Object.assign({}, fr, { leave: hit.leave, pv: pvFor(fr.how, hit.leave) });
 }
 const exText = ex => Object.values(ex || {}).filter(x => x.v).map(x => x.n === x.v ? x.v : `${x.n} ${x.v}`).join('·');
 async function openItemCfg(focus){
@@ -5362,6 +5394,7 @@ async function switchMate(id){
 function renderModal(){
   const p = current(), s = stats(p);
   renderMates(p);
+  renderLeadBoard();
   renderPersonDays(p);
   renderNotes(p);
   renderExPanel(p);
@@ -5588,9 +5621,9 @@ async function saveCheck(){
     if (!l) { cancelEdit(); return; }
     const oldPts = logPts(l);
     const before = `${l.date} 명찰 ${l.badge}·조끼 ${l.vest}·태도 ${l.attitude}·${l.leave}${l.ex ? '·' + exText(l.ex) : ''}`;
-    const fr = formRecord(l.ex); const ex = fr.ex;
+    let fr = formRecord(l.ex); fr = await memoAuto(g('c-memo'), fr); const ex = fr.ex;
     logEvent('점검 기록 수정', p, `${before} → ${date}${fr.how === '보고' ? ' 📞보고' : ''} 명찰 ${fr.badge}·조끼 ${fr.vest}·태도 ${g('c-attitude')}·${fr.leave}${Object.keys(ex).length ? '·' + exText(ex) : ''}`, date);
-    Object.assign(l, { date, badge:fr.badge, vest:fr.vest, attitude:g('c-attitude'), leave:fr.leave, memo:g('c-memo').trim(), ex, how: fr.how, pv: l.pv || Object.assign({}, PT_DEF) });
+    Object.assign(l, { date, badge:fr.badge, vest:fr.vest, attitude:g('c-attitude'), leave:fr.leave, memo:g('c-memo').trim(), ex, how: fr.how, pv: fr.pv || l.pv || Object.assign({}, PT_DEF) });
     fixMark(p, l);
     saveData(false); playDingDong(logPts(l) > 0);
     const s = stats(p);
@@ -5604,9 +5637,9 @@ async function saveCheck(){
     cancelEdit();
     return;
   }
-  const fr = formRecord();
+  let fr = formRecord(); fr = await memoAuto(g('c-memo'), fr);
   const log = { id: Date.now(), date, how: fr.how, badge:fr.badge, vest:fr.vest, attitude:g('c-attitude'),
-    leave:fr.leave, memo:g('c-memo').trim(), pv: Object.assign({}, PT), ex: fr.ex, time: hhmm(new Date()) };
+    leave:fr.leave, memo:g('c-memo').trim(), pv: fr.pv || Object.assign({}, PT), ex: fr.ex, time: hhmm(new Date()) };
   try { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); } catch(e) {}   // 11:50 알람용
 
   p.phone = g('m-phone').trim();
