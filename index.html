@@ -68,6 +68,7 @@
   .seg button { flex:1; margin:0; background:#edf2f7; color:#2d3748; border:2px solid transparent; padding:12px 4px; font-size:.98rem; }
   .seg button.on { background:var(--tint); border-color:var(--primary); color:var(--primary); font-weight:bold; }
   .seg button.on.bad { background:#fff5f5; border-color:var(--danger); color:var(--danger); }
+.how-bar{position:sticky;top:0;z-index:6;background:#fff;padding:6px 0 4px;}
   .seg button.on.mid { background:#fefcbf; border-color:#d69e2e; color:#975a16; }   /* 3개 중 가운데(중간)는 노랑 */
   details.info { background:#f7fafc; border-radius:8px; padding:10px 12px; margin:12px 0; }
   details.info summary { font-weight:bold; cursor:pointer; }
@@ -603,7 +604,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.26-2</span></span><button type="button" onclick="openHelp()" aria-label="사용법 찾기" style="width:auto;margin:0;padding:6px 14px;border-radius:14px;background:#2b6cb0;color:#fff;font-size:.9rem;">📖 사용법 찾기</button></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.26-3</span></span><button type="button" onclick="openHelp()" aria-label="사용법 찾기" style="width:auto;margin:0;padding:6px 14px;border-radius:14px;background:#2b6cb0;color:#fff;font-size:.9rem;">📖 사용법 찾기</button></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -612,6 +613,7 @@
     <div style="flex:1;min-width:0;"><h3 id="modal-title" class="m-title">참여자 점검</h3>
     <div id="modal-sub" class="m-sub"></div></div>
   </div>
+  <div id="how-bar" class="how-bar"><div class="seg" data-for="c-how" style="margin:0;"><button type="button" data-v="직접">🚶 직접 점검</button><button type="button" data-v="보고">📞 팀장님 보고</button></div><input type="hidden" id="c-how" value="직접"></div>
   <input type="file" id="photo-cam" accept="image/*" capture="environment" class="hidden" onchange="photoPicked(this)">
   <input type="file" id="photo-file" accept="image/*" class="hidden" onchange="photoPicked(this)">
   <div class="chg-box" id="sec-days"><div class="days-head"><h4 id="m-days-title">📅 이달 근무일</h4>
@@ -625,16 +627,14 @@
   <button class="secondary full hidden" id="btn-custom" onclick="addChange({ reason: '입원' })">🏥 입원 체크</button>
   </div>
   <div id="mate-tabs"></div>
+  <div id="lead-board" class="hidden"></div>
   <div id="modal-notice"></div>
   <input type="hidden" id="edit-id">
 
   <div id="check-section">
-    <div id="lead-board" class="hidden"></div>
     <input type="hidden" id="c-date">
     <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 6px;"><b>📋 점검 항목</b><button type="button" id="ck-toggle" class="small" onclick="ckToggle()" style="width:auto;margin:0;"></button></div>
     <div id="ck-body">
-    <div class="seg" data-for="c-how" style="margin-bottom:8px;"><button type="button" data-v="직접">🚶 직접 점검</button><button type="button" data-v="보고">📞 팀장님 보고</button></div>
-    <input type="hidden" id="c-how" value="직접">
     <div class="base-it" data-k="leave"><label>근무지 이탈 (벌점)</label>
     <input type="hidden" id="c-leave">
     <div class="seg" data-for="c-leave"><button type="button" data-v="정상">정상 근무</button><button type="button" data-v="자리비움" data-bad data-mid data-pt="자리비움">자리 비움</button><button type="button" data-v="이탈" data-bad data-pt="이탈">이탈</button></div>
@@ -1039,7 +1039,23 @@ function renderLeadBoard(){
     ${inHospNow(p) ? '<div style="font-size:19px;color:#c53030;font-weight:700;margin-top:6px;">🏥 현재 입원 중</div>' : ''}
     <div style="font-size:16px;font-weight:700;margin-top:10px;">📝 이번 달 특이사항</div>
     ${notes.length ? notes.map(n => `<div style="font-size:16px;margin-top:4px;line-height:1.5;">· ${Number(n.date.slice(5,7))}/${Number(n.date.slice(8,10))} ${esc(n.text)}</div>`).join('') : '<div class="muted" style="font-size:15px;margin-top:4px;">없음</div>'}
-    <button type="button" class="small" onclick="openNote(null)" style="width:auto;margin-top:8px;">＋ 특이사항 적기</button></div>`;
+    <div id="lead-note-box"><div onclick="leadNoteOpen()" style="border:1px dashed #2b6cb0;border-radius:8px;padding:8px;margin-top:8px;color:#2b6cb0;font-size:15px;background:#fff;">눌러서 특이사항 적기</div></div></div>`;
+}
+// 특이사항: 누르면 바로 입력 칸이 열림 (날짜는 오늘, 구분은 기타) (사용자 요청, 2026-10-26)
+function leadNoteOpen(){
+  const box = document.getElementById('lead-note-box'); if (!box || !current()) return;
+  box.innerHTML = `<textarea id="lead-note-text" rows="3" placeholder="예: 9일 전 발목 부상, 고질병 주의" style="margin:8px 0 0;font-size:16px;"></textarea>
+    <div class="grid-2" style="margin-top:6px;"><button type="button" class="secondary" onclick="renderLeadBoard()">취소</button><button type="button" onclick="leadNoteSave()">저장</button></div>`;
+  setTimeout(() => document.getElementById('lead-note-text')?.focus(), 30);
+}
+function leadNoteSave(){
+  const p = current(); if (!p) return;
+  const text = (document.getElementById('lead-note-text')?.value || '').trim();
+  if (!text) return notify('내용을 적어 주세요.');
+  const date = today();
+  (p.notes ||= []).push({ id: Date.now(), date, cat: '기타', text });
+  logEvent('특이사항', p, `[기타] ${text}`, date);
+  saveData(false); renderModal();
 }
 // 보고로 받은 자리 비움은 -1점 (직접 나간 날의 자리 비움은 지금처럼 경고) (사용자 요청, 2026-10-26)
 const pvFor = (how, leave) => (how === '보고' && leave === '자리비움') ? Object.assign({}, PT, { 자리비움: 1 }) : null;
@@ -5414,10 +5430,11 @@ function renderModal(){
   if (docWait(p) && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;"><span class="tag-doc" style="font-size:1rem;">!</span><b style="flex:1;color:#22543d;">비대면 교육 서류</b><button type="button" class="small" onclick="docConfirm(${p.id})" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">📄 서류 확인</button></div>` + n;
   if (p.docNeed && p.docOk && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="color:#22543d;">📄 비대면 서류 확인 완료</b>${p.docPhoto ? ` <span>📷 사진 있음</span> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docPhotoView(${p.id})">보기</button>` : ` <b style="color:#c05621;">📷 사진 없음</b> <button type="button" class="small" style="width:auto;margin:0;" onclick="docPhotoAdd(${p.id})">사진 넣기</button>`}</div>` + n;
   if (p.guess) n = `<div class="notice">📍 경로당 <b>"${esc(p.senior)}"</b>은 주소(${esc(p.address||'')})를 보고 자동으로 넣은 <b>추정</b>입니다.<br>맞으면 아래 "어르신 정보 고치기"에서 그대로 <b>정보 저장</b>, 틀리면 경로당 이름을 고쳐서 저장해 주세요.</div>` + n;
-  if (!s.dropped) n = (p.pause ? `<div class="notice" style="background:#fff5f5;border-color:#742a2a;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="flex:1;color:#742a2a;">💀 활동 중단 ${mdK(p.pause)} 시작 · 만료 ${mdK(pauseEnd(p))} (${leftTxt(pauseLeft(p))})</b><button type="button" class="small secondary" onclick="pauseEditDate(${p.id})" style="width:auto;margin:0;">📅 시작일 고치기</button> <button type="button" class="small secondary" onclick="pauseToggle(${p.id})" style="width:auto;margin:0;">▶ 활동 복귀</button></div>` : `<div style="margin-bottom:6px;"><button type="button" class="small secondary" onclick="pauseToggle(${p.id})" style="width:auto;">⏸ 활동 중단 (오늘부터)</button></div>`) + n;
+  if (!s.dropped) n = (p.pause ? `<div class="notice" style="background:#fff5f5;border-color:#742a2a;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="flex:1;color:#742a2a;">💀 활동 중단 ${mdK(p.pause)} 시작 · 만료 ${mdK(pauseEnd(p))} (${leftTxt(pauseLeft(p))})</b><button type="button" class="small secondary" onclick="pauseEditDate(${p.id})" style="width:auto;margin:0;">📅 시작일 고치기</button> <button type="button" class="small secondary" onclick="pauseToggle(${p.id})" style="width:auto;margin:0;">▶ 활동 복귀</button></div>` : `<div style="margin-bottom:6px;"><button type="button" class="small secondary" onclick="pauseToggle(${p.id})" style="width:auto;font-size:.78rem;padding:4px 10px;">⏸ 활동 중단 (오늘부터)</button></div>`) + n;
   if (!s.dropped) n = `<div style="margin-bottom:6px;"><button type="button" class="small secondary" onclick="ltcCheck(${p.id})" style="width:auto;">🏥 장기요양 등급 확인</button></div>` + n;
   document.getElementById('modal-notice').innerHTML = n;
   document.getElementById('check-section').classList.toggle('hidden', s.dropped && !editingLogId);
+  document.getElementById('how-bar').classList.toggle('hidden', s.dropped && !editingLogId);
 
   // 점검 기록은 벌점·경고가 있는 것만 (활동일지에는 모두 나옴)
   const logs = [...p.logs].filter(l => logPts(l) > 0 || l.attitude === '불량' || Object.values(l.ex || {}).some(x => x.bad)).sort((a,b) => b.date.localeCompare(a.date));
