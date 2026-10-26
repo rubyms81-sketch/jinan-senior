@@ -603,7 +603,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.25-9</span></span><button type="button" onclick="openHelp()" aria-label="사용법 찾기" style="width:auto;margin:0;padding:6px 14px;border-radius:14px;background:#2b6cb0;color:#fff;font-size:.9rem;">📖 사용법 찾기</button></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.26-1</span></span><button type="button" onclick="openHelp()" aria-label="사용법 찾기" style="width:auto;margin:0;padding:6px 14px;border-radius:14px;background:#2b6cb0;color:#fff;font-size:.9rem;">📖 사용법 찾기</button></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -632,6 +632,8 @@
     <input type="hidden" id="c-date">
     <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 6px;"><b>📋 점검 항목</b><button type="button" id="ck-toggle" class="small" onclick="ckToggle()" style="width:auto;margin:0;"></button></div>
     <div id="ck-body">
+    <div class="seg" data-for="c-how" style="margin-bottom:8px;"><button type="button" data-v="직접">🚶 직접 점검</button><button type="button" data-v="보고">📞 팀장님 보고</button></div>
+    <input type="hidden" id="c-how" value="직접">
     <div class="base-it" data-k="leave"><label>근무지 이탈 (벌점)</label>
     <input type="hidden" id="c-leave">
     <div class="seg" data-for="c-leave"><button type="button" data-v="정상">정상 근무</button><button type="button" data-v="자리비움" data-bad data-mid data-pt="자리비움">자리 비움</button><button type="button" data-v="이탈" data-bad data-pt="이탈">이탈</button></div>
@@ -988,11 +990,12 @@ function renderCheckItems(){
   applyBase();
   document.querySelectorAll('#check-section [data-pt]').forEach(b => { b.dataset.base ||= b.textContent; b.textContent = b.dataset.base + (PT[b.dataset.pt] ? ` (-${PT[b.dataset.pt]}점)` : ' (경고)'); });
   const box = document.getElementById('ex-items'); if (!box) return;
-  box.innerHTML = checkItems.map(it => `<label>${esc(it.name)}</label><input type="hidden" id="cx-${it.id}" value="정상">
-    <div class="seg" data-for="cx-${it.id}">${it.single ? `<button type="button" data-v="bad" data-one ${it.track ? 'data-mid' : ''} ${it.pts != null && it.pts !== '' ? 'data-bad' : ''}>${esc(it.bad)}${it.pts != null && it.pts !== '' ? ptLbl(Number(it.pts)) : ''}</button></div>` : `<button type="button" data-v="정상">${esc(it.ok || '정상')}</button>${it.mid ? `<button type="button" data-v="mid" data-mid>${esc(it.mid)}${it.midPts != null && it.midPts !== '' ? ptLbl(Number(it.midPts)) : ''}</button>` : ''}<button type="button" data-v="bad" data-bad>${esc(it.bad)}${ptLbl(it.pts)}</button></div>`}`).join('');
+  box.innerHTML = checkItems.map(it => `<div class="ex-it" data-lid="${it.id}"><label>${esc(it.name)}</label><input type="hidden" id="cx-${it.id}" value="정상">
+    <div class="seg" data-for="cx-${it.id}">${it.single ? `<button type="button" data-v="bad" data-one ${it.track ? 'data-mid' : ''} ${it.pts != null && it.pts !== '' ? 'data-bad' : ''}>${esc(it.bad)}${it.pts != null && it.pts !== '' ? ptLbl(Number(it.pts)) : ''}</button></div>` : `<button type="button" data-v="정상">${esc(it.ok || '정상')}</button>${it.mid ? `<button type="button" data-v="mid" data-mid>${esc(it.mid)}${it.midPts != null && it.midPts !== '' ? ptLbl(Number(it.midPts)) : ''}</button>` : ''}<button type="button" data-v="bad" data-bad>${esc(it.bad)}${ptLbl(it.pts)}</button></div>`}</div>`).join('');
   box.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.onclick = () => { window._segTouched = true;
     setSeg(seg.dataset.for, b.hasAttribute('data-one') && document.getElementById(seg.dataset.for).value === 'bad' ? '정상' : b.dataset.v); }));   // 1개짜리는 다시 누르면 꺼짐
   checkItems.forEach(it => setSeg('cx-' + it.id, '정상'));
+  applyHow();
 }
 const resetExItems = () => checkItems.forEach(it => setSeg('cx-' + it.id, '정상'));
 // 항목 값(정상·mid·bad) → 기록용 { n, v, bad, pt, mid } — 3개짜리는 가운데(mid)가 노랑, 가운데 점수 midPts(null=문제 아님)
@@ -1010,6 +1013,22 @@ function exFromForm(keep){
   const ex = {}; Object.entries(keep || {}).forEach(([k, x]) => { if (!checkItems.some(it => it.id === k)) ex[k] = x; });
   checkItems.forEach(it => { ex[it.id] = exVal(it, document.getElementById('cx-' + it.id)?.value || '정상'); });
   return ex;
+}
+// 📞 팀장님 보고 점검 (사용자 요청, 2026-10-26): 직접 나가지 않은 날은 근무지 이탈·조끼·명찰과 "보고로도 체크"가 꺼진 항목을 보여 주지도, 기록하지도 않음
+const leadOK = it => it.lead ?? it.id === 'diary';   // 보고로도 체크하는 항목 (기본: 활동일지만)
+const isLeadMode = () => document.getElementById('c-how')?.value === '보고';
+function applyHow(){
+  const lead = isLeadMode();
+  ['leave', 'vest', 'badge'].forEach(k => { const el = document.querySelector(`#check-section .base-it[data-k="${k}"]`); if (el) el.style.display = lead ? 'none' : ''; });
+  document.querySelectorAll('#ex-items .ex-it').forEach(el => { const it = checkItems.find(x => x.id === el.dataset.lid); el.style.display = lead && it && !leadOK(it) ? 'none' : ''; });
+}
+function formRecord(keep){
+  const g = id => document.getElementById(id).value;
+  const how = isLeadMode() ? '보고' : '직접';
+  const ex = exFromForm(keep);
+  if (how === '보고') checkItems.forEach(it => { if (!leadOK(it)) ex[it.id] = exVal(it, '정상'); });
+  const lead = how === '보고';
+  return { how, ex, leave: lead ? '정상' : g('c-leave'), vest: lead ? '정상' : g('c-vest'), badge: lead ? '정상' : g('c-badge') };
 }
 const exText = ex => Object.values(ex || {}).filter(x => x.v).map(x => x.n === x.v ? x.v : `${x.n} ${x.v}`).join('·');
 async function openItemCfg(focus){
@@ -1052,11 +1071,11 @@ async function openItemCfg(focus){
     $('#ic-items').innerHTML = items.length ? items.map((it, i) => `<div style="border:1px solid #e2e8f0;border-radius:8px;padding:8px;margin-top:6px;">
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;"><input type="text" data-i="${i}" data-f="name" value="${esc(it.name)}" placeholder="항목 이름" style="margin:0;font-weight:bold;"><button type="button" class="small secondary" data-del="${i}" style="width:auto;margin:0;color:var(--danger);white-space:nowrap;">🗑 삭제</button></div>
       <div style="display:flex;gap:6px;align-items:center;"><input type="text" data-i="${i}" data-f="o1" value="${esc(it.o1)}" placeholder="1 (예: 우수)" style="margin:0;"><input type="text" data-i="${i}" data-f="o2" value="${esc(it.o2)}" placeholder="2 (예: 보통)" style="margin:0;"><input type="text" data-i="${i}" data-f="o3" value="${esc(it.o3)}" placeholder="3 (예: 불량)" style="margin:0;"></div>
-      <div style="display:flex;gap:6px;align-items:center;margin-top:6px;font-size:.88rem;">${nOpt(it) === 1 ? `<span style="color:#2b6cb0;">1번</span>${midSel(it.pts, `data-i="${i}" data-f="pts"`, '기록만')}<label style="display:flex;align-items:center;gap:4px;margin:0;font-weight:normal;white-space:nowrap;"><input type="checkbox" data-i="${i}" data-f="track" ${it.track ? 'checked' : ''} style="width:20px;height:20px;margin:0;">📌 교체 전까지 게시판</label>` : it.o3.trim() ? `<span style="color:#975a16;">2번</span>${midSel(it.midPts, `data-i="${i}" data-f="midPts"`)}<span style="color:var(--danger);">3번</span>` : '<span style="color:var(--danger);">2번</span>'}${nOpt(it) === 1 ? '' : sel(it.pts, `data-i="${i}" data-f="pts"`)}</div></div>`).join('')
+      <div style="display:flex;gap:6px;align-items:center;margin-top:6px;font-size:.88rem;">${nOpt(it) === 1 ? `<span style="color:#2b6cb0;">1번</span>${midSel(it.pts, `data-i="${i}" data-f="pts"`, '기록만')}<label style="display:flex;align-items:center;gap:4px;margin:0;font-weight:normal;white-space:nowrap;"><input type="checkbox" data-i="${i}" data-f="track" ${it.track ? 'checked' : ''} style="width:20px;height:20px;margin:0;">📌 교체 전까지 게시판</label>` : it.o3.trim() ? `<span style="color:#975a16;">2번</span>${midSel(it.midPts, `data-i="${i}" data-f="midPts"`)}<span style="color:var(--danger);">3번</span>` : '<span style="color:var(--danger);">2번</span>'}${nOpt(it) === 1 ? '' : sel(it.pts, `data-i="${i}" data-f="pts"`)}<label style="display:flex;align-items:center;gap:4px;margin:0;font-weight:normal;white-space:nowrap;"><input type="checkbox" data-i="${i}" data-f="lead" ${leadOK(it) ? 'checked' : ''} style="width:20px;height:20px;margin:0;">📞 보고로도 체크</label></div></div>`).join('')
       : '<div class="muted" style="font-size:.88rem;">추가 항목이 없어요.</div>';
     items.forEach(it => { it._3 = nOpt(it); });
     back.querySelectorAll('#ic-items [data-f]').forEach(x => { const f = x.dataset.f, it = items[+x.dataset.i];
-      x.oninput = x.onchange = () => { it[f] = f === 'track' ? x.checked : (f === 'pts' || f === 'midPts') ? (x.value === '' ? null : Number(x.value)) : x.value; };
+      x.oninput = x.onchange = () => { it[f] = (f === 'track' || f === 'lead') ? x.checked : (f === 'pts' || f === 'midPts') ? (x.value === '' ? null : Number(x.value)) : x.value; };
       if (/^o\d$/.test(f)) x.onchange = () => { it[f] = x.value; const k = nOpt(it); if (k !== it._3 && (k === 1 || it._3 === 1 || k === 3 || it._3 === 3)) { if (it._3 === 1 && k > 1 && it.pts == null) it.pts = 0; if (k === 1 && it._3 !== 1) it.pts = null; draw(); } }; });
     back.querySelectorAll('#ic-items [data-del]').forEach(b => b.onclick = async () => { const it = items[+b.dataset.del];
       if (!await ask(`"${it.name || '이름 없는 항목'}" 항목을 지울까요?\n(이미 저장된 점검 기록은 그대로 남아요)`)) return; items.splice(+b.dataset.del, 1); draw(); });
@@ -1105,6 +1124,7 @@ async function openItemCfg(focus){
 }
 function setSeg(id, v){
   document.getElementById(id).value = v;
+  if (id === 'c-how') applyHow();
   document.querySelectorAll(`.seg[data-for="${id}"] button`).forEach(b => {
     b.classList.toggle('on', b.dataset.v===v); b.classList.toggle('bad', b.dataset.v===v && b.hasAttribute('data-bad') && !b.hasAttribute('data-mid')); b.classList.toggle('mid', b.dataset.v===v && b.hasAttribute('data-mid'));
   });
@@ -2517,7 +2537,7 @@ function histBody(p, mk){
   if (cu) extra.push(`🩹 보충 근무${cu.reason ? ` · ${esc(cu.reason)}` : ''}${cu.inHosp ? ' · 🏥 입원 중' : ''}${cu.hosp?.length ? ` · 🏥 입원 ${rangeText([...cu.hosp])}` : ''}`);
   h += sec('📅 근무일', days.length ? `<div>${days.map(d => dd(d)).join(' · ')}</div>` : none)
     + (extra.length || chg.length ? sec('🔄 날짜 변경·특이 사항', [...extra, ...chg.map(c => `🔄 ${dd(c.from)} → ${dd(c.to)}${c.reason ? ` (${esc(c.reason)})` : ''}`)].join('<br>')) : '')
-    + sec('📋 점검 기록', logs.length ? logs.map(l => `<div class="log ${logPts(l) ? 'warn' : ''}" style="margin:4px 0;">${dd(l.date)} · ${issueText(l).length ? issueText(l).map(esc).join(', ') : '이상 없음'}${l.memo ? `<br><span class="muted">📝 ${esc(l.memo)}</span>` : ''}${l.time ? ` <span class="muted">· ${esc(l.time)}</span>` : ''}</div>`).join('') : none)
+    + sec('📋 점검 기록', logs.length ? logs.map(l => `<div class="log ${logPts(l) ? 'warn' : ''}" style="margin:4px 0;">${dd(l.date)}${l.how === '보고' ? ' 📞보고' : ''} · ${issueText(l).length ? issueText(l).map(esc).join(', ') : '이상 없음'}${l.memo ? `<br><span class="muted">📝 ${esc(l.memo)}</span>` : ''}${l.time ? ` <span class="muted">· ${esc(l.time)}</span>` : ''}</div>`).join('') : none)
     + sec('🎓 교육', edus.length ? edus.map(e => `${dd(e.date)} · ${esc(e.name)}${eduAbsent(p, e.date) ? ' <b style="color:var(--danger)">불참</b>' : ' · 참석'}`).join('<br>') : none)
     + (p.docNeed ? sec('📄 비대면 교육 서류', `${p.docOk ? '확인 완료' : '<b style="color:var(--danger)">미확인</b>'} <span class="muted">(지금 상태)</span>`
       + (p.docOk ? (p.docPhoto ? ` · 📷 사진 있음 <button type="button" class="small secondary" style="width:auto;margin:0 0 0 4px;" onclick="docPhotoView(${p.id})">보기</button>` : ` · <b style="color:#c05621;">📷 사진 없음</b> <button type="button" class="small" style="width:auto;margin:0 0 0 4px;" onclick="docPhotoAdd(${p.id})">사진 넣기</button>`) : '')) : '')
@@ -5306,10 +5326,10 @@ function openModal(id){
   document.getElementById('m-address').value = p.address || '';
   setCheckDate(today());
   editingLogId = null; showEditBar();
-  ['c-badge','c-vest','c-leave'].forEach(i => setSeg(i,'정상'));
+  setSeg('c-how','직접'); ['c-badge','c-vest','c-leave'].forEach(i => setSeg(i,'정상'));
   setSeg('c-attitude','우수'); resetExItems();
   const pl = checkDrafts[p.id]; window._segTouched = !!pl;
-  if (pl) { setSeg('c-leave', pl.leave); setSeg('c-vest', pl.vest); setSeg('c-badge', pl.badge); setSeg('c-attitude', pl.attitude);
+  if (pl) { setSeg('c-how', pl.how || '직접'); setSeg('c-leave', pl.leave); setSeg('c-vest', pl.vest); setSeg('c-badge', pl.badge); setSeg('c-attitude', pl.attitude);
     checkItems.forEach(it => setSeg('cx-' + it.id, pl.ex?.[it.id] || '정상')); }
   // 전화번호를 누르면 바로 전화 걸기
   const tel = String(p.phone||'').replace(/[^0-9+]/g,'');
@@ -5372,7 +5392,7 @@ function renderModal(){
   document.getElementById('log-list').innerHTML = logs.length ? logs.map(l => {
     const pt = logPts(l), up = pt ? unpaidOf(p, l) : 0;
     const cls = l.leave==='이탈' ? 'bad' : pt ? 'warn' : l.attitude==='불량' ? 'warn' : 'ok';
-    return `<div class="log ${cls}"><b>${l.date}</b> <br>
+    return `<div class="log ${cls}"><b>${l.date}</b>${l.how === '보고' ? ' <span class="badge">📞 보고</span>' : ''} <br>
       명찰 ${l.badge} · 조끼 ${l.vest} · 태도 ${l.attitude} · ${l.leave==='이탈'?'이탈':l.leave==='자리비움'?'자리 비움':'이탈 없음'}${l.ex && Object.keys(l.ex).length ? ' · ' + esc(exText(l.ex).replace(/·/g, ' · ')) : ''}
       ${pt ? `<br><b style="color:var(--danger)">감점 -${pt}점</b> <span style="font-size:.88rem;">(${logItems(l).map(x => x.replace(/ -[\d.]+점$/, '')).join(' · ')})</span>${up ? ` · <b style="color:var(--danger)">일당 미지급${up > 1 ? ` ${up}일분` : ''}</b>` : ''}` : ''}
       ${l.memo?`<br>📝 ${esc(l.memo)}`:''}
@@ -5451,7 +5471,7 @@ function editLog(logId){
   const p = current(); const l = p && p.logs.find(x => x.id===logId); if (!l) return;
   editingLogId = logId;
   setCheckDate(l.date);
-  setSeg('c-leave', l.leave); setSeg('c-vest', l.vest); setSeg('c-badge', l.badge); setSeg('c-attitude', l.attitude);
+  setSeg('c-how', l.how || '직접'); setSeg('c-leave', l.leave); setSeg('c-vest', l.vest); setSeg('c-badge', l.badge); setSeg('c-attitude', l.attitude);
   checkItems.forEach(it => setSeg('cx-' + it.id, it.mid || exSegV(l.ex?.[it.id]) !== 'mid' ? exSegV(l.ex?.[it.id]) : '정상'));
   document.getElementById('c-memo').value = l.memo || '';
   document.getElementById('check-section').classList.remove('hidden');
@@ -5460,7 +5480,7 @@ function editLog(logId){
 }
 function cancelEdit(){
   editingLogId = null;
-  setCheckDate(today()); ['c-badge','c-vest','c-leave'].forEach(i => setSeg(i,'정상')); setSeg('c-attitude','우수'); resetExItems();
+  setCheckDate(today()); setSeg('c-how','직접'); ['c-badge','c-vest','c-leave'].forEach(i => setSeg(i,'정상')); setSeg('c-attitude','우수'); resetExItems();
   document.getElementById('c-memo').value = '';
   showEditBar(); renderModal();
 }
@@ -5553,9 +5573,9 @@ let checkDrafts = {};
 function keepDraft(p){
   if (!p || editingLogId) return;
   const g = id => document.getElementById(id).value;
-  const dr = { leave: g('c-leave'), vest: g('c-vest'), badge: g('c-badge'), attitude: g('c-attitude'), memo: g('c-memo'),
+  const dr = { how: g('c-how'), leave: g('c-leave'), vest: g('c-vest'), badge: g('c-badge'), attitude: g('c-attitude'), memo: g('c-memo'),
     ex: Object.fromEntries(checkItems.map(it => [it.id, g('cx-' + it.id) || '정상'])) };
-  const plain = dr.leave === '정상' && dr.vest !== '미착용' && dr.badge !== '미착용' && dr.attitude === '우수' && !dr.memo.trim() && Object.values(dr.ex).every(v => v === '정상');
+  const plain = dr.how !== '보고' && dr.leave === '정상' && dr.vest !== '미착용' && dr.badge !== '미착용' && dr.attitude === '우수' && !dr.memo.trim() && Object.values(dr.ex).every(v => v === '정상');
   if (plain && !window._segTouched) delete checkDrafts[p.id]; else checkDrafts[p.id] = dr;
 }
 async function saveCheck(){
@@ -5568,9 +5588,9 @@ async function saveCheck(){
     if (!l) { cancelEdit(); return; }
     const oldPts = logPts(l);
     const before = `${l.date} 명찰 ${l.badge}·조끼 ${l.vest}·태도 ${l.attitude}·${l.leave}${l.ex ? '·' + exText(l.ex) : ''}`;
-    const ex = exFromForm(l.ex);
-    logEvent('점검 기록 수정', p, `${before} → ${date} 명찰 ${g('c-badge')}·조끼 ${g('c-vest')}·태도 ${g('c-attitude')}·${g('c-leave')}${Object.keys(ex).length ? '·' + exText(ex) : ''}`, date);
-    Object.assign(l, { date, badge:g('c-badge'), vest:g('c-vest'), attitude:g('c-attitude'), leave:g('c-leave'), memo:g('c-memo').trim(), ex, pv: l.pv || Object.assign({}, PT_DEF) });
+    const fr = formRecord(l.ex); const ex = fr.ex;
+    logEvent('점검 기록 수정', p, `${before} → ${date}${fr.how === '보고' ? ' 📞보고' : ''} 명찰 ${fr.badge}·조끼 ${fr.vest}·태도 ${g('c-attitude')}·${fr.leave}${Object.keys(ex).length ? '·' + exText(ex) : ''}`, date);
+    Object.assign(l, { date, badge:fr.badge, vest:fr.vest, attitude:g('c-attitude'), leave:fr.leave, memo:g('c-memo').trim(), ex, how: fr.how, pv: l.pv || Object.assign({}, PT_DEF) });
     fixMark(p, l);
     saveData(false); playDingDong(logPts(l) > 0);
     const s = stats(p);
@@ -5584,8 +5604,9 @@ async function saveCheck(){
     cancelEdit();
     return;
   }
-  const log = { id: Date.now(), date, badge:g('c-badge'), vest:g('c-vest'), attitude:g('c-attitude'),
-    leave:g('c-leave'), memo:g('c-memo').trim(), pv: Object.assign({}, PT), ex: exFromForm(), time: hhmm(new Date()) };
+  const fr = formRecord();
+  const log = { id: Date.now(), date, how: fr.how, badge:fr.badge, vest:fr.vest, attitude:g('c-attitude'),
+    leave:fr.leave, memo:g('c-memo').trim(), pv: Object.assign({}, PT), ex: fr.ex, time: hhmm(new Date()) };
   try { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); } catch(e) {}   // 11:50 알람용
 
   p.phone = g('m-phone').trim();
@@ -5601,8 +5622,9 @@ async function saveCheck(){
     const dr = checkDrafts[q.id];
     if (q.id === p.id || !dr || stats(q).dropped || q.logs.some(l => l.date===date)) continue;
     delete checkDrafts[q.id];
-    const ql = { id: Date.now() + Math.random(), date, badge: dr.badge, vest: dr.vest, attitude: dr.attitude, leave: dr.leave, memo: (dr.memo || '').trim(), pv: Object.assign({}, PT), time: hhmm(new Date()),
-      ex: Object.fromEntries(checkItems.map(it => [it.id, exVal(it, dr.ex?.[it.id] || '정상')])) };
+    const lead = dr.how === '보고';
+    const ql = { id: Date.now() + Math.random(), date, how: lead ? '보고' : '직접', badge: lead ? '정상' : dr.badge, vest: lead ? '정상' : dr.vest, attitude: dr.attitude, leave: lead ? '정상' : dr.leave, memo: (dr.memo || '').trim(), pv: Object.assign({}, PT), time: hhmm(new Date()),
+      ex: Object.fromEntries(checkItems.map(it => [it.id, exVal(it, lead && !leadOK(it) ? '정상' : (dr.ex?.[it.id] || '정상'))])) };
     pt += await commitLog(q, ql, true); saved.push(q);
   }
   const next = matesOf(p).find(q => q.id !== p.id && !stats(q).dropped && !q.logs.some(l => l.date===date));
@@ -6492,7 +6514,7 @@ function exportExcel(){
   list.forEach(p => [...mLogs(p)].sort((a,b)=>a.date.localeCompare(b.date)).forEach(l => sheet2.push({
     '점검일':l.date, '시간':logTime(l), '읍면':p.town, '경로당':p.senior, '성명':p.name, '명찰':l.badge, '조끼':l.vest,
     '응대 태도':l.attitude, '근무지 이탈':l.leave==='자리비움' ? '잠깐 자리 비움' : l.leave, ...Object.fromEntries(Object.values(l.ex || {}).map(x => [x.n, x.v])), '감점':-logPts(l),
-    '일당':unpaidOf(p, l) ? `미지급${unpaidOf(p, l) > 1 ? ` (${unpaidOf(p, l)}일분)` : ''}` : '지급', '메모':l.memo })));
+    '일당':unpaidOf(p, l) ? `미지급${unpaidOf(p, l) > 1 ? ` (${unpaidOf(p, l)}일분)` : ''}` : '지급', '메모':l.memo, '점검 방법': l.how === '보고' ? '팀장님 보고' : '직접 점검' })));
 
   const fname = `노인일자리_점검_${town==='전체' && !showOthers ? '내담당' : town}_${YEAR}년${curMonth}월`;
 
@@ -6547,7 +6569,7 @@ function exportExcel(){
   paintSheet(ws1, kinds1);
   const ws2 = sheet2.length ? XLSX.utils.json_to_sheet(sheet2) : XLSX.utils.aoa_to_sheet([['점검 기록이 없습니다.']]);
   ws1['!cols'] = [12,8,14,8,14,10,9,18,6,8,15,22,11,9,15,13,13,11,9,18,13].map(w=>({wch:w}));
-  ws2['!cols'] = [12,8,14,10,8,8,9,10,6,7,30].map(w=>({wch:w}));
+  ws2['!cols'] = [12,8,14,10,8,8,9,10,6,7,30,12].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws1, '참여자 현황');
   XLSX.utils.book_append_sheet(wb, ws2, '점검 기록');
   // 그달 신규 인원
