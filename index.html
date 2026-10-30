@@ -439,6 +439,9 @@
   </div>
 
 
+  <div class="card" id="moim-card" data-mv="moim" style="padding:10px 14px;">
+    <button type="button" class="full" onclick="openMoim()" style="margin:0;">👥 모임 명단 (여행·임원 모임)</button>
+  </div>
   <div class="card" id="search-card" data-mv="search">
     <input type="search" id="search" placeholder="🔍 어르신 이름으로 바로 찾기 (모든 면)" oninput="renderList()" autocomplete="off" style="margin:0 0 4px;">
     <div id="participant-list"></div>
@@ -607,7 +610,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-1</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-2</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -5806,6 +5809,104 @@ function openCounter(){
   bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
   draw();
 }
+// ---------- 👥 모임 명단 (여행·임원 모임: 구역(근무)과 따로, 근무·감점·구역 인원에 안 셈) ----------
+let moims = (() => { try { return JSON.parse(load('jinan_moim')) || []; } catch(e) { return []; } })();
+const saveMoims = () => { try { store('jinan_moim', JSON.stringify(moims)); } catch(e) {} };
+const moimTime = () => { const d = new Date(); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+function openMoim(selId){
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = '<div class="dlg" style="text-align:left;max-height:90vh;overflow:auto;"></div>';
+  document.body.appendChild(bg);
+  const dlg = bg.querySelector('.dlg');
+  let sel = moims.find(m => m.id === selId) || moims[0] || null;
+  let onlyAbsent = false, q = '';
+  const close = () => bg.remove();
+  const draw = () => {
+    sel = (sel && moims.find(m => m.id === sel.id)) || moims[0] || null;
+    const chips = moims.map(m => `<button type="button" class="small ${sel && sel.id === m.id ? '' : 'secondary'}" data-pick="${m.id}" style="width:auto;margin:0 6px 6px 0;">${esc(m.name)}</button>`).join('');
+    let body = '';
+    if (sel) {
+      const n = sel.members.length, got = sel.members.filter(x => x.arrived).length;
+      const list = sel.members.filter(x => (!onlyAbsent || !x.arrived) && (!q || x.name.includes(q)));
+      body = `
+        <div class="muted" style="font-size:.85rem;margin-bottom:6px;">구역(근무)과 따로 관리합니다. 근무·감점·구역 인원에는 안 들어갑니다.</div>
+        <div style="display:flex;align-items:center;gap:6px;"><b style="flex:1;font-size:1.05rem;">${esc(sel.name)}</b><button type="button" class="small secondary" data-act="rename" style="width:auto;margin:0;">✏️ 이름</button></div>
+        <div style="text-align:center;margin:8px 0 4px;"><span style="font-size:1.8rem;font-weight:700;color:#c53030;">${got}</span> <span class="muted">/ ${n}명 도착</span></div>
+        <div class="grid-2" style="margin:6px 0;"><button type="button" class="${onlyAbsent ? 'secondary' : ''}" data-act="all" style="margin:0;">전체 ${n}명</button><button type="button" class="${onlyAbsent ? '' : 'secondary'}" data-act="absent" style="margin:0;">안 온 사람만 ${n - got}명</button></div>
+        <input type="search" id="mo-q" placeholder="🔍 이름으로 찾기" value="${esc(q)}" autocomplete="off" style="margin:4px 0 8px;">
+        <div>${list.map(x => `<div style="display:flex;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px solid #edf2f7;${x.arrived ? '' : 'background:#fff5f5;'}">
+          <span style="flex:1;font-weight:600;">${esc(x.name)}${x.phone ? ` <a class="tel-link" href="tel:${telOf(x)}" style="font-size:.85rem;font-weight:400;">📞</a>` : ''}</span>
+          <button type="button" class="small ${x.arrived ? 'secondary' : ''}" data-arr="${x.id}" style="width:auto;margin:0;padding:6px 10px;">${x.arrived ? `✔ 도착 ${esc(x.at || '')}` : '✔ 도착'}</button>
+          <button type="button" class="small secondary" data-del="${x.id}" style="width:auto;margin:0;padding:6px 8px;">✕</button></div>`).join('') || '<div class="muted" style="padding:8px 0;">해당하는 사람이 없습니다.</div>'}</div>
+        <label style="margin-top:10px;">사람 넣기 (구역 밖 사람도 가능)</label>
+        <div class="grid-2" style="margin:0 0 6px;"><input id="mo-nm" placeholder="이름" list="mo-dl" autocomplete="off" style="margin:0;"><input id="mo-tel" inputmode="tel" placeholder="전화번호 (선택)" style="margin:0;"></div>
+        <datalist id="mo-dl">${participants.map(p => `<option value="${esc(p.name)}">`).join('')}</datalist>
+        <button type="button" class="full secondary" data-act="add" style="margin:0 0 8px;">＋ 넣기</button>
+        <button type="button" class="full" data-act="sms" style="margin:0 0 8px;" ${n - got ? '' : 'disabled'}>📩 안 온 ${n - got}명에게 단체 문자</button>
+        <button type="button" class="full secondary" data-act="delmoim" style="margin:0 0 8px;color:var(--danger);">🗑 이 모임 지우기</button>`;
+    } else body = '<div class="muted" style="padding:8px 0;">모임이 없습니다. 아래에서 새 모임을 만드세요.</div>';
+    dlg.innerHTML = `<div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">👥 모임 명단</div>
+      <div>${chips}<button type="button" class="small" data-act="new" style="width:auto;margin:0 0 6px 0;">＋ 새 모임</button></div>
+      ${body}
+      <button type="button" class="full secondary" data-act="close" style="margin-top:10px;">닫기</button>`;
+  };
+  dlg.addEventListener('input', e => {
+    if (e.target.id !== 'mo-q') return;
+    q = e.target.value; draw();
+    const qi = dlg.querySelector('#mo-q'); if (qi) { qi.focus(); qi.setSelectionRange(q.length, q.length); }
+  });
+  dlg.addEventListener('click', async e => {
+    const pk = e.target.closest('[data-pick]');
+    if (pk) { sel = moims.find(m => m.id === pk.dataset.pick) || null; q = ''; onlyAbsent = false; return draw(); }
+    const b = e.target.closest('button'); if (!b) return;
+    const act = b.dataset.act;
+    if (b.dataset.arr) {
+      const m = sel.members.find(x => x.id === b.dataset.arr); if (!m) return;
+      m.arrived = !m.arrived; m.at = m.arrived ? moimTime() : '';
+      saveMoims(); logEvent('모임 도착', null, `${sel.name} · ${m.name} ${m.arrived ? '도착' : '도착 취소'}`); return draw();
+    }
+    if (b.dataset.del) {
+      const m = sel.members.find(x => x.id === b.dataset.del); if (!m) return;
+      if (!await ask(`${m.name} 님을 이 모임에서 뺄까요?`)) return;
+      sel.members = sel.members.filter(x => x.id !== m.id); saveMoims();
+      logEvent('모임 명단', null, `${sel.name}에서 ${m.name} 뺌`); return draw();
+    }
+    if (act === 'close') return close();
+    if (act === 'new') {
+      const nm = await askInput('새 모임 이름을 적어 주세요 (예: 11월 여행, 임원 모임)', '예: 임원 모임');
+      if (!nm || !nm.trim()) return;
+      const m = { id: 'mo' + Date.now(), name: nm.trim(), created: today(), members: [] };
+      moims.push(m); sel = m; saveMoims(); logEvent('모임 명단', null, `새 모임: ${m.name}`); return draw();
+    }
+    if (!sel) return;
+    if (act === 'rename') {
+      const nm = await askInput('모임 이름', sel.name); if (!nm || !nm.trim()) return;
+      const old = sel.name; sel.name = nm.trim(); saveMoims(); logEvent('모임 명단', null, `모임 이름: ${old} → ${sel.name}`); return draw();
+    }
+    if (act === 'all') { onlyAbsent = false; return draw(); }
+    if (act === 'absent') { onlyAbsent = true; return draw(); }
+    if (act === 'add') {
+      const nm = (dlg.querySelector('#mo-nm').value || '').trim(), tel = (dlg.querySelector('#mo-tel').value || '').trim();
+      if (!nm) return notify('이름을 적어 주세요.');
+      if (sel.members.some(x => x.name === nm)) return notify(`${nm} 님은 이미 명단에 있습니다.`);
+      sel.members.push({ id: 'mm' + Date.now(), name: nm, phone: tel, arrived: false, at: '' }); saveMoims();
+      logEvent('모임 명단', null, `${sel.name}에 ${nm} 넣음`); return draw();
+    }
+    if (act === 'sms') {
+      const people = sel.members.filter(x => !x.arrived).map(x => ({ id: x.id, name: x.name, phone: x.phone || '', town: '', senior: '' }));
+      if (!people.some(p => telOf(p))) return notify('안 온 분 중에 전화번호가 있는 분이 없습니다.');
+      smsBox({ title: `📩 ${sel.name} 안 온 분께 문자`, people, text: `안녕하세요, 진안군 노인회입니다.\n${sel.name} 관련하여 연락드립니다. 확인 부탁드립니다.\n진안군 노인회 드림`, logType: '모임 단체 문자', logDetail: `${sel.name} · ${people.map(p => p.name).join(', ')}` });
+      return;
+    }
+    if (act === 'delmoim') {
+      if (!await ask(`"${sel.name}" 모임을 지울까요?\n(명단이 모두 지워집니다)`)) return;
+      const old = sel.name; moims = moims.filter(m => m.id !== sel.id); saveMoims();
+      logEvent('모임 명단', null, `모임 지움: ${old}`); sel = moims[0] || null; return draw();
+    }
+  });
+  bg.addEventListener('click', e => { if (e.target === bg) close(); });
+  draw();
+}
 // 📖 사용법 찾기: 검색하면 제목만 나오고, 누르면 단계가 펼쳐집니다
 const HELP = [
   { t: '신규 어르신 등록하기', k: '신규 등록 추가 새로 새사람 어르신 입력 넣기 한명 저장 명단 신규등록', steps: ['메인 화면의 ➕ 신규등록 칸을 펼칩니다.', '성명, 성별, 나이, 소속 면, 경로당을 적습니다.', '저장을 누르면 명단에 들어갑니다. 여러 명은 📂 엑셀로 한번에 등록을 씁니다.'] },
@@ -6754,6 +6855,10 @@ function exportExcel(){
   const ws5 = hRows.length ? XLSX.utils.json_to_sheet(hRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 변경 이력이 없습니다.`]]);
   ws5['!cols'] = [17,11,14,8,14,10,60].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, shortSheet().ws, '근무 미달(1~11월)');
+  { const mr = moims.flatMap(m => m.members.map(x => ({ '모임': m.name, '만든 날': m.created || '', '성명': x.name, '전화번호': x.phone || '', '도착': x.arrived ? '도착' : '안 옴', '도착 시간': x.at || '' })));
+    const wsM = mr.length ? XLSX.utils.json_to_sheet(mr) : XLSX.utils.aoa_to_sheet([['모임 명단이 없습니다.']]);
+    wsM['!cols'] = [16,12,10,14,8,10].map(w => ({ wch: w }));
+    XLSX.utils.book_append_sheet(wb, wsM, '모임 명단'); }
   XLSX.utils.book_append_sheet(wb, ws5, '변경 이력');
   // 올려서 넣은 일정표 (활동일·역량강화교육)
   const sch = schedLoad();
@@ -6775,7 +6880,7 @@ eventLog.filter(h => h.type === '신규 등록' && (h.detail || '').startsWith('
 document.getElementById('st-from').value = '1'; document.getElementById('st-to').value = String(curMonth);
 // 태어난 해를 적어 둔 분은 해가 바뀌면 나이도 저절로 바뀜
 // ---------- 🧩 화면 배치: 칸 제목을 꾹 눌러 옮기기·겹쳐서 묶기·이름 바꾸기 (이 휴대폰에만 저장, jinan_layout) ----------
-const MV_BASE = { chg: '🔄 근무일 변경', wd: '📅 활동일', zone: '🗺 구역', search: '🔍 이름 찾기', board: '⚠️ 감점 현황', diary: '📝 활동일지', tools: '➕ 신규등록', stats: '📊 통계', ui: '🛠️ 설정', me: '👤 현장 점검자 정보', bk: '💾 백업' };
+const MV_BASE = { chg: '🔄 근무일 변경', wd: '📅 활동일', zone: '🗺 구역', moim: '👥 모임 명단', search: '🔍 이름 찾기', board: '⚠️ 감점 현황', diary: '📝 활동일지', tools: '➕ 신규등록', stats: '📊 통계', ui: '🛠️ 설정', me: '👤 현장 점검자 정보', bk: '💾 백업' };
 const MV_IDS = Object.keys(MV_BASE);
 let mvL = (() => { try { return JSON.parse(localStorage.getItem('jinan_layout')) || null; } catch(e) { return null; } })();
 function mvFix(){
@@ -6787,7 +6892,7 @@ function mvFix(){
       if (g.items.length > 1) order.push(k); else { g.items.forEach(i => order.push(i)); delete L.groups[k.slice(2)]; } }
     else if (MV_IDS.includes(k) && !seen.has(k)) { seen.add(k); order.push(k); } });
   Object.keys(L.groups).forEach(g => { if (!order.includes('g:' + g)) delete L.groups[g]; });
-  MV_IDS.forEach(i => { if (!seen.has(i)) order.push(i); });
+  MV_IDS.forEach((i, idx) => { if (seen.has(i)) return; seen.add(i); const at = idx ? order.indexOf(MV_IDS[idx-1]) : -1; if (at >= 0) order.splice(at+1, 0, i); else order.push(i); });
   L.order = order; mvL = L;
 }
 const mvCard = id => document.querySelector(`[data-mv="${id}"]`);
