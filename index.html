@@ -440,10 +440,22 @@
 
 
   <div class="card" id="moim-card" data-mv="moim" style="padding:10px 14px;">
-    <button type="button" class="full" onclick="openMoim()" style="margin:0;">👥 모임 명단 (여행·임원 모임)</button>
+    <details class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
+      <summary><div class="mv-t" style="flex:1;font-weight:bold;">👥 모임 명단</div><span class="chg-arrow"></span></summary>
+      <button type="button" class="full" onclick="openMoim()" style="margin:8px 0 0;">모임 명단 열기 (여행·임원 모임)</button>
+    </details>
   </div>
   <div class="card" id="edu-card" data-mv="edu" style="padding:10px 14px;">
-    <button type="button" class="full" onclick="openEduCheck()" style="margin:0;">🎓 교육 출석 체크 (교육 날짜 · 읍면별)</button>
+    <details class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
+      <summary><div class="mv-t" style="flex:1;font-weight:bold;">🎓 교육 출석 체크</div><span class="chg-arrow"></span></summary>
+      <button type="button" class="full" onclick="openEduCheck()" style="margin:8px 0 0;">교육 출석 열기 (교육 날짜 · 읍면별)</button>
+    </details>
+  </div>
+  <div class="card" id="count-card" data-mv="count" style="padding:10px 14px;">
+    <details class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
+      <summary><div class="mv-t" style="flex:1;font-weight:bold;">👥 인원 세기</div><span class="chg-arrow"></span></summary>
+      <button type="button" class="full" onclick="openCounter()" style="margin:8px 0 0;">인원 세기 열기 (총인원 · 행사 동행)</button>
+    </details>
   </div>
   <div class="card" id="search-card" data-mv="search">
     <input type="search" id="search" placeholder="🔍 어르신 이름으로 바로 찾기 (모든 면)" oninput="renderList()" autocomplete="off" style="margin:0 0 4px;">
@@ -470,9 +482,6 @@
 
 
 
-  <div class="card" id="count-card" style="padding:10px 14px;">
-    <button type="button" class="full" onclick="openCounter()" style="margin:0;">👥 인원 세기 (총인원 · 행사 동행)</button>
-  </div>
   <div class="card" id="board-card" data-mv="board">
     <details class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3 id="board-title">⚠️ 감점 현황</h3><span class="chg-arrow"></span></summary>
@@ -613,7 +622,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-4</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-5</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1229,11 +1238,13 @@ function goThisMonth(){ YEAR = Number(today().slice(0,4)); curMonth = Number(tod
 const mLogs = p => p.logs.filter(l => l.date.startsWith(monthKey()));
 function mstats(p){
   const ls = mLogs(p);
+  const vestEdu = Object.entries(p.eduChk || {}).filter(([x, c]) => x.startsWith(monthKey()) && c.arr && c.vest === false).length;
   const leaves = ls.filter(l => l.leave==='이탈'), aways = ls.filter(l => l.leave==='자리비움');
   const pi = payInfo(p, monthKey().slice(0,4));
-  return { leaves, aways, pts: ls.reduce((n,l) => n + logPts(l), 0), unpaid: ls.reduce((n,l) => n + (pi[l.id] || 0), 0), pens: ls.filter(l => logPts(l) > 0), wlogs: ls.filter(l => !logPts(l) && issueText(l).length), warns: ls.filter(l => l.badge==='미착용' || l.vest==='미착용'),
+  return { vestEdu, leaves, aways, pts: ls.reduce((n,l) => n + logPts(l), 0), unpaid: ls.reduce((n,l) => n + (pi[l.id] || 0), 0), pens: ls.filter(l => logPts(l) > 0), wlogs: ls.filter(l => !logPts(l) && issueText(l).length), warns: ls.filter(l => l.badge==='미착용' || l.vest==='미착용'),
            vest: ls.filter(l => l.vest==='미착용').length, badge: ls.filter(l => l.badge==='미착용').length };
 }
+const warnN = m => m.wlogs.length + (m.vestEdu || 0);   // 경고 = 점검 경고 + 교육 조끼 미착용
 const md = d => `${Number(d.slice(5,7))}/${Number(d.slice(8,10))}`;
 
 // ---------- 활동일 (한 달 10일, 보통 월·수·금) ----------
@@ -1314,7 +1325,7 @@ function eduInfo(name){
   if (T[n]) return T[n];
   const k = Object.keys(T).find(x => n.includes(x) || n.includes(x.replace(/교육$/, '')));
   if (k) return T[k];
-  const c = /안전/.test(n) ? '안전' : /소양/.test(n) ? '소양' : /직무/.test(n) ? '직무' : /문화|행사|나들이|체육대회/.test(n) ? '행사' : '기타';
+  const c = /안전/.test(n) ? '안전' : /소양/.test(n) ? '소양' : /직무/.test(n) ? '직무' : /문화|행사|나들이|체육대회|간담회|만족도|총회/.test(n) ? '행사' : '기타';
   return { h: c === '행사' ? 0 : 2, c };
 }
 // 그해 1월~11월, 오늘까지의 교육. 대규모 교육은 모두 받은 것으로 보고, 불참 표시(p.eduAbsent = [날짜])한 날만 빼고 셈
@@ -3348,14 +3359,14 @@ function renderBoard(){
   document.getElementById('month-label').textContent = `${YEAR}년 ${curMonth}월`;
   // 감점(모든 항목 점수 합) + 경고(감점 없는 자리 비움·조끼·명찰·태도 불량·새 항목)
   let totalPen = 0, totalWarn = 0;
-  visibleTowns().forEach(tw => participants.filter(p => p.town===tw).forEach(p => { const m = mstats(p); totalPen += m.pts; totalWarn += m.wlogs.length; }));
+  visibleTowns().forEach(tw => participants.filter(p => p.town===tw).forEach(p => { const m = mstats(p); totalPen += m.pts; totalWarn += warnN(m); }));
   document.getElementById('board-title').textContent = `⚠️ ${curMonth}월 감점 현황 (${[totalPen ? '-' + totalPen + '점' : '', totalWarn ? '경고 ' + totalWarn + '건' : ''].filter(Boolean).join(' · ') || '없음'})`;
   const isNow = monthKey() === today().slice(0,7);
   document.getElementById('btn-reset').textContent = `🗑 ${curMonth}월 기록 초기화`;
   document.getElementById('this-month').classList.toggle('hidden', isNow);
   const rows = visibleTowns().map(tw => {
     let pen=0, warn=0;
-    participants.filter(p => p.town===tw).forEach(p => { const m = mstats(p); pen += m.pts; warn += m.wlogs.length; });
+    participants.filter(p => p.town===tw).forEach(p => { const m = mstats(p); pen += m.pts; warn += warnN(m); });
     return {tw, pen, warn};
   }).filter(r => r.pen || r.warn).sort((a,b) => b.pen-a.pen || b.warn-a.warn);
   document.getElementById('penalty-board').innerHTML = rows.length ? rows.map(r =>
@@ -3365,14 +3376,14 @@ function renderBoard(){
 
 // 읍·면을 누르면: 어느 경로당, 누가, 감점 몇 건인지
 function showPenalty(tw){
-  const list = participants.filter(p => p.town===tw).map(p => ({p, m: mstats(p)})).filter(x => x.m.pts || x.m.wlogs.length)
+  const list = participants.filter(p => p.town===tw).map(p => ({p, m: mstats(p)})).filter(x => x.m.pts || warnN(x.m))
     .sort((a,b) => seniorRank(seniorOf(a.p))-seniorRank(seniorOf(b.p)) || seniorOf(a.p).localeCompare(seniorOf(b.p)) || b.m.pts-a.m.pts);
   const drops = participants.filter(p => p.town===tw && stats(p).dropped);
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">${tw} · ${curMonth}월 감점</div>
     <div class="close-sum" style="grid-template-columns:1fr 1fr;margin-top:0;">
-      <div style="background:#fff5f5;border-radius:6px;padding:8px 2px;text-align:center;font-size:.82rem;"><b style="display:block;font-size:1.2rem;color:var(--danger)">-${list.reduce((n,x)=>n+x.m.pts,0)}점</b>${curMonth}월 감점${list.some(x => x.m.wlogs.length) ? ` · 경고 ${list.reduce((n, x) => n + x.m.wlogs.length, 0)}건` : ''}</div>
+      <div style="background:#fff5f5;border-radius:6px;padding:8px 2px;text-align:center;font-size:.82rem;"><b style="display:block;font-size:1.2rem;color:var(--danger)">-${list.reduce((n,x)=>n+x.m.pts,0)}점</b>${curMonth}월 감점${list.some(x => warnN(x.m)) ? ` · 경고 ${list.reduce((n, x) => n + warnN(x.m), 0)}건` : ''}</div>
       <div style="background:#edf2f7;border-radius:6px;padding:8px 2px;text-align:center;font-size:.82rem;"><b style="display:block;font-size:1.2rem;color:#4a5568">${drops.length}명</b>중도포기(누적)</div>
     </div>
     ${drops.length ? `<div class="muted" style="margin:2px 0 8px;">중도포기: ${drops.map(p => `${nmH(p)}(${esc(seniorOf(p))})`).join(', ')}</div>` : ''}
@@ -3382,7 +3393,7 @@ function showPenalty(tw){
       const warnTxt = m.warns.map(l => `${md(l.date)} ${[l.vest==='미착용'?'조끼':'', l.badge==='미착용'?'명찰':''].filter(Boolean).join('·')}`).join(', ');
       return `<button class="pen-row ${m.pts?'':'warn'}" data-id="${p.id}">
         <span class="muted">🏠 ${esc(seniorOf(p))}</span><br>
-        <b>${nmH(p)}</b> ${m.pts?`<b style="color:var(--danger)">-${m.pts}점</b> <span class="muted">(${m.pens.map(l => md(l.date) + ' ' + shortItems(l)).join(', ')})</span>`:''}${m.wlogs.length ? `<br><b style="color:#b7791f;">경고 ${m.wlogs.length}건</b> <span class="muted">(${m.wlogs.map(l => md(l.date) + ' ' + issueText(l).map(x => x.replace(/\(경고\)$/, '').replace('잠깐 ', '').replace('근무지 ', '')).join('·')).join(', ')})</span>` : ''}
+        <b>${nmH(p)}</b> ${m.pts?`<b style="color:var(--danger)">-${m.pts}점</b> <span class="muted">(${m.pens.map(l => md(l.date) + ' ' + shortItems(l)).join(', ')})</span>`:''}${warnN(m) ? `<br><b style="color:#b7791f;">경고 ${warnN(m)}건</b> <span class="muted">(${m.wlogs.map(l => md(l.date) + ' ' + issueText(l).map(x => x.replace(/\(경고\)$/, '').replace('잠깐 ', '').replace('근무지 ', '')).join('·')).join(', ')})</span>` : ''}
         <br><span class="muted">누적 ${s.penalty}점${s.dropped?` · <b style="color:var(--danger)">${s.status}</b>`:''}</span></button>`;
     }).join('')}
     <button class="secondary full" id="pen-close">닫기</button></div>`;
@@ -4123,7 +4134,7 @@ function renderList(){
   const all = town==='전체';
   const inTown = all ? participants.filter(p => visibleTowns().includes(p.town)) : participants.filter(p => p.town===town);
   { let pen=0, warn=0, fix=0;   // 벌점(점수 합) · 경고(감점 없는 모든 항목) · 🔧 교체 필요
-    inTown.forEach(p => { const m = mstats(p); pen += m.pts; warn += m.wlogs.length; fix += fixList(p).length; });
+    inTown.forEach(p => { const m = mstats(p); pen += m.pts; warn += warnN(m); fix += fixList(p).length; });
     document.getElementById('close-sum').innerHTML =
       `<button onclick="showClose('leave')"><b style="color:var(--danger)">${pen?'-'+pen:0}점</b>벌점 ›</button><button onclick="showClose('warn')"><b style="color:#b7791f">${warn}건</b>경고 ›</button><button onclick="showClose('fix')"><b style="color:#c05621">${fix}건</b>🔧 교체 필요 ›</button>`; }
   document.getElementById('export-desc').innerHTML = (all ? (showOthers ? '<b>전체 읍·면</b> 명단을' : `<b>내 담당(${myTowns.join('·')})</b> 명단을`) : `<b>${esc(town)}</b> 명단을`) +
@@ -5911,7 +5922,7 @@ function openMoim(selId){
   draw();
 }
 // ---------- 🎓 교육 출석 체크: 교육 날짜 → 읍·면 → 명단. 도착·조끼 체크, 저장을 누르면 안 온 분은 불참으로 같이 반영 ----------
-const eduDayList = () => { const m = new Map(); const add = e => { if (!e?.date || eduInfo(e.name).c === '행사') return; if (!m.has(e.date)) m.set(e.date, e.name); };
+const eduDayList = () => { const m = new Map(); const add = e => { if (!e?.date) return; if (!m.has(e.date)) m.set(e.date, e.name); };
   Object.values(eduAll).forEach(arr => (arr || []).forEach(add)); Object.values(leaderPlan).forEach(v => (v?.edu || []).forEach(add));
   participants.forEach(p => { if (!p.quit) eduOf(p).forEach(add); }); return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0])); };
 const eduChkOf = (p, d) => (p.eduChk || {})[d] || null;
@@ -5924,16 +5935,18 @@ function openEduCheck(){
   const dlg = bg.querySelector('.dlg');
   const pastN = days.filter(([x]) => x <= today()).length;
   let d = (days[Math.max(0, pastN - 1)] || days[0])[0];
-  let t = null, onlyAbsent = false, q = '', dirty = false;
-  const dv = {}, touched = new Set();   // dv: `${날짜}|${id}` → {arr, vest, at}
+  let t = null, onlyAbsent = false, q = '';
+  const dv = (() => { try { return JSON.parse(load('jinan_edu_draft')) || {}; } catch(e) { return {}; } })();   // 임시 저장: `${날짜}|${id}` → {arr, vest, at, note}
+  const touched = new Set(Object.keys(dv).map(k => k.split('|')[0])); let dirty = touched.size > 0;
+  const saveDraft = () => { try { localStorage.setItem('jinan_edu_draft', JSON.stringify(dv)); } catch(e) {} };
   const findP = id => participants.find(x => String(x.id) === String(id));
   const people = day => participants.filter(p => !p.quit && eduOn(p, day));
-  const ensure = day => people(day).forEach(p => { const k = day + '|' + p.id; if (dv[k]) return; const c = eduChkOf(p, day); dv[k] = { arr: !!(c && c.arr), vest: c ? (c.vest ?? null) : null, at: c?.at || '' }; });
+  const ensure = day => people(day).forEach(p => { const k = day + '|' + p.id; if (dv[k]) return; const c = eduChkOf(p, day); dv[k] = { arr: !!(c && c.arr), vest: c ? (c.vest ?? null) : null, at: c?.at || '', note: c?.note || '' }; });
   const st = p => dv[d + '|' + p.id] || { arr: false, vest: null, at: '' };
   const draw = () => {
     ensure(d);
-    const all = people(d), ts = [...new Set(all.map(p => p.town))].sort((a, b) => a.localeCompare(b));
-    if (!ts.includes(t)) t = ts[0] || null;
+    const all = people(d), vis = visibleTowns(), ts = [...new Set(all.map(p => p.town))].sort((a, b) => (vis.includes(a) ? 0 : 1) - (vis.includes(b) ? 0 : 1) || a.localeCompare(b));
+    if (!ts.includes(t)) t = ts.find(x => vis.includes(x)) || ts[0] || null;
     const inTown = all.filter(p => p.town === t), n = inTown.length;
     const got = inTown.filter(p => st(p).arr).length;
     const vOk = inTown.filter(p => st(p).arr && st(p).vest === true).length, vNo = inTown.filter(p => st(p).arr && st(p).vest === false).length;
@@ -5951,15 +5964,17 @@ function openEduCheck(){
       <input type="search" id="ec-q" placeholder="🔍 이름으로 찾기" value="${esc(q)}" autocomplete="off" style="margin:4px 0 8px;">
       <div>${list.map(p => { const s = st(p); return `
         <div style="display:flex;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px solid #edf2f7;${s.arr ? '' : 'background:#fff5f5;'}">
-          <span style="flex:1;font-weight:600;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span>${p.phone && !s.arr ? ` <a class="tel-link" href="tel:${telOf(p)}" style="font-size:.85rem;font-weight:400;">📞</a>` : ''}</span>
+          <span style="flex:1;font-weight:600;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span>${p.phone && !s.arr ? ` <a class="tel-link" href="tel:${telOf(p)}" style="font-size:.85rem;font-weight:400;">📞</a>` : ''}${s.note ? `<br><span style="font-size:.8rem;color:#975a16;font-weight:400;">📝 ${esc(s.note)}</span>` : ''}</span>
+          ${s.arr ? '' : `<button type="button" class="small secondary" data-note="${p.id}" style="width:auto;margin:0;padding:6px 8px;">📝 연락</button>`}
           ${s.arr ? `<button type="button" class="small ${s.vest === false ? 'danger' : 'secondary'}" data-vest="${p.id}" style="width:auto;margin:0;padding:6px 8px;">${s.vest === true ? '🦺 착용' : s.vest === false ? '⚠ 미착용' : '조끼 확인'}</button>` : ''}
           <button type="button" class="small ${s.arr ? 'secondary' : ''}" data-arr="${p.id}" style="width:auto;margin:0;padding:6px 10px;">${s.arr ? `✔ 도착 ${esc(s.at || '')}` : '도착'}</button></div>`; }).join('') || '<div class="muted" style="padding:8px 0;">해당하는 사람이 없습니다.</div>'}</div>`
-      : `<div class="muted" style="padding:8px 0;">${participants.length ? '이 날 교육을 받는 어르신이 없습니다.' : '이 기기에는 어르신 명단이 없습니다.<br>📂 엑셀로 한번에 등록에서 명단을 먼저 올려 주세요.'}</div>`}
-      <button type="button" class="full" data-act="save" style="margin:10px 0 6px;">💾 저장 (안 온 분은 불참으로)</button>
+      : `<div class="muted" style="padding:8px 0;">${participants.length ? '이 날 교육을 받는 어르신이 없습니다.' : '이 기기에는 어르신 명단이 없습니다.<br>📂 엑셀로 한번에 등록에서 명단을 먼저 올려 주세요.<br><button type="button" class="small" data-act="bk" style="width:auto;margin-top:6px;">💾 백업 칸으로 가기</button>'}</div>`}
+      <button type="button" class="full secondary" data-act="stat" style="margin:10px 0 6px;">📊 면별 도착률 한눈에 보기</button>
+      <button type="button" class="full" data-act="save" style="margin:0 0 6px;">💾 저장 (안 온 분은 불참으로)</button>
       <button type="button" class="full" data-act="sms" style="margin:0 0 6px;" ${n - got ? '' : 'disabled'}>📩 ${esc(t || '')} 안 온 ${n - got}명에게 문자</button>
       <button type="button" class="full secondary" data-act="close">닫기</button>`;
   };
-  const confirmClose = async () => { if (dirty && !await ask('저장하지 않았어요.\n그래도 닫을까요?')) return false; bg.remove(); return true; };
+  const confirmClose = async () => { bg.remove(); return true; };
   dlg.addEventListener('input', e => {
     if (e.target.id !== 'ec-q') return;
     q = e.target.value; draw();
@@ -5974,27 +5989,42 @@ function openEduCheck(){
     days2.forEach(x => people(x).forEach(p => {
       const s = dv[x + '|' + p.id], prev = eduChkOf(p, x);
       const vest = s.arr ? s.vest : null;
-      const recChanged = !prev || !!prev.arr !== s.arr || (prev.vest ?? null) !== vest;
+      const recChanged = !prev || !!prev.arr !== s.arr || (prev.vest ?? null) !== vest || (prev.note || '') !== (s.note || '');
       const wasAbs = eduAbsent(p, x), nowAbs = !s.arr;
       if (!recChanged && wasAbs === nowAbs) return;
-      p.eduChk = p.eduChk || {}; p.eduChk[x] = { arr: s.arr, vest, at: s.arr ? s.at : '' };
+      p.eduChk = p.eduChk || {}; p.eduChk[x] = { arr: s.arr, vest, at: s.arr ? s.at : '', note: s.note || '' };
       if (wasAbs !== nowAbs) { p.eduAbsent = (p.eduAbsent || []).filter(v => v !== x); if (nowAbs) p.eduAbsent.push(x); }
       changed++;
       const e = eduOn(p, x);
-      logEvent('교육 출석', p, `${dd(x)} ${e?.name || '교육'} · ${s.arr ? '도착' : '불참(안 옴)'}${s.arr ? (vest === true ? ' · 조끼 착용' : vest === false ? ' · 조끼 미착용(경고)' : '') : ''}`, x);
+      logEvent('교육 출석', p, `${dd(x)} ${e?.name || '교육'} · ${s.arr ? '도착' : '불참(안 옴)'}${s.arr ? (vest === true ? ' · 조끼 착용' : vest === false ? ' · 조끼 미착용(경고)' : '') : ''}${s.note ? ` · 연락: ${s.note}` : ''}`, x);
     }));
-    saveData(false); dirty = false; touched.clear(); draw();
+    saveData(false); days2.forEach(x => Object.keys(dv).filter(k => k.startsWith(x + '|')).forEach(k => delete dv[k])); dirty = false; touched.clear(); saveDraft(); draw();
     notify(changed ? `저장했어요. (${changed}명 바뀜)` : '바뀐 것이 없어요.');
   };
   dlg.addEventListener('click', async e => {
     const dayB = e.target.closest('[data-day]'); if (dayB) { d = dayB.dataset.day; t = null; q = ''; onlyAbsent = false; return draw(); }
     const townB = e.target.closest('[data-town]'); if (townB) { t = townB.dataset.town; q = ''; onlyAbsent = false; return draw(); }
     const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.arr) { const s = dv[d + '|' + b.dataset.arr]; s.arr = !s.arr; s.at = s.arr ? moimTime() : ''; touched.add(d); dirty = true; return draw(); }
-    if (b.dataset.vest) { const s = dv[d + '|' + b.dataset.vest]; s.vest = s.vest === true ? false : s.vest === false ? null : true; touched.add(d); dirty = true; return draw(); }
+    if (b.dataset.note) { const p0 = findP(b.dataset.note), k = d + '|' + p0.id; const r = await askInput(`${p0.name} 님 연락 결과\n(예: 부재중, 다음에 온다고 함)`, dv[k]?.note || ''); if (r === null || r === undefined) return; dv[k].note = String(r).trim(); touched.add(d); dirty = true; saveDraft(); return draw(); }
+    if (b.dataset.arr) { const s = dv[d + '|' + b.dataset.arr]; s.arr = !s.arr; s.at = s.arr ? moimTime() : ''; touched.add(d); dirty = true; saveDraft(); return draw(); }
+    if (b.dataset.vest) { const s = dv[d + '|' + b.dataset.vest]; s.vest = s.vest === true ? false : s.vest === false ? null : true; touched.add(d); dirty = true; saveDraft(); return draw(); }
     const act = b.dataset.act;
     if (act === 'all') { onlyAbsent = false; return draw(); }
     if (act === 'absent') { onlyAbsent = true; return draw(); }
+    if (act === 'bk') { bg.remove(); document.getElementById('bk-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    if (act === 'stat') {
+      const all2 = people(d), ts2 = [...new Set(all2.map(p => p.town))].sort((a, b) => a.localeCompare(b));
+      const ok = p => st(p).arr, rowsH = ts2.map(tw => { const L = all2.filter(p => p.town === tw), g = L.filter(ok).length, vn = L.filter(p => ok(p) && st(p).vest === false).length, pc = L.length ? Math.round(g * 100 / L.length) : 0;
+        return `<tr><td style="padding:6px 4px;font-weight:600;">${esc(tw)}</td><td style="text-align:center;">${g}/${L.length}</td><td style="text-align:center;">${pc}%</td><td style="text-align:center;color:#975a16;">${vn}</td><td style="text-align:center;color:#c53030;">${L.length - g}</td></tr>`; }).join('');
+      const miss = all2.filter(p => ok(p) && st(p).vest === false);
+      const sb = document.createElement('div'); sb.className = 'dlg-back';
+      sb.innerHTML = `<div class="dlg" style="text-align:left;max-height:90vh;overflow:auto;"><div style="font-weight:bold;font-size:1.05rem;margin-bottom:6px;">📊 ${dd(d)} 면별 도착률</div>
+        <table style="width:100%;font-size:.9rem;border-collapse:collapse;"><tr style="border-bottom:1px solid #cbd5e0;"><th style="text-align:left;">면</th><th>도착/명단</th><th>도착률</th><th>조끼 미착용</th><th>안 온</th></tr>${rowsH}</table>
+        <div style="margin-top:10px;font-weight:bold;">⚠ 조끼 미착용 ${miss.length}명 (경고)</div>
+        <div style="font-size:.9rem;">${miss.map(p => `${esc(p.town)} · ${esc(seniorOf(p))} · ${esc(p.name)}`).join('<br>') || '없음'}</div>
+        <button type="button" class="full" style="margin-top:12px;" onclick="this.closest('.dlg-back').remove()">닫기</button></div>`;
+      document.body.appendChild(sb); return;
+    }
     if (act === 'close') return confirmClose();
     if (act === 'save') return save();
     if (act === 'sms') {
@@ -6985,7 +7015,7 @@ eventLog.filter(h => h.type === '신규 등록' && (h.detail || '').startsWith('
 document.getElementById('st-from').value = '1'; document.getElementById('st-to').value = String(curMonth);
 // 태어난 해를 적어 둔 분은 해가 바뀌면 나이도 저절로 바뀜
 // ---------- 🧩 화면 배치: 칸 제목을 꾹 눌러 옮기기·겹쳐서 묶기·이름 바꾸기 (이 휴대폰에만 저장, jinan_layout) ----------
-const MV_BASE = { chg: '🔄 근무일 변경', wd: '📅 활동일', zone: '🗺 구역', moim: '👥 모임 명단', edu: '🎓 교육 출석', search: '🔍 이름 찾기', board: '⚠️ 감점 현황', diary: '📝 활동일지', tools: '➕ 신규등록', stats: '📊 통계', ui: '🛠️ 설정', me: '👤 현장 점검자 정보', bk: '💾 백업' };
+const MV_BASE = { chg: '🔄 근무일 변경', wd: '📅 활동일', zone: '🗺 구역', moim: '👥 모임 명단', edu: '🎓 교육 출석', count: '👥 인원 세기', search: '🔍 이름 찾기', board: '⚠️ 감점 현황', diary: '📝 활동일지', tools: '➕ 신규등록', stats: '📊 통계', ui: '🛠️ 설정', me: '👤 현장 점검자 정보', bk: '💾 백업' };
 const MV_IDS = Object.keys(MV_BASE);
 let mvL = (() => { try { return JSON.parse(localStorage.getItem('jinan_layout')) || null; } catch(e) { return null; } })();
 function mvFix(){
