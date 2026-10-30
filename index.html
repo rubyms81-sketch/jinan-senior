@@ -622,7 +622,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-9</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-10</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1238,13 +1238,14 @@ function goThisMonth(){ YEAR = Number(today().slice(0,4)); curMonth = Number(tod
 const mLogs = p => p.logs.filter(l => l.date.startsWith(monthKey()));
 function mstats(p){
   const ls = mLogs(p);
+  const attWarn = Object.entries(p.zAtt || {}).filter(([x, c]) => x.startsWith(monthKey()) && c.arr && (c.vest === false || c.badge === false)).length;
   const vestEdu = Object.entries(p.eduChk || {}).filter(([x, c]) => x.startsWith(monthKey()) && c.arr && c.vest === false).length;
   const leaves = ls.filter(l => l.leave==='이탈'), aways = ls.filter(l => l.leave==='자리비움');
   const pi = payInfo(p, monthKey().slice(0,4));
-  return { vestEdu, leaves, aways, pts: ls.reduce((n,l) => n + logPts(l), 0), unpaid: ls.reduce((n,l) => n + (pi[l.id] || 0), 0), pens: ls.filter(l => logPts(l) > 0), wlogs: ls.filter(l => !logPts(l) && issueText(l).length), warns: ls.filter(l => l.badge==='미착용' || l.vest==='미착용'),
+  return { attWarn, vestEdu, leaves, aways, pts: ls.reduce((n,l) => n + logPts(l), 0), unpaid: ls.reduce((n,l) => n + (pi[l.id] || 0), 0), pens: ls.filter(l => logPts(l) > 0), wlogs: ls.filter(l => !logPts(l) && issueText(l).length), warns: ls.filter(l => l.badge==='미착용' || l.vest==='미착용'),
            vest: ls.filter(l => l.vest==='미착용').length, badge: ls.filter(l => l.badge==='미착용').length };
 }
-const warnN = m => m.wlogs.length + (m.vestEdu || 0);   // 경고 = 점검 경고 + 교육 조끼 미착용
+const warnN = m => m.wlogs.length + (m.vestEdu || 0) + (m.attWarn || 0);   // 경고 = 점검 경고 + 교육 조끼 미착용
 const md = d => `${Number(d.slice(5,7))}/${Number(d.slice(8,10))}`;
 
 // ---------- 활동일 (한 달 10일, 보통 월·수·금) ----------
@@ -2210,8 +2211,9 @@ function renderZones(){
     const v = z.sites.length ? zoneVisit(z) : null;
     // 예) 홍길동(상전) 10곳, 게이트볼 1곳 총 23명 / (동향) 2곳 총 4명
     const by = {}; z.sites.forEach(x => { const t = (by[x.town] ||= { s: 0, g: 0, n: 0 }); x.senior.includes('게이트볼') ? t.g++ : t.s++; t.n += siteMembers(x.town, x.senior).filter(counted).length; });
+    const A = zoneAttStat(z, today());
     const lines = TOWNS.filter(t => by[t]).map((t, i) => `${i ? '' : `<span style="font-weight:bold;font-size:1.05rem;">${esc(z.name)}</span>`}(${esc(t.replace(/[면읍]$/, ''))}) ${by[t].s}곳${by[t].g ? `, 게이트볼 ${by[t].g}곳` : ''} 총 ${by[t].n}명`);
-    return `<button type="button" class="zone-btn ${z.sites.length?'':'empty'}" onclick="openZone(${z.id})">${lines.length ? `<span style="display:block;font-size:.9rem;line-height:1.45;">${lines.join('<br>')}</span>` : `<b>${esc(z.name)}</b>`}</button>`;
+    return `<button type="button" class="zone-btn ${z.sites.length?'':'empty'}" onclick="openZone(${z.id})">${lines.length ? `<span style="display:block;font-size:.9rem;line-height:1.45;">${lines.join('<br>')}</span>` : `<b>${esc(z.name)}</b>`}${A.n ? `<span style="display:block;font-size:.85rem;margin-top:4px;">🙋 오늘 도착 <b>${A.arr}/${A.n}</b> · 🦺 미착용 ${A.vNo} · 🪪 미착용 ${A.bNo}</span>` : ''}</button>`;
   }).join('');
 }
 // 📥 모니터링 코스표 엑셀 (상전 코스표 양식): 구역 경로당을 면·순서대로, 대상 인원, 주소, 이번 달 입원·날짜 변경을 특이사항으로
@@ -2284,6 +2286,7 @@ function openZone(id){
           <select id="zn-range" style="width:auto;margin:0;padding:4px 6px;font-size:.85rem;"><option value="month">이번 달</option><option value="14">최근 2주</option><option value="7">최근 1주</option></select></div>
         <div id="zn-visit"></div>
       </div>
+      <button type="button" class="full" id="zn-att" style="margin:0 0 8px;">🙋 오늘 도착·조끼·명찰 체크</button>
       <details id="zn-manage" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
         <summary><b>⚙️ 경로당 고르기 · 담당 경로당 · 코스표 · 팀장 · 리셋</b><span class="chg-arrow"></span></summary>
         <div style="padding-top:8px;">
@@ -2509,6 +2512,7 @@ function openZone(id){
   $('#zn-name').addEventListener('change', saveZoneInfo);
   $('#zn-name').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); e.target.blur(); } });
   $('#zn-close').onclick = () => { saveZoneInfo(); bg.remove(); };
+  $('#zn-att').onclick = () => openZoneAtt(z);
   $('#zn-fold').onclick = () => { $('#zn-manage').open = false; $('#zn-manage').scrollIntoView({ block: 'nearest' }); };
   $('#zn-course').onclick = () => {
     if (!z.sites.length) return notify('이 구역에 경로당이 없어요.');
@@ -6065,6 +6069,59 @@ function openEduCheck(){
   bg.addEventListener('click', e => { if (e.target === bg) confirmClose(); });
   draw();
 }
+// ---------- 🙋 구역 출석 (오늘): 구역 안 어르신 도착·조끼·명찰. 누르는 즉시 저장 (p.zAtt = {날짜: {arr, vest, badge, at}}) ----------
+const zoneMembers = z => z.sites.flatMap(x => siteMembers(x.town, x.senior)).filter(counted);
+const attOf = (p, d) => (p.zAtt || {})[d] || null;
+function zoneAttStat(z, d){
+  const ms = zoneMembers(z), a = ms.map(p => attOf(p, d) || {});
+  return { n: ms.length, arr: a.filter(x => x.arr).length, vOk: a.filter(x => x.arr && x.vest === true).length, vNo: a.filter(x => x.arr && x.vest === false).length, bOk: a.filter(x => x.arr && x.badge === true).length, bNo: a.filter(x => x.arr && x.badge === false).length };
+}
+function openZoneAtt(z){
+  const d = today();
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = '<div class="dlg" style="text-align:left;max-height:90vh;overflow:auto;"></div>';
+  document.body.appendChild(bg);
+  const dlg = bg.querySelector('.dlg'); let onlyAbsent = false, q = '';
+  const cyc = v => v === true ? '착용' : v === false ? '미착용' : '확인';
+  const findP = id => participants.find(x => String(x.id) === String(id));
+  const setRec = (p, patch, what) => {
+    p.zAtt = p.zAtt || {};
+    const cur = Object.assign({ arr: false, vest: null, badge: null, at: '' }, p.zAtt[d] || {}); Object.assign(cur, patch); p.zAtt[d] = cur;
+    saveData(false); logEvent('구역 출석', p, `${z.name} · ${dd(d)} ${what}`, d); renderZones();
+  };
+  const draw = () => {
+    const S = zoneAttStat(z, d), ms = zoneMembers(z);
+    const list = ms.filter(p => (!onlyAbsent || !(attOf(p, d) || {}).arr) && (!q || p.name.includes(q)));
+    dlg.innerHTML = `<div style="font-weight:bold;font-size:1.05rem;margin-bottom:4px;">🙋 ${esc(z.name)} · 오늘 출석 (${dd(d)})</div>
+      <div style="text-align:center;margin:6px 0 2px;"><span style="font-size:1.8rem;font-weight:700;color:#c53030;">${S.arr}</span> <span class="muted">/ ${S.n}명 도착</span></div>
+      <div class="muted" style="text-align:center;font-size:.9rem;">🦺 조끼 착용 ${S.vOk} · 미착용 <b style="color:#975a16;">${S.vNo}</b> &nbsp; 🪪 명찰 착용 ${S.bOk} · 미착용 <b style="color:#975a16;">${S.bNo}</b></div>
+      <div class="grid-2" style="margin:8px 0 4px;"><button type="button" class="${onlyAbsent ? 'secondary' : ''}" data-act="all" style="margin:0;">전체 ${S.n}명</button><button type="button" class="${onlyAbsent ? '' : 'secondary'}" data-act="absent" style="margin:0;">안 온 사람만 ${S.n - S.arr}명</button></div>
+      <input type="search" id="za-q" placeholder="🔍 이름으로 찾기" value="${esc(q)}" autocomplete="off" style="margin:4px 0 8px;">
+      <div>${list.map(p => { const r = attOf(p, d) || {}; return `
+        <div style="padding:8px 4px;border-bottom:1px solid #edf2f7;${r.arr ? '' : 'background:#fff5f5;'}">
+          <div style="display:flex;align-items:center;gap:6px;"><span style="flex:1;font-weight:600;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span></span>
+          <button type="button" class="small ${r.arr ? 'secondary' : ''}" data-arr="${p.id}" style="width:auto;margin:0;padding:6px 10px;">${r.arr ? '✔ 도착' : '도착'}</button></div>
+          ${r.arr ? `<div style="display:flex;gap:6px;margin-top:4px;"><button type="button" class="small ${r.vest === false ? 'danger' : 'secondary'}" data-vest="${p.id}" style="width:auto;margin:0;padding:4px 8px;font-size:.85rem;">🦺 조끼 ${cyc(r.vest)}</button><button type="button" class="small ${r.badge === false ? 'danger' : 'secondary'}" data-badge="${p.id}" style="width:auto;margin:0;padding:4px 8px;font-size:.85rem;">🪪 명찰 ${cyc(r.badge)}</button></div>` : ''}
+        </div>`; }).join('') || '<div class="muted" style="padding:8px 0;">해당하는 사람이 없습니다.</div>'}</div>
+      <button type="button" class="full secondary" data-act="close" style="margin-top:10px;">닫기</button>`;
+  };
+  dlg.addEventListener('input', e => {
+    if (e.target.id !== 'za-q') return;
+    q = e.target.value; draw(); const qi = dlg.querySelector('#za-q'); if (qi) { qi.focus(); qi.setSelectionRange(q.length, q.length); }
+  });
+  dlg.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.act === 'all') { onlyAbsent = false; return draw(); }
+    if (b.dataset.act === 'absent') { onlyAbsent = true; return draw(); }
+    if (b.dataset.act === 'close') return bg.remove();
+    if (b.dataset.arr) { const p = findP(b.dataset.arr), on = !((attOf(p, d) || {}).arr); setRec(p, on ? { arr: true, at: moimTime() } : { arr: false, at: '' }, on ? '도착' : '도착 취소'); }
+    else if (b.dataset.vest) { const p = findP(b.dataset.vest), r = attOf(p, d) || {}, nv = r.vest === true ? false : r.vest === false ? null : true; setRec(p, { vest: nv }, `조끼 ${cyc(nv)}`); }
+    else if (b.dataset.badge) { const p = findP(b.dataset.badge), r = attOf(p, d) || {}, nb = r.badge === true ? false : r.badge === false ? null : true; setRec(p, { badge: nb }, `명찰 ${cyc(nb)}`); }
+    draw();
+  });
+  bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+  draw();
+}
 // 📖 사용법 찾기: 검색하면 제목만 나오고, 누르면 단계가 펼쳐집니다
 const HELP = [
   { t: '신규 어르신 등록하기', k: '신규 등록 추가 새로 새사람 어르신 입력 넣기 한명 저장 명단 신규등록', steps: ['메인 화면의 ➕ 신규등록 칸을 펼칩니다.', '성명, 성별, 나이, 소속 면, 경로당을 적습니다.', '저장을 누르면 명단에 들어갑니다. 여러 명은 📂 엑셀로 한번에 등록을 씁니다.'] },
@@ -7022,6 +7079,10 @@ function exportExcel(){
     const wsE = er.length ? XLSX.utils.json_to_sheet(er) : XLSX.utils.aoa_to_sheet([['교육 출석 기록이 없습니다.']]);
     wsE['!cols'] = [12,16,10,14,10,8,14,10].map(w => ({ wch: w }));
     XLSX.utils.book_append_sheet(wb, wsE, '교육 출석'); }
+  { const zr = []; participants.forEach(p => Object.entries(p.zAtt || {}).sort((a, b) => a[0].localeCompare(b[0])).forEach(([x, c]) => zr.push({ '날짜': x, '구역': zoneOf(p)?.name || '', '읍면': p.town, '경로당': seniorOf(p), '성명': p.name, '도착': c.arr ? '도착' : '안 옴', '조끼': c.vest === true ? '착용' : c.vest === false ? '미착용(경고)' : '', '명찰': c.badge === true ? '착용' : c.badge === false ? '미착용(경고)' : '', '시간': c.at || '' })));
+    const wsZ = zr.length ? XLSX.utils.json_to_sheet(zr) : XLSX.utils.aoa_to_sheet([['구역 출석 기록이 없습니다.']]);
+    wsZ['!cols'] = [12,12,10,14,10,8,14,14,8].map(w => ({ wch: w }));
+    XLSX.utils.book_append_sheet(wb, wsZ, '구역 출석'); }
   XLSX.utils.book_append_sheet(wb, ws5, '변경 이력');
   // 올려서 넣은 일정표 (활동일·역량강화교육)
   const sch = schedLoad();
