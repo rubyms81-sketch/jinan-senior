@@ -622,7 +622,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-8</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-9</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2442,13 +2442,13 @@ function openZone(id){
     $('#zn-pick-title').textContent = `${curTown} 경로당을 누르세요 (여러 곳)${taken.length ? ` · 다른 구역 ${taken.length}곳은 숨김` : ''}`;
     const shown = sites.filter(k => !taken.includes(k)), allOn = shown.length && shown.every(k => pick.has(siteKey(curTown, k)));
     const isX = k => (xSites[curTown] || []).includes(k);
-    $('#zn-list').innerHTML = (shown.length ? `<button type="button" class="small ${allOn ? 'secondary' : ''}" id="zn-all" style="margin:0 0 4px;">${allOn ? '✕ 전부 빼기' : '✔ 전부 선택'} (${shown.length}곳)</button>` : '') + shown.map(k => {
+    $('#zn-list').innerHTML = `<div style="display:flex;gap:6px;margin-top:6px;"><select id="zn-cat" style="width:auto;margin:0;"><option value="">일반 경로당 (이름 그대로)</option><option value="공공복지시설">공공복지시설 (어린이집 등)</option><option value="시니어 맥가이버">시니어 맥가이버</option><option value="시니어 안전 모니터링">시니어 안전 모니터링</option></select><input type="text" id="zn-new" placeholder="명단에 없는 경로당 이름 적기" autocomplete="off" style="margin:0;"><button type="button" class="small secondary" id="zn-new-add" style="margin:0;white-space:nowrap;">＋ 추가</button></div>` + (shown.length ? `<button type="button" class="small ${allOn ? 'secondary' : ''}" id="zn-all" style="margin:0 0 4px;">${allOn ? '✕ 전부 빼기' : '✔ 전부 선택'} (${shown.length}곳)</button>` : '') + shown.map(k => {
       const other = zoneOfSite(curTown, k), mine = pick.has(siteKey(curTown, k));
       const n = siteMembers(curTown, k).filter(counted).length;
       return `<div style="display:flex;gap:4px;align-items:center;"><button type="button" class="site ${mine?'zs-on':''}" data-k="${esc(k)}" style="flex:1;padding:9px 12px;margin:4px 0;${mine?'background:#c6f6d5;border-color:#38a169;':''}">
         <div>${mine?'✔ ':''}<b>${crown(curTown, k)}${esc(k)}</b> <span class="muted">${n}명</span>${other && other.id!==z.id ? ` <span class="badge bg-gray">${esc(other.name)}</span>` : ''}</div><span class="arrow">${mine?'':'＋'}</span></button>
         ${isX(k) ? `<button type="button" class="small secondary" data-xren="${esc(k)}" style="width:auto;margin:0;padding:6px 8px;">✏️</button><button type="button" class="small secondary" data-xdel="${esc(k)}" style="width:auto;margin:0;padding:6px 8px;color:var(--danger);">✕</button>` : ''}</div>`;
-    }).join('') + `<div style="display:flex;gap:6px;margin-top:6px;"><select id="zn-cat" style="width:auto;margin:0;"><option value="">일반 경로당 (이름 그대로)</option><option value="공공복지시설">공공복지시설 (어린이집 등)</option><option value="시니어 맥가이버">시니어 맥가이버</option><option value="시니어 안전 모니터링">시니어 안전 모니터링</option></select><input type="text" id="zn-new" placeholder="명단에 없는 경로당 이름 적기" autocomplete="off" style="margin:0;"><button type="button" class="small secondary" id="zn-new-add" style="margin:0;white-space:nowrap;">＋ 추가</button></div>`;
+    }).join('');
     $('#zn-all')?.addEventListener('click', () => { shown.forEach(k => allOn ? pick.delete(siteKey(curTown, k)) : pick.add(siteKey(curTown, k))); drawList(); });
     bg.querySelectorAll('[data-xdel]').forEach(b => b.onclick = async () => { const k = b.dataset.xdel;
       if (!await ask(`"${k}" 경로당을 목록에서 뺄까요?`)) return;
