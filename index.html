@@ -442,6 +442,9 @@
   <div class="card" id="moim-card" data-mv="moim" style="padding:10px 14px;">
     <button type="button" class="full" onclick="openMoim()" style="margin:0;">👥 모임 명단 (여행·임원 모임)</button>
   </div>
+  <div class="card" id="edu-card" data-mv="edu" style="padding:10px 14px;">
+    <button type="button" class="full" onclick="openEduCheck()" style="margin:0;">🎓 교육 출석 체크 (교육 날짜 · 읍면별)</button>
+  </div>
   <div class="card" id="search-card" data-mv="search">
     <input type="search" id="search" placeholder="🔍 어르신 이름으로 바로 찾기 (모든 면)" oninput="renderList()" autocomplete="off" style="margin:0 0 4px;">
     <div id="participant-list"></div>
@@ -610,7 +613,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-2</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-3</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2143,7 +2146,7 @@ function zoneTownText(z){
   return TOWNS.filter(t => by[t]).map(t => `${t} ${by[t].s}곳${by[t].g ? `·게이트볼 ${by[t].g}` : ''}·${by[t].n}명`).join(' / ');
 }
 // 구역 수: 기본 4개, ＋/－로 1~6개
-const ZONE_MIN = 1, ZONE_MAX = 10;
+const ZONE_MIN = 1, ZONE_MAX = Infinity;   // 구역은 계속 늘릴 수 있음
 async function zoneCount(d){
   if (d > 0) {
     if (zones.length >= ZONE_MAX) return notify(`구역은 ${ZONE_MAX}개까지 만들 수 있어요.`);
@@ -5907,6 +5910,101 @@ function openMoim(selId){
   bg.addEventListener('click', e => { if (e.target === bg) close(); });
   draw();
 }
+// ---------- 🎓 교육 출석 체크: 교육 날짜 → 읍·면 → 명단. 도착·조끼 체크, 저장을 누르면 안 온 분은 불참으로 같이 반영 ----------
+const eduDayList = () => { const m = new Map(); participants.forEach(p => { if (p.quit) return; eduOf(p).forEach(e => { if (eduInfo(e.name).c === '행사') return; if (!m.has(e.date)) m.set(e.date, e.name); }); }); return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0])); };
+const eduChkOf = (p, d) => (p.eduChk || {})[d] || null;
+function openEduCheck(){
+  const days = eduDayList();
+  if (!days.length) return notify('교육 날짜가 없어요.\n"활동일 수정"에서 교육 날짜를 먼저 넣어 주세요.');
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = '<div class="dlg" style="text-align:left;max-height:90vh;overflow:auto;"></div>';
+  document.body.appendChild(bg);
+  const dlg = bg.querySelector('.dlg');
+  const pastN = days.filter(([x]) => x <= today()).length;
+  let d = (days[Math.max(0, pastN - 1)] || days[0])[0];
+  let t = null, onlyAbsent = false, q = '', dirty = false;
+  const dv = {}, touched = new Set();   // dv: `${날짜}|${id}` → {arr, vest, at}
+  const findP = id => participants.find(x => String(x.id) === String(id));
+  const people = day => participants.filter(p => !p.quit && eduOn(p, day));
+  const ensure = day => people(day).forEach(p => { const k = day + '|' + p.id; if (dv[k]) return; const c = eduChkOf(p, day); dv[k] = { arr: !!(c && c.arr), vest: c ? (c.vest ?? null) : null, at: c?.at || '' }; });
+  const st = p => dv[d + '|' + p.id] || { arr: false, vest: null, at: '' };
+  const draw = () => {
+    ensure(d);
+    const all = people(d), ts = [...new Set(all.map(p => p.town))].sort((a, b) => a.localeCompare(b));
+    if (!ts.includes(t)) t = ts[0] || null;
+    const inTown = all.filter(p => p.town === t), n = inTown.length;
+    const got = inTown.filter(p => st(p).arr).length;
+    const vOk = inTown.filter(p => st(p).arr && st(p).vest === true).length, vNo = inTown.filter(p => st(p).arr && st(p).vest === false).length;
+    const list = inTown.filter(p => (!onlyAbsent || !st(p).arr) && (!q || p.name.includes(q)));
+    dlg.innerHTML = `
+      <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">🎓 교육 출석 체크</div>
+      <label style="margin-top:0;">교육 날짜</label>
+      <div>${days.map(([x, nm]) => `<button type="button" class="small ${x === d ? '' : 'secondary'}" data-day="${x}" style="width:auto;margin:0 6px 6px 0;">${Number(x.slice(5, 7))}/${Number(x.slice(8, 10))} ${esc(nm)}</button>`).join('')}</div>
+      <label>읍·면</label>
+      <div>${ts.map(x => `<button type="button" class="small ${x === t ? '' : 'secondary'}" data-town="${esc(x)}" style="width:auto;margin:0 6px 6px 0;">${esc(x)} (${all.filter(p => p.town === x).length})</button>`).join('')}</div>
+      ${t ? `
+      <div style="text-align:center;margin:8px 0 2px;"><span style="font-size:1.8rem;font-weight:700;color:#c53030;">${got}</span> <span class="muted">/ ${n}명 도착</span></div>
+      <div class="muted" style="text-align:center;font-size:.9rem;">🦺 조끼 착용 ${vOk} · 미착용 <b style="color:#975a16;">${vNo}</b> · 아직 ${got - vOk - vNo}</div>
+      <div class="grid-2" style="margin:8px 0 4px;"><button type="button" class="${onlyAbsent ? 'secondary' : ''}" data-act="all" style="margin:0;">전체 ${n}명</button><button type="button" class="${onlyAbsent ? '' : 'secondary'}" data-act="absent" style="margin:0;">안 온 사람만 ${n - got}명</button></div>
+      <input type="search" id="ec-q" placeholder="🔍 이름으로 찾기" value="${esc(q)}" autocomplete="off" style="margin:4px 0 8px;">
+      <div>${list.map(p => { const s = st(p); return `
+        <div style="display:flex;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px solid #edf2f7;${s.arr ? '' : 'background:#fff5f5;'}">
+          <span style="flex:1;font-weight:600;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span>${p.phone && !s.arr ? ` <a class="tel-link" href="tel:${telOf(p)}" style="font-size:.85rem;font-weight:400;">📞</a>` : ''}</span>
+          ${s.arr ? `<button type="button" class="small ${s.vest === false ? 'danger' : 'secondary'}" data-vest="${p.id}" style="width:auto;margin:0;padding:6px 8px;">${s.vest === true ? '🦺 착용' : s.vest === false ? '⚠ 미착용' : '조끼 확인'}</button>` : ''}
+          <button type="button" class="small ${s.arr ? 'secondary' : ''}" data-arr="${p.id}" style="width:auto;margin:0;padding:6px 10px;">${s.arr ? `✔ 도착 ${esc(s.at || '')}` : '도착'}</button></div>`; }).join('') || '<div class="muted" style="padding:8px 0;">해당하는 사람이 없습니다.</div>'}</div>`
+      : '<div class="muted" style="padding:8px 0;">이 날 교육을 받는 어르신이 없습니다.</div>'}
+      <button type="button" class="full" data-act="save" style="margin:10px 0 6px;">💾 저장 (안 온 분은 불참으로)</button>
+      <button type="button" class="full" data-act="sms" style="margin:0 0 6px;" ${n - got ? '' : 'disabled'}>📩 ${esc(t || '')} 안 온 ${n - got}명에게 문자</button>
+      <button type="button" class="full secondary" data-act="close">닫기</button>`;
+  };
+  const confirmClose = async () => { if (dirty && !await ask('저장하지 않았어요.\n그래도 닫을까요?')) return false; bg.remove(); return true; };
+  dlg.addEventListener('input', e => {
+    if (e.target.id !== 'ec-q') return;
+    q = e.target.value; draw();
+    const qi = dlg.querySelector('#ec-q'); if (qi) { qi.focus(); qi.setSelectionRange(q.length, q.length); }
+  });
+  const save = async () => {
+    const days2 = [...touched];
+    if (!days2.length) return notify('바뀐 것이 없어요.');
+    const unchecked = days2.reduce((k, x) => k + people(x).filter(p => !dv[x + '|' + p.id].arr).length, 0);
+    if (unchecked && !await ask(`${days2.length}개 날짜에서 도착 체크가 안 된 ${unchecked}명은\n불참으로 저장할까요?`)) return;
+    let changed = 0;
+    days2.forEach(x => people(x).forEach(p => {
+      const s = dv[x + '|' + p.id], prev = eduChkOf(p, x);
+      const vest = s.arr ? s.vest : null;
+      const recChanged = !prev || !!prev.arr !== s.arr || (prev.vest ?? null) !== vest;
+      const wasAbs = eduAbsent(p, x), nowAbs = !s.arr;
+      if (!recChanged && wasAbs === nowAbs) return;
+      p.eduChk = p.eduChk || {}; p.eduChk[x] = { arr: s.arr, vest, at: s.arr ? s.at : '' };
+      if (wasAbs !== nowAbs) { p.eduAbsent = (p.eduAbsent || []).filter(v => v !== x); if (nowAbs) p.eduAbsent.push(x); }
+      changed++;
+      const e = eduOn(p, x);
+      logEvent('교육 출석', p, `${dd(x)} ${e?.name || '교육'} · ${s.arr ? '도착' : '불참(안 옴)'}${s.arr ? (vest === true ? ' · 조끼 착용' : vest === false ? ' · 조끼 미착용(경고)' : '') : ''}`, x);
+    }));
+    saveData(false); dirty = false; touched.clear(); draw();
+    notify(changed ? `저장했어요. (${changed}명 바뀜)` : '바뀐 것이 없어요.');
+  };
+  dlg.addEventListener('click', async e => {
+    const dayB = e.target.closest('[data-day]'); if (dayB) { d = dayB.dataset.day; t = null; q = ''; onlyAbsent = false; return draw(); }
+    const townB = e.target.closest('[data-town]'); if (townB) { t = townB.dataset.town; q = ''; onlyAbsent = false; return draw(); }
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.arr) { const s = dv[d + '|' + b.dataset.arr]; s.arr = !s.arr; s.at = s.arr ? moimTime() : ''; touched.add(d); dirty = true; return draw(); }
+    if (b.dataset.vest) { const s = dv[d + '|' + b.dataset.vest]; s.vest = s.vest === true ? false : s.vest === false ? null : true; touched.add(d); dirty = true; return draw(); }
+    const act = b.dataset.act;
+    if (act === 'all') { onlyAbsent = false; return draw(); }
+    if (act === 'absent') { onlyAbsent = true; return draw(); }
+    if (act === 'close') return confirmClose();
+    if (act === 'save') return save();
+    if (act === 'sms') {
+      const people2 = people(d).filter(p => p.town === t && !st(p).arr);
+      if (!people2.some(p => telOf(p))) return notify('안 온 분 중에 전화번호가 있는 분이 없어요.');
+      const en = days.find(x => x[0] === d)?.[1] || '교육';
+      smsBox({ title: `📩 ${dd(d)} ${en} 안 온 분께 문자`, people: people2, text: `안녕하세요, 진안군 노인회입니다.\n${dd(d)} ${en} 교육 관련하여 연락드립니다. 확인 부탁드립니다.\n진안군 노인회 드림`, logType: '교육 불참 문자', logDetail: `${dd(d)} ${en} · ${people2.map(p => p.name).join(', ')}` });
+    }
+  });
+  bg.addEventListener('click', e => { if (e.target === bg) confirmClose(); });
+  draw();
+}
 // 📖 사용법 찾기: 검색하면 제목만 나오고, 누르면 단계가 펼쳐집니다
 const HELP = [
   { t: '신규 어르신 등록하기', k: '신규 등록 추가 새로 새사람 어르신 입력 넣기 한명 저장 명단 신규등록', steps: ['메인 화면의 ➕ 신규등록 칸을 펼칩니다.', '성명, 성별, 나이, 소속 면, 경로당을 적습니다.', '저장을 누르면 명단에 들어갑니다. 여러 명은 📂 엑셀로 한번에 등록을 씁니다.'] },
@@ -6859,6 +6957,11 @@ function exportExcel(){
     const wsM = mr.length ? XLSX.utils.json_to_sheet(mr) : XLSX.utils.aoa_to_sheet([['모임 명단이 없습니다.']]);
     wsM['!cols'] = [16,12,10,14,8,10].map(w => ({ wch: w }));
     XLSX.utils.book_append_sheet(wb, wsM, '모임 명단'); }
+  { const er = [];
+    participants.forEach(p => Object.entries(p.eduChk || {}).sort((a, b) => a[0].localeCompare(b[0])).forEach(([x, c]) => { const e = eduOn(p, x); er.push({ '교육 날짜': x, '교육': e?.name || '', '읍면': p.town, '경로당': seniorOf(p), '성명': p.name, '출석': c.arr ? '도착' : '불참', '조끼': !c.arr ? '' : c.vest === true ? '착용' : c.vest === false ? '미착용(경고)' : '확인 안 함', '체크 시간': c.at || '' }); }));
+    const wsE = er.length ? XLSX.utils.json_to_sheet(er) : XLSX.utils.aoa_to_sheet([['교육 출석 기록이 없습니다.']]);
+    wsE['!cols'] = [12,16,10,14,10,8,14,10].map(w => ({ wch: w }));
+    XLSX.utils.book_append_sheet(wb, wsE, '교육 출석'); }
   XLSX.utils.book_append_sheet(wb, ws5, '변경 이력');
   // 올려서 넣은 일정표 (활동일·역량강화교육)
   const sch = schedLoad();
@@ -6880,7 +6983,7 @@ eventLog.filter(h => h.type === '신규 등록' && (h.detail || '').startsWith('
 document.getElementById('st-from').value = '1'; document.getElementById('st-to').value = String(curMonth);
 // 태어난 해를 적어 둔 분은 해가 바뀌면 나이도 저절로 바뀜
 // ---------- 🧩 화면 배치: 칸 제목을 꾹 눌러 옮기기·겹쳐서 묶기·이름 바꾸기 (이 휴대폰에만 저장, jinan_layout) ----------
-const MV_BASE = { chg: '🔄 근무일 변경', wd: '📅 활동일', zone: '🗺 구역', moim: '👥 모임 명단', search: '🔍 이름 찾기', board: '⚠️ 감점 현황', diary: '📝 활동일지', tools: '➕ 신규등록', stats: '📊 통계', ui: '🛠️ 설정', me: '👤 현장 점검자 정보', bk: '💾 백업' };
+const MV_BASE = { chg: '🔄 근무일 변경', wd: '📅 활동일', zone: '🗺 구역', moim: '👥 모임 명단', edu: '🎓 교육 출석', search: '🔍 이름 찾기', board: '⚠️ 감점 현황', diary: '📝 활동일지', tools: '➕ 신규등록', stats: '📊 통계', ui: '🛠️ 설정', me: '👤 현장 점검자 정보', bk: '💾 백업' };
 const MV_IDS = Object.keys(MV_BASE);
 let mvL = (() => { try { return JSON.parse(localStorage.getItem('jinan_layout')) || null; } catch(e) { return null; } })();
 function mvFix(){
