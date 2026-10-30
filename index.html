@@ -622,7 +622,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-7</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-8</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2448,7 +2448,7 @@ function openZone(id){
       return `<div style="display:flex;gap:4px;align-items:center;"><button type="button" class="site ${mine?'zs-on':''}" data-k="${esc(k)}" style="flex:1;padding:9px 12px;margin:4px 0;${mine?'background:#c6f6d5;border-color:#38a169;':''}">
         <div>${mine?'✔ ':''}<b>${crown(curTown, k)}${esc(k)}</b> <span class="muted">${n}명</span>${other && other.id!==z.id ? ` <span class="badge bg-gray">${esc(other.name)}</span>` : ''}</div><span class="arrow">${mine?'':'＋'}</span></button>
         ${isX(k) ? `<button type="button" class="small secondary" data-xren="${esc(k)}" style="width:auto;margin:0;padding:6px 8px;">✏️</button><button type="button" class="small secondary" data-xdel="${esc(k)}" style="width:auto;margin:0;padding:6px 8px;color:var(--danger);">✕</button>` : ''}</div>`;
-    }).join('') + `<div style="display:flex;gap:6px;margin-top:6px;"><select id="zn-cat" style="width:auto;margin:0;">${SITE_CATS.map(c => `<option value="${c.k}"${c.k === '경로당지킴이' ? ' selected' : ''}>${c.k}</option>`).join('')}</select><input type="text" id="zn-new" placeholder="명단에 없는 경로당 이름 적기" autocomplete="off" style="margin:0;"><button type="button" class="small secondary" id="zn-new-add" style="margin:0;white-space:nowrap;">＋ 추가</button></div>`;
+    }).join('') + `<div style="display:flex;gap:6px;margin-top:6px;"><select id="zn-cat" style="width:auto;margin:0;"><option value="">일반 경로당 (이름 그대로)</option><option value="공공복지시설">공공복지시설 (어린이집 등)</option><option value="시니어 맥가이버">시니어 맥가이버</option><option value="시니어 안전 모니터링">시니어 안전 모니터링</option></select><input type="text" id="zn-new" placeholder="명단에 없는 경로당 이름 적기" autocomplete="off" style="margin:0;"><button type="button" class="small secondary" id="zn-new-add" style="margin:0;white-space:nowrap;">＋ 추가</button></div>`;
     $('#zn-all')?.addEventListener('click', () => { shown.forEach(k => allOn ? pick.delete(siteKey(curTown, k)) : pick.add(siteKey(curTown, k))); drawList(); });
     bg.querySelectorAll('[data-xdel]').forEach(b => b.onclick = async () => { const k = b.dataset.xdel;
       if (!await ask(`"${k}" 경로당을 목록에서 뺄까요?`)) return;
@@ -2462,7 +2462,7 @@ function openZone(id){
       participants.filter(q => q.town === curTown && q.senior === k).forEach(q => q.senior = v); saveData(false);
       if (xCat[k] !== undefined) { xCat[v] = xCat[k]; delete xCat[k]; saveXCat(); }
       logEvent('경로당 이름 바꾸기', null, `${curTown} ${k} → ${v}`); drawList(); });
-    const addNew = () => { const inp = $('#zn-new'); inp.blur(); setTimeout(() => { const v = inp.value.trim(); if (!v) return; const cat = $('#zn-cat')?.value || '';
+    const addNew = () => { const inp = $('#zn-new'); inp.blur(); setTimeout(() => { const cat = $('#zn-cat')?.value || ''; const direct = cat === '시니어 맥가이버' || cat === '시니어 안전 모니터링'; const v = direct ? cat : inp.value.trim(); if (!v) return;
       if (!sitesOf(curTown).includes(v)) { (xSites[curTown] ||= []).push(v); saveXSites(); if (cat) { xCat[v] = cat; saveXCat(); } logEvent('경로당 목록 추가', null, `${curTown} ${v}${cat ? ` (${cat})` : ''}`); }
       pick.add(siteKey(curTown, v)); drawList(); }, 50); };
     $('#zn-new-add').onclick = addNew;
