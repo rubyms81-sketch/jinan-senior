@@ -613,7 +613,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-3</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-4</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -5911,7 +5911,9 @@ function openMoim(selId){
   draw();
 }
 // ---------- 🎓 교육 출석 체크: 교육 날짜 → 읍·면 → 명단. 도착·조끼 체크, 저장을 누르면 안 온 분은 불참으로 같이 반영 ----------
-const eduDayList = () => { const m = new Map(); participants.forEach(p => { if (p.quit) return; eduOf(p).forEach(e => { if (eduInfo(e.name).c === '행사') return; if (!m.has(e.date)) m.set(e.date, e.name); }); }); return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0])); };
+const eduDayList = () => { const m = new Map(); const add = e => { if (!e?.date || eduInfo(e.name).c === '행사') return; if (!m.has(e.date)) m.set(e.date, e.name); };
+  Object.values(eduAll).forEach(arr => (arr || []).forEach(add)); Object.values(leaderPlan).forEach(v => (v?.edu || []).forEach(add));
+  participants.forEach(p => { if (!p.quit) eduOf(p).forEach(add); }); return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0])); };
 const eduChkOf = (p, d) => (p.eduChk || {})[d] || null;
 function openEduCheck(){
   const days = eduDayList();
@@ -5952,7 +5954,7 @@ function openEduCheck(){
           <span style="flex:1;font-weight:600;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span>${p.phone && !s.arr ? ` <a class="tel-link" href="tel:${telOf(p)}" style="font-size:.85rem;font-weight:400;">📞</a>` : ''}</span>
           ${s.arr ? `<button type="button" class="small ${s.vest === false ? 'danger' : 'secondary'}" data-vest="${p.id}" style="width:auto;margin:0;padding:6px 8px;">${s.vest === true ? '🦺 착용' : s.vest === false ? '⚠ 미착용' : '조끼 확인'}</button>` : ''}
           <button type="button" class="small ${s.arr ? 'secondary' : ''}" data-arr="${p.id}" style="width:auto;margin:0;padding:6px 10px;">${s.arr ? `✔ 도착 ${esc(s.at || '')}` : '도착'}</button></div>`; }).join('') || '<div class="muted" style="padding:8px 0;">해당하는 사람이 없습니다.</div>'}</div>`
-      : '<div class="muted" style="padding:8px 0;">이 날 교육을 받는 어르신이 없습니다.</div>'}
+      : `<div class="muted" style="padding:8px 0;">${participants.length ? '이 날 교육을 받는 어르신이 없습니다.' : '이 기기에는 어르신 명단이 없습니다.<br>📂 엑셀로 한번에 등록에서 명단을 먼저 올려 주세요.'}</div>`}
       <button type="button" class="full" data-act="save" style="margin:10px 0 6px;">💾 저장 (안 온 분은 불참으로)</button>
       <button type="button" class="full" data-act="sms" style="margin:0 0 6px;" ${n - got ? '' : 'disabled'}>📩 ${esc(t || '')} 안 온 ${n - got}명에게 문자</button>
       <button type="button" class="full secondary" data-act="close">닫기</button>`;
