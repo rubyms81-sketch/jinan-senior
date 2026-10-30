@@ -464,6 +464,9 @@
 
 
 
+  <div class="card" id="count-card" style="padding:10px 14px;">
+    <button type="button" class="full" onclick="openCounter()" style="margin:0;">👥 인원 세기 (총인원 · 행사 동행)</button>
+  </div>
   <div class="card" id="board-card" data-mv="board">
     <details class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3 id="board-title">⚠️ 감점 현황</h3><span class="chg-arrow"></span></summary>
@@ -604,7 +607,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.26-3</span></span><button type="button" onclick="openHelp()" aria-label="사용법 찾기" style="width:auto;margin:0;padding:6px 14px;border-radius:14px;background:#2b6cb0;color:#fff;font-size:.9rem;">📖 사용법 찾기</button></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-1</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1680,7 +1683,7 @@ function renderPersonDays(p){
       <br><button class="small secondary" onclick="addChange({ reason: '입원' })">고치기</button> <button class="small secondary" onclick="delCustom()">지우기</button></div>` : '')
     + (p.hospCall ? `<div class="log" style="border-left-color:#d53f8c;">📞 <b>안부 전화</b> · 마지막 ${mdw(p.hospCall.last)} · <b style="color:${p.hospCall.due <= today() ? 'var(--danger)' : '#97266d'}">다음 ${mdw(p.hospCall.due)}${p.hospCall.due <= today() ? ' (오늘 전화하세요)' : ''}</b>
       <br><button class="small secondary" onclick="callDone(${p.id})">✔ 오늘 통화했어요</button></div>` : '')
-    + chg.map(c => `<div class="log warn">🔄 <b>${dd(c.from)} → ${dd(c.to)}</b>${c.reason?` <span class="muted">(${esc(c.reason)})</span>`:''}
+    + chg.map(c => `<div class="log warn">🔄 <b>${dd(c.from)} → ${dd(c.to)}</b>${c.reason?` <span class="muted">(${esc(c.reason)})</span>`:''}${c.memo ? ` <span class="muted">📝 ${esc(c.memo)}</span>` : ''}${c.leaderSms ? ` <span class="badge bg-gray">📩 ${mdK(c.leaderSms)} 팀장님께 보고 보냄</span>` : ''}
       <br><button class="small secondary" onclick="delChange(${c.id})">이 변경 지우기</button></div>`).join('');
   document.getElementById('btn-custom').textContent = cu ? '🏥 입원 체크 고치기' : '🏥 입원 체크';
   const nMv = chg.length + (cu ? 1 : 0) + (p.hospCall ? 1 : 0);
@@ -2137,7 +2140,7 @@ function zoneTownText(z){
   return TOWNS.filter(t => by[t]).map(t => `${t} ${by[t].s}곳${by[t].g ? `·게이트볼 ${by[t].g}` : ''}·${by[t].n}명`).join(' / ');
 }
 // 구역 수: 기본 4개, ＋/－로 1~6개
-const ZONE_MIN = 1, ZONE_MAX = 6;
+const ZONE_MIN = 1, ZONE_MAX = 10;
 async function zoneCount(d){
   if (d > 0) {
     if (zones.length >= ZONE_MAX) return notify(`구역은 ${ZONE_MAX}개까지 만들 수 있어요.`);
@@ -3066,6 +3069,7 @@ function addChange(pre){
     <div id="cg-ebox" class="hidden" style="margin:-4px 0 12px;">
       <div id="cg-enames" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;"></div>
       <div style="display:flex;gap:4px;"><input type="text" id="cg-enew" placeholder="새 이름" autocomplete="off" style="margin:0;"><button type="button" class="small" id="cg-eadd" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button></div></div>
+    <label>메모 (선택)</label><input type="text" id="cg-memo" placeholder="예: 병원 예약 때문에 / 가족 행사" autocomplete="off" style="margin:0 0 10px;">
     ${mates.length ? `<label id="cg-all-wrap" style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-bottom:12px;"><input type="checkbox" id="cg-all" style="width:22px;height:22px;margin:0;"> 같은 경로당(${esc(seniorOf(p))}) ${mates.length}명도 똑같이 변경</label>` : ''}
     <div class="grid-2"><button class="secondary" id="cg-cancel">취소</button><button id="cg-save">저장</button></div></div>`;
   document.body.appendChild(back);
@@ -3158,7 +3162,7 @@ function addChange(pre){
   if (pre.note) $('.dlg').insertAdjacentHTML('afterbegin', `<div class="notice" style="margin-bottom:8px;">${pre.note}</div>`);
   $('#cg-cancel').onclick = () => back.remove();
   $('#cg-save').onclick = async () => {
-    const reason = $('#cg-type').value;
+    const reason = $('#cg-type').value; const memo = ($('#cg-memo')?.value || '').trim();
     if (isHosp()) {   // 🛏️ 입원 체크: 입원한 날은 근무일에서 빠짐
       const hd = [...hospSel].sort(), memo = $('#cg-hmemo').value.trim(), now = $('#cg-hnow').checked;
       const reg = isLeader(p) && leaderPlan[mk]?.days?.length ? leaderPlan[mk].days : monthDays(mk);
@@ -3207,17 +3211,18 @@ function addChange(pre){
     if (!pairs.length) return notify(from ? `${dd(from)}을 옮길 날짜를 누르거나 "이 날 빼기"를 눌러 주세요.` : '바꿀 근무일을 골라 주세요.');
     const targets = [p, ...(($('#cg-all')?.checked) ? mates : [])];
     let seq = 0; const done = new Set();
+    const made = [];
     targets.forEach(x => pairs.forEach(({ from: f, to: t }) => {
       const xd = personDays(x, mk);
       if (!xd.includes(f) || (t && xd.includes(t))) return;
-      (x.changes ||= []).push({ id: Date.now() + (seq++), from: f, to: t, reason });
-      logEvent('근무일 변경', x, `${dd(f)} → ${dd(t)}${reason?` (${reason})`:''}`, f); done.add(x);
+      const rec = { id: Date.now() + (seq++), from: f, to: t, reason, memo }; (x.changes ||= []).push(rec); made.push(rec);
+      logEvent('근무일 변경', x, `${dd(f)} → ${dd(t)}${reason?` (${reason})`:''}${memo ? ` · ${memo}` : ''}`, f); done.add(x);
     }));
     saveData(false); back.remove(); renderModal();
     const dl = [...done], txt = pairs.map(x => `${dd(x.from)} → ${dd(x.to)}`).join('\n');
     if (!dl.length) return notify('바꿀 수 있는 날짜가 없었어요.');
-    showDialog(`${dl.length > 1 ? dl.length+'명 ' : ''}근무일 변경이 저장되었습니다.\n${txt}\n\n변경 안내 문자를 보낼까요?${dl.some(leaderOf) ? '\n(구역 팀장에게도 같이 보낼 수 있어요)' : ''}`, true, ['문자 보내기', '나중에']).then(ok => {
-      if (ok) smsBox({ title: '근무일 변경 안내 문자', people: dl, text: changeText(dl.length === 1 ? dl[0] : null, pairs, null, reason, dl.every(x => leaderOf(x)?.num === leaderOf(dl[0])?.num) ? dl[0] : null), logType: '근무일 변경 문자', logDetail: pairs.map(x => `${dd(x.from)} → ${dd(x.to)}`).join(', ') });
+    showDialog(`${dl.length > 1 ? dl.length+'명 ' : ''}근무일 변경이 저장되었습니다.\n${txt}\n\n팀장님께 날짜 변경을 보고하는 문자를 보낼까요?${dl.some(leaderOf) ? '' : '\n(이 어르신의 구역 팀장이 아직 없어요)'}`, true, ['문자 보내기', '나중에']).then(ok => {
+      if (ok) smsBox({ title: '팀장님께 날짜 변경 보고 문자', people: dl, leaderOnly: true, text: leaderChangeText(dl, pairs, reason, memo), logType: '근무일 변경 문자', logDetail: pairs.map(x => `${dd(x.from)} → ${dd(x.to)}`).join(', '), onSent: () => { made.forEach(r => r.leaderSms = today()); saveData(false); renderModal(); } });
     });
   };
 }
@@ -3984,8 +3989,7 @@ function exportDiaryHwpx(){
 }
 function saveUI(what){ try { localStorage.setItem('jinan_ui', JSON.stringify(ui)); } catch(e) {} applyUI(); renderUI(); logEvent('화면 설정', null, what); }
 function renderUI(){
-  const s = document.getElementById('ui-size'); if (!s) return;
-  s.textContent = `${ui.size} 단계`;
+  const s = document.getElementById('ui-size'); if (s) s.textContent = `${ui.size} 단계`;
   document.getElementById('ui-theme').innerHTML = [['blue','🔵 기본 (파랑)','#2b6cb0'],['warm','🟠 따뜻한 색','#c05621'],['dark','⚫ 어두운 색','#1a202c']].map(([k, n, c]) => `<button type="button" class="${ui.theme === k ? 'on' : ''}" onclick="ui.theme='${k}';saveUI('화면 색깔 ${n}')" style="border-bottom:5px solid ${c};">${n}</button>`).join('');
   document.getElementById('ui-weight').innerHTML = [['thin','얇게'],['normal','보통'],['bold','두껍게']].map(([k, n]) => `<button type="button" class="${ui.weight === k ? 'on' : ''}" onclick="ui.weight='${k}';saveUI('글씨 두께 ${n}')">${n}</button>`).join('');
   const tg = (k, on, n) => `<button type="button" class="${ui[k] === on ? 'on' : ''}" onclick="ui.${k}=${on};saveUI('${n} ${on ? '켬' : '끔'}');refreshWeather()">${on ? '켜기' : '끄기'}</button>`;
@@ -5262,7 +5266,7 @@ function leaderMenu(p){
     logEvent('팀장 문자', p, `${L.name} 팀장 (${p.name} 어르신 점검 중)`);
     openSmsApp([L.num], `[진안군노인회] ${L.name} 팀장님, ${p.name} 어르신(${seniorOf(p)}) 관련 연락드립니다.\n`); });
 }
-function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, onSendText, noPhoto }){
+function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, onSendText, noPhoto, onSent }){
   return new Promise(resolve => {
     const recips = people.filter(p => telOf(p)).map(p => ({ key: 'p'+p.id, label: `${p.name} 어르신`, num: telOf(p), p }));
     const noTel = people.filter(p => !telOf(p));
@@ -5316,16 +5320,16 @@ function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, onS
         if (!(navigator.canShare && navigator.canShare({ files: [img] }))) return notify('이 휴대폰(브라우저)에서는 앱에서 사진을 바로 보낼 수 없어요.\n"문구 복사" 후 문자 앱에서 사진을 직접 첨부해 주세요.');
         await copyText(rs.map(r => r.num).join(','));
         try { await navigator.share({ files: [img], text: ta.value }); } catch(e) { if (e.name !== 'AbortError') notify('공유 창을 열지 못했어요.'); return; }
-        if (logType) logEvent(logType, people.length === 1 ? people[0] : null, `${logDetail || ''} · 사진 포함 → ${rs.length}명`);
+        if (logType) logEvent(logType, people.length === 1 ? people[0] : null, `${logDetail || ''} · 사진 포함 → ${rs.length}명`); if (onSent) onSent();
         return;
       }
-      if (logType) logEvent(logType, people.length === 1 ? people[0] : null, `${logDetail || ''} → ${rs.map(r => r.leader ? '팀장' : r.p.name).join(', ')}`);
+      if (logType) logEvent(logType, people.length === 1 ? people[0] : null, `${logDetail || ''} → ${rs.map(r => r.leader ? '팀장' : r.p.name).join(', ')}`); if (onSent) onSent();
       await copyText(ta.value); openSmsApp(rs.map(r => r.num), ta.value);
     };
     // 카톡: 휴대폰 공유 창 → 카카오톡 → 받는 사람(팀장 등) 고르기
     back.querySelector('#sb-kakao').onclick = async () => {
       if (onSendText) onSendText(ta.value);
-      if (logType) logEvent(logType, people.length === 1 ? people[0] : null, `${logDetail || ''} → 카카오톡`);
+      if (logType) logEvent(logType, people.length === 1 ? people[0] : null, `${logDetail || ''} → 카카오톡`); if (onSent) onSent();
       try { if (navigator.share) { await navigator.share(img && navigator.canShare && navigator.canShare({ files: [img] }) ? { files: [img], text: ta.value } : { text: ta.value }); return; } }
       catch(e) { if (e.name === 'AbortError') return; }
       const ok = await copyText(ta.value);
@@ -5350,6 +5354,14 @@ function quitText(p){
   return `[진안군노인회] 중도포기 안내\n\n${p.name} 어르신,\n${d ? `${d.slice(0,4)}년 ${Number(d.slice(5,7))}월 ${Number(d.slice(8,10))}일부터 ` : ''}노인일자리 활동을 그만두시는 것(중도포기)으로 처리되었습니다.\n(사유: ${p.quitWhy || '본인 사정'})\n\n그동안 수고 많으셨습니다.${leaderLine(p, '중도포기 사실을')}\n궁금한 점은 담당자에게 연락 주세요.\n감사합니다.`;
 }
 // 근무일 변경 안내 문자 (본인 + 팀장)
+// 팀장님께 드리는 날짜 변경 보고 문자 (사용자 요청, 2026-10-31)
+function leaderChangeText(dl, pairs, reason, memo){
+  const L = dl.map(x => leaderOf(x)).find(Boolean);
+  const who = dl.map(x => `${seniorOf(x)} ${x.name} 어르신`).join(', ');
+  const ch = pairs.map(x => x.to ? `${Number(x.from.slice(8,10))}일을 ${Number(x.to.slice(8,10))}일로` : `${Number(x.from.slice(8,10))}일 근무를 뺌`).join(', ');
+  const why = (reason || '사정') + (memo ? ` (${memo})` : '');
+  return `안녕하세요 ${L ? L.name + ' ' : ''}팀장님\n활동자 날짜변경요청 보고드립니다.\n${who} ${why}으로 인해 ${ch} 날짜 변경하였습니다.\n확인부탁드립니다. 감사합니다.\n진안군 노인회 드림`;
+}
 function changeText(p, from, to, reason, lp){
   const ymdK = d => d ? `${Number(d.slice(5,7))}월 ${dd(d)}` : '근무 안 함';
   const lines = Array.isArray(from) ? from.map(x => `${ymdK(x.from)} → ${ymdK(x.to)}`).join('\n') : `${ymdK(from)} → ${ymdK(to)}`;
@@ -5417,7 +5429,7 @@ function renderModal(){
   if (document.getElementById('c-date').value) setCheckDate(document.getElementById('c-date').value);
   // 이름을 누르면 기본 정보·건강 정보 창
   document.getElementById('modal-title').innerHTML = `<b class="name-tap" onclick="openInfo()">${nmH(p)}${p.health && (p.health.conds?.length || p.health.memo) ? '<span class="hl-dot">🩺</span>' : ''}${photoOf(p) ? '<span class="hl-dot">📷</span>' : ''}</b>` +
-    (inHospNow(p) ? ` <span class="badge bg-hosp" style="vertical-align:6px;font-size:.85rem;cursor:pointer;" onclick="addChange({ reason: '입원' })">🏥 현재 입원중</span>` : '');
+    (exOf(p) ? ` <span class="badge bg-gray" style="vertical-align:6px;font-size:.85rem;">🚫 참여 제외</span>` : '') + (inHospNow(p) ? ` <span class="badge bg-hosp" style="vertical-align:6px;font-size:.85rem;cursor:pointer;" onclick="addChange({ reason: '입원' })">🏥 현재 입원중</span>` : '');
   // 올해 감점이 있을 때만 짧게 표시 (누르면 이유)
   let n = s.pts ? `<div class="notice">${viewYear()}년 누적 감점 <b style="color:var(--danger)" class="pen-link" onclick="showPenReasons(current())">${s.penalty}점 이유 보기 ›</b>${s.unpaid ? ` · 일당 미지급 ${s.unpaid}일` : ''}</div>` : '';
   if (s.dropped) { const qd = quitDayOf(p);
@@ -5762,6 +5774,37 @@ function makerQuote(){
   bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
   bg.querySelector('button').onclick = () => bg.remove();
   document.body.appendChild(bg);
+}
+
+// 👥 인원 세기 (사용자 요청, 2026-10-31): 총 인원을 적고 한 명씩 누르면 올라감. 행사 동행 인원은 따로 셈. 이 휴대폰에만 저장
+let counter = (() => { try { const v = JSON.parse(load('jinan_counter')); return Object.assign({ total: 0, n: 0, extra: 0 }, v || {}); } catch(e) { return { total: 0, n: 0, extra: 0 }; } })();
+const saveCounter = () => { try { store('jinan_counter', JSON.stringify(counter)); } catch(e) {} };
+function openCounter(){
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = `<div class="dlg" style="text-align:center;">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">👥 인원 세기</div>
+    <label>총 인원</label><input type="number" id="cn-total" inputmode="numeric" placeholder="예: 25" style="margin:0 0 10px;text-align:center;font-size:1.2rem;">
+    <button type="button" id="cn-tap" style="width:100%;min-height:120px;font-size:3rem;font-weight:700;border-radius:16px;background:#ebf8ff;color:#2b6cb0;border:2px solid #2b6cb0;"><span id="cn-num"></span></button>
+    <div class="muted" style="font-size:.9rem;margin-top:4px;">누를 때마다 +1</div>
+    <div style="margin-top:14px;border-top:1px solid #e2e8f0;padding-top:10px;">
+      <b>🚌 행사 동행 인원 (여행)</b>
+      <button type="button" id="cn-ex" style="width:100%;min-height:70px;font-size:2rem;font-weight:700;border-radius:14px;background:#faf5ff;color:#553c9a;border:2px solid #805ad5;margin-top:6px;"><span id="cn-exn"></span></button>
+      <div class="muted" style="font-size:.9rem;margin-top:4px;">누를 때마다 +1</div></div>
+    <div class="grid-2" style="margin-top:12px;"><button type="button" class="secondary" id="cn-minus">− 1 되돌리기</button><button type="button" class="secondary" id="cn-reset" style="color:var(--danger);">리셋</button></div>
+    <button type="button" class="full" id="cn-close" style="margin-top:10px;">닫기</button></div>`;
+  document.body.appendChild(bg);
+  const draw = () => {
+    bg.querySelector('#cn-num').textContent = counter.total ? `${counter.n} / ${counter.total}` : `${counter.n}`;
+    bg.querySelector('#cn-exn').textContent = `동행 ${counter.extra}명`;
+    if (document.activeElement !== bg.querySelector('#cn-total')) bg.querySelector('#cn-total').value = counter.total || ''; };
+  bg.querySelector('#cn-total').oninput = e => { counter.total = Math.max(0, Number(e.target.value) || 0); saveCounter(); draw(); };
+  bg.querySelector('#cn-tap').onclick = () => { counter.n += 1; saveCounter(); draw(); };
+  bg.querySelector('#cn-ex').onclick = () => { counter.extra += 1; saveCounter(); draw(); };
+  bg.querySelector('#cn-minus').onclick = () => { counter.n = Math.max(0, counter.n - 1); saveCounter(); draw(); };
+  bg.querySelector('#cn-reset').onclick = async () => { if (!await ask('숫자를 0으로 되돌릴까요?\n(총 인원은 그대로 둡니다)')) return; counter.n = 0; counter.extra = 0; saveCounter(); draw(); };
+  bg.querySelector('#cn-close').onclick = () => bg.remove();
+  bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+  draw();
 }
 // 📖 사용법 찾기: 검색하면 제목만 나오고, 누르면 단계가 펼쳐집니다
 const HELP = [
