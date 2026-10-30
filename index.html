@@ -622,7 +622,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-6</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-7</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2448,20 +2448,22 @@ function openZone(id){
       return `<div style="display:flex;gap:4px;align-items:center;"><button type="button" class="site ${mine?'zs-on':''}" data-k="${esc(k)}" style="flex:1;padding:9px 12px;margin:4px 0;${mine?'background:#c6f6d5;border-color:#38a169;':''}">
         <div>${mine?'✔ ':''}<b>${crown(curTown, k)}${esc(k)}</b> <span class="muted">${n}명</span>${other && other.id!==z.id ? ` <span class="badge bg-gray">${esc(other.name)}</span>` : ''}</div><span class="arrow">${mine?'':'＋'}</span></button>
         ${isX(k) ? `<button type="button" class="small secondary" data-xren="${esc(k)}" style="width:auto;margin:0;padding:6px 8px;">✏️</button><button type="button" class="small secondary" data-xdel="${esc(k)}" style="width:auto;margin:0;padding:6px 8px;color:var(--danger);">✕</button>` : ''}</div>`;
-    }).join('') + `<div style="display:flex;gap:6px;margin-top:6px;"><input type="text" id="zn-new" placeholder="명단에 없는 경로당 이름 적기" autocomplete="off" style="margin:0;"><button type="button" class="small secondary" id="zn-new-add" style="margin:0;white-space:nowrap;">＋ 추가</button></div>`;
+    }).join('') + `<div style="display:flex;gap:6px;margin-top:6px;"><select id="zn-cat" style="width:auto;margin:0;">${SITE_CATS.map(c => `<option value="${c.k}"${c.k === '경로당지킴이' ? ' selected' : ''}>${c.k}</option>`).join('')}</select><input type="text" id="zn-new" placeholder="명단에 없는 경로당 이름 적기" autocomplete="off" style="margin:0;"><button type="button" class="small secondary" id="zn-new-add" style="margin:0;white-space:nowrap;">＋ 추가</button></div>`;
     $('#zn-all')?.addEventListener('click', () => { shown.forEach(k => allOn ? pick.delete(siteKey(curTown, k)) : pick.add(siteKey(curTown, k))); drawList(); });
     bg.querySelectorAll('[data-xdel]').forEach(b => b.onclick = async () => { const k = b.dataset.xdel;
       if (!await ask(`"${k}" 경로당을 목록에서 뺄까요?`)) return;
       xSites[curTown] = (xSites[curTown] || []).filter(x => x !== k); saveXSites(); pick.delete(siteKey(curTown, k));
+      delete xCat[k]; saveXCat();
       logEvent('경로당 목록 빼기', null, `${curTown} ${k}`); drawList(); });
     bg.querySelectorAll('[data-xren]').forEach(b => b.onclick = async () => { const k = b.dataset.xren, v = ((await askInput('경로당 이름을 고쳐 주세요', k)) || '').trim(); if (!v || v === k) return;
       xSites[curTown] = (xSites[curTown] || []).map(x => x === k ? v : x); saveXSites();
       if (pick.delete(siteKey(curTown, k))) pick.add(siteKey(curTown, v));
       zones.forEach(o => o.sites.forEach(x => { if (x.town === curTown && x.senior === k) x.senior = v; })); saveZones();
       participants.filter(q => q.town === curTown && q.senior === k).forEach(q => q.senior = v); saveData(false);
+      if (xCat[k] !== undefined) { xCat[v] = xCat[k]; delete xCat[k]; saveXCat(); }
       logEvent('경로당 이름 바꾸기', null, `${curTown} ${k} → ${v}`); drawList(); });
-    const addNew = () => { const inp = $('#zn-new'); inp.blur(); setTimeout(() => { const v = inp.value.trim(); if (!v) return;
-      if (!sitesOf(curTown).includes(v)) { (xSites[curTown] ||= []).push(v); saveXSites(); logEvent('경로당 목록 추가', null, `${curTown} ${v}`); }
+    const addNew = () => { const inp = $('#zn-new'); inp.blur(); setTimeout(() => { const v = inp.value.trim(); if (!v) return; const cat = $('#zn-cat')?.value || '';
+      if (!sitesOf(curTown).includes(v)) { (xSites[curTown] ||= []).push(v); saveXSites(); if (cat) { xCat[v] = cat; saveXCat(); } logEvent('경로당 목록 추가', null, `${curTown} ${v}${cat ? ` (${cat})` : ''}`); }
       pick.add(siteKey(curTown, v)); drawList(); }, 50); };
     $('#zn-new-add').onclick = addNew;
     $('#zn-new').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addNew(); } });
@@ -3439,7 +3441,26 @@ function showClose(kind){
 }
 
 // 경로당 순서: 개별관리 → 게이트볼 → 나머지(가나다) → 미입력
-function seniorRank(k){ k = String(k||'').replace(/\s/g,''); return k.includes('파크골프') ? -1 : k.includes('개별관리') ? 0 : k.includes('게이트볼') ? 1 : k===NO_SENIOR.replace(/\s/g,'') ? 3 : 2; }
+// 경로당 목록 순서: 사업별로 고정 (위에서부터). 같은 사업 안에서는 가나다순
+const SITE_CATS = [
+  { k: '파크골프', r: 0, m: /파크골프/ },
+  { k: '개별관리', r: 1, m: /개별관리/ },
+  { k: '게이트볼', r: 2, m: /게이트볼/ },
+  { k: '노인체육시설', r: 3, m: /체육/ },
+  { k: '공공복지시설', r: 4, m: /공공복지|어린이집|보육/ },
+  { k: '시니어 맥가이버', r: 5, m: /맥가이버/ },
+  { k: '시니어 안전 모니터링', r: 6, m: /안전\s*모니터링/ },
+  { k: '경로당지킴이', r: 7, m: /./ }
+];
+let xCat = (() => { try { return JSON.parse(load('jinan_xcat')) || {}; } catch(e) { return {}; } })();   // 직접 적어 넣은 경로당의 사업 종류 { 이름: 종류 }
+const saveXCat = () => { try { store('jinan_xcat', JSON.stringify(xCat)); } catch(e) {} };
+function seniorRank(k){
+  const raw = String(k || '').trim(), n = raw.replace(/\s/g, '');
+  if (n === NO_SENIOR.replace(/\s/g, '')) return 99;
+  const sv = xCat[raw] && SITE_CATS.find(c => c.k === xCat[raw]);
+  if (sv) return sv.r;
+  return SITE_CATS.find(c => c.m.test(n)).r;
+}
 
 // ---------- 내 담당 읍·면 (휴대폰마다 따로 저장) ----------
 let myTowns = (() => { try { const v = JSON.parse(load('jinan_my_towns')); if (Array.isArray(v) && v.length) return v; } catch(e){} return ['동향면','상전면']; })();
