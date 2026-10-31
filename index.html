@@ -649,7 +649,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-30</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-31</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -3105,11 +3105,11 @@ function openQuickChange(){
 function addChange(pre){
   const p = current(); if (!p) return;
   pre = pre || {};
-  const mk = monthKey(), days = personDays(p, mk), cuH = customOf(p, mk), hospD = new Set(cuH?.hosp || []), inH = !!(cuH && (cuH.inHosp || inHospNow(p)));
+  const mk = pre.mk || monthKey(), days = personDays(p, mk), cuH = customOf(p, mk), hospD = new Set(cuH?.hosp || []), inH = !!(cuH && (cuH.inHosp || inHospNow(p)));
   const mates = participants.filter(x => x.id!==p.id && x.town===p.town && seniorOf(x)===seniorOf(p) && !stats(x).dropped);
   const td = today(), end = endDay(mk);
   // 여러 날짜를 한 번에: pairs = [{from, to}]  · 지난 날짜(오늘 전)는 바꿀 수 없음
-  let pairs = [], from = null, quitFrom = null, startFrom = null;
+  let pairs = [...(pre.keep || [])], from = null, quitFrom = null, startFrom = null;
   // 🏥 입원 · 🎓 교육·행사도 이 창 하나에서
   let hospSel = new Set(hospD);
   const ownEdu = (p.edu || []).filter(e => e.date.startsWith(mk));
@@ -3121,10 +3121,13 @@ function addChange(pre){
   const isStart = () => back.querySelector('#cg-type')?.value === '시작일';
   const newbie = !!(p.start || p.startDay || isNew(p)), rawDays = personDays(p, mk, true);
   const canFrom = k => days.includes(k) && k >= td && !pairs.some(x => x.from === k);
+  const todayMk = today().slice(0,7);
+  const shiftMk = (base, n) => { const d = new Date(Number(base.slice(0,4)), Number(base.slice(5,7)) - 1 + n, 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; };
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">🔄 ${nmH(p)} 어르신 근무일 변경${inH ? ` <span class="badge bg-hosp" style="vertical-align:2px;">🏥 현재 입원중</span>` : ''}</div>
     ${hospD.size || inH ? `<div class="notice" style="background:#fff5f7;border-color:#fbb6ce;margin-bottom:8px;font-size:.9rem;">🏥 ${inH ? '<b>지금 입원 중</b>이에요' : '입원 기록이 있어요'}${hospD.size ? ` · 입원한 날 ${[...hospD].sort().map(dd).join(', ')}` : ''}${cuH?.memo ? ` · ${esc(cuH.memo)}` : ''}<br><span class="muted">달력의 분홍 칸이 입원한 날이에요.</span></div>` : ''}
+    <div class="grid-2" style="margin-bottom:8px;align-items:center;"><button type="button" class="secondary small" id="cg-mprev" ${mk <= todayMk ? 'disabled' : ''}>◀ 전달</button><b style="text-align:center;">${Number(mk.slice(0,4))}년 ${Number(mk.slice(5,7))}월</b><button type="button" class="secondary small" id="cg-mnext" ${mk >= shiftMk(todayMk, 11) ? 'disabled' : ''}>다음달 ▶</button></div>
     ${stats(p).dropped ? '' : `<div class="grid-2" style="margin-bottom:8px;"><button type="button" class="secondary small" id="cg-ltc">🏥 장기요양 등급 확인</button>${p.pause ? `<button type="button" class="small" id="cg-pause">▶ 활동 복귀</button><button type="button" class="secondary small" id="cg-pedit">📅 시작일 고치기</button>` : `<button type="button" class="warning small" id="cg-pause">💀 활동 중단 (오늘부터)</button>`}</div>`}
     <div class="legend"><span><i style="background:var(--primary);opacity:.55"></i>근무일</span><span><i style="background:#fffaf0;border:2px dashed var(--warning)"></i>원래 날짜</span><span><i style="background:var(--warning)"></i>바꾼 날짜</span><span><i style="background:#edf2f7"></i>지난 날·마감 이후</span></div>
     <div class="cal" id="cg-cal"></div>
@@ -3167,7 +3170,7 @@ function addChange(pre){
   drawENames();
   back.querySelectorAll('[data-qwhy]').forEach(b => b.onclick = () => { $('#cg-qwhy').value = b.dataset.qwhy;
     back.querySelectorAll('[data-qwhy]').forEach(x => { x.classList.toggle('secondary', x !== b); x.style.background = x === b ? 'var(--danger)' : ''; }); });
-  const y = YEAR, m = curMonth, lastD = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
+  const y = Number(mk.slice(0,4)), m = Number(mk.slice(5,7)), lastD = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
   const showList = () => {
     $('#cg-hbox').classList.toggle('hidden', !isHosp()); $('#cg-ebox').classList.toggle('hidden', !isEdu()); $('#cg-back').classList.toggle('hidden', !isHosp() && !isEdu());
     if (isHosp()) {
@@ -3244,6 +3247,10 @@ function addChange(pre){
   if (pre.all && $('#cg-all')) $('#cg-all').checked = true;
   if (pre.note) $('.dlg').insertAdjacentHTML('afterbegin', `<div class="notice" style="margin-bottom:8px;">${pre.note}</div>`);
   $('#cg-cancel').onclick = () => back.remove();
+  // 다른 달로 넘어가도 고른 날짜는 그대로 (저장할 때 각 날짜의 달에 맞게 확인)
+  const goMonth = n => { const reason = back.querySelector('#cg-type')?.value || ''; back.remove(); addChange({ mk: shiftMk(mk, n), keep: pairs, reason }); };
+  $('#cg-mprev').onclick = () => goMonth(-1);
+  $('#cg-mnext').onclick = () => goMonth(1);
   $('#cg-save').onclick = async () => {
     const reason = $('#cg-type').value; const memo = ($('#cg-memo')?.value || '').trim();
     if (isHosp()) {   // 🛏️ 입원 체크: 입원한 날은 근무일에서 빠짐
@@ -3296,7 +3303,7 @@ function addChange(pre){
     let seq = 0; const done = new Set();
     const made = [];
     targets.forEach(x => pairs.forEach(({ from: f, to: t }) => {
-      const xd = personDays(x, mk);
+      const xd = personDays(x, f.slice(0,7));
       if (!xd.includes(f) || (t && xd.includes(t))) return;
       const rec = { id: Date.now() + (seq++), from: f, to: t, reason, memo }; (x.changes ||= []).push(rec); made.push(rec);
       logEvent('근무일 변경', x, `${dd(f)} → ${dd(t)}${reason?` (${reason})`:''}${memo ? ` · ${memo}` : ''}`, f); done.add(x);
