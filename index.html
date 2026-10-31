@@ -262,11 +262,13 @@
   #mate-tabs button small { display:block; font-size:.75rem; font-weight:normal; opacity:.85; }
   #mate-tabs button.done:not(.on) { border-color:#9ae6b4; background:#f0fff4; color:#22543d; }
   #mate-tabs:empty { display:none; }
+  #mate-tabs .mt-wrap button.on { font-weight:bold; }
   #mate-tabs .mt-lbl { display:none; }
   #how-bar #modal-sub { display:flex; align-items:center; gap:6px; flex-wrap:nowrap; min-width:0; margin:0 0 6px; overflow:hidden; }
   #how-bar #modal-sub:empty { display:none; }
-  #how-bar #modal-sub .place { white-space:nowrap; margin:0; }
+  #how-bar #modal-sub .place { flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:0; }
   #how-bar #modal-sub .tel-row { flex:none; }
+  #how-bar #modal-sub .tel-link { flex:none; }
   #mate-tabs .mt-wrap { display:flex; flex-wrap:nowrap; align-items:center; gap:6px; margin:6px 0 0; padding:0 0 2px; background:none; border:0; border-radius:0; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
   #mate-tabs .mt-lbl { width:auto; flex:none; font-size:.8rem; color:#718096; white-space:nowrap; padding-right:2px; }
   #mate-tabs .mt-wrap button { flex:none; width:auto; margin:0; padding:5px 12px; border-radius:999px; font-size:.95rem; white-space:nowrap; }
@@ -648,7 +650,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-25</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-26</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -5496,7 +5498,7 @@ function openModal(id){
   // 전화번호를 누르면 바로 전화 걸기
   const tel = String(p.phone||'').replace(/[^0-9+]/g,'');
   // 동네(면)와 경로당 이름을 크게
-  document.getElementById('modal-sub').innerHTML = (p.phone ? `<span class="tel-row">${tel ? `<a class="tel-link" href="tel:${tel}">📞 ${esc(p.phone)}</a>` : esc(p.phone)}</span>` : '') + `<span class="place">📍 <b>${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</b>${mapOf(p.town, seniorOf(p)) ? ` <a class="tel-link" href="#" onclick="openSiteMap('${esc(p.town)}', this.dataset.s);return false;" data-s="${esc(seniorOf(p))}">🗺️ 위치</a>` : ''}</span>`;
+  document.getElementById('modal-sub').innerHTML = (p.phone ? `<span class="tel-row">${tel ? `<a class="tel-link" href="tel:${tel}">📞 ${esc(p.phone)}</a>` : esc(p.phone)}</span>` : '') + `<span class="place">📍 <b>${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</b>${mapOf(p.town, seniorOf(p)) ? ` <a class="tel-link" href="#" onclick="openSiteMap('${esc(p.town)}', this.dataset.s);return false;" data-s="${esc(seniorOf(p))}"><span aria-hidden="true">🗺️</span></a>` : ''}</span>`;
   renderModal();
   document.getElementById('modal').classList.remove('hidden');
   window.scrollTo(0,0);
@@ -5507,10 +5509,10 @@ function matesOf(p){ return participants.filter(q => q.town===p.town && seniorOf
 function renderMates(p){
   const box = document.getElementById('mate-tabs'); if (!box) return;
   const ms = matesOf(p), d = document.getElementById('c-date').value || today();
-  if (ms.length < 2) { box.innerHTML = ''; return; }
+  if (!ms.length) { box.innerHTML = ''; return; }
   box.innerHTML = `<div class="mt-wrap"><div class="mt-lbl">👥 같이 근무 ${ms.filter(counted).length}명</div>${ms.map(q => { const pd = !!checkDrafts[q.id] && q.id !== p.id, done = q.logs.some(l => l.date===d), gone = stats(q).dropped;
     return `<button type="button" class="${q.id===p.id?'on':''} ${done?'done':''} ${gone?'quit':''}" data-mate="${q.id}">${done && !gone?'✔ ':''}<span class="nm">${nmH(q)}</span><small>${gone ? '중도포기' : q.id===p.id ? '지금 점검 중' : pd && !done ? '✏️ 저장 전' : done ? `${md(d)} 점검함` : '아직 안 함'}</small></button>`; }).join('')}</div>`;
-  box.querySelectorAll('[data-mate]').forEach(b => b.onclick = () => switchMate(Number(b.dataset.mate)));
+  box.querySelectorAll('[data-mate]').forEach(b => b.onclick = () => Number(b.dataset.mate) === p.id ? openInfo() : switchMate(Number(b.dataset.mate)));
 }
 async function switchMate(id){
   const cur = current(); if (!cur || cur.id === id) return;
@@ -5528,7 +5530,7 @@ function renderModal(){
   renderExPanel(p);
   if (document.getElementById('c-date').value) setCheckDate(document.getElementById('c-date').value);
   // 이름을 누르면 기본 정보·건강 정보 창
-  document.getElementById('modal-title').innerHTML = `<b class="name-tap" onclick="openInfo()">${nmH(p)}${p.health && (p.health.conds?.length || p.health.memo) ? '<span class="hl-dot">🩺</span>' : ''}${photoOf(p) ? '<span class="hl-dot">📷</span>' : ''}</b>` +
+  document.getElementById('modal-title').innerHTML = `${p.health && (p.health.conds?.length || p.health.memo) ? '<span class="hl-dot">🩺</span>' : ''}${photoOf(p) ? '<span class="hl-dot">📷</span>' : ''}` +
     (exOf(p) ? ` <span class="badge bg-gray" style="vertical-align:6px;font-size:.85rem;">🚫 참여 제외</span>` : '') + (inHospNow(p) ? ` <span class="badge bg-hosp" style="vertical-align:6px;font-size:.85rem;cursor:pointer;" onclick="addChange({ reason: '입원' })">🏥 현재 입원중</span>` : '');
   // 올해 감점이 있을 때만 짧게 표시 (누르면 이유)
   let n = s.pts ? `<div class="notice">${viewYear()}년 누적 감점 <b style="color:var(--danger)" class="pen-link" onclick="showPenReasons(current())">${s.penalty}점 이유 보기 ›</b>${s.unpaid ? ` · 일당 미지급 ${s.unpaid}일` : ''}</div>` : '';
