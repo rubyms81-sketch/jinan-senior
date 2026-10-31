@@ -649,7 +649,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-38</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-39</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -6026,7 +6026,7 @@ function openEduCheck(){
   const dlg = bg.querySelector('.dlg');
   const pastN = days.filter(([x]) => x <= today()).length;
   let d = (days[Math.max(0, pastN - 1)] || days[0])[0];
-  let t = null, onlyAbsent = false, q = '';
+  let t = null, onlyAbsent = false, q = '', lastFull = null;
   const dv = (() => { try { return JSON.parse(load('jinan_edu_draft')) || {}; } catch(e) { return {}; } })();   // 임시 저장: `${날짜}|${id}` → {arr, vest, at, note}
   const touched = new Set(Object.keys(dv).map(k => k.split('|')[0])); let dirty = touched.size > 0;
   const saveDraft = () => { try { localStorage.setItem('jinan_edu_draft', JSON.stringify(dv)); } catch(e) {} };
@@ -6042,6 +6042,7 @@ function openEduCheck(){
     const got = inTown.filter(p => st(p).arr).length;
     const vOk = inTown.filter(p => st(p).arr && st(p).vest !== false).length, vNo = inTown.filter(p => st(p).arr && st(p).vest === false).length;
     const list = inTown.filter(p => (!onlyAbsent || !st(p).arr) && (!q || p.name.includes(q)));
+    const full = n > 0 && got === n; if (lastFull === false && full) playDingDong(); lastFull = full;
     dlg.innerHTML = `
       <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">🎓 교육 출석 체크</div>
       <label style="margin-top:0;">교육 날짜</label>
@@ -6051,13 +6052,14 @@ function openEduCheck(){
       ${t ? `
       <div style="text-align:center;margin:8px 0 2px;"><span style="font-size:1.8rem;font-weight:700;color:#c53030;">${got}</span> <span class="muted">/ ${n}명 도착</span></div>
       <div class="muted" style="text-align:center;font-size:.9rem;">🦺 조끼 착용 ${vOk} · 미착용 <b style="color:#975a16;">${vNo}</b></div>
+      ${full ? '<div style="text-align:center;font-weight:700;color:#2f855a;font-size:1.1rem;">✔ 완료되었습니다</div>' : ''}
       <div class="grid-2" style="margin:8px 0 4px;"><button type="button" class="${onlyAbsent ? 'secondary' : ''}" data-act="all" style="margin:0;">전체 ${n}명</button><button type="button" class="${onlyAbsent ? '' : 'secondary'}" data-act="absent" style="margin:0;">안 온 사람만 ${n - got}명</button></div>
       <input type="search" id="ec-q" placeholder="🔍 이름으로 찾기" value="${esc(q)}" autocomplete="off" style="margin:4px 0 8px;">
       <div style="flex:0 1 auto;min-height:120px;overflow:auto;-webkit-overflow-scrolling:touch;">${list.map(p => { const s = st(p); return `
         <div style="display:flex;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px solid #edf2f7;${s.arr ? '' : 'background:#fff5f5;'}">
           <span style="flex:1;font-weight:600;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span>${p.phone && !s.arr ? ` <a class="tel-link" href="tel:${telOf(p)}" style="font-size:.85rem;font-weight:400;">📞</a>` : ''}${s.note ? `<br><span style="font-size:.8rem;color:#975a16;font-weight:400;">📝 ${esc(s.note)}</span>` : ''}</span>
           ${s.arr ? '' : `<button type="button" class="small secondary" data-note="${p.id}" style="width:auto;margin:0;padding:6px 8px;">📝 연락</button>`}
-          ${s.arr ? `<button type="button" class="small ${s.vest === false ? 'danger' : ''}" data-vest="${p.id}" style="width:auto;margin:0;padding:6px 8px;${s.vest === false ? '' : 'background:#fff;color:#2d3748;border:2px solid #cbd5e0;'}">🦺 조끼</button>` : ''}
+          ${`<button type="button" class="small ${s.vest === false ? 'danger' : ''}" data-vest="${p.id}" style="width:auto;margin:0;padding:6px 8px;${s.vest === false ? '' : 'background:#fff;color:#2d3748;border:2px solid #cbd5e0;'}">🦺 조끼</button>`}
           <button type="button" class="small ${s.arr ? 'secondary' : ''}" data-arr="${p.id}" style="width:auto;margin:0;padding:6px 10px;">${s.arr ? `✔ 도착 ${esc(s.at || '')}` : '도착'}</button></div>`; }).join('') || '<div class="muted" style="padding:8px 0;">해당하는 사람이 없습니다.</div>'}</div>`
       : `<div class="muted" style="padding:8px 0;">${participants.length ? '이 날 교육을 받는 어르신이 없습니다.' : '이 기기에는 어르신 명단이 없습니다.<br>📂 엑셀로 한번에 등록에서 명단을 먼저 올려 주세요.<br><button type="button" class="small" data-act="bk" style="width:auto;margin-top:6px;">💾 백업 칸으로 가기</button>'}</div>`}
       <button type="button" class="full secondary" data-act="stat" style="margin:10px 0 6px;">📊 면별 도착률 한눈에 보기</button>
@@ -6098,7 +6100,7 @@ function openEduCheck(){
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.note) { const p0 = findP(b.dataset.note), k = d + '|' + p0.id; const r = await askInput(`${p0.name} 님 연락 결과\n(예: 부재중, 다음에 온다고 함)`, dv[k]?.note || ''); if (r === null || r === undefined) return; dv[k].note = String(r).trim(); touched.add(d); dirty = true; saveDraft(); return draw(); }
     if (b.dataset.arr) { const s = dv[d + '|' + b.dataset.arr]; s.arr = !s.arr; s.at = s.arr ? moimTime() : ''; touched.add(d); dirty = true; saveDraft(); return draw(); }
-    if (b.dataset.vest) { const s = dv[d + '|' + b.dataset.vest]; s.vest = s.vest === false; touched.add(d); dirty = true; saveDraft(); return draw(); }
+    if (b.dataset.vest) { const s = dv[d + '|' + b.dataset.vest]; s.vest = s.vest === false; if (!s.arr) { s.arr = true; s.at = moimTime(); } touched.add(d); dirty = true; saveDraft(); return draw(); }
     const act = b.dataset.act;
     if (act === 'all') { onlyAbsent = false; return draw(); }
     if (act === 'absent') { onlyAbsent = true; return draw(); }
@@ -6166,7 +6168,7 @@ function openZoneAtt(z){
         <div style="padding:8px 4px;border-bottom:1px solid #edf2f7;${r.arr ? '' : 'background:#fff5f5;'}">
           <div style="display:flex;align-items:center;gap:6px;"><span style="flex:1;font-weight:600;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span></span>
           <button type="button" class="small ${r.arr ? 'secondary' : ''}" data-arr="${p.id}" style="width:auto;margin:0;padding:6px 10px;">${r.arr ? '✔ 도착' : '도착'}</button></div>
-          ${r.arr ? `<div style="display:flex;gap:6px;margin-top:4px;"><button type="button" class="small ${r.vest === false ? 'danger' : ''}" data-vest="${p.id}" style="width:auto;margin:0;padding:4px 8px;font-size:.85rem;${r.vest === false ? '' : 'background:#fff;color:#2d3748;border:2px solid #cbd5e0;'}">🦺 조끼</button><button type="button" class="small ${r.badge === false ? 'danger' : ''}" data-badge="${p.id}" style="width:auto;margin:0;padding:4px 8px;font-size:.85rem;${r.badge === false ? '' : 'background:#fff;color:#2d3748;border:2px solid #cbd5e0;'}">🪪 명찰</button></div>` : ''}
+          ${`<div style="display:flex;gap:6px;margin-top:4px;"><button type="button" class="small ${r.vest === false ? 'danger' : ''}" data-vest="${p.id}" style="width:auto;margin:0;padding:4px 8px;font-size:.85rem;${r.vest === false ? '' : 'background:#fff;color:#2d3748;border:2px solid #cbd5e0;'}">🦺 조끼</button><button type="button" class="small ${r.badge === false ? 'danger' : ''}" data-badge="${p.id}" style="width:auto;margin:0;padding:4px 8px;font-size:.85rem;${r.badge === false ? '' : 'background:#fff;color:#2d3748;border:2px solid #cbd5e0;'}">🪪 명찰</button></div>`}
         </div>`; }).join('') || '<div class="muted" style="padding:8px 0;">해당하는 사람이 없습니다.</div>'}</div>
       <button type="button" class="full secondary" data-act="close" style="margin-top:10px;">닫기</button>`;
   };
@@ -6180,8 +6182,8 @@ function openZoneAtt(z){
     if (b.dataset.act === 'absent') { onlyAbsent = true; return draw(); }
     if (b.dataset.act === 'close') return bg.remove();
     if (b.dataset.arr) { const p = findP(b.dataset.arr), on = !((attOf(p, d) || {}).arr); setRec(p, on ? { arr: true, at: moimTime() } : { arr: false, at: '' }, on ? '도착' : '도착 취소'); }
-    else if (b.dataset.vest) { const p = findP(b.dataset.vest), r = attOf(p, d) || {}, nv = r.vest === false; setRec(p, { vest: nv }, `조끼 ${cyc(nv)}`); }
-    else if (b.dataset.badge) { const p = findP(b.dataset.badge), r = attOf(p, d) || {}, nb = r.badge === false; setRec(p, { badge: nb }, `명찰 ${cyc(nb)}`); }
+    else if (b.dataset.vest) { const p = findP(b.dataset.vest), r = attOf(p, d) || {}, nv = r.vest === false; setRec(p, r.arr ? { vest: nv } : { vest: nv, arr: true, at: moimTime() }, `조끼 ${cyc(nv)}`); }
+    else if (b.dataset.badge) { const p = findP(b.dataset.badge), r = attOf(p, d) || {}, nb = r.badge === false; setRec(p, r.arr ? { badge: nb } : { badge: nb, arr: true, at: moimTime() }, `명찰 ${cyc(nb)}`); }
     draw();
   });
   bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
