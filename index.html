@@ -649,7 +649,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-37</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-38</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -6021,7 +6021,7 @@ function openEduCheck(){
   const days = eduDayList();
   if (!days.length) return notify('교육 날짜가 없어요.\n"활동일 수정"에서 교육 날짜를 먼저 넣어 주세요.');
   const bg = document.createElement('div'); bg.className = 'dlg-back';
-  bg.innerHTML = '<div class="dlg" style="text-align:left;height:88vh;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;"></div>';
+  bg.innerHTML = '<div class="dlg" style="text-align:left;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;"></div>';
   document.body.appendChild(bg);
   const dlg = bg.querySelector('.dlg');
   const pastN = days.filter(([x]) => x <= today()).length;
@@ -6053,7 +6053,7 @@ function openEduCheck(){
       <div class="muted" style="text-align:center;font-size:.9rem;">🦺 조끼 착용 ${vOk} · 미착용 <b style="color:#975a16;">${vNo}</b></div>
       <div class="grid-2" style="margin:8px 0 4px;"><button type="button" class="${onlyAbsent ? 'secondary' : ''}" data-act="all" style="margin:0;">전체 ${n}명</button><button type="button" class="${onlyAbsent ? '' : 'secondary'}" data-act="absent" style="margin:0;">안 온 사람만 ${n - got}명</button></div>
       <input type="search" id="ec-q" placeholder="🔍 이름으로 찾기" value="${esc(q)}" autocomplete="off" style="margin:4px 0 8px;">
-      <div style="flex:1 1 0;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;">${list.map(p => { const s = st(p); return `
+      <div style="flex:0 1 auto;min-height:120px;overflow:auto;-webkit-overflow-scrolling:touch;">${list.map(p => { const s = st(p); return `
         <div style="display:flex;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px solid #edf2f7;${s.arr ? '' : 'background:#fff5f5;'}">
           <span style="flex:1;font-weight:600;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span>${p.phone && !s.arr ? ` <a class="tel-link" href="tel:${telOf(p)}" style="font-size:.85rem;font-weight:400;">📞</a>` : ''}${s.note ? `<br><span style="font-size:.8rem;color:#975a16;font-weight:400;">📝 ${esc(s.note)}</span>` : ''}</span>
           ${s.arr ? '' : `<button type="button" class="small secondary" data-note="${p.id}" style="width:auto;margin:0;padding:6px 8px;">📝 연락</button>`}
