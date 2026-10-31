@@ -650,7 +650,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-28</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-29</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -664,7 +664,8 @@
   <input type="file" id="photo-file" accept="image/*" class="hidden" onchange="photoPicked(this)">
   <div class="chg-box" id="sec-days"><div class="days-head"><h4 id="m-days-title">📅 이달 근무일</h4>
     <button type="button" class="small warning" onclick="addChange()" style="width:auto;margin:0 auto 0 0;padding:4px 10px;font-size:.85rem;">🔄 근무일 변경</button>
-    <button type="button" class="date-btn" id="c-date-btn" onclick="pickCheckDate()"></button></div>
+  </div>
+  <div class="date-row" style="display:flex;gap:6px;align-items:center;margin:0 0 8px;"><button type="button" class="date-btn" id="c-date-btn" onclick="pickCheckDate()" style="flex:1 1 auto;width:auto;min-width:0;margin:0;"></button><button type="button" class="small secondary" onclick="openNote()" style="flex:none;width:auto;margin:0;padding:8px 10px;">📝 특이사항</button></div>
   <div id="day-tabs" class="hist-tabs"></div>
   <div id="m-days" class="chips"></div>
   <details class="chg-box m-sec hidden" id="sec-moved" style="margin-top:8px;"><summary><h4 id="m-chg-title" style="font-size:.95rem;">🔄 이동한 날짜</h4><span class="chg-arrow"></span></summary>
@@ -2944,7 +2945,7 @@ function setCheckDate(k){
   document.getElementById('c-date').value = k;
   const i = dayInfo(current(), k);
   const tag = i.hosp ? '<span class="tag off">🏥 입원</span>' : i.end ? '<span class="tag end">마감일</span>' : i.work ? `<span class="tag work">${i.moved?'변경 근무일':'근무일'}</span>` : '<span class="tag off">근무일 아님</span>';
-  document.getElementById('c-date-btn').innerHTML = `<span>📅 <b>${Number(k.slice(5,7))}월 ${dd(k)}</b>${k===today()?' 오늘':''}${tag}</span><span class="muted">바꾸기 ▾</span>`;
+  document.getElementById('c-date-btn').innerHTML = `<span>📅 <b>${Number(k.slice(5,7))}월 ${dd(k)}</b>${k===today()?' 오늘':''}${tag}</span><span class="muted">▾</span>`;
   if (current()) renderMates(current());
 }
 function pickCheckDate(){ openDatePicker(document.getElementById('c-date').value || today(), setCheckDate); }
