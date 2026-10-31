@@ -649,7 +649,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-32</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-33</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -6162,9 +6162,9 @@ function openZoneAtt(z){
       <input type="search" id="za-q" placeholder="🔍 이름으로 찾기" value="${esc(q)}" autocomplete="off" style="margin:4px 0 8px;">
       <div>${list.map(p => { const r = attOf(p, d) || {}; return `
         <div style="padding:8px 4px;border-bottom:1px solid #edf2f7;${r.arr ? '' : 'background:#fff5f5;'}">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;"><span style="flex:1 1 auto;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span></span>
-          ${r.arr ? `<button type="button" class="small ${r.vest === false ? 'danger' : ''}" data-vest="${p.id}" style="width:auto;flex:none;margin:0;padding:5px 8px;font-size:.85rem;${r.vest === false ? '' : 'background:#fff;color:#2d3748;border:2px solid #cbd5e0;'}">🦺 조끼</button><button type="button" class="small ${r.badge === false ? 'danger' : ''}" data-badge="${p.id}" style="width:auto;flex:none;margin:0;padding:5px 8px;font-size:.85rem;${r.badge === false ? '' : 'background:#fff;color:#2d3748;border:2px solid #cbd5e0;'}">🪪 명찰</button>` : ''}
-          <button type="button" class="small ${r.arr ? 'secondary' : ''}" data-arr="${p.id}" style="width:auto;flex:none;margin:0;padding:6px 10px;">${r.arr ? '✔ 도착' : '도착'}</button></div>
+          <div style="display:flex;align-items:center;gap:6px;"><span style="flex:1;font-weight:600;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span></span>
+          <button type="button" class="small ${r.arr ? 'secondary' : ''}" data-arr="${p.id}" style="width:auto;margin:0;padding:6px 10px;">${r.arr ? '✔ 도착' : '도착'}</button></div>
+          ${r.arr ? `<div style="display:flex;gap:6px;margin-top:4px;"><button type="button" class="small ${r.vest === false ? 'danger' : ''}" data-vest="${p.id}" style="width:auto;margin:0;padding:4px 8px;font-size:.85rem;${r.vest === false ? '' : 'background:#fff;color:#2d3748;border:2px solid #cbd5e0;'}">🦺 조끼</button><button type="button" class="small ${r.badge === false ? 'danger' : ''}" data-badge="${p.id}" style="width:auto;margin:0;padding:4px 8px;font-size:.85rem;${r.badge === false ? '' : 'background:#fff;color:#2d3748;border:2px solid #cbd5e0;'}">🪪 명찰</button></div>` : ''}
         </div>`; }).join('') || '<div class="muted" style="padding:8px 0;">해당하는 사람이 없습니다.</div>'}</div>
       <button type="button" class="full secondary" data-act="close" style="margin-top:10px;">닫기</button>`;
   };
