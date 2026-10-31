@@ -577,6 +577,7 @@
       <div style="margin-top:8px;">
         <label>🔒 비밀번호 잠금</label>
         <button type="button" class="secondary full" id="lk-btn" onclick="setLockMode()">🔒 잠금 설정</button>
+        <button type="button" class="secondary full" onclick="openCatOrder()" style="margin:0 0 8px;">↕ 경로당 사업 순서 정하기</button>
         <label>화면 색깔</label>
         <div class="ui-opts" id="ui-theme"></div>
         <label>글씨 크기</label>
@@ -649,7 +650,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-39</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-40</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -765,15 +766,18 @@
 <!-- 신규 등록 -->
 <div id="add-modal" class="modal hidden"><div class="modal-inner">
   <h3>➕ 새로운 어르신 등록</h3>
-  <label>소속 면</label><select id="n-town"></select>
-  <label>경로당 이름</label><div class="senior-combo"><input type="text" id="n-senior" class="senior-in" data-town="n-town" placeholder="예: 지사" autocomplete="off"><button type="button" class="combo-btn" data-for="n-senior" aria-label="경로당 목록">▼</button><div class="combo-list hidden"></div></div>
+  <div class="grid-2" style="margin-bottom:6px;"><button type="button" class="small" id="nk-senior" onclick="setNKind('senior')" style="margin:0;">🏘 면·경로당 분</button><button type="button" class="small secondary" id="nk-moim" onclick="setNKind('moim')" style="margin:0;">👥 모임 분</button></div>
+  <div class="muted" id="nk-note" style="font-size:.85rem;margin-bottom:8px;">경로당지킴이 등 면·경로당이 있는 분을 넣습니다.</div>
+  <div id="n-moim-box" class="hidden"><label>넣을 모임</label><select id="n-moim"></select><div class="muted" style="font-size:.85rem;margin-bottom:8px;">임원·여행 등 면·경로당이 없는 분입니다. 이름과 전화번호만 받고, 근무·감점·구역 인원에는 안 들어갑니다. 여러 명은 👥 모임 명단의 "엑셀로 한번에 넣기"를 쓰세요.</div></div>
+  <div class="n-geo"><label>소속 면</label><select id="n-town"></select></div>
+  <div class="n-geo"><label>경로당 이름</label><div class="senior-combo"><input type="text" id="n-senior" class="senior-in" data-town="n-town" placeholder="예: 지사" autocomplete="off"><button type="button" class="combo-btn" data-for="n-senior" aria-label="경로당 목록">▼</button><div class="combo-list hidden"></div></div></div>
   <label>어르신 성명</label><input type="text" id="n-name" placeholder="예: 김진안">
-  <label>성별</label><div class="grid-2 sex-pick" data-for="n-sex" style="margin-bottom:10px;"><button type="button" class="reason" data-v="남">👨 남</button><button type="button" class="reason" data-v="여">👩 여</button></div><input type="hidden" id="n-sex">
-  <label>나이</label><input type="text" inputmode="numeric" id="n-age" class="age-in" placeholder="예: 1948 또는 78">
+  <div class="n-geo"><label>성별</label><div class="grid-2 sex-pick" data-for="n-sex" style="margin-bottom:10px;"><button type="button" class="reason" data-v="남">👨 남</button><button type="button" class="reason" data-v="여">👩 여</button></div><input type="hidden" id="n-sex"></div>
+  <div class="n-geo"><label>나이</label><input type="text" inputmode="numeric" id="n-age" class="age-in" placeholder="예: 1948 또는 78"></div>
   <label>연락처</label><input type="tel" id="n-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off">
-  <label>주소</label><input type="text" id="n-address" class="addr-in" data-town="n-town" placeholder="진안군 동향면 OOO" autocomplete="off">
-  <label>근무 시작 달</label><select id="n-start" class="start-sel"></select>
-  <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-bottom:12px;"><input type="checkbox" id="n-link" checked style="width:22px;height:22px;margin:0;"> 🔗 <b>신규 연계 중</b></label>
+  <div class="n-geo"><label>주소</label><input type="text" id="n-address" class="addr-in" data-town="n-town" placeholder="진안군 동향면 OOO" autocomplete="off"></div>
+  <div class="n-geo"><label>근무 시작 달</label><select id="n-start" class="start-sel"></select></div>
+  <div class="n-geo"><label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-bottom:12px;"><input type="checkbox" id="n-link" checked style="width:22px;height:22px;margin:0;"> 🔗 <b>신규 연계 중</b></label></div>
   <div class="grid-2">
     <button onclick="addParticipant()">등록하기</button>
     <button class="secondary" onclick="closeAdd()">취소</button>
@@ -3518,12 +3522,16 @@ const SITE_CATS = [
 ];
 let xCat = (() => { try { return JSON.parse(load('jinan_xcat')) || {}; } catch(e) { return {}; } })();   // 직접 적어 넣은 경로당의 사업 종류 { 이름: 종류 }
 const saveXCat = () => { try { store('jinan_xcat', JSON.stringify(xCat)); } catch(e) {} };
+// 사업 순서 (설정 "↕ 경로당 사업 순서 정하기"): 기본은 SITE_CATS 순서, 사용자가 바꾼 순서를 이 휴대폰에 저장
+let catOrder = (() => { const ks = SITE_CATS.map(c => c.k); try { const v = JSON.parse(load('jinan_catorder')); if (Array.isArray(v) && v.length) return [...v.filter(k => ks.includes(k)), ...ks.filter(k => !v.includes(k))]; } catch(e) {} return ks; })();
+const saveCatOrder = () => { try { store('jinan_catorder', JSON.stringify(catOrder)); } catch(e) {} };
+const catPos = c => { const i = catOrder.indexOf(c.k); return i < 0 ? c.r : i; };
 function seniorRank(k){
   const raw = String(k || '').trim(), n = raw.replace(/\s/g, '');
   if (n === NO_SENIOR.replace(/\s/g, '')) return 99;
   const sv = xCat[raw] && SITE_CATS.find(c => c.k === xCat[raw]);
-  if (sv) return sv.r;
-  return SITE_CATS.find(c => c.m.test(n)).r;
+  if (sv) return catPos(sv);
+  return catPos(SITE_CATS.find(c => c.m.test(n)));
 }
 
 // ---------- 내 담당 읍·면 (휴대폰마다 따로 저장) ----------
@@ -4321,7 +4329,22 @@ function summary(list){
 }
 
 // ---------- 신규 등록 ----------
+let nKind = 'senior';
+function setNKind(k){
+  nKind = k;
+  document.querySelectorAll('#add-modal .n-geo').forEach(el => el.classList.toggle('hidden', k === 'moim'));
+  document.getElementById('n-moim-box').classList.toggle('hidden', k !== 'moim');
+  document.getElementById('nk-senior').classList.toggle('secondary', k !== 'senior');
+  document.getElementById('nk-moim').classList.toggle('secondary', k !== 'moim');
+  document.getElementById('nk-note').textContent = k === 'moim' ? '임원·여행 등 면·경로당이 없는 분을 넣습니다.' : '경로당지킴이 등 면·경로당이 있는 분을 넣습니다.';
+  if (k === 'moim') {
+    const sl = document.getElementById('n-moim'), cur = sl.value;
+    sl.innerHTML = moims.length ? moims.map(m => `<option value="${esc(String(m.id))}">${esc(m.name)}</option>`).join('') : '<option value="">(모임 없음)</option>';
+    if (cur) sl.value = cur;
+  }
+}
 function openAdd(){
+  setNKind('senior');
   document.getElementById('n-link').checked = true;
   document.getElementById('n-start').value = String(Number(today().slice(5,7)));   // 기본: 이번 달
   const t = (document.getElementById('filter-town').value || '전체');
@@ -4474,6 +4497,15 @@ document.addEventListener('click', e => {
 });
 async function addParticipant(){
   const v = id => document.getElementById(id).value.trim();
+  if (nKind === 'moim') {
+    const m = moims.find(x => String(x.id) === document.getElementById('n-moim').value);
+    if (!m) return notify('넣을 모임을 골라 주세요.\n모임이 없으면 먼저 👥 모임 명단에서 새 모임을 만드세요.');
+    const nm = v('n-name'); if (!nm) return notify('어르신 성명은 꼭 적어 주세요.');
+    if (m.members.some(x => x.name === nm)) return notify(`${nm} 님은 이미 이 모임에 있습니다.`);
+    m.members.push({ id: 'mm' + Date.now(), name: nm, phone: v('n-phone') ? fmtPhone(v('n-phone')) : '', arrived: false, at: '' }); saveMoims();
+    logEvent('모임 명단', null, `${m.name}에 ${nm} 넣음 (신규)`);
+    ['n-name', 'n-phone'].forEach(id => document.getElementById(id).value = ''); closeAdd(); notify('모임에 넣었습니다.'); return;
+  }
   if (!v('n-name')) return notify('어르신 성명은 꼭 적어 주세요.');
   if (isDup(participants, v('n-name'), normSenior(v('n-town'), v('n-senior')), v('n-phone')) && !await ask('같은 분이 이미 등록되어 있습니다. 그래도 등록할까요?')) return;
   const ag = parseAge(v('n-age')); if (ag.bad) return notify(AGE_BAD);
@@ -5914,10 +5946,71 @@ function openCounter(){
   bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
   draw();
 }
+function openCatOrder(){
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = '<div class="dlg" style="text-align:left;"></div>';
+  document.body.appendChild(bg);
+  const dlg = bg.querySelector('.dlg');
+  const draw = () => {
+    dlg.innerHTML = `<div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">↕ 경로당 사업 순서</div>
+      <div class="muted" style="font-size:.9rem;margin-bottom:8px;">▲▼로 순서를 바꿉니다. 경로당 목록과 구역 창이 이 순서로 나옵니다. 같은 사업 안은 가나다순입니다.</div>
+      ${catOrder.map((k, i) => `<div style="display:flex;align-items:center;gap:6px;padding:6px 2px;border-bottom:1px solid #edf2f7;"><b style="flex:1;">${i + 1}. ${esc(k)}</b><button type="button" class="small secondary" data-up="${i}" ${i === 0 ? 'disabled' : ''} style="width:auto;margin:0;padding:6px 10px;">▲</button><button type="button" class="small secondary" data-dn="${i}" ${i === catOrder.length - 1 ? 'disabled' : ''} style="width:auto;margin:0;padding:6px 10px;">▼</button></div>`).join('')}
+      <button type="button" class="full secondary" data-act="reset" style="margin:10px 0 6px;">↩ 처음 순서로</button>
+      <button type="button" class="full" data-act="close">닫기</button>`;
+  };
+  const apply = () => { saveCatOrder(); logEvent('설정', null, '경로당 사업 순서: ' + catOrder.join(' → ')); try { renderList(); renderZones(); } catch(e) {} draw(); };
+  dlg.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.up) { const i = +b.dataset.up; [catOrder[i - 1], catOrder[i]] = [catOrder[i], catOrder[i - 1]]; return apply(); }
+    if (b.dataset.dn) { const i = +b.dataset.dn; [catOrder[i + 1], catOrder[i]] = [catOrder[i], catOrder[i + 1]]; return apply(); }
+    if (b.dataset.act === 'reset') { catOrder = SITE_CATS.map(c => c.k); return apply(); }
+    if (b.dataset.act === 'close') bg.remove();
+  });
+  bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+  draw();
+}
 // ---------- 👥 모임 명단 (여행·임원 모임: 구역(근무)과 따로, 근무·감점·구역 인원에 안 셈) ----------
 let moims = (() => { try { return JSON.parse(load('jinan_moim')) || []; } catch(e) { return []; } })();
 const saveMoims = () => { try { store('jinan_moim', JSON.stringify(moims)); } catch(e) {} };
 const moimTime = () => { const d = new Date(); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+// 엑셀로 한번에 넣기 (순번·이름·전화번호). 이름 칸을 제목 줄에서 찾고, 이미 있는 이름은 건너뜀
+function moimImport(input, getSel, redraw){
+  const file = input.files && input.files[0]; if (!file) return;
+  const sel = getSel(); if (!sel) { input.value = ''; return notify('먼저 모임을 고르거나 만들어 주세요.'); }
+  if (typeof XLSX === 'undefined') { input.value = ''; return notify('엑셀을 읽는 기능을 불러오지 못했습니다.\n인터넷 연결을 확인한 뒤 앱을 새로고침하고 다시 시도해 주세요.'); }
+  const reader = new FileReader();
+  reader.onerror = () => notify('파일을 열 수 없습니다. 다시 시도해 주세요.');
+  reader.onload = e => {
+    input.value = '';
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+      const hi = rows.findIndex(r => r.some(c => /이름|성명/.test(String(c))));
+      if (hi < 0) return notify('"이름" 칸을 찾지 못했습니다.\n첫 줄에 이름(또는 성명) 제목이 있는지 확인해 주세요.');
+      const head = rows[hi].map(c => String(c).replace(/\s/g, ''));
+      const ni = head.findIndex(h => /이름|성명/.test(h)), ti = head.findIndex(h => /전화|연락|휴대|핸드폰/.test(h));
+      let add = 0, skip = 0;
+      rows.slice(hi + 1).forEach(r => {
+        const nm = String(r[ni] || '').trim(); if (!nm) return;
+        if (sel.members.some(x => x.name === nm)) { skip++; return; }
+        const raw = ti >= 0 ? String(r[ti] || '').trim() : '';
+        sel.members.push({ id: 'mm' + Date.now() + '_' + add, name: nm, phone: raw ? fmtPhone(raw) : '', arrived: false, at: '' }); add++;
+      });
+      if (!add && !skip) return notify('넣을 이름이 없습니다.');
+      saveMoims(); logEvent('모임 명단', null, `${sel.name}에 엑셀로 ${add}명 넣음` + (skip ? ` (이미 있던 ${skip}명 건너뜀)` : ''));
+      notify(`${add}명을 넣었습니다.` + (skip ? `\n이미 있던 ${skip}명은 건너뛰었습니다.` : ''));
+      redraw();
+    } catch (err) { notify('엑셀 파일을 읽지 못했습니다. 양식을 확인해 주세요.'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+function moimTemplate(){
+  if (typeof XLSX === 'undefined') return notify('엑셀 양식을 만드는 기능을 불러오지 못했습니다.\n인터넷 연결을 확인해 주세요.');
+  const ws = XLSX.utils.aoa_to_sheet([['순번', '이름', '전화번호'], [1, '예시 1', '010-0000-0000'], [2, '예시 2', '010-1234-5678']]);
+  ws['!cols'] = [{ wch: 8 }, { wch: 14 }, { wch: 18 }];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '모임 명단');
+  XLSX.writeFile(wb, '모임_명단_양식.xlsx');
+}
 function openMoim(selId){
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = '<div class="dlg" style="text-align:left;max-height:90vh;overflow:auto;"></div>';
@@ -5926,6 +6019,8 @@ function openMoim(selId){
   let sel = moims.find(m => m.id === selId) || moims[0] || null;
   let onlyAbsent = false, q = '';
   const close = () => bg.remove();
+  const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel'; fi.className = 'hidden';
+  fi.onchange = () => moimImport(fi, () => sel, () => draw()); document.body.appendChild(fi);
   const draw = () => {
     sel = (sel && moims.find(m => m.id === sel.id)) || moims[0] || null;
     const chips = moims.map(m => `<button type="button" class="small ${sel && sel.id === m.id ? '' : 'secondary'}" data-pick="${m.id}" style="width:auto;margin:0 6px 6px 0;">${esc(m.name)}</button>`).join('');
@@ -5934,7 +6029,9 @@ function openMoim(selId){
       const n = sel.members.length, got = sel.members.filter(x => x.arrived).length;
       const list = sel.members.filter(x => (!onlyAbsent || !x.arrived) && (!q || x.name.includes(q)));
       body = `
-        <div class="muted" style="font-size:.85rem;margin-bottom:6px;">구역(근무)과 따로 관리합니다. 근무·감점·구역 인원에는 안 들어갑니다.</div>
+        <div class="muted" style="font-size:.85rem;margin-bottom:6px;">임원·여행 등 면·경로당이 없는 분을 넣는 곳입니다. 근무·감점·구역 인원에는 안 들어갑니다.</div>
+        <div class="grid-2" style="margin:0 0 4px;"><button type="button" class="secondary" data-act="xlsx" style="margin:0;">📂 엑셀로 한번에 넣기</button><button type="button" class="secondary" data-act="tpl" style="margin:0;">📄 엑셀 양식 받기</button></div>
+        <div class="muted" style="font-size:.8rem;margin-bottom:6px;">엑셀 칸은 순번 · 이름 · 전화번호입니다. 첫 줄은 제목이고, 이미 있는 이름은 건너뜁니다.</div>
         <div style="display:flex;align-items:center;gap:6px;"><b style="flex:1;font-size:1.05rem;">${esc(sel.name)}</b><button type="button" class="small secondary" data-act="rename" style="width:auto;margin:0;">✏️ 이름</button></div>
         <div style="text-align:center;margin:8px 0 4px;"><span style="font-size:1.8rem;font-weight:700;color:#c53030;">${got}</span> <span class="muted">/ ${n}명 도착</span></div>
         <div class="grid-2" style="margin:6px 0;"><button type="button" class="${onlyAbsent ? 'secondary' : ''}" data-act="all" style="margin:0;">전체 ${n}명</button><button type="button" class="${onlyAbsent ? '' : 'secondary'}" data-act="absent" style="margin:0;">안 온 사람만 ${n - got}명</button></div>
@@ -5984,6 +6081,8 @@ function openMoim(selId){
       moims.push(m); sel = m; saveMoims(); logEvent('모임 명단', null, `새 모임: ${m.name}`); return draw();
     }
     if (!sel) return;
+    if (act === 'xlsx') return fi.click();
+    if (act === 'tpl') return moimTemplate();
     if (act === 'rename') {
       const nm = await askInput('모임 이름', sel.name); if (!nm || !nm.trim()) return;
       const old = sel.name; sel.name = nm.trim(); saveMoims(); logEvent('모임 명단', null, `모임 이름: ${old} → ${sel.name}`); return draw();
