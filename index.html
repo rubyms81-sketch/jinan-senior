@@ -649,7 +649,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-33</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-34</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -5892,6 +5892,7 @@ function openCounter(){
     <label>총 인원</label><input type="number" id="cn-total" inputmode="numeric" placeholder="예: 25" style="margin:0 0 10px;text-align:center;font-size:1.2rem;">
     <button type="button" id="cn-tap" style="width:100%;min-height:120px;font-size:3rem;font-weight:700;border-radius:16px;background:#ebf8ff;color:#2b6cb0;border:2px solid #2b6cb0;"><span id="cn-num"></span></button>
     <div class="muted" style="font-size:.9rem;margin-top:4px;">누를 때마다 +1</div>
+    <div id="cn-done" style="display:none;margin-top:6px;font-size:1.2rem;font-weight:700;color:#2f855a;">✔ 완료되었습니다</div>
     <div style="margin-top:14px;border-top:1px solid #e2e8f0;padding-top:10px;">
       <b>🚌 행사 동행 인원 (여행)</b>
       <button type="button" id="cn-ex" style="width:100%;min-height:70px;font-size:2rem;font-weight:700;border-radius:14px;background:#faf5ff;color:#553c9a;border:2px solid #805ad5;margin-top:6px;"><span id="cn-exn"></span></button>
@@ -5902,9 +5903,10 @@ function openCounter(){
   const draw = () => {
     bg.querySelector('#cn-num').textContent = counter.total ? `${counter.n} / ${counter.total}` : `${counter.n}`;
     bg.querySelector('#cn-exn').textContent = `동행 ${counter.extra}명`;
+    bg.querySelector('#cn-done').style.display = counter.total && counter.n >= counter.total ? '' : 'none';
     if (document.activeElement !== bg.querySelector('#cn-total')) bg.querySelector('#cn-total').value = counter.total || ''; };
   bg.querySelector('#cn-total').oninput = e => { counter.total = Math.max(0, Number(e.target.value) || 0); saveCounter(); draw(); };
-  bg.querySelector('#cn-tap').onclick = () => { counter.n += 1; saveCounter(); draw(); };
+  bg.querySelector('#cn-tap').onclick = () => { counter.n += 1; saveCounter(); if (counter.total && counter.n === counter.total) playDingDong(); draw(); };
   bg.querySelector('#cn-ex').onclick = () => { counter.extra += 1; saveCounter(); draw(); };
   bg.querySelector('#cn-minus').onclick = () => { counter.n = Math.max(0, counter.n - 1); saveCounter(); draw(); };
   bg.querySelector('#cn-reset').onclick = async () => { if (!await ask('숫자를 0으로 되돌릴까요?\n(총 인원은 그대로 둡니다)')) return; counter.n = 0; counter.extra = 0; saveCounter(); draw(); };
@@ -6019,7 +6021,7 @@ function openEduCheck(){
   const days = eduDayList();
   if (!days.length) return notify('교육 날짜가 없어요.\n"활동일 수정"에서 교육 날짜를 먼저 넣어 주세요.');
   const bg = document.createElement('div'); bg.className = 'dlg-back';
-  bg.innerHTML = '<div class="dlg" style="text-align:left;max-height:90vh;overflow:auto;"></div>';
+  bg.innerHTML = '<div class="dlg" style="text-align:left;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;"></div>';
   document.body.appendChild(bg);
   const dlg = bg.querySelector('.dlg');
   const pastN = days.filter(([x]) => x <= today()).length;
@@ -6051,7 +6053,7 @@ function openEduCheck(){
       <div class="muted" style="text-align:center;font-size:.9rem;">🦺 조끼 착용 ${vOk} · 미착용 <b style="color:#975a16;">${vNo}</b></div>
       <div class="grid-2" style="margin:8px 0 4px;"><button type="button" class="${onlyAbsent ? 'secondary' : ''}" data-act="all" style="margin:0;">전체 ${n}명</button><button type="button" class="${onlyAbsent ? '' : 'secondary'}" data-act="absent" style="margin:0;">안 온 사람만 ${n - got}명</button></div>
       <input type="search" id="ec-q" placeholder="🔍 이름으로 찾기" value="${esc(q)}" autocomplete="off" style="margin:4px 0 8px;">
-      <div>${list.map(p => { const s = st(p); return `
+      <div style="flex:1;min-height:0;overflow:auto;">${list.map(p => { const s = st(p); return `
         <div style="display:flex;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px solid #edf2f7;${s.arr ? '' : 'background:#fff5f5;'}">
           <span style="flex:1;font-weight:600;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span>${p.phone && !s.arr ? ` <a class="tel-link" href="tel:${telOf(p)}" style="font-size:.85rem;font-weight:400;">📞</a>` : ''}${s.note ? `<br><span style="font-size:.8rem;color:#975a16;font-weight:400;">📝 ${esc(s.note)}</span>` : ''}</span>
           ${s.arr ? '' : `<button type="button" class="small secondary" data-note="${p.id}" style="width:auto;margin:0;padding:6px 8px;">📝 연락</button>`}
