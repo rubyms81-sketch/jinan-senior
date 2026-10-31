@@ -625,7 +625,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-13</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-14</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1241,7 +1241,7 @@ function goThisMonth(){ YEAR = Number(today().slice(0,4)); curMonth = Number(tod
 const mLogs = p => p.logs.filter(l => l.date.startsWith(monthKey()));
 function mstats(p){
   const ls = mLogs(p);
-  const attWarn = Object.entries(p.zAtt || {}).filter(([x, c]) => x.startsWith(monthKey()) && c.arr && (c.vest === false || c.badge === false)).length;
+  const attWarn = Object.entries(p.zAtt || {}).filter(([x, c]) => x.startsWith(monthKey()) && c.arr && (c.vest !== true || c.badge !== true)).length;
   const vestEdu = Object.entries(p.eduChk || {}).filter(([x, c]) => x.startsWith(monthKey()) && c.arr && c.vest === false).length;
   const leaves = ls.filter(l => l.leave==='이탈'), aways = ls.filter(l => l.leave==='자리비움');
   const pi = payInfo(p, monthKey().slice(0,4));
@@ -6078,7 +6078,7 @@ const zoneMembers = z => z.sites.flatMap(x => siteMembers(x.town, x.senior)).fil
 const attOf = (p, d) => (p.zAtt || {})[d] || null;
 function zoneAttStat(z, d){
   const ms = zoneMembers(z), a = ms.map(p => attOf(p, d) || {});
-  return { n: ms.length, arr: a.filter(x => x.arr).length, vOk: a.filter(x => x.arr && x.vest === true).length, vNo: a.filter(x => x.arr && x.vest === false).length, bOk: a.filter(x => x.arr && x.badge === true).length, bNo: a.filter(x => x.arr && x.badge === false).length };
+  return { n: ms.length, arr: a.filter(x => x.arr).length, vOk: a.filter(x => x.arr && x.vest === true).length, vNo: a.filter(x => x.arr && x.vest !== true).length, bOk: a.filter(x => x.arr && x.badge === true).length, bNo: a.filter(x => x.arr && x.badge !== true).length };
 }
 function openZoneAtt(z){
   const d = today();
@@ -6086,7 +6086,7 @@ function openZoneAtt(z){
   bg.innerHTML = '<div class="dlg" style="text-align:left;max-height:90vh;overflow:auto;"></div>';
   document.body.appendChild(bg);
   const dlg = bg.querySelector('.dlg'); let onlyAbsent = false, q = '';
-  const cyc = v => v === true ? '착용' : v === false ? '미착용' : '확인';
+  const cyc = v => v === true ? '착용' : '미착용';   // 누르면 착용, 다시 누르면 미착용 (안 누르면 미착용)
   const findP = id => participants.find(x => String(x.id) === String(id));
   const setRec = (p, patch, what) => {
     p.zAtt = p.zAtt || {};
@@ -6105,7 +6105,7 @@ function openZoneAtt(z){
         <div style="padding:8px 4px;border-bottom:1px solid #edf2f7;${r.arr ? '' : 'background:#fff5f5;'}">
           <div style="display:flex;align-items:center;gap:6px;"><span style="flex:1;font-weight:600;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span></span>
           <button type="button" class="small ${r.arr ? 'secondary' : ''}" data-arr="${p.id}" style="width:auto;margin:0;padding:6px 10px;">${r.arr ? '✔ 도착' : '도착'}</button></div>
-          ${r.arr ? `<div style="display:flex;gap:6px;margin-top:4px;"><button type="button" class="small ${r.vest === false ? 'danger' : 'secondary'}" data-vest="${p.id}" style="width:auto;margin:0;padding:4px 8px;font-size:.85rem;${r.vest === true ? 'background:#38a169;color:#fff;border-color:#2f855a;' : ''}">🦺 조끼 ${cyc(r.vest)}</button><button type="button" class="small ${r.badge === false ? 'danger' : 'secondary'}" data-badge="${p.id}" style="width:auto;margin:0;padding:4px 8px;font-size:.85rem;">🪪 명찰 ${cyc(r.badge)}</button></div>` : ''}
+          ${r.arr ? `<div style="display:flex;gap:6px;margin-top:4px;"><button type="button" class="small ${r.vest === true ? '' : 'danger'}" data-vest="${p.id}" style="width:auto;margin:0;padding:4px 8px;font-size:.85rem;${r.vest === true ? 'background:#38a169;color:#fff;border-color:#2f855a;' : ''}">🦺 조끼 ${cyc(r.vest)}</button><button type="button" class="small ${r.badge === true ? '' : 'danger'}" data-badge="${p.id}" style="width:auto;margin:0;padding:4px 8px;font-size:.85rem;${r.badge === true ? 'background:#38a169;color:#fff;border-color:#2f855a;' : ''}">🪪 명찰 ${cyc(r.badge)}</button></div>` : ''}
         </div>`; }).join('') || '<div class="muted" style="padding:8px 0;">해당하는 사람이 없습니다.</div>'}</div>
       <button type="button" class="full secondary" data-act="close" style="margin-top:10px;">닫기</button>`;
   };
@@ -6119,8 +6119,8 @@ function openZoneAtt(z){
     if (b.dataset.act === 'absent') { onlyAbsent = true; return draw(); }
     if (b.dataset.act === 'close') return bg.remove();
     if (b.dataset.arr) { const p = findP(b.dataset.arr), on = !((attOf(p, d) || {}).arr); setRec(p, on ? { arr: true, at: moimTime() } : { arr: false, at: '' }, on ? '도착' : '도착 취소'); }
-    else if (b.dataset.vest) { const p = findP(b.dataset.vest), r = attOf(p, d) || {}, nv = r.vest === true ? false : r.vest === false ? null : true; setRec(p, { vest: nv }, `조끼 ${cyc(nv)}`); }
-    else if (b.dataset.badge) { const p = findP(b.dataset.badge), r = attOf(p, d) || {}, nb = r.badge === true ? false : r.badge === false ? null : true; setRec(p, { badge: nb }, `명찰 ${cyc(nb)}`); }
+    else if (b.dataset.vest) { const p = findP(b.dataset.vest), r = attOf(p, d) || {}, nv = r.vest !== true; setRec(p, { vest: nv }, `조끼 ${cyc(nv)}`); }
+    else if (b.dataset.badge) { const p = findP(b.dataset.badge), r = attOf(p, d) || {}, nb = r.badge !== true; setRec(p, { badge: nb }, `명찰 ${cyc(nb)}`); }
     draw();
   });
   bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
