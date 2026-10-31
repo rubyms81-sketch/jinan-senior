@@ -263,11 +263,10 @@
   #mate-tabs button.done:not(.on) { border-color:#9ae6b4; background:#f0fff4; color:#22543d; }
   #mate-tabs:empty { display:none; }
   #mate-tabs .mt-lbl { display:none; }
-  #top-head { display:flex; align-items:center; gap:8px; flex-wrap:nowrap; min-width:0; margin:0 0 6px; }
-  #top-head:empty { display:none; }
-  #top-head .nm { font-weight:bold; font-size:1.05rem; white-space:nowrap; }
-  #top-head .tel-link { flex:none; white-space:nowrap; font-size:.9rem; padding:2px 8px; border:1px solid #90cdf4; border-radius:8px; background:#ebf8ff; text-decoration:none; }
-  #top-head .site { font-size:.85rem; color:#276749; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+  #how-bar #modal-sub { display:flex; align-items:center; gap:6px; flex-wrap:nowrap; min-width:0; margin:0 0 6px; overflow:hidden; }
+  #how-bar #modal-sub:empty { display:none; }
+  #how-bar #modal-sub .place { white-space:nowrap; margin:0; }
+  #how-bar #modal-sub .tel-row { flex:none; }
   #mate-tabs .mt-wrap { display:flex; flex-wrap:nowrap; align-items:center; gap:6px; margin:6px 0 0; padding:0 0 2px; background:none; border:0; border-radius:0; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
   #mate-tabs .mt-lbl { width:auto; flex:none; font-size:.8rem; color:#718096; white-space:nowrap; padding-right:2px; }
   #mate-tabs .mt-wrap button { flex:none; width:auto; margin:0; padding:5px 12px; border-radius:999px; font-size:.95rem; white-space:nowrap; }
@@ -649,16 +648,16 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-24</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-25</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
   <div class="crumb"><button class="secondary small" id="m-crumb" onclick="closeModal()">← 경로당 선택으로</button></div>
   <div class="m-head">
     <div style="flex:1;min-width:0;"><h3 id="modal-title" class="m-title">참여자 점검</h3>
-    <div id="modal-sub" class="m-sub"></div></div>
+    </div>
   </div>
-  <div id="how-bar" class="how-bar"><div id="top-head"></div><input type="hidden" id="c-how" value="직접"><div id="mate-tabs"></div></div>
+  <div id="how-bar" class="how-bar"><div id="modal-sub" class="m-sub"></div><input type="hidden" id="c-how" value="직접"><div id="mate-tabs"></div></div>
   <input type="file" id="photo-cam" accept="image/*" capture="environment" class="hidden" onchange="photoPicked(this)">
   <input type="file" id="photo-file" accept="image/*" class="hidden" onchange="photoPicked(this)">
   <div class="chg-box" id="sec-days"><div class="days-head"><h4 id="m-days-title">📅 이달 근무일</h4>
@@ -5497,9 +5496,7 @@ function openModal(id){
   // 전화번호를 누르면 바로 전화 걸기
   const tel = String(p.phone||'').replace(/[^0-9+]/g,'');
   // 동네(면)와 경로당 이름을 크게
-  document.getElementById('modal-sub').innerHTML = (p.phone ? `<span class="tel-row">${tel ? `<a class="tel-link" href="tel:${tel}">📞 ${esc(p.phone)}</a>` : esc(p.phone)}</span>` : '') + `<span class="place">📍 <b>${esc(p.town)}</b> · <b>${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</b>${mapOf(p.town, seniorOf(p)) ? ` <a class="tel-link" href="#" onclick="openSiteMap('${esc(p.town)}', this.dataset.s);return false;" data-s="${esc(seniorOf(p))}">🗺️ 위치</a>` : ''}</span>${zoneOf(p) ? `<span class="zone" onclick="leaderMenu(current())" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px;">🗺 ${esc(zoneOf(p).name)}${zoneOf(p).leaderId === p.id ? ' · 👤 팀장' : ''} ›</span>` : ''}`;
-  document.getElementById('c-memo').value = pl?.memo || '';
-  document.getElementById('memo-label').innerHTML = `점검 메모 · <b style="color:#1a365d;">${nmH(p)}</b> 어르신 <span class="muted" style="font-weight:normal;">(${esc(p.town)} ${esc(seniorOf(p))})</span>`;
+  document.getElementById('modal-sub').innerHTML = (p.phone ? `<span class="tel-row">${tel ? `<a class="tel-link" href="tel:${tel}">📞 ${esc(p.phone)}</a>` : esc(p.phone)}</span>` : '') + `<span class="place">📍 <b>${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</b>${mapOf(p.town, seniorOf(p)) ? ` <a class="tel-link" href="#" onclick="openSiteMap('${esc(p.town)}', this.dataset.s);return false;" data-s="${esc(seniorOf(p))}">🗺️ 위치</a>` : ''}</span>`;
   renderModal();
   document.getElementById('modal').classList.remove('hidden');
   window.scrollTo(0,0);
@@ -5507,10 +5504,6 @@ function openModal(id){
 
 // 같은 경로당에서 같이 일하는 어르신: 점검 화면 위에 이름 버튼으로 (누르면 그분 점검 화면으로 바로)
 function matesOf(p){ return participants.filter(q => q.town===p.town && seniorOf(q)===seniorOf(p)).sort((a,b) => stats(a).dropped - stats(b).dropped || a.name.localeCompare(b.name)); }   // 중도포기한 분도 뒤쪽에 남김
-function renderTopHead(p){
-  const h = document.getElementById('top-head'); if (!h) return;
-  h.innerHTML = `<span class="nm" onclick="openInfo()">${nmH(p)}</span>${p.phone ? telBtn(p) : '<span class="muted" style="font-size:.85rem;">연락처 없음</span>'}<span class="site">🏠 ${esc(p.town)} · ${esc(seniorOf(p))}</span>`;
-}
 function renderMates(p){
   const box = document.getElementById('mate-tabs'); if (!box) return;
   const ms = matesOf(p), d = document.getElementById('c-date').value || today();
@@ -5528,7 +5521,6 @@ async function switchMate(id){
 }
 function renderModal(){
   const p = current(), s = stats(p);
-  renderTopHead(p);
   renderMates(p);
   renderLeadBoard();
   renderPersonDays(p);
