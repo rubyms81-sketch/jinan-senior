@@ -261,6 +261,11 @@
   #mate-tabs button.on { background:var(--primary); color:#fff; border-color:var(--primary); font-weight:bold; }
   #mate-tabs button small { display:block; font-size:.75rem; font-weight:normal; opacity:.85; }
   #mate-tabs button.done:not(.on) { border-color:#9ae6b4; background:#f0fff4; color:#22543d; }
+  #mate-tabs:empty { display:none; }
+  #mate-tabs .mt-wrap { display:flex; flex-wrap:nowrap; align-items:center; gap:6px; margin:6px 0 0; padding:0 0 2px; background:none; border:0; border-radius:0; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
+  #mate-tabs .mt-lbl { width:auto; flex:none; font-size:.8rem; color:#718096; white-space:nowrap; padding-right:2px; }
+  #mate-tabs .mt-wrap button { flex:none; width:auto; margin:0; padding:5px 12px; border-radius:999px; font-size:.95rem; white-space:nowrap; }
+  #mate-tabs .mt-wrap button small { display:inline; margin-left:4px; font-size:.72rem; }
   .m-sub .place { display:inline-block; background:var(--tint); color:var(--primary-dk); border:1px solid var(--tint-bd); border-radius:8px; padding:2px 10px; font-size:1.05rem; margin-right:4px; }
   .m-sub .place b { font-size:1.15rem; color:#1a365d; }
   .m-sub .zone { color:#276749; font-size:.92rem; margin-right:4px; }
@@ -638,7 +643,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-22</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-23</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -647,7 +652,7 @@
     <div style="flex:1;min-width:0;"><h3 id="modal-title" class="m-title">참여자 점검</h3>
     <div id="modal-sub" class="m-sub"></div></div>
   </div>
-  <div id="how-bar" class="how-bar"><div class="seg" data-for="c-how" style="margin:0;"><button type="button" data-v="직접">🚶 직접 점검</button><button type="button" data-v="보고">📞 팀장님 보고</button></div><input type="hidden" id="c-how" value="직접"></div>
+  <div id="how-bar" class="how-bar"><div class="seg" data-for="c-how" style="margin:0;"><button type="button" data-v="직접">🚶 직접 점검</button><button type="button" data-v="보고">📞 팀장님 보고</button></div><input type="hidden" id="c-how" value="직접"><div id="mate-tabs"></div></div>
   <input type="file" id="photo-cam" accept="image/*" capture="environment" class="hidden" onchange="photoPicked(this)">
   <input type="file" id="photo-file" accept="image/*" class="hidden" onchange="photoPicked(this)">
   <div class="chg-box" id="sec-days"><div class="days-head"><h4 id="m-days-title">📅 이달 근무일</h4>
@@ -660,7 +665,6 @@
   <button class="warning full hidden" id="btn-addchg" onclick="addChange()">🔄 근무일 변경 추가</button>
   <button class="secondary full hidden" id="btn-custom" onclick="addChange({ reason: '입원' })">🏥 입원 체크</button>
   </div>
-  <div id="mate-tabs"></div>
   <div id="lead-board" class="hidden"></div>
   <div id="modal-notice"></div>
   <input type="hidden" id="edit-id">
@@ -5496,7 +5500,7 @@ function renderMates(p){
   const box = document.getElementById('mate-tabs'); if (!box) return;
   const ms = matesOf(p), d = document.getElementById('c-date').value || today();
   if (ms.length < 2) { box.innerHTML = ''; return; }
-  box.innerHTML = `<div class="mt-wrap"><div class="mt-lbl">👥 ${esc(seniorOf(p))} 같이 근무 ${ms.filter(counted).length}명</div>${ms.map(q => { const pd = !!checkDrafts[q.id] && q.id !== p.id, done = q.logs.some(l => l.date===d), gone = stats(q).dropped;
+  box.innerHTML = `<div class="mt-wrap"><div class="mt-lbl">👥 같이 근무 ${ms.filter(counted).length}명</div>${ms.map(q => { const pd = !!checkDrafts[q.id] && q.id !== p.id, done = q.logs.some(l => l.date===d), gone = stats(q).dropped;
     return `<button type="button" class="${q.id===p.id?'on':''} ${done?'done':''} ${gone?'quit':''}" data-mate="${q.id}">${done && !gone?'✔ ':''}<span class="nm">${nmH(q)}</span><small>${gone ? '중도포기' : q.id===p.id ? '지금 점검 중' : pd && !done ? '✏️ 저장 전' : done ? `${md(d)} 점검함` : '아직 안 함'}</small></button>`; }).join('')}</div>`;
   box.querySelectorAll('[data-mate]').forEach(b => b.onclick = () => switchMate(Number(b.dataset.mate)));
 }
