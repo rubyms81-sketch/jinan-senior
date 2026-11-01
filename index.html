@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:14px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-55</span></span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:14px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-56</span></span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2376,21 +2376,22 @@ function openZone(id){
           <select id="zn-range" style="width:auto;margin:0;padding:4px 6px;font-size:.85rem;"><option value="month">이번 달</option><option value="14">최근 2주</option><option value="7">최근 1주</option></select></div>
         <div id="zn-visit"></div>
       </div>
-      <div id="zn-today" style="text-align:center;font-size:1rem;margin:0 0 6px;"></div>
       <div id="zn-moims" style="margin:0 0 8px;"></div>
       <details id="zn-manage" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
         <summary class="zn-pull"><b>⚙️ 메뉴 꺼내기 ▼</b><small>오늘 도착·조끼·명찰 체크 · 오늘 조끼·명찰 리셋 · 경로당 고르기 · 담당 경로당 · 코스표 · 팀장 · 리셋</small><span class="chg-arrow"></span></summary>
         <div style="padding-top:8px;">
-      <button type="button" class="full" id="zn-att" style="margin:0 0 8px;">🙋 오늘 도착·조끼·명찰 체크</button>
-      <div style="text-align:center;margin:0 0 8px;"><button type="button" class="secondary small" id="zn-vreset" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↩ 오늘 조끼·명찰 리셋 (도착은 그대로)</button></div>
-      <button type="button" class="warning full" id="zn-add" style="margin-bottom:8px;">＋ 경로당 고르기</button>
-      <button type="button" class="full secondary" id="zn-moim-add" style="margin:0 0 8px;">👥 모임 구역 넣기 (여행·임원 등)</button>
-      <details id="zn-sites-box" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
+      <div style="text-align:right;margin:0 0 6px;"><button type="button" class="secondary small" id="zn-order-btn" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↕ 순서 바꾸기</button></div>
+      <div id="zn-today" data-zk="today" style="text-align:center;font-size:1rem;margin:0 0 8px;"></div>
+      <button type="button" class="full" id="zn-att" data-zk="att" style="margin:0 0 8px;">🙋 오늘 도착·조끼·명찰 체크</button>
+      <div data-zk="vreset" style="text-align:center;margin:0 0 8px;"><button type="button" class="secondary small" id="zn-vreset" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↩ 오늘 조끼·명찰 리셋 (도착은 그대로)</button></div>
+      <button type="button" class="warning full" id="zn-add" data-zk="add" style="margin-bottom:8px;">＋ 경로당 고르기</button>
+      <button type="button" class="full secondary" id="zn-moim-add" data-zk="moim" style="margin:0 0 8px;">👥 모임 구역 넣기 (여행·임원 등)</button>
+      <details id="zn-sites-box" data-zk="sites" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
         <summary><span id="zn-sites-title" style="font-weight:bold;">담당 경로당</span><span class="chg-arrow"></span></summary>
         <div id="zn-sites"></div>
       </details>
-      <button type="button" class="secondary full" id="zn-course" style="margin:0 0 10px;">📥 모니터링 코스표 내려받기 (엑셀)</button>
-      <div style="border-top:1px solid #e2e8f0;margin-top:10px;padding-top:10px;">
+      <button type="button" class="secondary full" id="zn-course" data-zk="course" style="margin:0 0 10px;">📥 모니터링 코스표 내려받기 (엑셀)</button>
+      <div data-zk-end="1" style="border-top:1px solid #e2e8f0;margin-top:10px;padding-top:10px;">
         <div id="zn-leader" style="margin-bottom:6px;font-size:.92rem;"></div>
         <label>팀장 연락처</label>
         <input type="tel" id="zn-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off" style="margin-bottom:10px;">
@@ -2633,6 +2634,8 @@ function openZone(id){
     renderZones(); $('#zn-today').innerHTML = zoneTodayHtml(z);
   };
   $('#zn-manage').open = !!openMem['zn-manage'];
+  zmEdit = false; applyZMenu(); drawZMenuEdit();
+  $('#zn-order-btn').onclick = () => zmToggle(z);
   $('#zn-fold').onclick = () => { $('#zn-manage').open = false; $('#zn-manage').scrollIntoView({ block: 'nearest' }); };
   $('#zn-course').onclick = () => {
     if (!z.sites.length) return notify('이 구역에 경로당이 없어요.');
@@ -6431,6 +6434,52 @@ function zoneAttStat(z, d){
   return { n: ms.length, arr: a.filter(x => x.arr).length, vOk: a.filter(x => x.arr && x.vest !== false).length, vNo: a.filter(x => x.arr && x.vest === false).length, bOk: a.filter(x => x.arr && x.badge !== false).length, bNo: a.filter(x => x.arr && x.badge === false).length };
 }
 // 구역 창 안: 오늘 도착·미착용 줄 (구역 칸에는 안 보임)
+// ⚙️ 메뉴 안 단추 순서 (이 휴대폰에만 저장, 2026-11-01). ▲▼로 바꿈
+const ZMENU_DEF = ['today','att','vreset','add','moim','sites','course'];
+const ZMENU_TXT = {today:'오늘 도착 현황', att:'오늘 도착·조끼·명찰 체크', vreset:'오늘 조끼·명찰 리셋', add:'경로당 고르기', moim:'모임 구역 넣기', sites:'담당 경로당', course:'모니터링 코스표'};
+let zmEdit = false, zmBefore = '';
+function zmenuOrder(){
+  try { const a = JSON.parse(localStorage.getItem('jinan_zmenu') || 'null');
+    if (Array.isArray(a) && a.length === ZMENU_DEF.length && ZMENU_DEF.every(k => a.includes(k))) return a; } catch(e) {}
+  return ZMENU_DEF.slice();
+}
+function zmenuSave(a){ try { localStorage.setItem('jinan_zmenu', JSON.stringify(a)); } catch(e) {} }
+function zmenuBox(){ return document.querySelector('#zn-manage > div'); }
+function applyZMenu(){
+  const box = zmenuBox(); if (!box) return;
+  const end = box.querySelector(':scope > [data-zk-end]'); if (!end) return;
+  zmenuOrder().forEach(k => { const el = box.querySelector(`:scope > [data-zk="${k}"]`); if (el) box.insertBefore(el, end); });
+}
+function drawZMenuEdit(){
+  const box = zmenuBox(); if (!box) return;
+  box.querySelectorAll('.zk-arrows').forEach(e => e.remove());
+  const btn = document.getElementById('zn-order-btn');
+  if (btn) btn.textContent = zmEdit ? '✔ 순서 정했어요' : '↕ 순서 바꾸기';
+  if (!zmEdit) return;
+  box.querySelectorAll(':scope > [data-zk]').forEach(el => {
+    const k = el.dataset.zk;
+    const row = document.createElement('div'); row.className = 'zk-arrows';
+    row.style.cssText = 'display:flex;gap:6px;align-items:center;margin:0 0 4px;';
+    row.innerHTML = `<span class="muted" style="flex:1;font-size:.85rem;">${ZMENU_TXT[k]}</span><button type="button" class="secondary small" style="width:auto;margin:0;padding:4px 10px;">▲ 위로</button><button type="button" class="secondary small" style="width:auto;margin:0;padding:4px 10px;">▼ 아래로</button>`;
+    const [up, dn] = row.querySelectorAll('button');
+    up.onclick = () => zmMove(k, -1); dn.onclick = () => zmMove(k, 1);
+    el.parentNode.insertBefore(row, el);
+  });
+}
+function zmMove(k, dir){
+  const a = zmenuOrder(); const i = a.indexOf(k), j = i + dir;
+  if (j < 0 || j >= a.length) return;
+  [a[i], a[j]] = [a[j], a[i]]; zmenuSave(a); applyZMenu(); drawZMenuEdit();
+}
+function zmToggle(z){
+  if (!zmEdit) { zmEdit = true; zmBefore = JSON.stringify(zmenuOrder()); drawZMenuEdit(); return; }
+  zmEdit = false; drawZMenuEdit();
+  const now = zmenuOrder();
+  if (JSON.stringify(now) !== zmBefore) {
+    saveData(false);
+    logEvent('구역 메뉴 순서', null, `${z.name} · 순서: ${now.map(k => ZMENU_TXT[k]).join(' → ')}`, today());
+  }
+}
 function zoneTodayHtml(z){
   const A = zoneAttStat(z, today());
   return A.n ? `🙋 오늘 도착 <b style="font-size:1.2rem;">${A.arr}/${A.n}</b> <span class="muted" style="font-size:.85rem;">· 🦺 미착용 ${A.vNo} · 🪪 미착용 ${A.bNo}</span>` : '';
