@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:14px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-57</span></span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:14px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-58</span></span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -576,12 +576,16 @@
   <div class="card" id="ui-card" data-mv="ui">
     <details class="chg-box" id="ui-box" style="margin-top:0;border-top:none;padding-top:0;" ontoggle="if(this.open) renderUI()">
       <summary><h3>🛠️ 설정</h3><span class="chg-arrow"></span></summary>
-      <div style="margin-top:8px;">
+      <div style="margin-top:8px;" id="set-body">
+      <div style="text-align:right;margin:0 0 6px;"><button type="button" class="secondary small" id="set-order-btn" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↕ 묶음 순서 바꾸기</button></div>
+      <div class="set-grp" data-sg="base">
         <label>🔒 비밀번호 잠금</label>
         <button type="button" class="secondary full" id="lk-btn" onclick="setLockMode()">🔒 잠금 설정</button>
         <button type="button" class="secondary full" onclick="openCatOrder()" style="margin:0 0 8px;">↕ 경로당 사업 순서 정하기</button>
         <label>화면 색깔</label>
         <div class="ui-opts" id="ui-theme"></div>
+      </div>
+      <details class="chg-box set-grp" data-sg="font" style="margin:8px 0;"><summary><b>🔤 글씨 (크기·두께·글씨체)</b><span class="chg-arrow"></span></summary><div style="margin-top:6px;">
         <label>글씨 크기</label>
         <div style="display:flex;align-items:center;gap:8px;margin:5px 0 8px;">
           <button type="button" class="secondary" onclick="uiSize(-1)" style="margin:0;width:auto;padding:8px 18px;font-size:1.2rem;">－</button>
@@ -592,6 +596,9 @@
         <div class="ui-opts" id="ui-weight"></div>
         <label>글씨체</label>
         <div class="ui-opts" id="ui-font" style="grid-template-columns:repeat(2,1fr);"></div>
+        <div class="notice" id="ui-sample" style="font-size:1rem;">가나다 미리보기 — 동향면 고부 경로당 · 조끼 착용 · 10월 14일(수)</div>
+      </div></details>
+      <details class="chg-box set-grp" data-sg="title" style="margin:8px 0;"><summary><b>🏷️ 맨 위 제목 (글자·색·꾸밈·위치)</b><span class="chg-arrow"></span></summary><div style="margin-top:6px;">
         <label>맨 위 제목 글자</label>
         <input type="text" id="ui-hdtext" maxlength="30" placeholder="진안군 노인회 일자리 현장 점검" autocomplete="off" style="margin:5px 0 8px;">
         <label>제목 색깔</label>
@@ -606,17 +613,25 @@
         <div class="ui-opts" id="ui-sc3d" style="grid-template-columns:repeat(2,1fr);"></div>
         <label>제목 위치</label>
         <div class="ui-opts" id="ui-hdpos"></div>
+      </div></details>
+      <div class="set-grp" data-sg="wx" style="margin-top:8px;"><b>🌤️ 날씨</b>
         <label>날씨 표시</label>
         <div class="ui-opts" id="ui-wx" style="grid-template-columns:repeat(2,1fr);"></div>
+        <label>날씨 효과</label>
+        <div class="ui-opts" id="ui-wxfx" style="grid-template-columns:repeat(2,1fr);"></div>
+      </div>
+      <div class="set-grp" data-sg="alarm" style="margin-top:8px;"><b>⏰ 알림·알람</b>
         <label>🔔 알림 소리 (모든 소리·진동)</label>
         <div class="ui-opts" id="ui-sound" style="grid-template-columns:repeat(2,1fr);"></div>
         <label>⏰ 점검 결과 알람 시간</label>
         <input type="time" id="ui-alarmat" style="margin:5px 0 12px;">
+      </div>
+      <div class="set-grp" data-sg="etc" style="margin-top:8px;"><b>⚙️ 기타 규칙</b>
         <label>⏳ 중도포기 기준 일수 (활동 중단 후)</label>
         <div class="ui-opts" style="grid-template-columns:52px 1fr 52px;align-items:center;margin:5px 0 12px;"><button type="button" onclick="quitDaysSet(-1)">－</button><b id="ui-qdays" style="text-align:center;">45일</b><button type="button" onclick="quitDaysSet(1)">＋</button></div>
-        <label>날씨 효과</label>
-        <div class="ui-opts" id="ui-wxfx" style="grid-template-columns:repeat(2,1fr);"></div>
-        <div class="notice" id="ui-sample" style="font-size:1rem;">가나다 미리보기 — 동향면 고부 경로당 · 조끼 착용 · 10월 14일(수)</div>
+      </div>
+      <div class="set-grp" data-sg="quota" style="margin-top:8px;"><b>📌 면별 배정 인원</b><div id="quota-box" style="margin-top:6px;"></div></div>
+      <div data-sg-end="1"></div>
         <button type="button" class="secondary full" onclick="uiReset()">처음 설정으로 되돌리기</button>
         <button type="button" class="secondary full" onclick="mvReset()">↩ 화면 배치 처음으로</button>
       </div>
@@ -6478,6 +6493,81 @@ function zmToggle(z){
     logEvent('구역 메뉴 순서', null, `${z.name} · 순서: ${now.map(k => ZMENU_TXT[k]).join(' → ')}`, today());
   }
 }
+// ⚙️ 설정 묶음 순서 + 면별 배정 인원 (2026-11-01)
+const SET_DEF = ['base','font','title','wx','alarm','etc','quota'];
+const SET_TXT = {base:'기본', font:'글씨', title:'맨 위 제목', wx:'날씨', alarm:'알림·알람', etc:'기타 규칙', quota:'면별 배정 인원'};
+let setEdit = false, setBefore = '';
+function setOrder(){
+  try { const a = JSON.parse(localStorage.getItem('jinan_setorder') || 'null');
+    if (Array.isArray(a)) { const k = a.filter(x => SET_DEF.includes(x)); SET_DEF.forEach(x => { if (!k.includes(x)) k.push(x); }); return k; } } catch(e) {}
+  return SET_DEF.slice();
+}
+function setOrderSave(a){ try { localStorage.setItem('jinan_setorder', JSON.stringify(a)); } catch(e) {} }
+function applySetOrder(){
+  const box = document.getElementById('set-body'); if (!box) return;
+  const end = box.querySelector(':scope > [data-sg-end]'); if (!end) return;
+  setOrder().forEach(k => { const el = box.querySelector(`:scope > [data-sg="${k}"]`); if (el) box.insertBefore(el, end); });
+}
+function drawSetEdit(){
+  const box = document.getElementById('set-body'); if (!box) return;
+  box.querySelectorAll(':scope > .sg-arrows').forEach(e => e.remove());
+  const btn = document.getElementById('set-order-btn');
+  if (btn) btn.textContent = setEdit ? '✔ 순서 정했어요' : '↕ 묶음 순서 바꾸기';
+  if (!setEdit) return;
+  box.querySelectorAll(':scope > [data-sg]').forEach(el => {
+    const k = el.dataset.sg;
+    const row = document.createElement('div'); row.className = 'sg-arrows';
+    row.style.cssText = 'display:flex;gap:6px;align-items:center;margin:6px 0 4px;';
+    row.innerHTML = `<span class="muted" style="flex:1;font-size:.85rem;">${SET_TXT[k]}</span><button type="button" class="secondary small" style="width:auto;margin:0;padding:4px 10px;">▲ 위로</button><button type="button" class="secondary small" style="width:auto;margin:0;padding:4px 10px;">▼ 아래로</button>`;
+    const [up, dn] = row.querySelectorAll('button');
+    up.onclick = () => setMove(k, -1); dn.onclick = () => setMove(k, 1);
+    el.parentNode.insertBefore(row, el);
+  });
+}
+function setMove(k, dir){
+  const a = setOrder(); const i = a.indexOf(k), j = i + dir;
+  if (j < 0 || j >= a.length) return;
+  [a[i], a[j]] = [a[j], a[i]]; setOrderSave(a); applySetOrder(); drawSetEdit();
+}
+function setToggle(){
+  if (!setEdit) { setEdit = true; setBefore = JSON.stringify(setOrder()); drawSetEdit(); return; }
+  setEdit = false; drawSetEdit();
+  const now = setOrder();
+  if (JSON.stringify(now) !== setBefore) {
+    saveData(false);
+    logEvent('설정 묶음 순서', null, now.map(k => SET_TXT[k]).join(' → '), today());
+  }
+}
+// 면별 배정 인원 (이 휴대폰에 저장, 마감 엑셀 "면별 배정 인원" 시트)
+function quotaAll(){ try { return JSON.parse(localStorage.getItem('jinan_quota') || '{}') || {}; } catch(e) { return {}; } }
+function drawQuota(){
+  const box = document.getElementById('quota-box'); if (!box) return;
+  const q = quotaAll();
+  box.innerHTML = TOWNS.map(t => `<div style="display:flex;align-items:center;gap:6px;margin:4px 0;flex-wrap:wrap;">
+    <b style="width:58px;">${t}</b>
+    <span class="muted" style="font-size:.85rem;">일반</span><input type="number" min="0" inputmode="numeric" data-q="${t}|n" value="${q[t] && q[t].n != null ? q[t].n : ''}" style="width:72px;margin:0;">
+    <span class="muted" style="font-size:.85rem;">게이트</span><input type="number" min="0" inputmode="numeric" data-q="${t}|g" value="${q[t] && q[t].g != null ? q[t].g : ''}" style="width:72px;margin:0;">
+  </div>`).join('');
+}
+function quotaChange(e){
+  const el = e.target; if (!el.dataset || !el.dataset.q) return;
+  const [t, kind] = el.dataset.q.split('|');
+  const q = quotaAll(); q[t] = q[t] || {};
+  const old = q[t][kind] ?? null;
+  const v = el.value === '' ? null : Math.max(0, parseInt(el.value, 10) || 0);
+  q[t][kind] = v;
+  try { localStorage.setItem('jinan_quota', JSON.stringify(q)); } catch(_) {}
+  if (old !== v) {
+    el.value = v == null ? '' : v;
+    saveData(false);
+    logEvent('배정 인원', null, `${t} ${kind === 'g' ? '게이트' : '일반'} 배정 ${old ?? '-'} → ${v ?? '-'}`, today());
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  applySetOrder(); drawQuota();
+  const ob = document.getElementById('set-order-btn'); if (ob) ob.onclick = setToggle;
+  const qb = document.getElementById('quota-box'); if (qb) qb.addEventListener('change', quotaChange);
+});
 function zoneTodayHtml(z){
   const A = zoneAttStat(z, today());
   return A.n ? `🙋 오늘 도착 <b style="font-size:1.2rem;">${A.arr}/${A.n}</b> <span class="muted" style="font-size:.85rem;">· 🦺 미착용 ${A.vNo} · 🪪 미착용 ${A.bNo}</span>` : '';
@@ -7533,6 +7623,10 @@ function exportExcel(){
     const wsZ = zr.length ? XLSX.utils.json_to_sheet(zr) : XLSX.utils.aoa_to_sheet([['구역 출석 기록이 없습니다.']]);
     wsZ['!cols'] = [12,12,10,14,10,8,14,14,8].map(w => ({ wch: w }));
     XLSX.utils.book_append_sheet(wb, wsZ, '구역 출석'); }
+  { const qa = quotaAll();
+    const qr = TOWNS.filter(t => qa[t] && (qa[t].n != null || qa[t].g != null)).map(t => { const c = townCount(t), n = qa[t].n, g = qa[t].g;
+      return { '면': t, '배정 일반': n ?? '', '현재 일반': c.act, '일반 차이(현재-배정)': n != null ? c.act - n : '', '배정 게이트': g ?? '', '현재 게이트': c.gate, '게이트 차이(현재-배정)': g != null ? c.gate - g : '' }; });
+    XLSX.utils.book_append_sheet(wb, qr.length ? XLSX.utils.json_to_sheet(qr) : XLSX.utils.aoa_to_sheet([['면별 배정 인원을 아직 넣지 않았습니다.']]), '면별 배정 인원'); }
   XLSX.utils.book_append_sheet(wb, ws5, '변경 이력');
   // 올려서 넣은 일정표 (활동일·역량강화교육)
   const sch = schedLoad();
