@@ -650,7 +650,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.10.31-44</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-45</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2197,6 +2197,16 @@ const monitorOfSite = (town, senior) => monitors.find(m => m.sites?.some(x => x.
 const siteKey = (town, senior) => town + '|' + senior;
 const zoneOfSite = (town, senior) => zones.find(z => z.sites.some(x => x.town===town && x.senior===senior)) || null;
 const zoneOf = p => zoneOfSite(p.town, seniorOf(p));
+// 구역의 면: 고른 면(z.town) → 없으면 들어 있는 경로당의 면
+const zoneTown = z => z.town || z.sites[0]?.town || null;
+// 👤 팀장 고르기: 고른 면의 팀장만 보여 줌 (면 고르기는 따로 위에 둠)
+function townSelHtml(t){ return `<label>🏘 면 고르기</label><select id="ld-town" style="margin-bottom:8px;">${TOWNS.map(x => `<option value="${esc(x)}" ${x === t ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`; }
+function leaderPickHtml(t, L, z){
+  const ms = monitors.filter(m => m.town === t);
+  return ms.length
+    ? `<label>👤 팀장 고르기 (${esc(t)})</label><select id="ld-pick" style="margin-bottom:10px;"><option value="">— 고르기 —</option>${ms.map(m => `<option value="${m.id}" ${(L ? L.name : z.leaderName) === m.name ? 'selected' : ''}>${esc(m.name)}${m.sites?.length ? ` (${m.sites.length}곳)` : ''}</option>`).join('')}</select>`
+    : `<div class="muted" style="margin-bottom:10px;">${esc(t)}에 등록된 팀장이 없어요. (👤 팀장 명단 엑셀로 올려 주세요)</div>`;
+}
 // 인원수: 중도포기한 분과 아직 연계 중인 신규는 빼고 셈 (연계 끝난 뒤부터 포함)
 const counted = p => !stats(p).dropped && !p.linking;
 const siteMembers = (town, senior) => participants.filter(p => p.town===town && seniorOf(p)===senior)
@@ -2396,8 +2406,9 @@ function openZone(id){
   $('#zn-name').value = z.name; $('#zn-phone').value = z.phone || '';
   $('#zn-lead-ed').onclick = () => {
     const L = participants.find(x => x.id === z.leaderId), d2 = document.createElement('div'); d2.className = 'dlg-back';
+    const zTown0 = zoneTown(z) || myTowns[0];
     d2.innerHTML = `<div class="dlg" style="max-width:360px;"><div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">👤 ${esc(z.name)} 팀장 정보</div>
-      ${monitors.length ? `<label>👤 팀장 고르기</label><select id="ld-pick" style="margin-bottom:10px;"><option value="">— 고르기 —</option>${[...myTowns, ...TOWNS.filter(t => !myTowns.includes(t))].map(t => { const ms = monitors.filter(m => m.town === t); return ms.length ? `<optgroup label="${esc(t)}">${ms.map(m => `<option value="${m.id}" ${(L ? L.name : z.leaderName) === m.name ? 'selected' : ''}>${esc(m.name)}${m.sites?.length ? ` (${m.sites.length}곳)` : ''}</option>`).join('')}</optgroup>` : ''; }).join('')}</select>` : ''}
+      ${townSelHtml(zTown0)}<div id="ld-pick-box">${leaderPickHtml(zTown0, L, z)}</div>
       <label>팀장 성명</label><input type="text" id="ld-name" value="${esc(L ? L.name : (z.leaderName || ''))}" autocomplete="off">
       <label>연락처</label><input type="tel" id="ld-phone" class="phone-in" inputmode="numeric" value="${esc(z.phone || (L && L.phone) || '')}" placeholder="010-0000-0000" autocomplete="off">
       <label>주소</label><input type="text" id="ld-addr" value="${esc(z.leaderAddr || (L && L.address) || '')}" autocomplete="off">
@@ -2406,7 +2417,10 @@ function openZone(id){
     document.body.appendChild(d2);
     d2.querySelector('#ld-cancel').onclick = () => d2.remove();
     let pickSites = null;
-    d2.querySelector('#ld-pick')?.addEventListener('change', async e => { const m = monitors.find(x => String(x.id) === e.target.value); if (!m) return;
+    d2.addEventListener('change', async e => {
+      if (e.target.id === 'ld-town') { d2.querySelector('#ld-pick-box').innerHTML = leaderPickHtml(e.target.value, null, z); return; }
+      if (e.target.id !== 'ld-pick') return;
+      const m = monitors.find(x => String(x.id) === e.target.value); if (!m) return;
       const set = (id, v) => { d2.querySelector(id).value = v || ''; };
       set('#ld-name', m.name); set('#ld-phone', m.phone); set('#ld-addr', m.addr); set('#ld-car', m.car); set('#ld-carno', m.carNo);
       pickSites = m.sites?.length && await ask(`${m.name} 팀장 담당 경로당 ${m.sites.length}곳을 이 구역에 넣을까요?\n${m.sites.map(x => x.senior).join(', ')}`) ? m.sites : null; });
@@ -2414,13 +2428,14 @@ function openZone(id){
       const nmv = d2.querySelector('#ld-name').value.trim(), ph = fmtPhone(d2.querySelector('#ld-phone').value);
       const P = nmv ? (participants.find(q => q.name === nmv && z.sites.some(x => x.town === q.town)) || participants.find(q => q.name === nmv)) : null;
       logEvent('팀장 정보 수정', P || null, `${z.name}: ${(L ? L.name : z.leaderName) || '(없음)'} → ${nmv || '(없음)'}${ph ? ' · ' + ph : ''}`);
+      if (d2.querySelector('#ld-town')) z.town = d2.querySelector('#ld-town').value;
       z.leaderName = nmv; z.phone = ph; if (P) z.leaderId = P.id; else delete z.leaderId;
       z.leaderAddr = d2.querySelector('#ld-addr').value.trim(); z.car = d2.querySelector('#ld-car').value.trim(); z.carNo = d2.querySelector('#ld-carno').value.trim();
       logEvent('팀장 정보 수정', P || null, `${z.name}: 주소 ${z.leaderAddr || '-'} · 자동차 ${z.car || '-'} ${z.carNo || ''}`);
       if (pickSites) { zones.forEach(o => { if (o !== z) o.sites = o.sites.filter(x => !pickSites.some(y => y.town === x.town && y.senior === x.senior)); }); z.sites = pickSites.map(x => ({ ...x }));
         logEvent('구역 경로당', null, `${z.name}: ${nmv} 팀장 담당 경로당 ${pickSites.length}곳 (${pickSites.map(x => x.senior).join(', ')})`); }
       // 팀장 명단에도 같이 고침
-      if (nmv) { const town = z.sites[0]?.town || (P && P.town) || myTowns[0]; let m = monitors.find(x => x.name === nmv && x.town === town);
+      if (nmv) { const town = zoneTown(z) || (P && P.town) || myTowns[0]; let m = monitors.find(x => x.name === nmv && x.town === town);
         if (!m) { monitors.push(m = { id: Date.now(), town, name: nmv, sites: [] }); logEvent('팀장 등록', null, `${town} ${nmv} (구역 ${z.name})`); }
         Object.assign(m, { phone: ph || m.phone || '', addr: z.leaderAddr || m.addr || '', car: z.car || m.car || '', carNo: z.carNo || m.carNo || '' }); if (z.sites.length) m.sites = z.sites.map(x => ({ ...x })); saveMonitors(); }
       saveZones(); d2.remove(); $('#zn-phone').value = z.phone; drawMain(); renderZones();
