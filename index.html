@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:14px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-63</span></span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:14px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-64</span></span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3908,6 +3908,14 @@ async function saveDocPhoto(p, file){
   logEvent('서류 사진 넣기', p, '비대면 교육 서류(조끼·서명) 사진 넣음', today());
   saveData(false);
 }
+// 사진 필요 없음: 게시판 "사진 없음" 표시에서 빼고 변경 이력에 남김 (사진을 나중에 넣으면 그대로 사진 있음)
+async function docNoNeed(id){
+  const p = participants.find(x => x.id === id); if (!p) return;
+  if (!await ask(`${p.name} 어르신은 서류 사진이 필요 없는 것으로 처리할까요?`)) return;
+  p.docNoNeed = today(); delete p.docNoPhoto;
+  logEvent('서류 사진 필요 없음', p, '비대면 교육 서류 사진 필요 없음으로 처리', today());
+  saveData(false); renderPhotoAlert(); renderList(); if (current()?.id === p.id) renderModal();
+}
 async function docPhotoAdd(id){
   const p = participants.find(x => x.id === id); if (!p) return;
   const f = await pickImage(); if (!f) return;
@@ -3944,7 +3952,7 @@ async function drawStorage(){
 }
 function renderPhotoAlert(){
   const box = document.getElementById('photo-alert'); if (!box) return;
-  const ps = participants.filter(q => q.docOk && q.docNoPhoto && !q.docPhoto && !q.quit && !q.linking);
+  const ps = participants.filter(q => q.docOk && q.docNoPhoto && !q.docNoNeed && !q.docPhoto && !q.quit && !q.linking);
   box.innerHTML = ps.length ? `<div class="notice" style="background:#fffaf0;border-color:#f6ad55;"><b style="color:#c05621;">📷 신규 비대면 서류 사진 없음 ${ps.length}명</b> <span class="muted" style="font-size:.85rem;">이름을 누르면 사진을 넣을 수 있어요</span>
     <div style="margin-top:4px;">${ps.map(q => `<button type="button" class="small secondary" style="width:auto;margin:2px 4px 2px 0;" onclick="openModal(${q.id})">${esc(q.name)}</button>`).join('')}</div></div>` : '';
 }
@@ -5760,7 +5768,7 @@ function renderModal(){
       <br>받은 시간: <b style="color:${es.lackSafe ? 'var(--danger)' : '#2c5282'}">안전 ${es.safe}/${EDU_NEED.safe}시간</b> · 전체 ${es.total}/${EDU_NEED.total}시간${es.lackSafe ? ` → <b style="color:var(--danger)">안전 ${es.lackSafe}시간 더 필요</b>` : es.lackTotal ? ` → <b>${es.lackTotal}시간 더 필요</b>` : ''}</div>` + n; }
   if (fixList(p).length) n = fixList(p).map(x => `<div class="notice" style="background:#fffaf0;border-color:#f6ad55;display:flex;align-items:center;gap:8px;"><b style="flex:1;color:#c05621;">🔧 ${esc(x.n)} <span class="muted" style="font-weight:normal;font-size:.85rem;">${md(x.date)}</span></b><button type="button" class="small" onclick="fixDone(${p.id}, '${x.id}')" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">✔ 교체함</button></div>`).join('') + n;
   if (docWait(p) && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;"><span class="tag-doc" style="font-size:1rem;">!</span><b style="flex:1;color:#22543d;">비대면 교육 서류</b><button type="button" class="small" onclick="docConfirm(${p.id})" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">📄 서류 확인</button></div>` + n;
-  if (p.docNeed && p.docOk && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="color:#22543d;">📄 비대면 서류 확인 완료</b>${p.docPhoto ? ` <span>📷 사진 있음</span> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docPhotoView(${p.id})">보기</button>` : ` <b style="color:#c05621;">📷 사진 없음</b> <button type="button" class="small" style="width:auto;margin:0;" onclick="docPhotoAdd(${p.id})">사진 넣기</button>`}</div>` + n;
+  if (p.docNeed && p.docOk && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="color:#22543d;">📄 비대면 서류 확인 완료</b>${p.docPhoto ? ` <span>📷 사진 있음</span> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docPhotoView(${p.id})">보기</button>` : ` ${p.docNoNeed ? '<span style="color:#22543d;">📷 사진 필요 없음 (처리됨)</span>' : `<b style="color:#c05621;">📷 사진 없음</b> <button type="button" class="small" style="width:auto;margin:0;" onclick="docPhotoAdd(${p.id})">사진 넣기</button> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docNoNeed(${p.id})">사진 필요 없음</button>`}`}</div>` + n;
   if (p.guess) n = `<div class="notice">📍 경로당 <b>"${esc(p.senior)}"</b>은 주소(${esc(p.address||'')})를 보고 자동으로 넣은 <b>추정</b>입니다.<br>맞으면 아래 "어르신 정보 고치기"에서 그대로 <b>정보 저장</b>, 틀리면 경로당 이름을 고쳐서 저장해 주세요.</div>` + n;
   if (!s.dropped && p.pause) n = `<div class="notice" style="background:#fff5f5;border-color:#742a2a;"><b style="color:#742a2a;">💀 활동 중단 ${mdK(p.pause)} 시작 · 만료 ${mdK(pauseEnd(p))} (${leftTxt(pauseLeft(p))})</b></div>` + n;
   document.getElementById('modal-notice').innerHTML = n;
@@ -7446,7 +7454,7 @@ function exportExcel(){
 
   const kinds1 = list.map(p => monthKind(p, monthKey()));
   const sheet1 = list.map((p, i) => { const s = stats(p), m = mstats(p); return {
-    '표시':KIND_TXT[kinds1[i]] || '', '읍면':p.town, '경로당':p.senior, '우수 경로당':isBest(p.town, seniorOf(p)) ? '👑' : '', '구역':zoneOf(p)?.name || '', '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '성별':p.sex || '', '생일':bdayText(p.bday), '근무 시작':startTag(p) ? `${Number(p.start.slice(5))}월부터` : '', '신규 등록일':newUntil(p) ? p.regDay : '', '중도포기일':quitDayOf(p), '중도포기 사유':stats(p).dropped ? (p.quitWhy || stats(p).status) : '', '활동 중단 시작':p.pause || '', '장기요양 탈락':p.ltc || '', '중도포기서':p.quitPaper ? (p.quitPaper.ok ? `받음 (${p.quitPaper.ok})` : '미확인') : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : p.linkDone ? `연계 끝 (${p.linkDone.day})` : '', '비대면 교육 서류':p.docNeed ? (p.docOk ? `확인 (${p.docOk})` : '미확인') : '', '서류 사진':p.docNeed && p.docOk ? (p.docPhoto ? `있음 (${p.docPhoto})` : '없음') : '', '교체 필요':fixList(p).map(x => `${x.n} (${x.date})`).join(', '), '교체 완료':(p.fixDone || []).map(x => `${x.n.replace(/\s*파손$/, '')} ${x.day}`).join(', '), '나이':p.age, '태어난 해':p.birth || '', '연락처':p.phone, '주소':p.address,
+    '표시':KIND_TXT[kinds1[i]] || '', '읍면':p.town, '경로당':p.senior, '우수 경로당':isBest(p.town, seniorOf(p)) ? '👑' : '', '구역':zoneOf(p)?.name || '', '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '성별':p.sex || '', '생일':bdayText(p.bday), '근무 시작':startTag(p) ? `${Number(p.start.slice(5))}월부터` : '', '신규 등록일':newUntil(p) ? p.regDay : '', '중도포기일':quitDayOf(p), '중도포기 사유':stats(p).dropped ? (p.quitWhy || stats(p).status) : '', '활동 중단 시작':p.pause || '', '장기요양 탈락':p.ltc || '', '중도포기서':p.quitPaper ? (p.quitPaper.ok ? `받음 (${p.quitPaper.ok})` : '미확인') : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : p.linkDone ? `연계 끝 (${p.linkDone.day})` : '', '비대면 교육 서류':p.docNeed ? (p.docOk ? `확인 (${p.docOk})` : '미확인') : '', '서류 사진':p.docNeed && p.docOk ? (p.docPhoto ? `있음 (${p.docPhoto})` : (p.docNoNeed ? `사진 필요 없음 (${p.docNoNeed})` : '없음')) : '', '교체 필요':fixList(p).map(x => `${x.n} (${x.date})`).join(', '), '교체 완료':(p.fixDone || []).map(x => `${x.n.replace(/\s*파손$/, '')} ${x.day}`).join(', '), '나이':p.age, '태어난 해':p.birth || '', '연락처':p.phone, '주소':p.address,
     [`${curMonth}월 점검 횟수`]:mLogs(p).length, [`${curMonth}월 감점`]:-m.pts, [`${curMonth}월 자리 비움`]:m.aways.length, [`${curMonth}월 일당 미지급 일수`]:m.unpaid,
     [`${curMonth}월 조끼 미착용`]:m.vest, [`${curMonth}월 명찰 미착용`]:m.badge, '누적 이탈 횟수':s.leaves, '누적 감점':s.penalty, '상태':s.status, '마지막 점검일':s.last, '2027 제외':p.ex27 ? '제외 표시' : '',
     [`${curMonth}월 활동 날짜`]: personDays(p, monthKey()).map(d => Number(d.slice(8,10))).join(', '),
@@ -7522,7 +7530,7 @@ function exportExcel(){
   XLSX.utils.book_append_sheet(wb, ws2, '점검 기록');
   // 그달 신규 인원
   const ncRows = nc.map(p => ({ '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '나이':p.age, '연락처':p.phone,
-    '근무 시작':p.start ? `${Number(p.start.slice(5))}월부터` : '', '중도포기 서류':p.quitDay ? (p.quitDocOk ? `확인 (${p.quitDocOk})${p.quitDocPhoto ? ' · 사진 있음' : ' · 사진 없음'}` : '미확인') : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : '연계 끝', '비대면 교육 서류':p.docNeed ? (p.docOk ? `확인 (${p.docOk})` : '미확인') : '', '서류 사진':p.docNeed && p.docOk ? (p.docPhoto ? `있음 (${p.docPhoto})` : '없음') : '',
+    '근무 시작':p.start ? `${Number(p.start.slice(5))}월부터` : '', '중도포기 서류':p.quitDay ? (p.quitDocOk ? `확인 (${p.quitDocOk})${p.quitDocPhoto ? ' · 사진 있음' : ' · 사진 없음'}` : '미확인') : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : '연계 끝', '비대면 교육 서류':p.docNeed ? (p.docOk ? `확인 (${p.docOk})` : '미확인') : '', '서류 사진':p.docNeed && p.docOk ? (p.docPhoto ? `있음 (${p.docPhoto})` : (p.docNoNeed ? `사진 필요 없음 (${p.docNoNeed})` : '없음')) : '',
     [`${curMonth}월 활동일 수`]: personDays(p, monthKey()).length }));
   const wsN = ncRows.length ? XLSX.utils.json_to_sheet(ncRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 신규 인원이 없습니다.`]]);
   wsN['!cols'] = [8,14,10,6,15,10,22,12].map(w=>({wch:w}));
