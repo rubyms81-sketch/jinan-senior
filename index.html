@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-68</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-69</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -1802,16 +1802,18 @@ function issuesDialog(d){
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">🔔 ${M}월 ${dd(d)} 점검 결과 · 경고·벌점 ${rows.length}건</div>
-    ${rows.length ? groups.map((g, gi) => `<div style="margin:10px 0 4px;font-weight:bold;color:#2c5282;">👤 ${g.L ? esc(g.L.name) + ' 팀장' : '팀장 없음'}${g.z ? ` <span class="muted" style="font-weight:normal;font-size:.85rem;">${esc(g.z.name)}</span>` : ''}</div>
+    ${rows.length ? `<label style="display:flex;align-items:center;gap:8px;font-weight:bold;margin:4px 0 6px;"><input type="checkbox" id="di-all" checked style="width:22px;height:22px;margin:0;"> 전체 선택</label>` : ''}
+    ${rows.length ? groups.map((g, gi) => `<details style="margin:6px 0;"><summary style="cursor:pointer;font-weight:bold;color:#2c5282;padding:8px 0;">👤 ${g.L ? esc(g.L.name) + ' 팀장' : '팀장 없음'}${g.z ? ` <span class="muted" style="font-weight:normal;font-size:.85rem;">${esc(g.z.name)}</span>` : ''} <span class="muted" style="font-weight:normal;font-size:.85rem;">${g.rows.length}건</span></summary>
       ${g.rows.map((r, i) => `<label style="display:flex;align-items:flex-start;gap:8px;font-weight:normal;margin:6px 0;padding:8px;border-radius:8px;background:${logPts(r.l) ? '#fff5f5' : '#fffaf0'};">
         <input type="checkbox" data-g="${gi}" data-i="${i}" checked style="width:22px;height:22px;margin:2px 0 0;flex:none;">
         <span><b>${nmH(r.q)}</b> <span class="muted" style="font-size:.85rem;">📍 ${esc(r.q.town)} ${esc(seniorOf(r.q))}${r.time ? ` · 🕐 ${r.time}` : ''}</span><br>
         <span style="color:${logPts(r.l) ? 'var(--danger)' : '#c05621'};font-weight:bold;">${r.t.map(esc).join(', ')}</span>${r.l.memo ? `<br><span class="muted" style="font-size:.85rem;">📝 ${esc(r.l.memo)}</span>` : ''}</span></label>`).join('')}
-      <button type="button" class="full" data-sms="${gi}" style="margin:4px 0 8px;">💬 ${g.L ? esc(g.L.name) + ' 팀장에게' : ''} 문자</button>`).join('')
+      <button type="button" class="full" data-sms="${gi}" style="margin:4px 0 8px;">💬 ${g.L ? esc(g.L.name) + ' 팀장에게' : ''} 문자</button></details>`).join('')
       : '<div class="muted" style="margin:8px 0 12px;">이 날 경고·벌점 받은 어르신이 없어요.</div>'}
     <button type="button" class="secondary full" id="di-close" style="margin:0;">닫기</button></div>`;
   document.body.appendChild(back);
   back.querySelector('#di-close').onclick = () => back.remove();
+  back.querySelector('#di-all')?.addEventListener('change', e => back.querySelectorAll('input[data-g]').forEach(c => c.checked = e.target.checked));
   back.querySelectorAll('[data-sms]').forEach(b => b.onclick = () => {
     const g = groups[b.dataset.sms], pick = g.rows.filter((r, i) => back.querySelector(`input[data-g="${b.dataset.sms}"][data-i="${i}"]`).checked);
     if (!pick.length) return notify('문자 보낼 어르신을 골라 주세요.');
@@ -3673,13 +3675,16 @@ function openMyTowns(){
   back.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">⭐ 내 담당 읍·면</div>
     <div class="muted" style="margin-bottom:8px;">체크한 곳만 목록 맨 위에 보이고, 나머지는 "다른 읍·면 보기"를 눌렀을 때만 보입니다.</div>
+    <label style="display:flex;align-items:center;gap:10px;font-weight:bold;padding:8px 4px;"><input type="checkbox" id="mt-all" ${TOWNS.every(t => myTowns.includes(t)) ? 'checked' : ''} style="width:22px;height:22px;margin:0;"> 전체 선택</label>
+    <details style="margin-bottom:8px;"><summary style="cursor:pointer;font-weight:bold;padding:6px 0;">읍·면 고르기 (지금 ${myTowns.length}곳, 누르면 보기)</summary>
     ${TOWNS.map(t => `<label style="display:flex;align-items:center;gap:10px;font-weight:normal;padding:8px 4px;border-bottom:1px solid #edf2f7;">
-      <input type="checkbox" value="${t}" ${myTowns.includes(t)?'checked':''} style="width:22px;height:22px;margin:0;"> ${t}</label>`).join('')}
+      <input type="checkbox" value="${t}" ${myTowns.includes(t)?'checked':''} style="width:22px;height:22px;margin:0;"> ${t}</label>`).join('')}</details>
     <div class="grid-2" style="margin-top:10px;"><button class="secondary" id="mt-cancel">취소</button><button id="mt-save">저장</button></div></div>`;
   document.body.appendChild(back);
   back.querySelector('#mt-cancel').onclick = () => back.remove();
+  back.querySelector('#mt-all').addEventListener('change', e => back.querySelectorAll('input[value]').forEach(c => c.checked = e.target.checked));
   back.querySelector('#mt-save').onclick = () => {
-    const v = [...back.querySelectorAll('input:checked')].map(i => i.value);
+    const v = [...back.querySelectorAll('input[value]:checked')].map(i => i.value);
     if (!v.length) return notify('담당 읍·면을 하나 이상 골라 주세요.');
     myTowns = v; store('jinan_my_towns', JSON.stringify(v)); showOthers = false;
     if (!myTowns.includes(lastTown)) { lastTown = '전체'; document.getElementById('filter-town').value = '전체'; curSenior = null; }
@@ -5459,7 +5464,7 @@ function openReport(onlyKeys){
   const monOpts = monSorted.map(m => `<option value="${esc(monKey(m))}">${esc(m.name)} (${esc(m.town)}${m.sites?.length ? `, 경로당 ${m.sites.length}곳` : ''})</option>`).join('') || '<option value="">등록된 팀장이 없어요</option>';
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📣 인원 변동 보고</div>
-    <div style="max-height:30vh;overflow:auto;margin-bottom:8px;">${pend.map((e, i) => `<label style="display:flex;align-items:flex-start;gap:8px;font-weight:normal;margin:4px 0;"><input type="checkbox" data-i="${i}" ${pre.has(rptKey(e)) ? 'checked' : ''} style="width:22px;height:22px;margin:2px 0 0;flex:none;"><span>${e.type === '신규 등록' ? '🆕 신규' : '🚪 중도포기'} · ${esc(e.name)} <span class="muted" style="font-size:.85rem;">${esc(e.town)} ${esc(e.senior)}</span></span></label>`).join('') || '<div class="muted">대기 중인 변동이 없어요.</div>'}</div>
+    ${pend.length ? `<label style="display:flex;align-items:center;gap:8px;font-weight:bold;margin:4px 0;"><input type="checkbox" id="rp-all" ${pend.every(e => pre.has(rptKey(e))) ? 'checked' : ''} style="width:22px;height:22px;margin:0;"> 전체 선택</label><details style="margin-bottom:8px;"><summary style="cursor:pointer;font-weight:bold;padding:6px 0;">대기 ${pend.length}명 (누르면 보기)</summary><div style="max-height:30vh;overflow:auto;">${pend.map((e, i) => `<label style="display:flex;align-items:flex-start;gap:8px;font-weight:normal;margin:4px 0;"><input type="checkbox" data-i="${i}" ${pre.has(rptKey(e)) ? 'checked' : ''} style="width:22px;height:22px;margin:2px 0 0;flex:none;"><span>${e.type === '신규 등록' ? '🆕 신규' : '🚪 중도포기'} · ${esc(e.name)} <span class="muted" style="font-size:.85rem;">${esc(e.town)} ${esc(e.senior)}</span></span></label>`).join('') || '<div class="muted">대기 중인 변동이 없어요.</div>'}</div></details>` : '<div class="muted" style="margin-bottom:8px;">대기 중인 변동이 없어요.</div>'}
     <label>담당 팀장</label>
     <select id="rp-staff" style="margin-bottom:6px;">${monOpts}</select>
     <label>팀장 전화번호</label>
@@ -5475,6 +5480,7 @@ function openReport(onlyKeys){
   const picked = () => [...bg.querySelectorAll('input[data-i]')].filter(c => c.checked).map(c => pend[Number(c.dataset.i)]);
   const draw = () => { $('#rp-text').value = reportText(picked()); };
   bg.querySelectorAll('input[data-i]').forEach(c => c.onchange = draw);
+  $('#rp-all')?.addEventListener('change', e => { bg.querySelectorAll('input[data-i]').forEach(c => c.checked = e.target.checked); draw(); });
   draw();
   const loadTel = () => { const k = $('#rp-staff').value, m = monitors.find(x => monKey(x) === k); $('#rp-tel').value = staffTel[k] || (m && m.phone) || ''; };
   // 고른 변동 중 첫 번째 사람의 담당 팀장을 기본으로
@@ -5661,6 +5667,7 @@ function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, sel
     const back = document.createElement('div'); back.className = 'dlg-back';
     back.innerHTML = `<div class="dlg">
       <div style="font-weight:bold;margin-bottom:6px;">📩 ${esc(title)}</div>
+      ${recips.length > 1 ? `<label style="display:flex;align-items:center;gap:8px;font-weight:bold;margin:4px 0 6px;"><input type="checkbox" id="sb-all" checked style="width:22px;height:22px;margin:0;"> 전체 선택</label>` : ''}
       ${recips.length > 5 ? `<details style="margin-bottom:6px;"><summary style="cursor:pointer;font-weight:bold;">받는 분 ${recips.length}명 <span class="muted" style="font-weight:normal;font-size:.85rem;">(누르면 보기·빼기)</span></summary>` : ''}
       <div style="margin-bottom:6px;">${recips.map(r => `<label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin:4px 0;"><input type="checkbox" data-k="${r.key}" checked style="width:22px;height:22px;margin:0;"> <span>${r.leader ? `<b style="color:#276749">${esc(r.label)}</b>` : `<b>${esc(r.label)}</b>`} <span class="muted">${esc(fmtPhone(r.num))}</span></span></label>`).join('')}
         ${noTel.length ? `<div class="muted" style="font-size:.85rem;">연락처 없음: ${noTel.map(p => esc(p.name)).join(', ')}</div>` : ''}
@@ -5679,6 +5686,7 @@ function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, sel
     if (noPhoto) { back.querySelector('#sb-img-btn').style.display = 'none'; }
     if (free) { ta.rows = 8; ta.placeholder = '보낼 내용을 적으세요'; setTimeout(() => { const at = ta.value.indexOf('\n\n') + 2; ta.focus(); ta.setSelectionRange(at, at); }, 80); }
     const picked = () => recips.filter(r => back.querySelector(`input[data-k="${r.key}"]`).checked);
+    back.querySelector('#sb-all')?.addEventListener('change', e => back.querySelectorAll('input[data-k]').forEach(c => c.checked = e.target.checked));
     back.querySelector('#sb-copy').onclick = async () => {
       if (onSendText) onSendText(ta.value);
       const ok = await copyText(ta.value);
