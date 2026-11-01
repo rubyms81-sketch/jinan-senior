@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.01-66</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-67</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3821,7 +3821,14 @@ function renderLinking(){
   if (!ps.length) return;
   const nOn = ps.filter(p => p.linking).length;
   document.getElementById('link-title').innerHTML = `🔗 신규 · 연계 중 <span style="color:var(--warning)">${nOn}명</span>${ps.length > nOn ? ` <span class="muted" style="font-size:.85rem;font-weight:normal;">· 연계 끝 ${ps.length - nOn}명</span>` : ''}`;
-  document.getElementById('link-list').innerHTML = ps.map(p => { const L = p.linking || p.linkDone, n = daysBetween(L.since, today()) + 1; return `<div class="call-row" style="border-top:1px dashed #e2e8f0;">
+  const lkOn = ps.filter(p => p.linking);
+  lkSel = new Set([...lkSel].filter(id => lkOn.some(p => p.id === id)));   // 목록에서 사라진 분은 선택 해제
+  const bar = lkOn.length ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0;padding:6px 8px;background:#f7fafc;border-radius:8px;">
+    <label style="font-weight:bold;"><input type="checkbox" style="width:auto;margin:0 4px 0 0;" ${lkSel.size === lkOn.length ? 'checked' : ''} onchange="lkAll(this.checked)">전체 선택</label>
+    <span class="muted" style="font-size:.9rem;">${lkSel.size}명 선택</span>
+    <button type="button" class="small danger" style="width:auto;margin:0 0 0 auto;padding:6px 10px;${lkSel.size ? '' : 'opacity:.5;'}" onclick="lkBulkDone()">✔ 선택한 ${lkSel.size}명 연계 끝</button></div>` : '';
+  document.getElementById('link-list').innerHTML = bar + ps.map(p => { const L = p.linking || p.linkDone, n = daysBetween(L.since, today()) + 1; return `<div class="call-row" style="border-top:1px dashed #e2e8f0;">
+    ${p.linking ? `<input type="checkbox" style="width:auto;margin:0 6px 0 0;align-self:center;" ${lkSel.has(p.id) ? 'checked' : ''} onchange="lkPick(${p.id}, this.checked)">` : ''}
     <button class="who" onclick="openModal(${p.id})"><b>${nmH(p)}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
       <span class="muted" style="font-size:.85rem;">${mdw(L.since)} 등록 · ${p.linking ? `연계 ${n}일째` : `${mdw(p.linkDone.day)} 연계 끝`}</span><br>${telBtn(p)}</button>
     ${p.linking ? `<button class="small danger" onclick="linkDone(${p.id})" style="width:auto;margin:0;padding:8px 12px;white-space:nowrap;" title="연계 끝">✕ 연계 끝</button>`
@@ -3983,6 +3990,24 @@ async function linkDone(id){
   delete p.linking;
   saveData(false); renderList();
   welcomeSms(p);
+}
+// 🔗 여러 명 한꺼번에 연계 끝: 체크박스로 고른 분만 (선택은 화면에만, 저장 안 함)
+let lkSel = new Set();
+function lkPick(id, on){ on ? lkSel.add(id) : lkSel.delete(id); renderLinking(); }
+function lkAll(on){ const ids = participants.filter(p => p.linking).map(p => p.id); lkSel = on ? new Set(ids) : new Set(); renderLinking(); }
+async function lkBulkDone(){
+  const ps = participants.filter(p => p.linking && lkSel.has(p.id)); if (!ps.length) return;
+  if (!await askHtml(`${ps.length}명을 한꺼번에 연계 끝으로 표시할까요?<br>목록에서 빠지고, 명단에는 그대로 남아요.<br><br>` +
+    `<span style="color:#e53e3e;font-weight:bold;font-size:1.15em;">★ 연계가 승인된 당일에는 근무할 수 없습니다.</span>`)) return;
+  for (const p of ps) {
+    logEvent('연계 완료', p, `${p.linking.since}부터 연계 → 끝남 (여러 명 한꺼번에)`);
+    if (p.start && !(p.startDay && p.startDay > today())) p.startDay = addDays(today(), 1);
+    p.linkDone = { since: p.linking.since, day: today() };
+    delete p.linking;
+  }
+  lkSel = new Set();
+  saveData(false); renderList(); renderLinking();
+  notify(`${ps.length}명 연계 끝으로 표시했어요. 환영 문자는 각 어르신 이름을 눌러 보내 주세요.`);
 }
 // 🎉 환영 문자: 축하 + 활동일(달력) + 주의사항. 글은 한 번 고치면 다음에도 그대로 씀 (jinan_tpl.welcome)
 // 점검 항목 접기·펴기: 한 번 정하면 다른 어르신을 열어도 그대로 (이 휴대폰에만 저장)
