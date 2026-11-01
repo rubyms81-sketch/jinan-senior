@@ -650,7 +650,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-45</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-46</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -5197,8 +5197,14 @@ function workdayText(mk, days, who, edu){
 // 📣 인원 변동 보고: 신규 등록·중도포기가 생기면 한 명씩 바로 보고할 수 있고, 📣 창에서 여러 명을 골라 한꺼번에도 보냄
 // 보고 대기 = 변동 기록(eventLog) 중 아직 보고하지 않은 것. 보고(문자·복사·카톡)를 누르면 보고 완료로 표시.
 const RPT_TYPES = ['신규 등록', '중도포기(본인 사정)'];
-const RPT_TEL_KEY = 'jinan_staff_tel';
-let staffTel = (() => { try { return JSON.parse(load(RPT_TEL_KEY)) || {}; } catch(e) { return {}; } })();   // 담당 직원 전화번호 (한 번 적으면 기억)
+const RPT_TEL_KEY = 'jinan_leader_tel';
+let staffTel = (() => { try { return JSON.parse(load(RPT_TEL_KEY)) || {}; } catch(e) { return {}; } })();   // 담당 팀장 전화번호 (팀장 town|이름 별로 한 번 적으면 기억)
+const monKey = m => m.town + '|' + m.name;
+// 변동 한 건의 담당 팀장 (구역 팀장, 없으면 담당 경로당의 팀장)
+function leaderForEvt(e){
+  const p = rptPerson(e), L = p && leaderOf(p); if (L) return { town: e.town, name: L.name };
+  const m = monitorOfSite(e.town, e.senior); return m ? { town: m.town, name: m.name } : null;
+}
 const rptKey = e => `${e.at}|${e.name}|${e.type}`;
 const rptSeen = () => new Set((() => { try { return JSON.parse(load('jinan_rpt_seen')) || []; } catch(e) { return []; } })());
 function rptPending(){
@@ -5280,7 +5286,7 @@ function exportChangeForm(){
   const { wb, fname } = buildChangeForm();
   XLSX.writeFile(wb, fname);
 }
-// 담당 직원에게 보내기: 휴대폰 공유 창으로 엑셀 파일을 넘김 (카카오톡 선택) — 보내면 그 변동들은 보고 완료
+// 담당 팀장에게 보내기: 휴대폰 공유 창으로 엑셀 파일을 넘김 (카카오톡 선택) — 보내면 그 변동들은 보고 완료
 async function sendChangeForm(){
   if (typeof XLSX === 'undefined') return notify('엑셀 기능을 불러오지 못했어요. 인터넷에 연결한 뒤 다시 눌러 주세요.');
   const { wb, evs, fname } = buildChangeForm();
@@ -5299,17 +5305,19 @@ function openReport(onlyKeys){
   if (!pend.length && !onlyKeys) return notify('보고할 변동이 없어요.');
   const pre = new Set(onlyKeys || pend.map(rptKey));
   const bg = document.createElement('div'); bg.className = 'dlg-back';
+  const monSorted = [...monitors].sort((a, b) => myTowns.includes(b.town) - myTowns.includes(a.town) || TOWNS.indexOf(a.town) - TOWNS.indexOf(b.town) || a.name.localeCompare(b.name, 'ko'));
+  const monOpts = monSorted.map(m => `<option value="${esc(monKey(m))}">${esc(m.name)} (${esc(m.town)}${m.sites?.length ? `, 경로당 ${m.sites.length}곳` : ''})</option>`).join('') || '<option value="">등록된 팀장이 없어요</option>';
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📣 인원 변동 보고</div>
     <div style="max-height:30vh;overflow:auto;margin-bottom:8px;">${pend.map((e, i) => `<label style="display:flex;align-items:flex-start;gap:8px;font-weight:normal;margin:4px 0;"><input type="checkbox" data-i="${i}" ${pre.has(rptKey(e)) ? 'checked' : ''} style="width:22px;height:22px;margin:2px 0 0;flex:none;"><span>${e.type === '신규 등록' ? '🆕 신규' : '🚪 중도포기'} · ${esc(e.name)} <span class="muted" style="font-size:.85rem;">${esc(e.town)} ${esc(e.senior)}</span></span></label>`).join('') || '<div class="muted">대기 중인 변동이 없어요.</div>'}</div>
-    <label>담당 직원</label>
-    <select id="rp-staff" style="margin-bottom:6px;">${staffList.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('')}</select>
-    <label>담당 직원 전화번호</label>
+    <label>담당 팀장</label>
+    <select id="rp-staff" style="margin-bottom:6px;">${monOpts}</select>
+    <label>팀장 전화번호</label>
     <input type="tel" id="rp-tel" placeholder="010-0000-0000" autocomplete="off" style="margin-bottom:8px;">
     <textarea id="rp-text" rows="9" style="font-size:.92rem;"></textarea>
     <div class="grid-2"><button id="rp-sms">💬 문자 앱 열기</button><button id="rp-copy" class="warning">📋 문구 복사</button></div>
     <button class="full" id="rp-kakao" style="background:#FEE500;color:#3c1e1e;font-weight:bold;margin-top:6px;">🟡 카카오톡으로 보내기</button>
-    <button class="full" id="rp-xl-send" style="background:#FEE500;color:#3c1e1e;font-weight:bold;margin-top:6px;">📤 참여자 변경현황 엑셀 담당자에게 보내기 (카톡)</button>
+    <button class="full" id="rp-xl-send" style="background:#FEE500;color:#3c1e1e;font-weight:bold;margin-top:6px;">📤 참여자 변경현황 엑셀 팀장님께 보내기 (카톡)</button>
     <button class="secondary full" id="rp-excel" style="margin-top:6px;">📄 참여자 변경현황 엑셀 받기 (이번 달)</button>
     <button class="secondary full" id="rp-close" style="margin-top:6px;">닫기</button></div>`;
   document.body.appendChild(bg);
@@ -5318,14 +5326,17 @@ function openReport(onlyKeys){
   const draw = () => { $('#rp-text').value = reportText(picked()); };
   bg.querySelectorAll('input[data-i]').forEach(c => c.onchange = draw);
   draw();
-  const loadTel = () => { $('#rp-tel').value = staffTel[$('#rp-staff').value] || ''; };
+  const loadTel = () => { const k = $('#rp-staff').value, m = monitors.find(x => monKey(x) === k); $('#rp-tel').value = staffTel[k] || (m && m.phone) || ''; };
+  // 고른 변동 중 첫 번째 사람의 담당 팀장을 기본으로
+  const firstEv = pend.find(e => pre.has(rptKey(e))), ldr = firstEv && leaderForEvt(firstEv);
+  if (ldr && monitors.some(x => monKey(x) === monKey(ldr))) $('#rp-staff').value = monKey(ldr);
   loadTel();
   $('#rp-staff').onchange = loadTel;
   $('#rp-tel').onchange = () => { const n = $('#rp-tel').value.trim(); if (n) { staffTel[$('#rp-staff').value] = n; store(RPT_TEL_KEY, JSON.stringify(staffTel)); } };
   const num = () => $('#rp-tel').value.replace(/[^0-9]/g, '');
   const sent = () => { const evs = picked(); rptMarkSeen(evs); renderRpt(); return evs; };
   const needPick = () => { if (!picked().length) { notify('보고할 사람을 골라 주세요.'); return true; } return false; };
-  $('#rp-sms').onclick = () => { if (needPick()) return; if (!num()) return notify('담당 직원 전화번호를 적어 주세요.'); const t = $('#rp-text').value; sent(); openSmsApp([num()], t); };
+  $('#rp-sms').onclick = () => { if (needPick()) return; if (!num()) return notify('팀장 전화번호를 적어 주세요.'); const t = $('#rp-text').value; sent(); openSmsApp([num()], t); };
   $('#rp-copy').onclick = async () => { if (needPick()) return; await copyText($('#rp-text').value); sent(); notify('문구를 복사했어요. 카카오톡에 붙여넣으세요.'); };
   $('#rp-kakao').onclick = async () => {
     if (needPick()) return; const t = $('#rp-text').value;
