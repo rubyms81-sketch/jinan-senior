@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:14px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-56</span></span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:14px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-57</span></span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2385,7 +2385,6 @@ function openZone(id){
       <button type="button" class="full" id="zn-att" data-zk="att" style="margin:0 0 8px;">🙋 오늘 도착·조끼·명찰 체크</button>
       <div data-zk="vreset" style="text-align:center;margin:0 0 8px;"><button type="button" class="secondary small" id="zn-vreset" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↩ 오늘 조끼·명찰 리셋 (도착은 그대로)</button></div>
       <button type="button" class="warning full" id="zn-add" data-zk="add" style="margin-bottom:8px;">＋ 경로당 고르기</button>
-      <button type="button" class="full secondary" id="zn-moim-add" data-zk="moim" style="margin:0 0 8px;">👥 모임 구역 넣기 (여행·임원 등)</button>
       <details id="zn-sites-box" data-zk="sites" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
         <summary><span id="zn-sites-title" style="font-weight:bold;">담당 경로당</span><span class="chg-arrow"></span></summary>
         <div id="zn-sites"></div>
@@ -2590,7 +2589,6 @@ function openZone(id){
     if (o) return openMoim(o.dataset.mopen);
     if (x) { const m = moims.find(q => q.id === x.dataset.mout); if (!m || !await ask(`"${m.name}"을(를) 이 구역에서 뺄까요?\n(모임 명단은 그대로 남습니다)`)) return; z.moims = (z.moims || []).filter(id => id !== m.id); saveZones(); logEvent('구역 모임 빼기', null, `${z.name}: ${m.name} 뺌`); drawMoims(); }
   };
-  $('#zn-moim-add').onclick = () => pickMoimForZone(z, drawMoims);
   $('#zn-add').onclick = () => {
     pick = new Set(z.sites.map(x => siteKey(x.town, x.senior))); curTown = null;
     $('#zn-main').classList.add('hidden'); $('#zn-pick').classList.remove('hidden');
@@ -6435,12 +6433,12 @@ function zoneAttStat(z, d){
 }
 // 구역 창 안: 오늘 도착·미착용 줄 (구역 칸에는 안 보임)
 // ⚙️ 메뉴 안 단추 순서 (이 휴대폰에만 저장, 2026-11-01). ▲▼로 바꿈
-const ZMENU_DEF = ['today','att','vreset','add','moim','sites','course'];
-const ZMENU_TXT = {today:'오늘 도착 현황', att:'오늘 도착·조끼·명찰 체크', vreset:'오늘 조끼·명찰 리셋', add:'경로당 고르기', moim:'모임 구역 넣기', sites:'담당 경로당', course:'모니터링 코스표'};
+const ZMENU_DEF = ['today','att','vreset','add','sites','course'];
+const ZMENU_TXT = {today:'오늘 도착 현황', att:'오늘 도착·조끼·명찰 체크', vreset:'오늘 조끼·명찰 리셋', add:'경로당 고르기', sites:'담당 경로당', course:'모니터링 코스표'};
 let zmEdit = false, zmBefore = '';
 function zmenuOrder(){
   try { const a = JSON.parse(localStorage.getItem('jinan_zmenu') || 'null');
-    if (Array.isArray(a) && a.length === ZMENU_DEF.length && ZMENU_DEF.every(k => a.includes(k))) return a; } catch(e) {}
+    if (Array.isArray(a)) { const k = a.filter(x => ZMENU_DEF.includes(x)); ZMENU_DEF.forEach(x => { if (!k.includes(x)) k.push(x); }); return k; } } catch(e) {}
   return ZMENU_DEF.slice();
 }
 function zmenuSave(a){ try { localStorage.setItem('jinan_zmenu', JSON.stringify(a)); } catch(e) {} }
