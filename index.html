@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-78</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-79</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -4860,7 +4860,17 @@ function guessSenior(p, pool){
 // ---------- 엑셀로 여러 명 한번에 등록 ----------
 // 직접 만든 양식과 노인일자리 업무시스템에서 내려받은 명단 둘 다 읽습니다.
 const COLS = { town:['읍면','면','소속면','읍·면','읍면동'], senior:['경로당','경로당이름','경로당명','근무장소','근무지'], name:['성명','이름','어르신성명'],
-  sex:['성별','남녀'], bday:['생일','생년월일','출생일'], age:['나이','연령'], phone:['연락처','전화번호','휴대폰'], address:['주소','거주지'], state:['참여상태'] };
+  sex:['성별','남녀'], bday:['생일','생년월일','출생일'], age:['나이','연령'], phone:['연락처','전화번호','휴대폰'], address:['주소','거주지'], state:['참여상태'], start:['참여시작일','시작일'] };
+// 참여시작일 글자 → 'YYYY-MM-DD' (엑셀 날짜 칸의 여러 표시 모양을 다 받음)
+const parseStartDay = v => {
+  const s = String(v ?? '').trim(); if (!s) return '';
+  let m = s.match(/^(\d{4})\s*[.\-\/]\s*(\d{1,2})\s*[.\-\/]\s*(\d{1,2})/);
+  if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);   // 미국식 M/D/Y
+  if (m) { const y = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]); return `${y}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`; }
+  if (/^\d{5}$/.test(s)) return new Date(Date.UTC(1899, 11, 30) + Number(s) * 86400000).toISOString().slice(0,10);   // 엑셀 날짜 번호
+  return '';
+};
 
 // 등록 양식 (앱 안에 들어 있음: 인터넷이 안 되면 CSV로 내려받아도 엑셀에서 열림)
 const TEMPLATE = [['읍면','경로당','성명','성별','나이','생일','연락처','주소'],
@@ -5199,6 +5209,8 @@ function bulkImport(input){
         if (!town && fill) { const c = participants.filter(p => !matched.has(p.id) && p.name===name); if (c.length===1) town = c[0].town; else if (filterTown === '전체') { notFound.push(name); return; } }
         if (!town) { if (filterTown !== '전체') town = filterTown; else { noTown.push(name); return; } }
         const senior = get('senior') ? normSenior(town, get('senior')) : '';
+        // 참여시작일: 올해 2월 이후 시작한 분만 근무 시작일로 넣음 (1월 시작 = 처음부터, 기록 없음)
+        const sd = parseStartDay(get('start')), sdLater = !!sd && sd.slice(0,4) === String(YEAR) && Number(sd.slice(5,7)) > 1;
         fileTowns.add(town);
         // 이미 있는 분 찾기: 이름 + (연락처 또는 경로당 또는 주소), 없으면 같은 면에 같은 이름이 한 분뿐일 때
         let ex = participants.find(p => !matched.has(p.id) && p.name===name && (
@@ -5215,13 +5227,14 @@ function bulkImport(input){
           if (bday && ex.bday !== bday) ch.push(['bday', bday, '생일']);
           if (age && String(ex.age)!==age) ch.push(['age', age, '나이']);
           if (birth && ex.birth !== birth) ch.push(['birth', birth, '태어난 해']);
+          if (sdLater && !ex.start && !ex.startDay) ch.push(['start', sd.slice(0,7), '근무 시작 달'], ['startDay', sd, '근무 시작일']);
           if (ch.length) updated.push([ex, ch]); else same.push(ex);
           if (ex.quit) unquit.push(ex);
           return;
         }
         if (fill) { notFound.push(name); return; }   // 추가 정보만 넣기: 명단에 없는 분은 건너뜀
         if (isDup(added, name, senior, phone)) { dup.push(name); return; }
-        added.push({ id: Date.now() + (seq++), town, senior, name, ...(sex ? { sex } : {}), ...(bday ? { bday } : {}), age, ...(birth ? { birth } : {}), phone, address, quit:false, logs:[] });
+        added.push({ id: Date.now() + (seq++), town, senior, name, ...(sex ? { sex } : {}), ...(bday ? { bday } : {}), age, ...(birth ? { birth } : {}), phone, address, ...(sdLater ? { start: sd.slice(0,7), startDay: sd } : {}), quit:false, logs:[] });
       });
       // 새 명단에 없는 분 (파일에 들어 있는 면만 비교)
       const gone = bulkMode === 'fill' ? [] : participants.filter(p => fileTowns.has(p.town) && !matched.has(p.id));
@@ -5233,6 +5246,8 @@ function bulkImport(input){
       msg += `\n✔ 그대로인 분: ${same.length}명`;
       msg += `\n➕ 새로 오신 분: ${added.length}명${added.length?` — ${list(added.map(p=>p.name))}`:''}`;
       msg += `\n✏️ 정보가 바뀐 분: ${updated.length}명${updated.length?` — ${list(updated.map(([p,ch]) => `${p.name}(${ch.map(c=>c[2]).join('·')})`))}`:''}`;
+      const nStart = added.filter(p => p.startDay).length + updated.filter(([p, ch]) => ch.some(c => c[0] === 'startDay')).length;
+      if (nStart) msg += `\n🗓 근무 시작일 반영: ${nStart}명 (참여시작일 칸)`;
       if (gone.length) msg += `\n➖ 새 명단에 없는 분: ${gone.length}명 — ${list(gone.map(p=>p.name))}`;
       const nGuess = added.filter(p => p.guess).length;
       if (nGuess) msg += `\n\n📍 주소를 보고 경로당을 넣은 분: ${nGuess}명 (앱에 "추정"으로 표시)`;
@@ -5248,7 +5263,7 @@ function bulkImport(input){
       if (!await ask(msg + '\n\n이대로 정리할까요?')) return;
 
       participants.push(...added);
-      added.forEach(p => logEvent('신규 등록', p, '엑셀 명단' + (p.guess ? ' · 경로당 추정' : '')));
+      added.forEach(p => logEvent('신규 등록', p, '엑셀 명단' + (p.guess ? ' · 경로당 추정' : '') + (p.startDay ? ' · 참여시작 ' + p.startDay : '')));
       updated.forEach(([p, ch]) => {
         logEvent('정보 수정', p, ch.map(([k, v, label]) => `${label}: ${p[k]||'(없음)'} → ${v}`).join(' / ') + (bulkMode === 'fill' ? ' (엑셀 추가 정보)' : ' (엑셀 명단)'));
         ch.forEach(([k, v]) => p[k] = v); if (ch.some(c => c[0]==='senior')) delete p.guess; });
