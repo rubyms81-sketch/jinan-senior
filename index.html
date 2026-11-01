@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-71</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-72</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2310,9 +2310,10 @@ function renderZones(){
   // 면마다 3줄: 경로당·인원 / 게이트·인원 / 합계. 배정 인원(설정)보다 모자라면 빨간 -N
   // 면 줄: 동향(합계:N명)일반N/게이트N,개별N(경로당N) — 배정 인원보다 모자라면 뒤에 빨간 배정 표시
   if (zs) { const qa = quotaAll();
-    const short = (cur, w) => (w == null || cur - w >= 0) ? '' : ` <b style="color:#c53030;">배정 ${w} ${cur - w}</b>`;
+    // 모자랄 때만 줄을 따로 빨갛게: 경로당지킴이 -N명 / 게이트볼 -N명
+    const short = (cur, w, label) => (w == null || cur - w >= 0) ? '' : `<div style="color:#c53030;font-weight:bold;padding-left:18px;">${label} ${cur - w}명</div>`;
     zs.innerHTML = myTowns.map(t => { const c = townCount(t), q = qa[t] || {}, plain = c.act - c.ind;
-      return `<div style="margin:6px 0;">📍 <b>${esc(t.replace(/[면읍]$/, ''))}</b>(합계:<b>${c.all}명</b>)${plain}/<span style="color:#2f855a;">${c.gate}</span>,개별${c.ind}(경로당${c.site})${short(plain, q.n)}${short(c.gate, q.g)}</div>`; }).join(''); }
+      return `<div style="margin:6px 0;"><div>📍 <b>${esc(t.replace(/[면읍]$/, ''))}</b>(합계:<b>${c.all}명</b>)${plain}/<span style="color:#2f855a;">${c.gate}</span>,개별${c.ind}(경로당${c.site})</div>${short(plain, q.n, '경로당지킴이')}${short(c.gate, q.g, '게이트볼')}</div>`; }).join(''); }
   const zn = document.getElementById('zone-n'); if (zn) zn.textContent = zones.length + '개';
   document.getElementById('zone-minus').disabled = zones.length <= ZONE_MIN; document.getElementById('zone-plus').disabled = zones.length >= ZONE_MAX;
   box.innerHTML = zones.map(z => {
