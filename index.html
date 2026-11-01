@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-69</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-70</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -7009,17 +7009,22 @@ function restoreFrom(b){
   try { const h = JSON.parse(localStorage.getItem('jinan_history') || '[]'); h.push({ at: nowHM(), date: today(), type: '백업 복원', town:'', senior:'', name:'', detail: `${b.at} 백업 (어르신 ${b.count}명)` }); localStorage.setItem('jinan_history', JSON.stringify(h)); } catch(e) {}
   notify(`복원했어요. (${b.at} 백업, 어르신 ${b.count}명)\n앱을 다시 불러옵니다.`).then(() => phDone).then(() => location.reload());
 }
-async function saveBackup(){
+async function saveBackup(quiet){
   const a = document.createElement('a'); a.href = URL.createObjectURL(bkFile()); a.download = bkName(); a.click();
   await snapSave(); store('jinan_last_backup', nowHM()); logEvent('백업 저장', null, `${bkName()} (어르신 ${participants.length}명)`);
-  renderBackup(); notify(`💾 백업 파일을 휴대폰에 저장했어요.\n(다운로드 폴더: ${bkName()})\n\n휴대폰이 바뀌어도 쓰려면 "📤 문자·카톡으로 보내기"로 나에게 보내 두세요.`);
+  renderBackup(); if (!quiet) notify(`💾 백업 파일을 휴대폰에 저장했어요.\n(다운로드 폴더: ${bkName()})\n\n휴대폰이 바뀌어도 쓰려면 "📤 문자·카톡으로 보내기"로 나에게 보내 두세요.`);
 }
 async function shareBackup(){
   const f = bkFile();
-  if (!(navigator.canShare && navigator.canShare({ files: [f] }))) return notify('이 휴대폰에서는 바로 보낼 수 없어요.\n"💾 백업 파일 저장" 후, 문자·카톡에서 다운로드 폴더의 파일을 첨부해 주세요.');
+  if (!(navigator.canShare && navigator.canShare({ files: [f] }))) return bkFallback('이 휴대폰에서는 바로 보낼 수 없어요.');
   try { await navigator.share({ files: [f], title: '현장점검 백업', text: `현장점검 앱 백업 ${today()}` });
     await snapSave(); store('jinan_last_backup', nowHM()); logEvent('백업 보내기', null, `${bkName()} (어르신 ${participants.length}명)`); renderBackup();
-  } catch(e) { if (e.name !== 'AbortError') notify('보내기 창을 열지 못했어요.'); }
+  } catch(e) { if (e.name !== 'AbortError') bkFallback('보내기 창을 열지 못했어요.'); }
+}
+// 공유 창이 안 열리면: 다운로드 폴더에 먼저 저장하고, 카톡으로 보내는 법을 안내
+async function bkFallback(why){
+  await saveBackup(true);
+  notify(`${why}\n\n📥 백업 파일을 다운로드 폴더에 저장했어요.\n(${bkName()})\n\n카톡 "나와의 채팅"을 열고 + → 파일을 눌러, 이 파일을 골라 보내 주세요.`);
 }
 function loadBackupFile(input){
   const f = input.files && input.files[0]; input.value = ''; if (!f) return;
