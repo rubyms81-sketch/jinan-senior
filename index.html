@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-74</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-75</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -562,6 +562,7 @@
         <details id="ex-box" class="stat-box chg-box">
           <summary><span style="font-weight:bold;" id="ex-title">🚫 내년도 참여 제외 대상</span><span class="chg-arrow"></span></summary>
           <button class="danger full" onclick="openAddExclude()" style="margin:8px 0 4px;">＋ 제외 대상 추가</button>
+          <button class="secondary full" onclick="exportExcludeList()" style="margin:0 0 4px;">📥 참여 제외 대상 엑셀 받기</button>
           <div id="ex-list"></div>
         </details>
         <details class="stat-box chg-box" id="rs-box">
@@ -3493,6 +3494,20 @@ function renderExList(){
     <button class="pen-row" onclick="openModal(${p.id})"><span class="muted">🏠 ${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
       <b>${nmH(p)}</b> ${ex.reason?`<b style="color:var(--danger)">${esc(ex.reason)}</b>`:''}${ex.memo?`<br><span class="muted">📝 ${esc(ex.memo)}</span>`:''}</button>`; }).join('')
     : '<div class="muted">제외 대상이 없어요.</div>';
+}
+// 📥 참여 제외 대상만 따로 엑셀 파일로 (전체 면, 마감 엑셀 "○년 참여 제외" 시트와 같은 칸)
+function exportExcludeList(){
+  const list = participants.filter(p => exOf(p))
+    .sort((a,b) => a.town.localeCompare(b.town) || seniorRank(seniorOf(a))-seniorRank(seniorOf(b)) || seniorOf(a).localeCompare(seniorOf(b)) || a.name.localeCompare(b.name));
+  if (!list.length) return notify(`${exYear()}년 참여 제외 대상이 없어요.`);
+  const rows = list.map(p => ({ '읍면': p.town, '경로당': seniorOf(p), '성명': p.name, '나이': p.age, '연락처': p.phone,
+    '제외 사유': exOf(p).reason || '', '자세한 사유': exOf(p).memo || '', '지정일': exOf(p).date || '' }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [8,14,10,6,15,16,36,12].map(w => ({ wch: w }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, `${exYear()}년 참여 제외`);
+  XLSX.writeFile(wb, `${exYear()}년_참여제외_대상_${list.length}명.xlsx`);
+  notify(`${exYear()}년 참여 제외 대상 ${list.length}명을 엑셀로 받았어요.`);
 }
 // 목록에서 바로 사람 고르고 제외 지정
 function openAddExclude(){
