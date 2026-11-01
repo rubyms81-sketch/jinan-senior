@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:14px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-60</span></span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:14px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-61</span></span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -456,7 +456,6 @@
     <summary><div style="display:flex;align-items:center;gap:6px;flex:1;"><div class="mv-t" style="flex:1;font-weight:bold;">🗺 구역</div>
       <button type="button" class="small secondary" id="zone-minus" onclick="event.preventDefault();event.stopPropagation();zoneCount(-1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">－</button><b id="zone-n" style="min-width:2.2em;text-align:center;"></b><button type="button" class="small" id="zone-plus" onclick="event.preventDefault();event.stopPropagation();zoneCount(1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">＋</button></div><span class="chg-arrow" style="flex:none;margin-left:6px;"></span></summary>
     <div id="zone-sum" style="font-size:.85rem;margin:-2px 0 4px;"></div>
-    <div id="zone-lead" style="font-size:.85rem;margin:0 0 8px;padding:6px 8px;background:#f0fff4;border-radius:8px;"></div>
     <div class="zone-grid" id="zone-btns"></div>
     </details>
   </div>
@@ -2284,11 +2283,6 @@ function renderZones(){
         <div>📍 <b>${esc(t.replace(/[면읍]$/, ''))}</b> 경로당 <b>${c.site}곳</b> · <b>${c.act}명</b>${want(c.act, q.n)}</div>
         <div style="padding-left:14px;color:#2f855a;">🟢 게이트 ${c.gsite}곳 · ${c.gate}명${want(c.gate, q.g)}</div>
         <div style="padding-left:14px;">합계 <b>${c.all}명</b></div></div>`; }).join(''); }
-  // 팀장 구역 합계: 구역 수 · 경로당 · 게이트볼 · 총 인원
-  const zl = document.getElementById('zone-lead');
-  if (zl) { const used = zones.filter(z => z.sites.length), ss = used.flatMap(z => z.sites), g = ss.filter(x => x.senior.includes('게이트볼')).length;
-    const n = ss.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(counted).length, 0);
-    zl.innerHTML = `👤 팀장 담당 · 경로당 <b>${ss.length - g}</b>곳 · 게이트 <b>${g}</b>곳 · 총 <b>${n}</b>명`; zl.classList.toggle('hidden', !used.length); }
   const zn = document.getElementById('zone-n'); if (zn) zn.textContent = zones.length + '개';
   document.getElementById('zone-minus').disabled = zones.length <= ZONE_MIN; document.getElementById('zone-plus').disabled = zones.length >= ZONE_MAX;
   box.innerHTML = zones.map(z => {
