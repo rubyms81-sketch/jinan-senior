@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.01-65</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.01-66</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2231,6 +2231,13 @@ function leaderPickHtml(t, L, z){
 const counted = p => !stats(p).dropped && !p.linking;
 const siteMembers = (town, senior) => participants.filter(p => p.town===town && seniorOf(p)===senior)
   .sort((a,b) => stats(a).dropped - stats(b).dropped || a.name.localeCompare(b.name));
+// 구역 창 제목 줄용: 면별 경로당(일반)·인원, 게이트 곳·인원 (경 N곳/N명, 게 N곳/N명)
+function zoneTownLines(z){
+  const by = {};
+  z.sites.forEach(x => { const t = (by[x.town] ||= { s: 0, g: 0, sp: 0, gp: 0 }); const n = siteMembers(x.town, x.senior).filter(counted).length;
+    if (x.senior.includes('게이트볼')) { t.g++; t.gp += n; } else { t.s++; t.sp += n; } });
+  return TOWNS.filter(t => by[t]).sort((a, b) => by[b].s - by[a].s).map(t => ({ t, ...by[t] }));
+}
 // 구역 안 경로당을 면별로: "동향면 10곳·15명" (면이 여럿이면 " / "로 이어 붙임)
 function zoneTownText(z){
   const by = {};
@@ -2382,12 +2389,10 @@ function openZone(id){
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.15rem;margin-bottom:8px;" id="zn-title"></div>
-    <label>구역 이름</label>
-    <div style="display:flex;gap:6px;margin-bottom:8px;"><input type="text" id="zn-name" autocomplete="off" style="margin:0;"><button type="button" class="small" id="zn-lead-ed" style="width:auto;margin:0;white-space:nowrap;background:#276749;">👤 팀장 정보</button></div>
+    <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px;"><button type="button" class="small" id="zn-lead-ed" style="width:auto;margin:0;white-space:nowrap;background:#276749;">👤 팀장 정보</button></div>
     <div id="zn-main">
       <div id="zn-visit-box" style="background:#fffaf0;border:1px solid #fbd38d;border-radius:10px;padding:8px 10px;margin-bottom:10px;">
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><b style="flex:1;">📋 이 구역 점검 현황</b>
-          <select id="zn-range" style="width:auto;margin:0;padding:4px 6px;font-size:.85rem;"><option value="month">이번 달</option><option value="14">최근 2주</option><option value="7">최근 1주</option></select></div>
+        <div style="margin-bottom:6px;"><b>📋 점검 현황</b></div>
         <div id="zn-visit"></div>
       </div>
       <div id="zn-moims" style="margin:0 0 8px;"></div>
@@ -2423,7 +2428,7 @@ function openZone(id){
     <button type="button" class="secondary full" id="zn-close" style="margin-top:8px;">닫기</button></div>`;
   document.body.appendChild(bg);
   const $ = q => bg.querySelector(q);
-  $('#zn-name').value = z.name; $('#zn-phone').value = z.phone || '';
+  if ($('#zn-name')) $('#zn-name').value = z.name; $('#zn-phone').value = z.phone || '';
   $('#zn-lead-ed').onclick = () => {
     const L = participants.find(x => x.id === z.leaderId), d2 = document.createElement('div'); d2.className = 'dlg-back';
     const zTown0 = zoneTown(z) || myTowns[0];
@@ -2467,10 +2472,12 @@ function openZone(id){
     z.sites = []; delete z.leaderName; delete z.leaderId; delete z.phone; delete z.leaderAddr; delete z.car; delete z.carNo;
     saveZones(); bg.remove(); renderZones();
   };
-  $('#zn-range').value = nvRange; $('#zn-range').onchange = () => { nvRange = $('#zn-range').value; drawMain(); renderZones(); };
+  nvRange = 'month';
   const drawMain = () => {
     const total = z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(counted).length, 0);
-    $('#zn-title').innerHTML = `🗺 ${esc(z.name)} <span style="display:block;font-size:1.05rem;font-weight:bold;margin-top:4px;color:#1a365d;">${z.sites.length ? esc(zoneTownText(z)) : '경로당 0곳'}</span>`;
+    { const zt = zoneTownLines(z), tot = zt.reduce((k, x) => k + x.sp + x.gp, 0);
+      $('#zn-title').innerHTML = `🗺 ${esc(z.name)} <span style="font-size:1.05rem;color:#1a365d;">${zt.map(x => `(${esc(x.t.replace(/[면읍]$/, ''))})`).join('')} 총${tot}</span>`
+        + `<div style="font-size:1rem;font-weight:bold;margin:4px 0 0;color:#1a365d;">${zt.length ? zt.map(x => `<div>${esc(x.t.replace(/[면읍]$/, ''))} 경${x.s}곳/${x.sp}명${x.g ? `, 게${x.g}곳/${x.gp}명` : ''}</div>`).join('') : '경로당 0곳'}</div>`; }
     const sorted = [...z.sites].sort((a,b) => a.town.localeCompare(b.town) || seniorRank(a.senior)-seniorRank(b.senior) || a.senior.localeCompare(b.senior));
     $('#zn-sites').innerHTML = sorted.length ? sorted.map(x => {
       const ms = siteMembers(x.town, x.senior);
@@ -2622,7 +2629,7 @@ function openZone(id){
     $('#zn-pick').classList.add('hidden'); $('#zn-main').classList.remove('hidden'); drawMain();
   };
   const saveZoneInfo = () => {
-    const inp = $('#zn-name');
+    const inp = $('#zn-name') || { value: z.name };
     setTimeout(() => {   // 저장 단추 없이: 다 쓰고 다른 곳을 누르거나 창을 닫으면 저장
       const v = inp.value.trim(), ph = fmtPhone($('#zn-phone').value); if (!v) { inp.value = z.name; return; }
       const msg = [];
@@ -2633,8 +2640,8 @@ function openZone(id){
     }, 50);
   };
   $('#zn-phone').addEventListener('change', saveZoneInfo);
-  $('#zn-name').addEventListener('change', saveZoneInfo);
-  $('#zn-name').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); e.target.blur(); } });
+  $('#zn-name')?.addEventListener('change', saveZoneInfo);
+  $('#zn-name')?.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); e.target.blur(); } });
   $('#zn-close').onclick = () => { saveZoneInfo(); bg.remove(); };
   $('#zn-att').onclick = () => openZoneAtt(z);
   $('#zn-today').innerHTML = zoneTodayHtml(z);
