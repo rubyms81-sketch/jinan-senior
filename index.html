@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:14px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-61</span></span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:14px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-62</span></span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2276,13 +2276,11 @@ function renderZones(){
   // 면별: 경로당 수 · 지킴이 / 게이트볼 = 전체 (예: 상전 20곳 79명/6명=85)
   const zs = document.getElementById('zone-sum');
   // 면마다 3줄: 경로당·인원 / 게이트·인원 / 합계. 배정 인원(설정)보다 모자라면 빨간 -N
+  // 면 줄: 동향(합계:N명)일반N/게이트N,개별N(경로당N) — 배정 인원보다 모자라면 뒤에 빨간 배정 표시
   if (zs) { const qa = quotaAll();
-    const want = (cur, w) => w == null ? '' : (cur - w < 0 ? ` 배정 ${w} <b style="color:#c53030;">${cur - w}</b>` : ` 배정 ${w}`);
-    zs.innerHTML = myTowns.map(t => { const c = townCount(t), q = qa[t] || {};
-      return `<div style="margin:6px 0;">
-        <div>📍 <b>${esc(t.replace(/[면읍]$/, ''))}</b> 경로당 <b>${c.site}곳</b> · <b>${c.act}명</b>${want(c.act, q.n)}</div>
-        <div style="padding-left:14px;color:#2f855a;">🟢 게이트 ${c.gsite}곳 · ${c.gate}명${want(c.gate, q.g)}</div>
-        <div style="padding-left:14px;">합계 <b>${c.all}명</b></div></div>`; }).join(''); }
+    const short = (cur, w) => (w == null || cur - w >= 0) ? '' : ` <b style="color:#c53030;">배정 ${w} ${cur - w}</b>`;
+    zs.innerHTML = myTowns.map(t => { const c = townCount(t), q = qa[t] || {}, plain = c.act - c.ind;
+      return `<div style="margin:6px 0;">📍 <b>${esc(t.replace(/[면읍]$/, ''))}</b>(합계:<b>${c.all}명</b>)${plain}/<span style="color:#2f855a;">${c.gate}</span>,개별${c.ind}(경로당${c.site})${short(plain, q.n)}${short(c.gate, q.g)}</div>`; }).join(''); }
   const zn = document.getElementById('zone-n'); if (zn) zn.textContent = zones.length + '개';
   document.getElementById('zone-minus').disabled = zones.length <= ZONE_MIN; document.getElementById('zone-plus').disabled = zones.length >= ZONE_MAX;
   box.innerHTML = zones.map(z => {
@@ -4592,7 +4590,7 @@ function townCount(t){
   const ps = participants.filter(p => p.town === t && counted(p)), g = ps.filter(isGate).length;
   const sites = [...new Set(ps.map(seniorOf))].filter(k => k !== '개별관리' && k !== NO_SENIOR), gs = sites.filter(k => k.includes('게이트볼')).length;
   // 게이트 곳 수: 면의 경로당 목록(townSites)에서 셈 — 배치 명단만 있고 사람이 아직 없는 게이트도 포함 (사용자 요청, 2026-11-01)
-  return { act: ps.length - g, gate: g, all: ps.length, site: sites.length - gs, gsite: townSites(t).filter(x => x.gate).length };
+  return { act: ps.length - g, gate: g, all: ps.length, ind: ps.filter(p => seniorOf(p) === '개별관리').length, site: sites.length - gs, gsite: townSites(t).filter(x => x.gate).length };
 }
 const townLabel = t => { const c = townCount(t); return `${t}(활동${c.act}/게이트${c.gsite}곳) ${c.all}명`; };
 // 경로당 이름: "지사"만 적어도 됨. 끝의 "경로당"은 떼고, 그 면에 있는 경로당 이름과 맞으면 그 이름으로
