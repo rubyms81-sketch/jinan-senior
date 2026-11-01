@@ -650,7 +650,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-50</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-51</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -2219,7 +2219,7 @@ const siteMembers = (town, senior) => participants.filter(p => p.town===town && 
 function zoneTownText(z){
   const by = {};
   z.sites.forEach(x => { const t = (by[x.town] ||= { s: 0, g: 0, n: 0 }); x.senior.includes('게이트볼') ? t.g++ : t.s++; t.n += siteMembers(x.town, x.senior).filter(counted).length; });
-  return TOWNS.filter(t => by[t]).map(t => `${t} ${by[t].s}곳${by[t].g ? `·게이트볼 ${by[t].g}` : ''}·${by[t].n}명`).join(' / ');
+  return TOWNS.filter(t => by[t]).map(t => `${t} ${by[t].s}곳${by[t].g ? `·게이트 ${by[t].g}곳` : ''}·${by[t].n}명`).join(' / ');
 }
 // 구역 수: 기본 4개, ＋/－로 1~6개
 const ZONE_MIN = 1, ZONE_MAX = Infinity;   // 구역은 계속 늘릴 수 있음
@@ -2260,12 +2260,12 @@ function renderZones(){
   // 면별: 경로당 수 · 지킴이 / 게이트볼 = 전체 (예: 상전 20곳 79명/6명=85)
   const zs = document.getElementById('zone-sum');
   if (zs) zs.innerHTML = myTowns.map(t => { const c = townCount(t);
-    return `<div>📍 <b>${esc(t.replace(/[면읍]$/, ''))}</b> ${c.site}곳 ${c.act}명/<span style="color:#2f855a">게이트볼 ${c.gate}명</span> = <b>${c.all}명</b></div>`; }).join('');
+    return `<div>📍 <b>${esc(t.replace(/[면읍]$/, ''))}</b> ${c.site}곳 ${c.act}명/<span style="color:#2f855a">게이트 ${c.gsite}곳</span> = <b>${c.all}명</b></div>`; }).join('');
   // 팀장 구역 합계: 구역 수 · 경로당 · 게이트볼 · 총 인원
   const zl = document.getElementById('zone-lead');
   if (zl) { const used = zones.filter(z => z.sites.length), ss = used.flatMap(z => z.sites), g = ss.filter(x => x.senior.includes('게이트볼')).length;
     const n = ss.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(counted).length, 0);
-    zl.innerHTML = `👤 팀장 담당 · 경로당 <b>${ss.length - g}</b>곳 · 게이트볼 <b>${g}</b>곳 · 총 <b>${n}</b>명`; zl.classList.toggle('hidden', !used.length); }
+    zl.innerHTML = `👤 팀장 담당 · 경로당 <b>${ss.length - g}</b>곳 · 게이트 <b>${g}</b>곳 · 총 <b>${n}</b>명`; zl.classList.toggle('hidden', !used.length); }
   const zn = document.getElementById('zone-n'); if (zn) zn.textContent = zones.length + '개';
   document.getElementById('zone-minus').disabled = zones.length <= ZONE_MIN; document.getElementById('zone-plus').disabled = zones.length >= ZONE_MAX;
   box.innerHTML = zones.map(z => {
@@ -2274,7 +2274,7 @@ function renderZones(){
     // 예) 홍길동(상전) 10곳, 게이트볼 1곳 총 23명 / (동향) 2곳 총 4명
     const by = {}; z.sites.forEach(x => { const t = (by[x.town] ||= { s: 0, g: 0, n: 0 }); x.senior.includes('게이트볼') ? t.g++ : t.s++; t.n += siteMembers(x.town, x.senior).filter(counted).length; });
     const A = zoneAttStat(z, today());
-    const lines = TOWNS.filter(t => by[t]).map((t, i) => `${i ? '' : `<span style="font-weight:bold;font-size:1.05rem;">${esc(z.name)}</span>`}(${esc(t.replace(/[면읍]$/, ''))}) ${by[t].s}곳${by[t].g ? `, 게이트볼 ${by[t].g}곳` : ''} 총 ${by[t].n}명`);
+    const lines = TOWNS.filter(t => by[t]).map((t, i) => `${i ? '' : `<span style="font-weight:bold;font-size:1.05rem;">${esc(z.name)}</span>`}(${esc(t.replace(/[면읍]$/, ''))}) ${by[t].s}곳${by[t].g ? `, 게이트 ${by[t].g}곳` : ''} 총 ${by[t].n}명`);
     return `<button type="button" class="zone-btn ${z.sites.length?'':'empty'}" onclick="openZone(${z.id})">${lines.length ? `<span style="display:block;font-size:.9rem;line-height:1.45;">${lines.join('<br>')}</span>` : `<b>${esc(z.name)}</b>`}</button>`;
   }).join('');
 }
@@ -2573,7 +2573,7 @@ function openZone(id){
     });
   };
   const drawTowns = () => {
-    $('#zn-towns').innerHTML = townsWith.map(t => { const c = townCount(t); return `<button type="button" class="reason ${t===curTown?'on':''}" data-t="${t}" style="line-height:1.25;">${t}<br><small style="font-weight:normal;font-size:.75rem;">(활동${c.act}/게이트볼${c.gate}) ${c.all}명</small></button>`; }).join('');
+    $('#zn-towns').innerHTML = townsWith.map(t => { const c = townCount(t); return `<button type="button" class="reason ${t===curTown?'on':''}" data-t="${t}" style="line-height:1.25;">${t}<br><small style="font-weight:normal;font-size:.75rem;">(활동${c.act}/게이트${c.gsite}곳) ${c.all}명</small></button>`; }).join('');
     bg.querySelectorAll('#zn-towns button').forEach(b => b.onclick = () => { curTown = b.dataset.t; drawTowns(); drawList(); });
   };
   // 👥 모임 구역: 경로당지킴이처럼 구역 창에 한 줄로 뜸. 근무·감점·구역 인원에는 안 셈 (z.moims = [모임 id])
@@ -4374,7 +4374,7 @@ function renderList(){
         + (rest.length ? `<optgroup label="구역에 안 넣은 경로당 (${rest.length}곳)">${rest.map(optOf).join('')}</optgroup>` : '');
     }
     const gk = keys.filter(k => k.includes('게이트볼')).length;
-    sSel.innerHTML = `<option value="">${keys.length ? `(경로당${keys.length - gk}/게이트볼${gk}) ${keys.length}곳` : '이 면에는 등록된 명단이 없어요'}</option>` + body;
+    sSel.innerHTML = `<option value="">${keys.length ? `(경로당${keys.length - gk}/게이트${gk}곳) ${keys.length}곳` : '이 면에는 등록된 명단이 없어요'}</option>` + body;
     sSel.value = curSenior || '';
     document.getElementById('senior-tools').classList.toggle('hidden', !curSenior);
     const bb = document.getElementById('btn-best'), isB = curSenior && isBest(town, curSenior);
@@ -4537,9 +4537,10 @@ function sitesOf(town){
 function townCount(t){
   const ps = participants.filter(p => p.town === t && counted(p)), g = ps.filter(isGate).length;
   const sites = [...new Set(ps.map(seniorOf))].filter(k => k !== '개별관리' && k !== NO_SENIOR), gs = sites.filter(k => k.includes('게이트볼')).length;
-  return { act: ps.length - g, gate: g, all: ps.length, site: sites.length - gs, gsite: gs };
+  // 게이트 곳 수: 면의 경로당 목록(townSites)에서 셈 — 배치 명단만 있고 사람이 아직 없는 게이트도 포함 (사용자 요청, 2026-11-01)
+  return { act: ps.length - g, gate: g, all: ps.length, site: sites.length - gs, gsite: townSites(t).filter(x => x.gate).length };
 }
-const townLabel = t => { const c = townCount(t); return `${t}(활동${c.act}/게이트볼${c.gate}) ${c.all}명`; };
+const townLabel = t => { const c = townCount(t); return `${t}(활동${c.act}/게이트${c.gsite}곳) ${c.all}명`; };
 // 경로당 이름: "지사"만 적어도 됨. 끝의 "경로당"은 떼고, 그 면에 있는 경로당 이름과 맞으면 그 이름으로
 function normSenior(town, v){
   let t = String(v||'').trim().replace(/\s*경로당$/, '').trim();
@@ -6980,46 +6981,45 @@ function rankData(d){
     .sort((a, b) => (a.rate === null) - (b.rate === null) || (a.rate ?? 0) - (b.rate ?? 0) || a.p.name.localeCompare(b.p.name));
 }
 // 📉 근무 미달: 1월~11월 근무 인정일(활동일 - 일당 미지급)이 필요한 날(근무한 달 × 10일)보다 적은 분
-const SHORT_TO = 11;
+const SHORT_TO = 11;   // 📉 근무 미달 (사용자 요청, 2026-11-01 · 2번 방식): 1월~11월 전체 기준. 달마다 인정일이 10일보다 적으면 그만큼 모자람.
+// 중도포기자: 그만두기 전 달은 그대로 세고, 그만둔 뒤 달은 빈자리로 보고 달마다 10일씩 모자람에 넣음
 function shortData(){
   const d = statsData(1, SHORT_TO);
-  // 중도포기자도 포함: 그만둔 달까지만 필요한 달로 셈 (그 뒤 달은 빼고 계산)
   const rows = d.people.map(r => {
-    const qd = quitDayOf(r.p), qm = qd ? qd.slice(0,7) : null;
-    const mks = d.mks.filter(mk => !(r.p.start && r.p.start > mk) && (!qm || mk <= qm));
-    const months = mks.length, need = months * WORK_TARGET, lack = need - r.paid;
-    const pi = payInfo(r.p, String(d.y));
-    const byM = mks.map(mk => {
-      const un = r.p.logs.filter(l => l.date.startsWith(mk)).reduce((n, l) => n + (pi[l.id] || 0), 0), got = workDays(r.p, mk).length - un;
-      return { m: Number(mk.slice(5)), got, lack: WORK_TARGET - got };
-    }).filter(x => x.lack > 0);
-    return { ...r, months, need, lack, byM, quitDay: qd };
-  }).filter(r => r.months && r.lack > 0).sort((a, b) => b.lack - a.lack || a.p.town.localeCompare(b.p.town) || a.p.name.localeCompare(b.p.name));
+    const qd = quitDayOf(r.p), qm = qd ? qd.slice(0, 7) : null, pi = payInfo(r.p, String(d.y));
+    const byM = d.mks.map(mk => {
+      const un = r.p.logs.filter(l => l.date.startsWith(mk)).reduce((n, l) => n + (pi[l.id] || 0), 0);
+      const got = r.p.start && mk < r.p.start ? 0 : Math.max(0, workDays(r.p, mk).length - un);   // 들어오기 전 달은 0일로 셈 (2번 방식)
+      return { m: Number(mk.slice(5)), mk, got, lack: Math.max(0, WORK_TARGET - got) };
+    });
+    const paid = byM.reduce((n, x) => n + x.got, 0), lack = byM.reduce((n, x) => n + x.lack, 0);
+    const before = qm ? byM.filter(x => x.mk <= qm).reduce((n, x) => n + x.lack, 0) : lack;
+    return { ...r, need: d.mks.length * WORK_TARGET, paid, lack, before, after: lack - before, byM: byM.filter(x => x.lack > 0), quitDay: qd };
+  }).filter(r => r.lack > 0).sort((a, b) => b.lack - a.lack || a.p.town.localeCompare(b.p.town) || a.p.name.localeCompare(b.p.name));
   return { d, rows };
 }
 const shortMonths = r => r.byM.map(x => `${x.m}월 ${x.got}일(-${x.lack})`).join(', ');
 function showShort(){
-  const { d, rows } = shortData(), tot = rows.reduce((n, r) => n + r.lack, 0);
-  // 기간 통계와 같은 모양: 달별 표 + 면별 칸(누르면 그 면 명단)
-  const months = d.mks.map(mk => { const m = Number(mk.slice(5)); const rs = rows.filter(r => r.byM.some(x => x.m === m));
-    return { m, n: rs.length, lack: rs.reduce((k, r) => k + (r.byM.find(x => x.m === m)?.lack || 0), 0) }; });
-  const towns = TOWNS.filter(t => rows.some(r => r.p.town === t));
+  const { d, rows } = shortData(), tot = rows.reduce((n, r) => n + r.lack, 0), quitN = d.people.filter(r => quitDayOf(r.p)).length;
+  const months = d.mks.map(mk => { const m = Number(mk.slice(5)), rs = rows.filter(r => r.byM.some(x => x.m === m));
+    return { m, n: rs.length, quit: d.people.filter(r => (quitDayOf(r.p) || '').slice(0, 7) === mk).length,
+      lack: rs.reduce((k, r) => k + (r.byM.find(x => x.m === m)?.lack || 0), 0) }; });
+  // 면 칸: 그 면 활동 인원(중도포기·연계 중 신규 제외) 중 미달 인원
+  const towns = d.towns.map(t => ({ t, total: participants.filter(p => p.town === t && counted(p)).length, miss: rows.filter(r => r.p.town === t).length }));
   const COL = ['#b7791f', '#2b6cb0', '#2f855a', '#805ad5', '#c53030', '#dd6b20'];
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg" style="max-width:560px;">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:2px;">📉 ${d.y}년 1월~${SHORT_TO}월 근무 미달</div>
-    <div class="muted" style="font-size:.85rem;margin-bottom:4px;">대상: ${esc(d.towns.join('·'))} · 미달 ${rows.length}명 · 모자란 날 ${tot}일</div>
-    <div style="font-size:.88rem;background:#f7fafc;border-radius:8px;padding:6px 8px;margin-bottom:6px;line-height:1.5;">💡 <b>쉽게 말하면</b>: 한 달에 ${WORK_TARGET}일은 일해야 해요. 그보다 적게 인정된 분이 <b>미달</b>이에요.<br>· <b>인정</b> = 실제로 인정된 날 · <b>필요</b> = 근무한 달 × ${WORK_TARGET}일 · <b>모자람</b> = 필요 − 인정<br>· 🚪 중도포기한 분은 <b>그만둔 달까지만</b> 셉니다.</div>
-    <table class="st-tbl"><tr><th>달</th><th>미달 인원</th><th>모자란 날</th></tr>
-      ${months.map(x => `<tr><td>${x.m}월</td><td style="color:${x.n ? 'var(--danger)' : 'inherit'}">${x.n}</td><td>${x.lack ? '-' + x.lack + '일' : 0}</td></tr>`).join('')}
-      <tr style="font-weight:bold;background:#f7fafc;"><td>합계</td><td style="color:var(--danger)">${rows.length}명</td><td>-${tot}일</td></tr></table>
-    ${towns.length ? `<div class="close-sum" style="grid-template-columns:repeat(${Math.min(towns.length, 4)},1fr);margin:8px 0;">${towns.map((t, i) => { const rs = rows.filter(r => r.p.town === t);
-      return `<button type="button" data-go="${i}" style="background:#fffff0;border:1px solid ${COL[i % 6]}33;border-radius:8px;padding:8px 2px;font-size:.8rem;color:#2d3748;"><b style="display:block;font-size:1.25rem;color:${COL[i % 6]}">${rs.length}명</b>📍 ${esc(t)}<br>-${rs.reduce((k, r) => k + r.lack, 0)}일</button>`; }).join('')}</div>` : '<div class="pen-none">✔ 근무일이 모자란 어르신이 없어요</div>'}
-    ${towns.map((t, i) => { const rs = rows.filter(r => r.p.town === t);
-      return `<div id="sh-g${i}" class="sg-list hidden" style="margin-top:6px;"><div style="font-weight:bold;padding:6px 8px;border-radius:8px;background:#fffff0;color:${COL[i % 6]};border-left:4px solid ${COL[i % 6]};">📍 ${esc(t)} <span style="color:#2d3748;">${rs.length}명 · -${rs.reduce((k, r) => k + r.lack, 0)}일</span></div>
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📉 ${d.y}년 1월~${SHORT_TO}월 근무 미달</div>
+    <div class="close-sum" style="grid-template-columns:repeat(${Math.min(towns.length, 4) || 1},1fr);margin:6px 0;">${towns.map((x, i) => `<button type="button" data-go="${i}" style="background:#fffff0;border:1px solid ${COL[i % 6]}33;border-radius:8px;padding:8px 2px;font-size:.85rem;color:#2d3748;">📍 <b>${esc(x.t)}</b><br>총 ${x.total}명 중<b style="display:block;font-size:1.25rem;color:${COL[i % 6]}">미달 ${x.miss}명</b></button>`).join('') || '<div class="pen-none">대상 인원이 없어요</div>'}</div>
+    <div style="font-size:.9rem;background:#f7fafc;border-radius:8px;padding:6px 8px;margin-bottom:6px;">미달 <b style="color:var(--danger)">${rows.length}명</b> (🚪 중도포기 ${quitN}명 포함) · 총 모자란 일수 <b style="color:var(--danger)">${tot}일</b></div>
+    <table class="st-tbl"><tr><th>달</th><th>미달 인원</th><th>포기</th><th>모자란 일수</th></tr>
+      ${months.map(x => `<tr><td>${x.m}월</td><td style="color:${x.n ? 'var(--danger)' : 'inherit'}">${x.n}</td><td>${x.quit || 0}</td><td>${x.lack ? '-' + x.lack + '일' : 0}</td></tr>`).join('')}
+      <tr style="font-weight:bold;background:#f7fafc;"><td>합계</td><td style="color:var(--danger)">${rows.length}명</td><td>${quitN}명</td><td>-${tot}일</td></tr></table>
+    ${towns.map((x, i) => { const rs = rows.filter(r => r.p.town === x.t);
+      return `<div id="sh-g${i}" class="sg-list hidden" style="margin-top:6px;"><div style="font-weight:bold;padding:6px 8px;border-radius:8px;background:#fffff0;color:${COL[i % 6]};border-left:4px solid ${COL[i % 6]};">📍 ${esc(x.t)} <span style="color:#2d3748;">미달 ${rs.length}명 · -${rs.reduce((k, r) => k + r.lack, 0)}일</span></div>
       ${rs.map((r, k) => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#fff;border-left-color:${COL[i % 6]};margin-top:4px;">
-        <b>${k + 1}. ${nmH(r.p)}</b> <span class="muted">🏠 ${esc(seniorOf(r.p))}</span>${r.quitDay ? ` <span style="color:#9b2c2c;font-size:.85rem;">🚪 ${md(r.quitDay)} 중도포기</span>` : ''}<br>
-        <span style="font-size:.88rem;"><b style="color:var(--danger)">${r.lack}일 모자람</b> · 인정 ${r.paid}일 / 필요 ${r.need}일${r.byM.length ? ` · ${shortMonths(r)}` : ''}</span> <span class="arrow">›</span></button>`).join('')}</div>`; }).join('')}
+        <b>${k + 1}. ${nmH(r.p)}</b> <span class="muted">🏠 ${esc(seniorOf(r.p))}</span>${r.quitDay ? ` <span style="color:#805ad5;font-size:.85rem;">🚪 ${md(r.quitDay)} 중도포기</span>` : ''}<br>
+        <span style="font-size:.88rem;"><b style="color:var(--danger)">${r.lack}일 모자람</b> · 인정 ${r.paid}일 / 필요 ${r.need}일${r.quitDay ? ` · 그만두기 전 ${r.before}일 + 그만둔 뒤 ${r.after}일` : ''}</span> <span class="arrow">›</span></button>`).join('')}</div>`; }).join('')}
     <div class="grid-2" style="margin-top:10px;"><button class="secondary" id="sh-close">닫기</button><button id="sh-xls">엑셀로 내려받기</button></div></div>`;
   document.body.appendChild(back);
   back.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const el = back.querySelector('#sh-g' + b.dataset.go), show = el.classList.contains('hidden');
@@ -7030,11 +7030,12 @@ function showShort(){
 }
 function shortSheet(){
   const { d, rows } = shortData();
-  const ws = XLSX.utils.aoa_to_sheet([[`${d.y}년 근무 미달 인원 (1월 1일 ~ ${SHORT_TO}월 30일, ${d.towns.join('·')}) ${rows.length}명`], ['쉽게 말하면: 한 달에 ' + WORK_TARGET + '일은 일해야 함 · 필요한 날 = 근무한 달 × ' + WORK_TARGET + '일 · 인정일 = 활동일(교육·행사 포함) − 일당 미지급 · 중도포기자는 그만둔 달까지만 셈']]);
+  const ws = XLSX.utils.aoa_to_sheet([[`${d.y}년 근무 미달 (1월 1일 ~ ${SHORT_TO}월 30일, ${d.towns.join('·')}) ${rows.length}명 · 총 모자란 일수 ${rows.reduce((n, r) => n + r.lack, 0)}일`],
+    [`쉽게 말하면: 1~${SHORT_TO}월 달마다 ${WORK_TARGET}일을 기준으로 봄 · 달마다 (${WORK_TARGET}일 − 인정일)을 모두 더함 · 중도포기자는 그만둔 뒤 달도 ${WORK_TARGET}일씩 모자란 날에 넣음`]]);
   const data = rows.map((r, i) => ({ '순위': i + 1, '읍면': r.p.town, '경로당': seniorOf(r.p), '성명': r.p.name, '성별': r.p.sex || '', '나이': r.p.age, '근무 시작': r.p.start ? `${Number(r.p.start.slice(5))}월부터` : '',
-    '근무한 달 수': r.months, '필요한 날': r.need, '활동일': r.days, '일당 미지급': r.unpaid, '인정일': r.paid, '모자란 날': r.lack, '달별로 모자란 날': shortMonths(r), '상태': r.quitDay ? `중도포기 (${dd(r.quitDay).split('(')[0]})` : '활동 중' }));
+    '상태': r.quitDay ? `중도포기 (${dd(r.quitDay).split('(')[0]})` : '활동 중', '필요한 날': r.need, '인정일': r.paid, '모자란 날': r.lack, '그만두기 전 모자란 날': r.before, '그만둔 뒤 모자란 날': r.after, '달별로 모자란 날': shortMonths(r) }));
   if (data.length) XLSX.utils.sheet_add_json(ws, data, { origin: 'A4' }); else XLSX.utils.sheet_add_aoa(ws, [['근무일이 모자란 어르신이 없습니다.']], { origin: 'A4' });
-  ws['!cols'] = [6,8,12,9,6,6,10,10,9,8,10,8,9,50,16].map(w => ({ wch: w }));
+  ws['!cols'] = [6,8,12,9,6,6,10,16,9,9,10,14,14,50].map(w => ({ wch: w }));
   return { ws, d, rows };
 }
 // 📚 교육 부족 인원 (안전 시간 적은 순)
@@ -7085,10 +7086,10 @@ function openEduHours(){
   const cur = Object.fromEntries(names.map(n => [n, { ...eduInfo(n) }]));
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">⚙️ 교육별 시간 <span class="muted" style="font-size:.85rem;font-weight:normal;">(전체 ${EDU_NEED.total}시간 · 안전 ${EDU_NEED.safe}시간 포함)</span></div>
-    ${names.map((n, i) => `<div style="display:flex;gap:6px;align-items:center;margin:4px 0;"><b style="flex:1;min-width:0;">${esc(n)} <span class="muted" data-hl="${i}" style="font-weight:normal;">(${Number(cur[n].h)}시간)</span></b>
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">⚙️ 교육별 시간 <span class="muted" style="font-size:inherit;font-weight:normal;">(${EDU_NEED.total}시간/안전${EDU_NEED.safe})</span></div>
+    ${names.map((n, i) => `<div style="display:flex;gap:6px;align-items:center;margin:4px 0;"><b style="flex:1;min-width:0;">${esc(n)}</b>
       <select data-c="${i}" style="width:auto;margin:0;">${EDU_CATS.map(c => `<option ${cur[n].c === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
-      <select data-h="${i}" onchange="this.parentNode.querySelector('[data-hl]').textContent='('+this.value+'시간)'" style="width:auto;margin:0;">${[0,1,1.5,2,3,4,5,6,8].map(h => `<option value="${h}" ${Number(cur[n].h) === h ? 'selected' : ''}>${h}시간</option>`).join('')}</select></div>`).join('')}
+      <select data-h="${i}" style="width:auto;margin:0;">${[0,1,1.5,2,3,4,5,6,8].map(h => `<option value="${h}" ${Number(cur[n].h) === h ? 'selected' : ''}>${h}시간</option>`).join('')}</select></div>`).join('')}
     <div class="grid-2" style="margin-top:10px;"><button class="secondary" id="eh-cancel">취소</button><button id="eh-save">저장</button></div></div>`;
   document.body.appendChild(back);
   back.querySelector('#eh-cancel').onclick = () => back.remove();
