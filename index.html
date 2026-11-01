@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-70</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-71</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6617,8 +6617,10 @@ function drawQuota(){
     <b style="width:60px;flex:none;">${t}</b>
     <input type="number" min="0" inputmode="numeric" placeholder="인원" data-q="${t}|n" value="${q[t] && q[t].n != null ? q[t].n : ''}" style="flex:1;min-width:0;margin:0;">
     <input type="number" min="0" inputmode="numeric" placeholder="게이트볼" data-q="${t}|g" value="${q[t] && q[t].g != null ? q[t].g : ''}" style="flex:1;min-width:0;margin:0;">
-  </div>`).join('');
+  </div>`).join('') + `<button type="button" id="quota-save" class="full" style="margin-top:8px;">✔ 저장</button>`;
 }
+let quotaDirty = false;
+function setQuotaDirty(on){ quotaDirty = on; const b = document.getElementById('quota-save'); if (b) b.textContent = on ? '✔ 저장 (안 된 칸이 있어요)' : '✔ 저장'; }
 function quotaChange(e){
   const el = e.target; if (!el.dataset || !el.dataset.q) return;
   const [t, kind] = el.dataset.q.split('|');
@@ -6629,14 +6631,23 @@ function quotaChange(e){
   try { localStorage.setItem('jinan_quota', JSON.stringify(q)); } catch(_) {}
   if (old !== v) {
     el.value = v == null ? '' : v;
-    saveData(false);
+    saveData(false); renderZones();   // 구역 줄 바로 다시 그림 (배정 모자람 표시)
     logEvent('배정 인원', null, `${t} ${kind === 'g' ? '게이트' : '일반'} 배정 ${old ?? '-'} → ${v ?? '-'}`, today());
   }
 }
 document.addEventListener('DOMContentLoaded', () => {
   applySetOrder(); drawQuota();
   const ob = document.getElementById('set-order-btn'); if (ob) ob.onclick = setToggle;
-  const qb = document.getElementById('quota-box'); if (qb) qb.addEventListener('change', quotaChange);
+  const qb = document.getElementById('quota-box');
+  if (qb) {
+    qb.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.q) setQuotaDirty(true); });
+    qb.addEventListener('change', quotaChange);
+    qb.addEventListener('click', e => {
+      if (e.target.id !== 'quota-save') return;
+      qb.querySelectorAll('input[data-q]').forEach(el => quotaChange({ target: el }));
+      setQuotaDirty(false); renderZones(); notify('✔ 면별 배정 인원을 저장했어요.');
+    });
+  }
 });
 function zoneTodayHtml(z){
   const A = zoneAttStat(z, today());
