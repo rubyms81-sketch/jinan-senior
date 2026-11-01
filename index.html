@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-76</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-77</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2022,7 +2022,8 @@ function renderCallAlert(){
         <button class="who" onclick="openModal(${x.p.id})"><b>${nmH(x.p)}</b> <span class="muted">${esc(x.p.town)} · ${esc(seniorOf(x.p))}</span><br>
           <span style="font-size:.85rem;">${x.kind==='변경' ? `원래 ${dd(x.from)} → <b style="color:var(--warning)">오늘</b>` : '<b style="color:var(--warning)">보충 근무</b>'}${x.reason?` · ${esc(x.reason)}`:''}</span><br>${telBtn(x.p)}</button>
         ${done ? '<span class="muted" style="white-space:nowrap;">✔ 통화함</span>' : `<button class="done-btn" onclick="dayCallDone(${x.p.id})">✔ 통화했어요</button>`}</div>`; }).join('')}
-      ${tmr.length ? `<div class="muted" style="font-size:.85rem;margin-top:4px;">내일 바뀐 날짜로 근무: ${tmr.map(x => `<a href="#" onclick="openModal(${x.p.id});return false;" style="color:inherit;">${nmH(x.p)}</a>`).join(', ')}</div>` : ''}`);
+      ${chg.length ? `<button type="button" class="small full" onclick="dayWorkPop(true)" style="margin:6px 0 2px;background:#2b6cb0;">📩 오늘 근무 안내 문자 보내기</button>` : ''}
+      ${tmr.length ? `<div class="muted" style="font-size:.85rem;margin-top:4px;">내일 바뀐 날짜로 근무:${tmr.map(x => `<a href="#" onclick="openModal(${x.p.id});return false;" style="color:inherit;">${nmH(x.p)}</a>`).join(', ')}</div>` : ''}`);
   }
   if (all.length) {
     const next = all.filter(p => p.hospCall.due > td).sort((a,b) => a.hospCall.due.localeCompare(b.hospCall.due));
@@ -4135,6 +4136,36 @@ function bdaySms(list){
     const text = ta.value.replace(/\{계절\}/g, SEASON(Number(today().slice(5,7)))).replace(/\{담당자\}/g, '진안군 노인회').replace(/\{이름\}/g, '');
     back.remove();
     smsBox({ title: '🎂 생일 축하 문자', people: list, text, logType: '생일 축하 문자', logDetail: `${today()} ${list.map(p => p.name).join(', ')}` });
+  };
+}
+// 📩 근무일 당일 안내 문자: 바뀐 날짜로 근무하는 날 아침, 앱을 열면 한 번 뜸 (하루 한 번). 글은 한 번 고치면 다음에도 그대로 (jinan_tpl.dayWork)
+const DAYWORK_DEF = '[진안군 노인회]\n오늘은 근무날입니다.\n9시부터 12시까지 빠지지 않고 경로당에서 활동하시길 바랍니다.\n\n진안군 노인회 드림';
+function dayWorkPop(manual){
+  const d = today(), list = chgOn(d).map(x => x.p).filter((p, i, a) => a.indexOf(p) === i);
+  if (!list.length) { if (manual) notify('오늘 바뀐 날짜로 근무하는 어르신이 없어요.'); return; }
+  if (!manual) { let seen = ''; try { seen = load('jinan_daypop') || ''; } catch(e) {} if (seen === d) return; }
+  try { store('jinan_daypop', d); } catch(e) {}
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📩 오늘은 바뀐 날짜 근무 · ${list.length}명</div>
+    <div style="font-size:.85rem;margin-bottom:6px;">골라서 보내 주세요. 글을 고치면 다음에도 이 글로 보냅니다.</div>
+    ${list.map((p, i) => `<label style="display:flex;align-items:flex-start;gap:8px;font-weight:normal;margin:6px 0;padding:8px;border-radius:8px;background:#f0f7ff;">
+      <input type="checkbox" data-i="${i}" checked style="width:22px;height:22px;margin:2px 0 0;flex:none;">
+      <span><b>${nmH(p)}</b> <span class="muted" style="font-size:.85rem;">📍 ${esc(p.town)} ${esc(seniorOf(p))}</span><br>${p.phone ? `<span class="muted" style="font-size:.85rem;">📞 ${esc(p.phone)}</span>` : '<span class="muted" style="font-size:.85rem;">연락처 없음</span>'}</span></label>`).join('')}
+    <textarea id="dw-text" rows="6" style="font-size:.92rem;"></textarea>
+    <div style="display:flex;gap:6px;margin:-4px 0 8px;"><button type="button" class="small secondary" id="dw-reset" style="width:auto;margin:0;">↺ 처음 글로</button></div>
+    <div class="grid-2"><button class="secondary" id="dw-close">닫기</button><button id="dw-go" style="background:#2b6cb0;">📩 문자 보내기</button></div></div>`;
+  document.body.appendChild(back);
+  const ta = back.querySelector('#dw-text'); ta.value = smsTpl.dayWork || DAYWORK_DEF;
+  back.querySelector('#dw-reset').onclick = () => { ta.value = DAYWORK_DEF; };
+  back.querySelector('#dw-close').onclick = () => back.remove();
+  back.querySelector('#dw-go').onclick = () => {
+    const pick = list.filter((p, i) => back.querySelector(`input[data-i="${i}"]`).checked);
+    if (!pick.length) return notify('문자 보낼 어르신을 골라 주세요.');
+    const text = ta.value.replace(/\{담당자\}/g, '진안군 노인회');
+    if (ta.value !== (smsTpl.dayWork || DAYWORK_DEF)) { smsTpl.dayWork = ta.value; store('jinan_tpl', JSON.stringify(smsTpl)); logEvent('근무 안내 문자 글 저장', null, '다음에도 이 글로 보냄'); }
+    back.remove();
+    smsBox({ title: '📩 오늘 근무 안내 문자', people: pick, text, logType: '근무일 당일 안내 문자', logDetail: `${d} ${pick.map(p => p.name).join(', ')}` });
   };
 }
 function welcomeSms(p){   // 환영 문자: 글 편집 창을 건너뛰고 바로 문자 화면 (그 화면에서 글을 고쳐 보낼 수 있음)
@@ -6658,6 +6689,7 @@ function quotaChange(e){
 }
 document.addEventListener('DOMContentLoaded', () => {
   applySetOrder(); drawQuota();
+  setTimeout(() => dayWorkPop(false), 1500);   // 바뀐 날짜 당일이면 하루 한 번 안내 문자 팝업
   const ob = document.getElementById('set-order-btn'); if (ob) ob.onclick = setToggle;
   const qb = document.getElementById('quota-box');
   if (qb) {
