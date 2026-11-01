@@ -650,7 +650,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-48</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-49</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -6976,15 +6976,18 @@ function reviewText(r, d){
 const SHORT_TO = 11;
 function shortData(){
   const d = statsData(1, SHORT_TO);
-  const rows = d.people.filter(r => !stats(r.p).dropped && !r.p.quit && r.months).map(r => {
-    const need = r.months * WORK_TARGET, lack = need - r.paid;
+  // 중도포기자도 포함: 그만둔 달까지만 필요한 달로 셈 (그 뒤 달은 빼고 계산)
+  const rows = d.people.map(r => {
+    const qd = quitDayOf(r.p), qm = qd ? qd.slice(0,7) : null;
+    const mks = d.mks.filter(mk => !(r.p.start && r.p.start > mk) && (!qm || mk <= qm));
+    const months = mks.length, need = months * WORK_TARGET, lack = need - r.paid;
     const pi = payInfo(r.p, String(d.y));
-    const byM = d.mks.filter(mk => !(r.p.start && r.p.start > mk)).map(mk => {
+    const byM = mks.map(mk => {
       const un = r.p.logs.filter(l => l.date.startsWith(mk)).reduce((n, l) => n + (pi[l.id] || 0), 0), got = workDays(r.p, mk).length - un;
       return { m: Number(mk.slice(5)), got, lack: WORK_TARGET - got };
     }).filter(x => x.lack > 0);
-    return { ...r, need, lack, byM };
-  }).filter(r => r.lack > 0).sort((a, b) => b.lack - a.lack || a.p.town.localeCompare(b.p.town) || a.p.name.localeCompare(b.p.name));
+    return { ...r, months, need, lack, byM, quitDay: qd };
+  }).filter(r => r.months && r.lack > 0).sort((a, b) => b.lack - a.lack || a.p.town.localeCompare(b.p.town) || a.p.name.localeCompare(b.p.name));
   return { d, rows };
 }
 const shortMonths = r => r.byM.map(x => `${x.m}월 ${x.got}일(-${x.lack})`).join(', ');
@@ -6998,7 +7001,8 @@ function showShort(){
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg" style="max-width:560px;">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:2px;">📉 ${d.y}년 1월~${SHORT_TO}월 근무 미달</div>
-    <div class="muted" style="font-size:.85rem;margin-bottom:6px;">대상: ${esc(d.towns.join('·'))} · 미달 ${rows.length}명 · 모자란 날 ${tot}일</div>
+    <div class="muted" style="font-size:.85rem;margin-bottom:4px;">대상: ${esc(d.towns.join('·'))} · 미달 ${rows.length}명 · 모자란 날 ${tot}일</div>
+    <div style="font-size:.88rem;background:#f7fafc;border-radius:8px;padding:6px 8px;margin-bottom:6px;line-height:1.5;">💡 <b>쉽게 말하면</b>: 한 달에 ${WORK_TARGET}일은 일해야 해요. 그보다 적게 인정된 분이 <b>미달</b>이에요.<br>· <b>인정</b> = 실제로 인정된 날 · <b>필요</b> = 근무한 달 × ${WORK_TARGET}일 · <b>모자람</b> = 필요 − 인정<br>· 🚪 중도포기한 분은 <b>그만둔 달까지만</b> 셉니다.</div>
     <table class="st-tbl"><tr><th>달</th><th>미달 인원</th><th>모자란 날</th></tr>
       ${months.map(x => `<tr><td>${x.m}월</td><td style="color:${x.n ? 'var(--danger)' : 'inherit'}">${x.n}</td><td>${x.lack ? '-' + x.lack + '일' : 0}</td></tr>`).join('')}
       <tr style="font-weight:bold;background:#f7fafc;"><td>합계</td><td style="color:var(--danger)">${rows.length}명</td><td>-${tot}일</td></tr></table>
@@ -7007,7 +7011,7 @@ function showShort(){
     ${towns.map((t, i) => { const rs = rows.filter(r => r.p.town === t);
       return `<div id="sh-g${i}" class="sg-list hidden" style="margin-top:6px;"><div style="font-weight:bold;padding:6px 8px;border-radius:8px;background:#fffff0;color:${COL[i % 6]};border-left:4px solid ${COL[i % 6]};">📍 ${esc(t)} <span style="color:#2d3748;">${rs.length}명 · -${rs.reduce((k, r) => k + r.lack, 0)}일</span></div>
       ${rs.map((r, k) => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#fff;border-left-color:${COL[i % 6]};margin-top:4px;">
-        <b>${k + 1}. ${nmH(r.p)}</b> <span class="muted">🏠 ${esc(seniorOf(r.p))}</span><br>
+        <b>${k + 1}. ${nmH(r.p)}</b> <span class="muted">🏠 ${esc(seniorOf(r.p))}</span>${r.quitDay ? ` <span style="color:#9b2c2c;font-size:.85rem;">🚪 ${md(r.quitDay)} 중도포기</span>` : ''}<br>
         <span style="font-size:.88rem;"><b style="color:var(--danger)">${r.lack}일 모자람</b> · 인정 ${r.paid}일 / 필요 ${r.need}일${r.byM.length ? ` · ${shortMonths(r)}` : ''}</span> <span class="arrow">›</span></button>`).join('')}</div>`; }).join('')}
     <div class="grid-2" style="margin-top:10px;"><button class="secondary" id="sh-close">닫기</button><button id="sh-xls">엑셀로 내려받기</button></div></div>`;
   document.body.appendChild(back);
@@ -7019,11 +7023,11 @@ function showShort(){
 }
 function shortSheet(){
   const { d, rows } = shortData();
-  const ws = XLSX.utils.aoa_to_sheet([[`${d.y}년 근무 미달 인원 (1월 1일 ~ ${SHORT_TO}월 30일, ${d.towns.join('·')}) ${rows.length}명`], ['필요한 날 = 근무한 달 × ' + WORK_TARGET + '일 · 인정일 = 활동일(교육·행사 포함) − 일당 미지급 · 중도포기 제외']]);
+  const ws = XLSX.utils.aoa_to_sheet([[`${d.y}년 근무 미달 인원 (1월 1일 ~ ${SHORT_TO}월 30일, ${d.towns.join('·')}) ${rows.length}명`], ['쉽게 말하면: 한 달에 ' + WORK_TARGET + '일은 일해야 함 · 필요한 날 = 근무한 달 × ' + WORK_TARGET + '일 · 인정일 = 활동일(교육·행사 포함) − 일당 미지급 · 중도포기자는 그만둔 달까지만 셈']]);
   const data = rows.map((r, i) => ({ '순위': i + 1, '읍면': r.p.town, '경로당': seniorOf(r.p), '성명': r.p.name, '성별': r.p.sex || '', '나이': r.p.age, '근무 시작': r.p.start ? `${Number(r.p.start.slice(5))}월부터` : '',
-    '근무한 달 수': r.months, '필요한 날': r.need, '활동일': r.days, '일당 미지급': r.unpaid, '인정일': r.paid, '모자란 날': r.lack, '달별로 모자란 날': shortMonths(r) }));
+    '근무한 달 수': r.months, '필요한 날': r.need, '활동일': r.days, '일당 미지급': r.unpaid, '인정일': r.paid, '모자란 날': r.lack, '달별로 모자란 날': shortMonths(r), '상태': r.quitDay ? `중도포기 (${dd(r.quitDay).split('(')[0]})` : '활동 중' }));
   if (data.length) XLSX.utils.sheet_add_json(ws, data, { origin: 'A4' }); else XLSX.utils.sheet_add_aoa(ws, [['근무일이 모자란 어르신이 없습니다.']], { origin: 'A4' });
-  ws['!cols'] = [6,8,12,9,6,6,10,10,9,8,10,8,9,50].map(w => ({ wch: w }));
+  ws['!cols'] = [6,8,12,9,6,6,10,10,9,8,10,8,9,50,16].map(w => ({ wch: w }));
   return { ws, d, rows };
 }
 // 📚 교육 부족 인원 (안전 시간 적은 순)
