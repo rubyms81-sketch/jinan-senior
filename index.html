@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:14px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-59</span></span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:14px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-60</span></span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2276,8 +2276,14 @@ function renderZones(){
   const box = document.getElementById('zone-btns'); if (!box) return;
   // 면별: 경로당 수 · 지킴이 / 게이트볼 = 전체 (예: 상전 20곳 79명/6명=85)
   const zs = document.getElementById('zone-sum');
-  if (zs) zs.innerHTML = myTowns.map(t => { const c = townCount(t);
-    return `<div>📍 <b>${esc(t.replace(/[면읍]$/, ''))}</b> ${c.site}곳 ${c.act}명/<span style="color:#2f855a">게이트 ${c.gsite}곳</span> = <b>${c.all}명</b></div>`; }).join('');
+  // 면마다 3줄: 경로당·인원 / 게이트·인원 / 합계. 배정 인원(설정)보다 모자라면 빨간 -N
+  if (zs) { const qa = quotaAll();
+    const want = (cur, w) => w == null ? '' : (cur - w < 0 ? ` 배정 ${w} <b style="color:#c53030;">${cur - w}</b>` : ` 배정 ${w}`);
+    zs.innerHTML = myTowns.map(t => { const c = townCount(t), q = qa[t] || {};
+      return `<div style="margin:6px 0;">
+        <div>📍 <b>${esc(t.replace(/[면읍]$/, ''))}</b> 경로당 <b>${c.site}곳</b> · <b>${c.act}명</b>${want(c.act, q.n)}</div>
+        <div style="padding-left:14px;color:#2f855a;">🟢 게이트 ${c.gsite}곳 · ${c.gate}명${want(c.gate, q.g)}</div>
+        <div style="padding-left:14px;">합계 <b>${c.all}명</b></div></div>`; }).join(''); }
   // 팀장 구역 합계: 구역 수 · 경로당 · 게이트볼 · 총 인원
   const zl = document.getElementById('zone-lead');
   if (zl) { const used = zones.filter(z => z.sites.length), ss = used.flatMap(z => z.sites), g = ss.filter(x => x.senior.includes('게이트볼')).length;
