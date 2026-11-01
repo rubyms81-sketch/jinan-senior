@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-67</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-68</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -1350,7 +1350,7 @@ function suggestDays(mk, n = WORK_TARGET, skip = new Set()){
 }
 const isShifted = d => ![1,3,5].includes(dObj(d).getDay());   // 월·수·금이 아닌 날 = 옮긴 날
 const monthDays = mk => workdays[mk] || suggestDays(mk);
-const endDay = mk => { const d = [...monthDays(mk), ...((typeof eduAll !== 'undefined' && eduAll[mk]) || []).filter(e => !e.ext).map(e => e.date)].sort(); return d[d.length-1] || ''; };   // 열흘째 = 마감일
+const endDay = mk => { const d = [...monthDays(mk), ...((typeof eduAll !== 'undefined' && eduAll[mk]) || []).filter(e => !notCounted(e)).map(e => e.date)].sort(); return d[d.length-1] || ''; };   // 열흘째 = 마감일
 const quitDayOf = p => (p.quit && p.quitDay && Number(p.quitDay.slice(0,4)) === (p.quitYear || 0)) ? p.quitDay : '';
 const changesIn = (p, mk) => (p.changes || []).filter(c => c.from.startsWith(mk) || c.to.startsWith(mk));
 // 🩹 보충 근무(개인 일정): 사고·입원 등으로 쉬다가 돌아와 남은 날을 몰아서 일할 때
@@ -1363,6 +1363,8 @@ const customOf = (p, mk) => (p.custom && p.custom[mk]) || null;
 let eduAll = (() => { try { return JSON.parse(load('jinan_edu')) || {}; } catch(e) { return {}; } })();
 let leaderPlan = (() => { try { return JSON.parse(load('jinan_leaders')) || {}; } catch(e) { return {}; } })();
 const isLeader = p => zones.some(z => z.leaderId === p.id);
+// 역량강화교육(역량활동 모임 날)은 공익 교육·근무일 10일에 안 셈 (일정표 역량강화도 같음)
+const notCounted = e => !!e.ext || /역량강화/.test(e.name || '');
 function eduOf(p, mk){
   const mks = mk ? [mk] : [...new Set([...Object.keys(eduAll), ...Object.keys(leaderPlan)])];
   const all = [...(p.edu || []).filter(e => !mk || e.date.startsWith(mk)).map(e => ({ ...e, own: true })),
@@ -1376,7 +1378,7 @@ function personDays(p, mk, noStart){
   const lp = isLeader(p) && leaderPlan[mk]?.days?.length ? leaderPlan[mk].days : null;   // 팀장은 팀장 일정
   const set = new Set(cu ? cu.days : lp || monthDays(mk));
   changesIn(p, mk).forEach(c => { set.delete(c.from); if (c.to.startsWith(mk)) set.add(c.to); });
-  eduOf(p, mk).forEach(e => set.add(e.date));   // 교육 날은 근무일로 침
+  eduOf(p, mk).filter(e => !notCounted(e)).forEach(e => set.add(e.date));   // 교육 날은 근무일로 침 (역량강화 제외)
   const qd = quitDayOf(p);   // 중도포기한 날부터는 근무일 없음
   const sd = noStart ? '' : (p.startDay || '');   // 신규: 근무 시작한 날 전에는 근무일 없음
   return [...set].filter(d => (!qd || d < qd) && (!sd || d >= sd)).sort();
@@ -1404,7 +1406,7 @@ const docWait = p => !!(p.docNeed && !p.docOk && !p.quit);   // 비대면 교육
 function eduStatus(p, y){
   y = y || viewYear(); const t = today(), from = `${y}-01-01`, to = `${y}-${String(EDU_NEED.toMonth).padStart(2,'0')}-30`;
   const st = p.startDay || (p.start ? p.start + '-01' : ''), qd = quitDayOf(p);
-  const offered = eduOf(p).filter(e => e.date >= from && e.date <= to && e.date <= t && (e.own || ((!st || e.date >= st) && (!qd || e.date < qd))) && eduInfo(e.name).c !== '행사' && eduH(e) > 0);
+  const offered = eduOf(p).filter(e => e.date >= from && e.date <= to && e.date <= t && (e.own || ((!st || e.date >= st) && (!qd || e.date < qd))) && eduInfo(e.name).c !== '행사' && eduH(e) > 0 && !/역량강화/.test(e.name));
   const missed = offered.filter(e => eduAbsent(p, e.date)), list = offered.filter(e => !eduAbsent(p, e.date) && !(e.doc && !p.docOk));   // 서류 확인 전 비대면 교육은 아직 안 셈
   const by = { 안전: 0, 소양: 0, 직무: 0, 기타: 0 }; let total = 0;
   list.forEach(e => Object.entries(eduCats(e)).forEach(([c, h]) => { by[c] = (by[c] || 0) + h; total += h; }));
@@ -1580,7 +1582,7 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
   let locked = !!(lockable && wdLock[mk]);
   const y = Number(mk.slice(0,4)), m = Number(mk.slice(5,7)), last = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
   let sel = new Set(days), ed = new Map((edu || []).map(e => [e.date, e.name])), curEdu = '';
-  const extD = new Set((edu || []).filter(e => e.ext).map(e => e.date));   // 일정표 역량강화교육: 10일에 안 셈
+  const extD = new Set((edu || []).filter(notCounted).map(e => e.date));   // 역량강화교육: 10일에 안 셈
   const cntE = () => [...ed.keys()].filter(k => !extD.has(k)).length;   // '' = 근무일, 이름 = 그 교육·행사
   const snap = () => [...sel].sort().join() + '|' + [...ed].sort().join();
   const s0 = snap();
@@ -1906,40 +1908,59 @@ function quitsIn(mk){
   }).filter(Boolean);
 }
 // 🟢 비대면 교육 미실시: 연계 끝 신규인데 아직 비대면 교육을 하지 않은 분
-const needNF = p => !!(p.linkDone && !p.nfDone && !p.quit && !p.docOk && !(p.edu || []).some(e => /의무교육/.test(e.name)));
-// 1) 비대면 교육 준비 확인 → 2) 서류 사진 → 3) 교육 시간 입력 (순서대로, 뒤로 가기 가능)
+const needNF = p => !!(p.linkDone && !p.nfDone && !p.quit && !p.docOk && !(p.edu || []).some(e => /의무교육/.test(e.name)) && eduStatus(p).missed.length > 0);   // 단체 교육 날 불참자만
+// 날짜·시간 입력 창 (한 명 또는 여러 명 공통). 사진 단계는 없음 (현장에서 체크함) → {date, hs} 또는 null
+const NF_H = [0, 1, 2, 2.5, 3, 4, 5, 6];
+function nfSetDlg(ps){
+  return new Promise(res => {
+    const hs0 = { 안전: 2, 소양: 0, 직무: 1 }, names = ps.map(p => p.name);
+    const back = document.createElement('div'); back.className = 'dlg-back';
+    back.innerHTML = `<div class="dlg" style="max-width:380px;"><div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🎓 비대면 교육 날짜·시간</div>
+      <div class="muted" style="font-size:.9rem;margin-bottom:8px;">${ps.length}명 · ${esc(names.slice(0, 5).join(', '))}${ps.length > 5 ? ' 외' : ''}</div>
+      <label>교육 받은 날짜</label><input type="date" id="nf-date" value="${today()}" max="${today()}">
+      ${Object.keys(hs0).map(c => `<div style="display:flex;align-items:center;gap:8px;margin:6px 0;"><b style="flex:1;">${c}교육</b><select data-c="${c}" style="width:auto;margin:0;">${NF_H.map(h => `<option value="${h}" ${hs0[c] === h ? 'selected' : ''}>${h}시간</option>`).join('')}</select></div>`).join('')}
+      <div class="grid-2" style="margin-top:10px;"><button class="secondary" data-v="0">취소</button><button id="nf-ok">저장</button></div></div>`;
+    document.body.appendChild(back);
+    back.querySelector('[data-v="0"]').onclick = () => { back.remove(); res(null); };
+    back.querySelector('#nf-ok').onclick = () => {
+      const date = back.querySelector('#nf-date').value;
+      if (!date || date > today()) return notify('교육 받은 날짜를 오늘 이전으로 넣어 주세요.');
+      const hs = {}; back.querySelectorAll('[data-c]').forEach(x => hs[x.dataset.c] = Number(x.value));
+      back.remove(); res({ date, hs });
+    };
+  });
+}
+// 비대면 교육 처리: 교육 날짜 기록 + 이수 + 서류 확인 (사진 없음 → 사진 필요 없음으로 남김), 사람마다 변경 이력
+function nfApply(ps, date, hs){
+  ps.forEach(p => {
+    if (!(p.edu || []).some(e => /의무교육/.test(e.name))) {
+      const ve = { id: Date.now() + p.id, date, name: '의무교육(비대면)', hs: { ...hs }, doc: true }; ve.h = eduH(ve); (p.edu ||= []).push(ve);
+    }
+    p.nfDone = true; p.nfStep = 3; p.docNeed = true; p.docOk = today(); p.docNoNeed = today(); delete p.docNoPhoto;
+    logEvent('비대면 교육', p, `${dd(date)} 비대면 의무교육 · ${vEduTxt(hs)} · 현장 체크로 이수 (사진 없음)`, date);
+  });
+  saveData(false);
+}
+// 🟢 한 명: 준비 확인 → 날짜·시간
 async function nfDialog(id){
   const p = participants.find(x => x.id === id); if (!p) return;
-  let s = p.nfStep || 0;
-  if (s < 1) {
-    if (!await ask(`${p.name} 어르신\n비대면 교육 준비되셨나요?\n(수료증 및 교육자료)`)) return;
-    s = 1; p.nfStep = 1; saveData(false);
-  }
-  const mk0 = today().slice(0,7), nx = addDays(mk0 + '-28', 7).slice(0,7);
-  const first = [...personDays(p, mk0), ...personDays(p, nx)].filter(d => d > today()).sort()[0];
-  if (!first) return notify('다음 근무일이 없어요. 근무일을 먼저 정해 주세요.');
-  for (;;) {
-    if (s < 2) {   // 2) 서류 사진
-      const c = await docPhotoAsk(p);
-      if (c === 'x') return;
-      if (c === 'photo') {
-        const f = await pickImage(); if (!f) continue;
-        try { await saveDocPhoto(p, f); } catch(e) { await notify('사진을 저장하지 못했어요. 다시 해 주세요.'); continue; }
-      } else { p.docNoPhoto = true; }
-      p.docOk = today(); s = 2; p.nfStep = 2; saveData(false);
-    }
-    const hs = await vEduDlg(p, first, { 안전: 2, 소양: 0, 직무: 1 }, true);   // 3) 교육 시간
-    if (hs === 'BACK') { s = 1; continue; }
-    if (!hs) return;
-    if (!(p.edu || []).some(e => /의무교육/.test(e.name))) {
-      const ve = { id: Date.now(), date: first, name: '의무교육(비대면)', hs, doc: true }; ve.h = eduH(ve); (p.edu ||= []).push(ve);
-      logEvent('교육 날짜', p, `${dd(first)} 의무교육(비대면) ${vEduTxt(hs)} · 첫 근무일 (일한 날로 인정)`, first);
-    }
-    p.nfDone = true; p.nfStep = 3; p.docNeed = true;
-    logEvent('비대면 교육', p, '준비 확인 · 서류 사진 · 교육 시간 입력 완료', today());
-    saveData(false); renderNewAlert(); renderList(); if (current()?.id === p.id) renderModal();
-    return notify('✔ 비대면 교육 처리를 마쳤어요.');
-  }
+  if (!await ask(`${p.name} 어르신\n비대면 교육 준비되셨나요?\n(수료증 및 교육자료)`)) return;
+  const r = await nfSetDlg([p]); if (!r) return;
+  nfApply([p], r.date, r.hs);
+  renderNewAlert(); renderList(); if (current()?.id === p.id) renderModal();
+  notify('✔ 비대면 교육 처리를 마쳤어요.');
+}
+// 🟢 여러 명: 체크한 분을 같은 날짜·시간으로 한꺼번에
+let nfSel = new Set();
+function nfPick(id, on){ on ? nfSel.add(id) : nfSel.delete(id); renderNewAlert(); }
+function nfAll(on){ const ids = participants.filter(needNF).map(p => p.id); nfSel = on ? new Set(ids) : new Set(); renderNewAlert(); }
+async function nfBulk(){
+  const ps = participants.filter(p => needNF(p) && nfSel.has(p.id)); if (!ps.length) return;
+  if (!await ask(`${ps.length}명을 한꺼번에 비대면 교육 처리할까요?\n(준비 확인은 이미 하신 것으로 봅니다)`)) return;
+  const r = await nfSetDlg(ps); if (!r) return;
+  nfApply(ps, r.date, r.hs); nfSel = new Set();
+  renderNewAlert(); renderList(); if (current() && ps.some(p => p.id === current().id)) renderModal();
+  notify(`✔ ${ps.length}명 비대면 교육 처리를 마쳤어요.`);
 }
 function renderNewAlert(){
   const box = document.getElementById('new-alert'); if (!box) return;
@@ -1949,7 +1970,8 @@ function renderNewAlert(){
   const todayIs = issuesOn(today());
   const tmd = today().slice(5), bd = sortPs(participants.filter(p => p.bday === tmd && visibleTowns().includes(p.town) && !stats(p).dropped));   // 내 담당 읍·면 어르신
   const fx = sortPs(participants.filter(p => fixList(p).length && !stats(p).dropped));
-  const nf = sortPs(participants.filter(p => needNF(p)));   // 면 제한 없이 전체 신규
+  const nf = sortPs(participants.filter(p => needNF(p)));   // 면 제한 없이 전체 신규 (단체 교육 날 불참자)
+  nfSel = new Set([...nfSel].filter(id => nf.some(p => p.id === id)));
   const pz = sortPs(participants.filter(p => p.pause && !stats(p).dropped && visibleTowns().includes(p.town) && pauseLeft(p) <= 7));
   const pp = sortPs(participants.filter(p => p.quitPaper && !p.quitPaper.ok && visibleTowns().includes(p.town)));
   const pauseHtml = (pz.length ? alertCard('pause', 'background:#fff5f5;border-color:#742a2a;padding:4px 10px;', `<b style="color:#742a2a;">💀 중도포기 만료 임박 ${pz.length}명</b>`,
@@ -1964,7 +1986,8 @@ function renderNewAlert(){
   const qdHtml = qdl.length ? alertCard('qdoc', 'background:#fff5f5;border-color:#c53030;padding:4px 10px;', `<b style="color:#9b2c2c;">📄 중도포기 서류 미확인 ${qdl.length}명</b>`,
     qdl.map(p => `<button type="button" class="small" onclick="quitDocAsk(${p.id})" style="width:auto;margin:4px 4px 0 0;background:#c53030;white-space:nowrap;">${esc(p.town.replace(/[면읍]$/,''))}_${esc(p.name)}_(${esc(seniorOf(p))})</button>`).join('')) : '';
   box.innerHTML = pauseHtml + ltHtml + qdHtml + renderNoSite() + (nf.length ? alertCard('nf', 'background:#f0fff4;border-color:#38a169;padding:4px 10px;', `<b style="color:#22543d;"><span class="tag-doc">!</span> 비대면 교육 미실시 ${nf.length}명</b>`,
-      nf.map(p => `<button type="button" class="small" onclick="nfDialog(${p.id})" style="width:auto;margin:4px 4px 0 0;background:#38a169;white-space:nowrap;">${esc(p.town)}_${esc(p.name)}_(${esc(seniorOf(p))})</button>`).join('')) : '')
+      `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.9rem;margin-bottom:4px;"><label style="font-weight:bold;white-space:nowrap;"><input type="checkbox" style="width:auto;margin:0 4px 0 0;" ${nf.every(p => nfSel.has(p.id)) ? 'checked' : ''} onchange="nfAll(this.checked)">전체 선택</label><span class="muted">${nfSel.size}명 선택</span><button type="button" class="small" onclick="nfBulk()" style="width:auto;margin:0 0 0 auto;padding:6px 10px;background:#38a169;${nfSel.size ? '' : 'opacity:.5;'}">✔ 선택한 ${nfSel.size}명 비대면 처리</button></div>`
+      + nf.map(p => `<span style="white-space:nowrap;display:inline-flex;align-items:center;margin:4px 4px 0 0;"><input type="checkbox" style="width:auto;margin:0 4px 0 0;" ${nfSel.has(p.id) ? 'checked' : ''} onchange="nfPick(${p.id}, this.checked)"><button type="button" class="small" onclick="nfDialog(${p.id})" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">${esc(p.town)}_${esc(p.name)}_(${esc(seniorOf(p))})</button></span>`).join('')) : '')
     + (fx.length ? alertCard('fix', 'background:#fffaf0;border-color:#dd6b20;padding:4px 10px;', `<b style="color:#c05621;">🔧 교체 필요 ${fx.length}명</b>`,
       fx.map(p => `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-top:1px dashed #fbd38d;font-size:.9rem;"><a href="#" data-open="${p.id}" style="flex:1;color:#7b341e;">${esc(p.name)}<span class="muted" style="font-size:.82rem;">(${esc(p.town.replace(/[면읍]$/,''))} ${esc(seniorOf(p))})</span><br>${fixList(p).map(x => `<b>${esc(x.n)}</b> <span class="muted" style="font-size:.82rem;">${md(x.date)}</span>`).join(' · ')}</a>
         ${fixList(p).map(x => `<button type="button" class="small" data-fix="${p.id}|${x.id}" style="width:auto;margin:0;padding:6px 10px;background:#38a169;white-space:nowrap;">✔ ${esc(x.n.replace(/\s*파손$/, ''))} 교체</button>`).join('')}</div>`).join('')) : '')
@@ -6688,7 +6711,7 @@ const HELP = [
   { t: '장기요양 등급 탈락 처리', k: '장기요양 등급 탈락 1~5등급 요양보험 등급판정 탈락처리 탈락 중도포기 등급', steps: ['어르신 이름을 눌러 점검 화면을 엽니다.', '🏥 장기요양 등급 확인을 누릅니다.', '1~5등급이면 "1~5등급 있음"을 누르고 확인을 누릅니다.'] },
   { t: '중도포기 처리와 중도포기서', k: '중도포기 그만둠 탈락 만료 서류 중도포기서 보고 전산 확인 성립 포기', steps: ['만료 임박 칸에서 이름을 누르면 보고 확인 창이 뜹니다.', '보고와 전산 처리가 됐으면 네를 누릅니다.', '중도포기서를 받으면 📄 칸에서 서류 받음을 누릅니다.'] },
   { t: '교체 필요 (조끼·명찰 파손)', k: '교체 파손 조끼 명찰 교체 필요 교체완료 물품 깨짐 찢어짐 바꿈', steps: ['게시판의 🔧 교체 필요 칸을 펼칩니다.', '교체할 항목을 확인합니다.', '교체했으면 ✔ 교체 단추를 누릅니다.'] },
-  { t: '비대면 교육 미실시', k: '비대면 교육 서류 신규 교육 준비 수료증 서류확인 교육 미실시 사진 교육시간', steps: ['게시판의 🟢 비대면 교육 미실시 칸에서 이름을 누릅니다.', '준비 확인, 서류 사진, 교육 시간 순서로 진행합니다.', '끝나면 목록에서 빠집니다.'] },
+  { t: '비대면 교육 미실시', k: '비대면 교육 서류 신규 교육 준비 수료증 서류확인 교육 미실시 사진 교육시간', steps: ['게시판의 🟢 비대면 교육 미실시 칸에서 이름을 누릅니다. 여러 명은 체크해서 한꺼번에 할 수 있습니다.', '준비 확인을 하고, 교육 받은 날짜와 시간(안전·소양·직무)을 넣습니다. 사진은 없습니다.', '끝나면 목록에서 빠집니다.'] },
   { t: '생일 축하 문자', k: '생일 축하 생일문자 축하문자 생일자 오늘생일 생일축하 계절인사', steps: ['게시판의 🎂 오늘 생일 칸을 누릅니다.', '📋 자세히 보기를 누릅니다.', '골라서 생일 축하 문자를 보냅니다.'] },
   { t: '문자 보내기', k: '문자 문자보내기 메시지 카톡 카카오톡 복사 보내기 안내 환영 문자 템플릿 글 축하 중도포기문자', steps: ['문자를 보낼 어르신이나 팀장을 고릅니다.', '글을 필요하면 고칩니다.', '💬 문자 보내기, 📋 복사, 🟡 카톡 중 하나를 누릅니다.'] },
   { t: '백업 저장하기', k: '백업 저장 불러오기 자료 보관 복구 파일 데이터 보내기 안전 백업알림 잃어버림 보관 백업파일', steps: ['설정 아래쪽의 💾 백업 칸을 찾습니다.', '저장 단추를 누르면 백업 파일이 만들어집니다.', '문제가 생기면 불러오기로 되돌립니다.'] },
