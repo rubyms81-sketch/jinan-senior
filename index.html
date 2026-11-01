@@ -650,7 +650,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-51</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-52</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1947,7 +1947,7 @@ function renderNewAlert(){
   const qdl = participants.filter(p => p.quit && quitDayOf(p) && !p.quitDocOk && visibleTowns().includes(p.town));
   const qdHtml = qdl.length ? alertCard('qdoc', 'background:#fff5f5;border-color:#c53030;padding:8px 12px;', `<b style="color:#9b2c2c;">📄 중도포기 서류 미확인 ${qdl.length}명</b>`,
     qdl.map(p => `<button type="button" class="small" onclick="quitDocAsk(${p.id})" style="width:auto;margin:4px 4px 0 0;background:#c53030;white-space:nowrap;">${esc(p.town.replace(/[면읍]$/,''))}_${esc(p.name)}_(${esc(seniorOf(p))})</button>`).join('')) : '';
-  box.innerHTML = pauseHtml + ltHtml + qdHtml + (nf.length ? alertCard('nf', 'background:#f0fff4;border-color:#38a169;padding:8px 12px;', `<b style="color:#22543d;"><span class="tag-doc">!</span> 비대면 교육 미실시 ${nf.length}명</b>`,
+  box.innerHTML = pauseHtml + ltHtml + qdHtml + renderNoSite() + (nf.length ? alertCard('nf', 'background:#f0fff4;border-color:#38a169;padding:8px 12px;', `<b style="color:#22543d;"><span class="tag-doc">!</span> 비대면 교육 미실시 ${nf.length}명</b>`,
       nf.map(p => `<button type="button" class="small" onclick="nfDialog(${p.id})" style="width:auto;margin:4px 4px 0 0;background:#38a169;white-space:nowrap;">${esc(p.town)}_${esc(p.name)}_(${esc(seniorOf(p))})</button>`).join('')) : '')
     + (fx.length ? alertCard('fix', 'background:#fffaf0;border-color:#dd6b20;padding:8px 12px;', `<b style="color:#c05621;">🔧 교체 필요 ${fx.length}명</b>`,
       fx.map(p => `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-top:1px dashed #fbd38d;font-size:.9rem;"><a href="#" data-open="${p.id}" style="flex:1;color:#7b341e;">${esc(p.name)}<span class="muted" style="font-size:.82rem;">(${esc(p.town.replace(/[면읍]$/,''))} ${esc(seniorOf(p))})</span><br>${fixList(p).map(x => `<b>${esc(x.n)}</b> <span class="muted" style="font-size:.82rem;">${md(x.date)}</span>`).join(' · ')}</a>
@@ -3696,6 +3696,42 @@ function openGuessFix(){
   };
 }
 
+// 📍 경로당 미입력 (사용자 요청, 2026-11-01): 경로당 이름이 비었거나 "활동지 칸 비어 있음"으로 저장된 분
+const noSiteP = p => !p.senior || p.senior === NO_SENIOR || /활동지 칸 비어|경로당 미입력/.test(p.senior);
+function renderNoSite(){   // 게시판 칸 (내 담당 면, 중도포기 제외)
+  const ps = sortPs(participants.filter(p => noSiteP(p) && !stats(p).dropped && visibleTowns().includes(p.town)));
+  if (!ps.length) return '';
+  const towns = TOWNS.filter(t => ps.some(p => p.town === t));
+  return alertCard('nosite', 'background:#fffff0;border-color:#d69e2e;padding:8px 12px;', `<b style="color:#744210;">📍 경로당 미입력 ${ps.length}명</b>`,
+    towns.map(t => `<div style="font-weight:bold;font-size:.9rem;margin-top:6px;">${esc(t)} · ${ps.filter(p => p.town === t).length}명</div>`
+      + ps.filter(p => p.town === t).map(p => `<button type="button" class="small" onclick="openModal(${p.id})" style="width:auto;margin:4px 4px 0 0;background:#b7791f;white-space:nowrap;">${esc(p.name)}</button>`).join('')).join('')
+    + `<button type="button" class="full" onclick="nositeRename()" style="margin-top:10px;background:#2b6cb0;">✏️ 경로당 이름 한꺼번에 넣기</button>`);
+}
+function nositeRename(){   // 고른 면의 경로당 미입력 분 전체를 새 경로당 이름으로
+  const ps = participants.filter(p => noSiteP(p) && !stats(p).dropped && visibleTowns().includes(p.town));
+  if (!ps.length) return notify('경로당이 없는 분이 없어요.');
+  const towns = TOWNS.filter(t => ps.some(p => p.town === t));
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">✏️ 경로당 이름 한꺼번에 넣기</div>
+    <label>면</label>
+    <select id="nr-town">${towns.map(t => `<option value="${esc(t)}">${esc(t)} · ${ps.filter(p => p.town === t).length}명</option>`).join('')}</select>
+    <label>새 경로당 이름</label>
+    <input type="text" id="nr-name" placeholder="예: 군상경로당">
+    <div class="muted" style="margin:6px 0 10px;font-size:.85rem;">고른 면에서 경로당이 없는 분 전체가 이 이름으로 바뀝니다.</div>
+    <div class="grid-2"><button class="secondary" id="nr-cancel">취소</button><button id="nr-save">바꾸기</button></div></div>`;
+  document.body.appendChild(back);
+  back.querySelector('#nr-cancel').onclick = () => back.remove();
+  back.querySelector('#nr-save').onclick = async () => {
+    const t = back.querySelector('#nr-town').value, nn = back.querySelector('#nr-name').value.trim();
+    if (!nn) return notify('새 경로당 이름을 적어 주세요.');
+    const members = ps.filter(p => p.town === t);
+    if (!await ask(`${t} 경로당 없는 ${members.length}명을 "${nn}" 경로당으로 넣을까요?`)) return;
+    members.forEach(p => { logEvent('경로당 변경', p, `${p.senior || '미입력'} → ${nn} (경로당 미입력 한꺼번에)`); p.senior = nn; delete p.guess; });
+    saveData(false); back.remove(); renderNewAlert(); renderList();
+    notify(`${members.length}명을 "${nn}"으로 넣었어요.`);
+  };
+}
 function renameSenior(){
   const town = lastTown, old = curSenior; if (!old || town==='전체') return;
   const members = participants.filter(p => p.town===town && seniorOf(p)===old);
