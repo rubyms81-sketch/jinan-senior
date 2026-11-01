@@ -219,7 +219,9 @@
   .cal button.edu { background:#805ad5; color:#fff; font-weight:bold; }
   .bg-hosp { background:#d53f8c; }
   .tel-link { display:inline-block; color:var(--primary); font-weight:bold; text-decoration:none; background:var(--tint); border:1px solid var(--tint-bd); border-radius:16px; padding:2px 10px; margin-top:2px; white-space:nowrap; }
-  .call-card { background:#fff5f7; border:2px solid #d53f8c; border-radius:12px; padding:10px 12px; margin-bottom:12px; }
+  .call-card { background:#fff5f7; border:2px solid #d53f8c; border-radius:12px; padding:6px 12px; margin-bottom:8px; }
+  .call-card > .chg-box > summary { padding:2px 0; }
+  .call-card .chg-arrow { width:26px; height:26px; font-size:.95rem; }
   .call-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-top:1px dashed #fbb6ce; }
   .call-row:first-of-type { border-top:none; }
   .call-card.chg { background:#fffaf0; border-color:var(--warning); }
@@ -650,7 +652,7 @@
   </div>
 </div>
 
-<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-52</span></span></footer>
+<footer style="margin:0 auto;width:100%;box-sizing:border-box;text-align:left;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:#a0aec0;font-size:.8rem;padding:0 16px 24px;"><span id="maker" onclick="makerQuote()" style="cursor:pointer;">제작자:김스템 <span style="opacity:.7;">· 버전 2026.11.01-53</span></span></footer>
 
 <!-- 점검 화면 -->
 <div id="modal" class="modal hidden"><div class="modal-inner">
@@ -1936,29 +1938,29 @@ function renderNewAlert(){
   const nf = sortPs(participants.filter(p => needNF(p)));   // 면 제한 없이 전체 신규
   const pz = sortPs(participants.filter(p => p.pause && !stats(p).dropped && visibleTowns().includes(p.town) && pauseLeft(p) <= 7));
   const pp = sortPs(participants.filter(p => p.quitPaper && !p.quitPaper.ok && visibleTowns().includes(p.town)));
-  const pauseHtml = (pz.length ? alertCard('pause', 'background:#fff5f5;border-color:#742a2a;padding:8px 12px;', `<b style="color:#742a2a;">💀 중도포기 만료 임박 ${pz.length}명</b>`,
+  const pauseHtml = (pz.length ? alertCard('pause', 'background:#fff5f5;border-color:#742a2a;padding:4px 10px;', `<b style="color:#742a2a;">💀 중도포기 만료 임박 ${pz.length}명</b>`,
     pz.map(p => `<button type="button" class="small" onclick="pauseReport(${p.id})" style="width:auto;margin:4px 4px 0 0;background:#742a2a;white-space:nowrap;">${esc(p.name)} · ${leftTxt(pauseLeft(p))}</button>`).join('')) : '')
-    + (pp.length ? alertCard('paper', 'background:#fffaf0;border-color:#dd6b20;padding:8px 12px;', `<b style="color:#c05621;">📄 중도포기서 확인 필요 ${pp.length}명</b>`,
+    + (pp.length ? alertCard('paper', 'background:#fffaf0;border-color:#dd6b20;padding:4px 10px;', `<b style="color:#c05621;">📄 중도포기서 확인 필요 ${pp.length}명</b>`,
     pp.map(p => `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-top:1px dashed #fbd38d;font-size:.9rem;"><span style="flex:1;color:#7b341e;">${esc(p.name)} <span class="muted" style="font-size:.82rem;">중도포기 ${mdK(p.quitPaper.day)}</span></span><button type="button" class="small" onclick="quitPaperOk(${p.id})" style="width:auto;margin:0;padding:6px 10px;background:#38a169;white-space:nowrap;">✔ 서류 받음</button></div>`).join('')) : '');
   const lt = sortPs(participants.filter(p => p.ltc && p.quit && visibleTowns().includes(p.town)));
-  const ltHtml = lt.length ? alertCard('ltc', 'background:#f7fafc;border-color:#4a5568;padding:8px 12px;', `<b style="color:#2d3748;">🏥 장기요양 탈락 ${lt.length}명</b>`,
+  const ltHtml = lt.length ? alertCard('ltc', 'background:#f7fafc;border-color:#4a5568;padding:4px 10px;', `<b style="color:#2d3748;">🏥 장기요양 탈락 ${lt.length}명</b>`,
     `<div style="font-size:.9rem;">${lt.map(p => `<a href="#" data-open="${p.id}" style="color:#2d3748;white-space:nowrap;">${esc(p.name)}<span class="muted" style="font-size:.82rem;">(${esc(seniorOf(p))} · ${mdK(p.ltc)})</span></a>`).join(', ')}</div>`) : '';
   // 📄 중도포기 서류 미확인 (서류 확인 전): 올해 중도포기자
   const qdl = participants.filter(p => p.quit && quitDayOf(p) && !p.quitDocOk && visibleTowns().includes(p.town));
-  const qdHtml = qdl.length ? alertCard('qdoc', 'background:#fff5f5;border-color:#c53030;padding:8px 12px;', `<b style="color:#9b2c2c;">📄 중도포기 서류 미확인 ${qdl.length}명</b>`,
+  const qdHtml = qdl.length ? alertCard('qdoc', 'background:#fff5f5;border-color:#c53030;padding:4px 10px;', `<b style="color:#9b2c2c;">📄 중도포기 서류 미확인 ${qdl.length}명</b>`,
     qdl.map(p => `<button type="button" class="small" onclick="quitDocAsk(${p.id})" style="width:auto;margin:4px 4px 0 0;background:#c53030;white-space:nowrap;">${esc(p.town.replace(/[면읍]$/,''))}_${esc(p.name)}_(${esc(seniorOf(p))})</button>`).join('')) : '';
-  box.innerHTML = pauseHtml + ltHtml + qdHtml + renderNoSite() + (nf.length ? alertCard('nf', 'background:#f0fff4;border-color:#38a169;padding:8px 12px;', `<b style="color:#22543d;"><span class="tag-doc">!</span> 비대면 교육 미실시 ${nf.length}명</b>`,
+  box.innerHTML = pauseHtml + ltHtml + qdHtml + renderNoSite() + (nf.length ? alertCard('nf', 'background:#f0fff4;border-color:#38a169;padding:4px 10px;', `<b style="color:#22543d;"><span class="tag-doc">!</span> 비대면 교육 미실시 ${nf.length}명</b>`,
       nf.map(p => `<button type="button" class="small" onclick="nfDialog(${p.id})" style="width:auto;margin:4px 4px 0 0;background:#38a169;white-space:nowrap;">${esc(p.town)}_${esc(p.name)}_(${esc(seniorOf(p))})</button>`).join('')) : '')
-    + (fx.length ? alertCard('fix', 'background:#fffaf0;border-color:#dd6b20;padding:8px 12px;', `<b style="color:#c05621;">🔧 교체 필요 ${fx.length}명</b>`,
+    + (fx.length ? alertCard('fix', 'background:#fffaf0;border-color:#dd6b20;padding:4px 10px;', `<b style="color:#c05621;">🔧 교체 필요 ${fx.length}명</b>`,
       fx.map(p => `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-top:1px dashed #fbd38d;font-size:.9rem;"><a href="#" data-open="${p.id}" style="flex:1;color:#7b341e;">${esc(p.name)}<span class="muted" style="font-size:.82rem;">(${esc(p.town.replace(/[면읍]$/,''))} ${esc(seniorOf(p))})</span><br>${fixList(p).map(x => `<b>${esc(x.n)}</b> <span class="muted" style="font-size:.82rem;">${md(x.date)}</span>`).join(' · ')}</a>
         ${fixList(p).map(x => `<button type="button" class="small" data-fix="${p.id}|${x.id}" style="width:auto;margin:0;padding:6px 10px;background:#38a169;white-space:nowrap;">✔ ${esc(x.n.replace(/\s*파손$/, ''))} 교체</button>`).join('')}</div>`).join('')) : '')
-    + (bd.length ? alertCard('bday', 'background:#fff5f7;border-color:#ed64a6;padding:8px 12px;', `<b style="color:#b83280;">🎂 오늘 생일 ${bd.length}명</b>`,
+    + (bd.length ? alertCard('bday', 'background:#fff5f7;border-color:#ed64a6;padding:4px 10px;', `<b style="color:#b83280;">🎂 오늘 생일 ${bd.length}명</b>`,
       `<div style="font-size:.9rem;margin-bottom:6px;">${bd.map(p => `<a href="#" data-open="${p.id}" style="color:#702459;white-space:nowrap;">${esc(p.name)}<span class="muted" style="font-size:.82rem;">(${esc(p.town.replace(/[면읍]$/,''))} ${esc(seniorOf(p))})</span></a>`).join(', ')}</div>
       <button type="button" class="full" id="bd-sms" style="margin:0;background:#d53f8c;">📋 자세히 보기 · 생일 축하 문자</button>`) : '')
-    + (todayIs.length ? alertCard('issue', 'background:#fff5f5;border-color:#e53e3e;padding:8px 12px;', `<b style="color:#c53030;">🔔 오늘 경고·벌점 ${todayIs.length}건</b>`,
+    + (todayIs.length ? alertCard('issue', 'background:#fff5f5;border-color:#e53e3e;padding:4px 10px;', `<b style="color:#c53030;">🔔 오늘 경고·벌점 ${todayIs.length}건</b>`,
       `<div style="font-size:.9rem;margin-bottom:6px;">${todayIs.map(r => `<span style="white-space:nowrap;">${esc(r.q.name)}<span class="muted" style="font-size:.82rem;">(${esc(seniorOf(r.q))}${r.time ? ' ' + r.time : ''})</span></span>`).join(', ')}</div>
       <button type="button" class="full" id="is-open" style="margin:0;background:#e53e3e;">📋 자세히 보기 · 팀장 문자</button>`) : '')
-    + (qs.length ? alertCard('quit', 'background:#f7fafc;border-color:#718096;padding:8px 12px;', `<b style="color:#2d3748;">🚪 ${m}월 중도포기 어르신 ${qs.length}명</b>`,
+    + (qs.length ? alertCard('quit', 'background:#f7fafc;border-color:#718096;padding:4px 10px;', `<b style="color:#2d3748;">🚪 ${m}월 중도포기 어르신 ${qs.length}명</b>`,
       `<div style="font-size:.9rem;">${qs.map(x => `<a href="#" data-open="${x.p.id}" style="color:#2d3748;white-space:nowrap;">${esc(x.p.name)}<span class="muted" style="font-size:.82rem;">(${esc(x.p.town.replace(/[면읍]$/,''))} ${esc(seniorOf(x.p))} · ${md(x.date)} · ${esc(x.why)})</span></a>`).join(', ')}</div>`) : '');
   box.querySelectorAll('[data-open]').forEach(a => a.onclick = e => { e.preventDefault(); openModal(Number(a.dataset.open)); });
   box.querySelector('#bd-sms')?.addEventListener('click', () => bdayDialog(bd));
@@ -3702,7 +3704,7 @@ function renderNoSite(){   // 게시판 칸 (내 담당 면, 중도포기 제외
   const ps = sortPs(participants.filter(p => noSiteP(p) && !stats(p).dropped && visibleTowns().includes(p.town)));
   if (!ps.length) return '';
   const towns = TOWNS.filter(t => ps.some(p => p.town === t));
-  return alertCard('nosite', 'background:#fffff0;border-color:#d69e2e;padding:8px 12px;', `<b style="color:#744210;">📍 경로당 미입력 ${ps.length}명</b>`,
+  return alertCard('nosite', 'background:#fffff0;border-color:#d69e2e;padding:4px 10px;', `<b style="color:#744210;">📍 경로당 미입력 ${ps.length}명</b>`,
     towns.map(t => `<div style="font-weight:bold;font-size:.9rem;margin-top:6px;">${esc(t)} · ${ps.filter(p => p.town === t).length}명</div>`
       + ps.filter(p => p.town === t).map(p => `<button type="button" class="small" onclick="openModal(${p.id})" style="width:auto;margin:4px 4px 0 0;background:#b7791f;white-space:nowrap;">${esc(p.name)}</button>`).join('')).join('')
     + `<button type="button" class="full" onclick="nositeRename()" style="margin-top:10px;background:#2b6cb0;">✏️ 경로당 이름 한꺼번에 넣기</button>`);
