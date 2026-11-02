@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-136</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-137</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -1801,9 +1801,12 @@ function issuesOn(d){
   participants.forEach(q => q.logs.filter(l => l.date === d).forEach(l => { const t = issueText(l); if (t.length) rows.push({ q, l, t, time: logTime(l) }); }));
   return rows.sort((a, b) => a.time.localeCompare(b.time) || a.q.name.localeCompare(b.q.name));
 }
+// 팀장께 문자 보낸 건(l.sentLeader)은 게시판·알림 목록에서 뺌 (기록은 그대로)
+const issuesOpen = d => issuesOn(d).filter(r => !r.l.sentLeader);
+function markIssueSent(rows){ rows.forEach(r => r.l.sentLeader = true); saveData(false); renderList(); }
 // 🔔 점검 결과: 팀장(구역)별로 묶어서 이유·경로당·시간까지 → 팀장에게 문자
 function issuesDialog(d){
-  const rows = issuesOn(d), M = Number(d.slice(5,7)), D = Number(d.slice(8,10));
+  const rows = issuesOpen(d), M = Number(d.slice(5,7)), D = Number(d.slice(8,10));
   const groups = [];
   rows.forEach(r => { const z = zoneOf(r.q), L = leaderOf(r.q), key = L ? 'L' + L.num : z ? 'z' + z.id : 'none';
     let g = groups.find(x => x.key === key); if (!g) groups.push(g = { key, z, L, rows: [] }); g.rows.push(r); });
@@ -1830,7 +1833,8 @@ function issuesDialog(d){
       + pick.map(r => `· ${seniorOf(r.q)} ${r.q.name} 어르신${r.time ? ` (${Number(r.time.slice(0,2))}시 ${Number(r.time.slice(3,5))}분)` : ''}\n\n  ${r.t.join(', ')}${r.l.memo ? ` - ${r.l.memo}` : ''}`).join('\n\n')
       + `\n\n어르신들께 주의 말씀 전해 주시고, 지도 편달 부탁드립니다.\n${isToday ? '오늘도' : '늘'} 애써 주셔서 진심으로 감사합니다.\n\n진안군 노인회 드림.`;
     smsBox({ title: `${M}월 ${dd(d)} 점검 결과 → ${g.L ? g.L.name + ' 팀장' : '팀장'}`, people: [...new Set(pick.map(r => r.q))], text, logType: '점검 결과 팀장 문자',
-      logDetail: `${d} ${pick.map(r => `${r.q.name}(${r.time}): ${r.t.join(', ')}`).join(' / ')}`, leaderOnly: true });
+      logDetail: `${d} ${pick.map(r => `${r.q.name}(${r.time}): ${r.t.join(', ')}`).join(' / ')}`, leaderOnly: true,
+      onSent: () => markIssueSent(pick) });
   });
 }
 // ⏰ 점검한 날 정해 둔 시간(기본 오전 11시 50분): 알람 + 경고·벌점 받은 어르신 목록 (앱이 켜져 있을 때 / 늦게 열면 열 때)
@@ -1838,7 +1842,7 @@ const ALARM_DEF = '11:50';
 const alarmAt = () => /^\d{2}:\d{2}$/.test(ui.alarmAt || '') ? ui.alarmAt : ALARM_DEF;   // 환경 설정에서 바꿀 수 있음
 function checkAlarm(){
   const d = today(); if (hhmm(new Date()) < alarmAt()) return;
-  const n = issuesOn(d).length; if (!n) return;
+  const n = issuesOpen(d).length; if (!n) return;
   const seen = (() => { try { return JSON.parse(load('jinan_alarm')) || {}; } catch(e) { return {}; } })();
   if (seen.d === d && seen.n >= n) return;
   store('jinan_alarm', JSON.stringify({ d, n }));
@@ -1902,6 +1906,9 @@ function chgOn(k){
   return out.sort((a,b) => !!dayCalled(a.p, k) - !!dayCalled(b.p, k) || seniorRank(seniorOf(a.p))-seniorRank(seniorOf(b.p)) || seniorOf(a.p).localeCompare(seniorOf(b.p)) || a.p.name.localeCompare(b.p.name));
 }
 const dayCalled = (p, k) => (p.dayCalls || []).includes(k);
+// 📩 바뀐 날짜 근무 안내 문자를 보낸 날 (보낸 분은 오늘 칸·팝업에서 뺌)
+const daySent = (p, k) => (p.daySent || []).includes(k);
+function markDaySent(p, k){ if (!daySent(p, k)) (p.daySent ||= []).push(k); saveData(false); renderList(); }
 // 🆕 그달 새로 들어온 어르신 (2월 이후 근무 시작으로 등록한 분) — 그 달에만 간단히 보여 줌
 // 맨 위 알림 칸: 오른쪽 화살표로 접기·펼치기 (처음엔 접힘, 펼친 상태는 다시 그려도 그대로)
 const alertOpen = {};
@@ -1977,7 +1984,7 @@ function renderNewAlert(){
   const mk = monthKey(), m = Number(mk.slice(5)), ps = sortPs(participants.filter(p => p.start === mk && visibleTowns().includes(p.town)));
   const qs = quitsIn(mk);
   // 🎂 오늘 생일: 구역에 넣은 어르신만 (구역이 없으면 내 담당 면)
-  const todayIs = issuesOn(today());
+  const todayIs = issuesOpen(today());
   const tmd = today().slice(5), bd = sortPs(participants.filter(p => p.bday === tmd && visibleTowns().includes(p.town) && !stats(p).dropped));   // 내 담당 읍·면 어르신
   const fx = sortPs(participants.filter(p => fixList(p).length && !stats(p).dropped));
   const nf = sortPs(participants.filter(p => needNF(p)));   // 면 제한 없이 전체 신규 (단체 교육 날 불참자)
@@ -2019,11 +2026,11 @@ function renderCallAlert(){
   renderNewAlert();
   const box = document.getElementById('call-alert'), td = today();
   const all = participants.filter(p => p.hospCall), due = callDue();
-  const chg = chgOn(td), tmr = chgOn(addDays(td, 1));
+  const chgAll = chgOn(td), chg = chgAll.filter(x => !daySent(x.p, td)), tmr = chgOn(addDays(td, 1));   // 안내 문자 보낸 분은 뺌
   let h = noticeHtml();
   if (chg.length || tmr.length) {
     const left = chg.filter(x => !dayCalled(x.p, td)).length;
-    h += alertCard('chg', 'background:#fffaf0;border-color:var(--warning);', `<div style="font-weight:bold;color:#c05621;">${chg.length ? `🔄 오늘 바뀐 날짜로 근무하는 어르신 ${chg.length}명${left ? ` · 📞 확인 전화 ${left}명 남음` : ' · ✔ 모두 통화함'}` : '🔄 오늘은 바뀐 날짜로 근무하는 어르신이 없어요'}</div>`, `
+    h += alertCard('chg', 'background:#fffaf0;border-color:var(--warning);', `<div style="font-weight:bold;color:#c05621;">${chg.length ? `🔄 오늘 바뀐 날짜로 근무하는 어르신 ${chg.length}명${left ? ` · 📞 확인 전화 ${left}명 남음` : ' · ✔ 모두 통화함'}` : chgAll.length ? '✔ 오늘 근무 안내 문자 모두 보냄' : '🔄 오늘은 바뀐 날짜로 근무하는 어르신이 없어요'}</div>`, `
       ${chg.map(x => { const done = dayCalled(x.p, td); return `<div class="call-row ${done?'called':''}">
         <button class="who" onclick="openModal(${x.p.id})"><b>${nmH(x.p)}</b> <span class="muted">${esc(x.p.town)} · ${esc(seniorOf(x.p))}</span><br>
           <span style="font-size:.85rem;">${x.kind==='변경' ? `원래 ${dd(x.from)} → <b style="color:var(--warning)">오늘</b>` : '<b style="color:var(--warning)">보충 근무</b>'}${x.reason?` · ${esc(x.reason)}`:''}</span><br>${telBtn(x.p)}</button>
@@ -4172,8 +4179,9 @@ function dayWorkText(tpl, p, d){
     .replace(/\{이름\}/g, p.name).replace(/\{담당자\}/g, '진안군 노인회');
 }
 function dayWorkPop(manual){
-  const d = today(), list = chgOn(d).map(x => x.p).filter((p, i, a) => a.indexOf(p) === i);
-  if (!list.length) { if (manual) notify('오늘 바뀐 날짜로 근무하는 어르신이 없어요.'); return; }
+  const d = today(), all = chgOn(d).map(x => x.p).filter((p, i, a) => a.indexOf(p) === i);
+  const list = all.filter(p => !daySent(p, d));   // 안내 문자 보낸 분은 뺌
+  if (!list.length) { if (manual) notify(all.length ? '오늘 근무 안내 문자는 모두 보냈어요.' : '오늘 바뀐 날짜로 근무하는 어르신이 없어요.'); return; }
   if (!manual) { let seen = ''; try { seen = load('jinan_daypop') || ''; } catch(e) {} if (seen === d) return; }
   try { store('jinan_daypop', d); } catch(e) {}
   const back = document.createElement('div'); back.className = 'dlg-back';
@@ -4204,7 +4212,7 @@ function dayWorkPop(manual){
     back.remove();
     // 어르신마다 글이 달라서 한 명씩 차례로 문자 창을 띄움 (창을 닫으면 다음 분)
     for (const p of pick) {
-      await smsBox({ title: `📩 오늘 근무 안내 문자 · ${p.name}`, people: [p], text: dayWorkText(tpl, p, d), logType: '근무일 당일 안내 문자', logDetail: `${d} ${mdKo(d)} 바뀐 날 근무` });
+      await smsBox({ title: `📩 오늘 근무 안내 문자 · ${p.name}`, people: [p], text: dayWorkText(tpl, p, d), logType: '근무일 당일 안내 문자', logDetail: `${d} ${mdKo(d)} 바뀐 날 근무`, onSent: () => markDaySent(p, d) });
     }
   };
 }
