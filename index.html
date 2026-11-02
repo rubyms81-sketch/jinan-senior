@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-124</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-125</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -5386,11 +5386,13 @@ function bulkImport(input){
 }
 
 // ---------- 근무지 이탈 안내 문자 ----------
+// (v125) 팀장 문자 대상: 점검 항목(자리 비움·조끼·명찰·활동일지 미리 씀·항목 미흡) + 응대 태도 불량
+const leaderItems = l => { const t = logItems(l); if (l.attitude === '불량') t.push('응대 태도 불량'); return t; };
 // (v90) 점검에서 자리 비움·조끼/명찰 미착용·활동일지 미리 씀·항목 미흡이 있으면 저장 직후 팀장께 보내는 문자 (문제 없으면 안 보냄)
 function issueLeaderText(p, l){
   const L = leaderOf(p), d = `${Number(l.date.slice(5,7))}월 ${Number(l.date.slice(8,10))}일`;
   const memo = (l.memo || '').trim();
-  return `[진안군노인회] ${d} 현장 점검 확인 사항\n\n${L ? L.name + ' 팀장님' : '팀장님'}, 안녕하세요.\n진안군 노인회입니다.\n\n${seniorOf(p)} ${p.name} 어르신 점검 중 아래 내용이 확인되었습니다.\n${logItems(l).map(x => '· ' + x).join('\n')}${memo ? `\n메모: ${memo}` : ''}\n\n어르신께 주의 말씀 전해 주시고 확인 부탁드립니다.\n\n진안군 노인회 드림`;
+  return `[진안군노인회] ${d} 현장 점검 확인 사항\n\n${L ? L.name + ' 팀장님' : '팀장님'}, 안녕하세요.\n진안군 노인회입니다.\n\n${seniorOf(p)} ${p.name} 어르신 점검 중 아래 내용이 확인되었습니다.\n${leaderItems(l).map(x => '· ' + x).join('\n')}${memo ? `\n메모: ${memo}` : ''}\n\n어르신께 주의 말씀 전해 주시고 확인 부탁드립니다.\n\n진안군 노인회 드림`;
 }
 function penaltyText(p, l){
   const d = `${l.date.slice(0,4)}년 ${Number(l.date.slice(5,7))}월 ${Number(l.date.slice(8,10))}일`;
@@ -7051,7 +7053,7 @@ async function commitLog(p, log, named, quiet){
   const s = stats(p);
   const pt = logPts(log), up = pt ? unpaidOf(p, log) : 0;
   if (pt) logEvent(log.leave==='이탈' ? '근무지 이탈' : '벌점', p, `${logItems(log).join(', ')} → 감점 -${pt}점 (${viewYear()}년 누적 ${s.penalty}점)` + (up ? ' · 일당 미지급' : '') + (s.pts >= MAX_LEAVE ? ' → 감점 누적 중도포기' : '') + (log.memo ? ` · ${log.memo}` : ''), log.date);
-  if (logItems(log).length && !quiet) await smsBox({ title: `${nm(p)} 어르신 점검 확인 → 팀장님께 문자`, people: [p], leaderOnly: true, text: issueLeaderText(p, log), logType: '점검 확인 팀장 문자', logDetail: `${log.date} ${logItems(log).join(', ')}` });
+  if (leaderItems(log).length && !quiet) await smsBox({ title: `${nm(p)} 어르신 점검 확인 → 팀장님께 문자`, people: [p], leaderOnly: true, text: issueLeaderText(p, log), logType: '점검 확인 팀장 문자', logDetail: `${log.date} ${leaderItems(log).join(', ')}` });
   if (pt) {
     let msg = `${named ? nm(p) + ' 어르신\n' : ''}${logItems(log).join('\n')}\n→ 벌점 -${pt}점 (누적 ${s.penalty}점)`;
     msg += up ? `\n\n벌점 -1점이 채워져 하루치 일당 미지급입니다.` : `\n\n(벌점 -1점마다 하루치 일당 미지급)`;
