@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-98</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-99</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -7537,7 +7537,7 @@ function showShort(){
       return `<div id="sh-g${i}" class="sg-list hidden" style="margin-top:6px;"><div style="font-weight:bold;padding:6px 8px;border-radius:8px;background:#fffff0;color:${COL[i % 6]};border-left:4px solid ${COL[i % 6]};">📍 ${esc(x.t)} <span style="color:#2d3748;">미달 ${rs.length}명 · -${rs.reduce((k, r) => k + r.lack, 0)}일</span></div>
       ${rs.map((r, k) => `<div style="display:flex;gap:6px;align-items:flex-start;"><input type="checkbox" class="sh-ck" data-ck="${r.p.id}" style="width:22px;height:22px;margin:14px 0 0 4px;flex:none;"><button type="button" class="pen-row" data-id="${r.p.id}" style="flex:1;background:#fff;border-left-color:${COL[i % 6]};margin-top:4px;">
         <b>${k + 1}. ${nmH(r.p)}</b> <span class="muted">🏠 ${esc(seniorOf(r.p))}</span>${r.quitDay ? ` <span style="color:#805ad5;font-size:.85rem;">🚪 ${md(r.quitDay)} 중도포기</span>` : ''}<br>
-        <span style="font-size:.88rem;"><b style="color:var(--danger)">${r.lack}일 모자람</b> · 근무일 ${r.paid}일 · 시작 ${startTxt(r.p)}${r.quitDay ? `<br>그만두기 전 ${r.before}일 + 그만둔 뒤 ${r.after}일` : ''}</span> <span class="arrow">›</span></button></div>`).join('')}</div>`; }).join('')}
+        <span style="font-size:.88rem;"><b style="color:var(--danger)">${r.lack}일 모자람</b><br>근무일 ${r.paid}일 · 시작 ${startTxt(r.p)}${r.quitDay ? `<br>그만두기 전 ${r.before}일 + 그만둔 뒤 ${r.after}일` : ''}</span> <span class="arrow">›</span></button></div>`).join('')}</div>`; }).join('')}
     <div class="grid-2" style="margin-top:10px;"><button class="secondary" id="sh-close">닫기</button><button id="sh-xls">엑셀로 내려받기</button></div></div>`;
   document.body.appendChild(back);
   back.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const el = back.querySelector('#sh-g' + b.dataset.go), show = el.classList.contains('hidden');
