@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-82</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-83</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -7452,18 +7452,44 @@ function showShort(){
     <table class="st-tbl"><tr><th>달</th><th>미달 인원</th><th>포기</th><th>모자란 일수</th></tr>
       ${months.map(x => `<tr><td>${x.m}월</td><td style="color:${x.n ? 'var(--danger)' : 'inherit'}">${x.n}</td><td>${x.quit || 0}</td><td>${x.lack ? '-' + x.lack + '일' : 0}</td></tr>`).join('')}
       <tr style="font-weight:bold;background:#f7fafc;"><td>합계</td><td style="color:var(--danger)">${rows.length}명</td><td>${quitN}명</td><td>-${tot}일</td></tr></table>
+    <div class="grid-2" style="margin:8px 0;"><button type="button" class="secondary small" id="sh-all">☑ 전체 선택</button><button type="button" class="small" id="sh-startset" disabled>🗓 고른 0명 근무 시작 날짜 넣기</button></div>
     ${towns.map((x, i) => { const rs = rows.filter(r => r.p.town === x.t);
       return `<div id="sh-g${i}" class="sg-list hidden" style="margin-top:6px;"><div style="font-weight:bold;padding:6px 8px;border-radius:8px;background:#fffff0;color:${COL[i % 6]};border-left:4px solid ${COL[i % 6]};">📍 ${esc(x.t)} <span style="color:#2d3748;">미달 ${rs.length}명 · -${rs.reduce((k, r) => k + r.lack, 0)}일</span></div>
-      ${rs.map((r, k) => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#fff;border-left-color:${COL[i % 6]};margin-top:4px;">
+      ${rs.map((r, k) => `<div style="display:flex;gap:6px;align-items:flex-start;"><input type="checkbox" class="sh-ck" data-ck="${r.p.id}" style="width:22px;height:22px;margin:14px 0 0 4px;flex:none;"><button type="button" class="pen-row" data-id="${r.p.id}" style="flex:1;background:#fff;border-left-color:${COL[i % 6]};margin-top:4px;">
         <b>${k + 1}. ${nmH(r.p)}</b> <span class="muted">🏠 ${esc(seniorOf(r.p))}</span>${r.quitDay ? ` <span style="color:#805ad5;font-size:.85rem;">🚪 ${md(r.quitDay)} 중도포기</span>` : ''}<br>
-        <span style="font-size:.88rem;"><b style="color:var(--danger)">${r.lack}일 모자람</b> · 인정 ${r.paid}일 / 필요 ${r.need}일${r.quitDay ? ` · 그만두기 전 ${r.before}일 + 그만둔 뒤 ${r.after}일` : ''}</span> <span class="arrow">›</span></button>`).join('')}</div>`; }).join('')}
+        <span style="font-size:.88rem;"><b style="color:var(--danger)">${r.lack}일 모자람</b> · 인정 ${r.paid}일 / 필요 ${r.need}일${r.quitDay ? ` · 그만두기 전 ${r.before}일 + 그만둔 뒤 ${r.after}일` : ''}</span> <span class="arrow">›</span></button></div>`).join('')}</div>`; }).join('')}
     <div class="grid-2" style="margin-top:10px;"><button class="secondary" id="sh-close">닫기</button><button id="sh-xls">엑셀로 내려받기</button></div></div>`;
   document.body.appendChild(back);
   back.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const el = back.querySelector('#sh-g' + b.dataset.go), show = el.classList.contains('hidden');
     back.querySelectorAll('.sg-list').forEach(x => x.classList.add('hidden')); el.classList.toggle('hidden', !show); if (show) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
   back.querySelector('#sh-close').onclick = () => back.remove();
   back.querySelector('#sh-xls').onclick = () => exportShort();
-  back.querySelectorAll('[data-id]').forEach(b => b.onclick = () => { back.remove(); openModal(Number(b.dataset.id)); });
+  back.querySelectorAll('button[data-id]').forEach(b => b.onclick = () => { back.remove(); openModal(Number(b.dataset.id)); });
+  const cks = () => [...back.querySelectorAll('.sh-ck')], sBtn = back.querySelector('#sh-startset');
+  const syncBtn = () => { const n = cks().filter(c => c.checked).length; sBtn.disabled = !n; sBtn.textContent = `🗓 고른 ${n}명 근무 시작 날짜 넣기`; };
+  cks().forEach(c => c.onchange = syncBtn);
+  back.querySelector('#sh-all').onclick = () => { const on = cks().some(c => !c.checked); cks().forEach(c => c.checked = on); syncBtn(); };
+  sBtn.onclick = () => {
+    const ids = cks().filter(c => c.checked).map(c => Number(c.dataset.ck)); if (!ids.length) return;
+    const dl = document.createElement('div'); dl.className = 'dlg-back';
+    dl.innerHTML = `<div class="dlg"><div style="font-weight:bold;margin-bottom:6px;">🗓 ${ids.length}명 근무 시작 날짜</div>
+      <div class="muted" style="font-size:.9rem;margin-bottom:6px;">실제로 근무를 시작한 날을 고르세요. 고른 ${ids.length}명 모두 같은 날짜로 바뀝니다.<br>1월 시작은 처음부터(시작일 없음)로 봅니다.</div>
+      <input type="date" id="ss-date" style="width:100%;font-size:1.1rem;">
+      <div class="grid-2" style="margin-top:10px;"><button class="secondary" id="ss-no">취소</button><button id="ss-ok">✔ 저장</button></div></div>`;
+    document.body.appendChild(dl);
+    dl.querySelector('#ss-no').onclick = () => dl.remove();
+    dl.querySelector('#ss-ok').onclick = () => {
+      const sd = dl.querySelector('#ss-date').value; if (!sd) return notify('날짜를 골라 주세요.');
+      if (sd.slice(0, 4) !== String(YEAR)) return notify(`${YEAR}년 날짜를 골라 주세요.`);
+      const jan = Number(sd.slice(5, 7)) === 1;
+      ids.forEach(id => { const p = participants.find(x => x.id === id); if (!p) return;
+        const before = p.startDay || (p.start ? p.start.slice(0, 7) : '없음');
+        if (jan) { delete p.start; delete p.startDay; } else { p.start = sd.slice(0, 7); p.startDay = sd; }
+        logEvent('근무 시작 일괄 변경', p, `${before} → ${jan ? '처음부터(1월)' : sd} (미달 창에서 여러 명 한꺼번에)`, sd); });
+      saveData(false); dl.remove(); back.remove(); showShort();
+      notify(`✔ ${ids.length}명의 근무 시작 날짜를 ${jan ? '1월(처음부터)' : sd} 로 넣었어요.`);
+    };
+  };
 }
 function shortSheet(){
   const { d, rows } = shortData();
