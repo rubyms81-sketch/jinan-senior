@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-91</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-92</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -1842,7 +1842,7 @@ function checkAlarm(){
     navigator.serviceWorker.ready.then(r => r.showNotification('🔔 오늘 점검 결과', { body: `경고·벌점 ${n}건 · 팀장님께 문자를 보내 주세요.`, tag: 'jinan-alarm', silent: ui.sound === false, icon: 'icon-192.png' })); } catch(e) {}
   logEvent('점검 결과 알람', null, `${d} ${alarmAt()} 경고·벌점 ${n}건`, d);
   document.querySelectorAll('.dlg-back[data-alarm]').forEach(x => x.remove());
-  issuesDialog(d); [...document.querySelectorAll('.dlg-back')].pop()?.setAttribute('data-alarm', '1');
+  // (v92) 자동 팝업은 띄우지 않음. 게시판 🔔 칸을 눌러 볼 수 있음
 }
 setInterval(checkAlarm, 30000);
 setTimeout(checkAlarm, 4000);
