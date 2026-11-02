@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-109</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-110</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -552,7 +552,8 @@
           <div class="grid-2" style="margin-top:8px;"><button class="secondary" onclick="showStats()">화면으로 보기</button><button onclick="exportStats()">통계 엑셀</button></div>
           <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #cbd5e0;font-weight:bold;">📉 근무 미달 인원 <span class="muted" style="font-weight:normal;font-size:.85rem;">(1월 1일 ~ 11월 30일)</span></div>
           <div class="grid-2" style="margin-top:6px;"><button class="secondary" onclick="showShort()">화면으로 보기</button><button onclick="exportShort()" style="background:#b7791f;">미달 엑셀</button></div>
-          <button class="full" id="btn-close-xls" onclick="exportExcel()" style="margin-top:12px;">📥 마감 엑셀 파일로 내려받기</button>
+          <button class="full" onclick="monthlyExcel()" style="margin-top:12px;background:#2f6db0;">📋 월간 정리표 엑셀 받기</button>
+          <button class="full" id="btn-close-xls" onclick="exportExcel()" style="margin-top:8px;">📥 마감 엑셀 파일로 내려받기</button>
         </details>
         <details class="stat-box chg-box" id="edu-box">
           <summary><span style="font-weight:bold;">📚 교육 불참·시간 <span class="muted" style="font-weight:normal;font-size:.85rem;">(1~11월 · 안전 6시간 · 전체 12시간)</span></span><span class="chg-arrow"></span></summary>
@@ -3121,7 +3122,8 @@ function changeLogDate(logId){
 // 예) "홍길동 어르신 16일을 15일로 병원"  /  "고부 경로당 16일에서 15일 행사"
 const REASON_WORDS = [
   ['병원 진료', /병원|진료|치료|아프|아퍼|입원|검진|수술|약/],
-  ['개인 사정', /개인|사정|볼일|일이\s*있|농사|집안|가족|외출|경조|장례|상가|초상|결혼|혼사|잔치|칠순|팔순|제사|행사|모임|여행/]
+  ['해외여행', /해외|여행|출국|외국/],
+  ['개인 사정', /개인|사정|볼일|일이\s*있|농사|집안|가족|외출|경조|장례|상가|초상|결혼|혼사|잔치|칠순|팔순|제사|행사|모임/]
 ];
 function parseChange(text){
   const t = String(text||''), ns = t.replace(/\s+/g, '');
@@ -3263,7 +3265,7 @@ function addChange(pre){
     <input type="hidden" id="cg-type">
     <div class="grid-2" id="cg-types" style="margin-bottom:12px;">
       <button type="button" class="reason" data-v="병원 진료">🏥 병원 진료</button><button type="button" class="reason" data-v="개인 사정">🙋 개인 사정</button>
-      <button type="button" class="reason" data-v="입원" style="color:#97266d;">🛏️ 입원 체크</button><button type="button" class="reason" data-v="교육" style="color:#553c9a;">🎓 교육·행사</button>
+      <button type="button" class="reason" data-v="해외여행" style="color:#2b6cb0;">🛫 해외여행</button><button type="button" class="reason" data-v="입원" style="color:#97266d;">🛏️ 입원 체크</button><button type="button" class="reason" data-v="교육" style="color:#553c9a;">🎓 교육·행사</button>
       ${newbie ? `<button type="button" class="reason" data-v="시작일" style="grid-column:1/-1;color:#975a16;background:#fefcbf;">🆕 근무 시작 날짜${p.startDay ? ` (지금 ${dd(p.startDay)})` : ''}</button>` : ''}
       <button type="button" class="reason" data-v="중도포기" style="grid-column:1/-1;color:var(--danger);">🚪 중도포기</button>
     </div>
@@ -7806,8 +7808,61 @@ function newcomers(list, mk){
   const reg = new Set(eventLog.filter(h => h.type==='신규 등록' && h.date.startsWith(mk)).map(h => h.town+'|'+h.name));
   return list.filter(p => (p.start === mk) || reg.has(p.town+'|'+p.name) || (p.linking && p.linking.since.startsWith(mk)));
 }
+// ---------- 📋 월간 정리표 (메인 담당자용, v110) ----------
+// 면별 근무 10일 미만 분 + 벌점 + 중도포기 + 현재 입원 중. 벌점 일수는 앱 일당 계산(payInfo) 그대로.
+const unpaidIn = (p, mk) => { const pi = payInfo(p, mk.slice(0,4)); return p.logs.filter(l => l.date.startsWith(mk)).reduce((n,l) => n + (pi[l.id] || 0), 0); };
+const penIn = (p, mk) => p.logs.filter(l => l.date.startsWith(mk)).reduce((n,l) => n + logPts(l), 0);
+const lastDayIn = (p, mk) => { const ds = workDays(p, mk); return ds.length ? Number(ds[ds.length-1].slice(8,10)) : null; };
+const reasonsIn = (p, mk) => {
+  const rs = [...new Set(changesIn(p, mk).map(c => c.reason).filter(Boolean))];
+  if (customOf(p, mk)?.inHosp || hospOf(p, mk).length) rs.unshift('입원');
+  return rs.join(', ');
+};
+function monthlyRows(mk){
+  const mine = participants.filter(p => visibleTowns().includes(p.town));
+  const ok = mine.filter(p => counted(p));
+  const rows = [[`${mk.slice(0,4)}년 ${Number(mk.slice(5))}월 월간 정리표`], []];
+  visibleTowns().forEach(t => {
+    const n = ok.filter(p => p.town === t).length;
+    rows.push([`${t}(${n}명)`]);
+    rows.push(['경로당','이름','총 근무','끝나는 날','사유']);
+    const few = ok.filter(p => p.town === t).map(p => ({ p, paid: workDays(p, mk).length - unpaidIn(p, mk) }))
+      .filter(x => x.paid < WORK_TARGET).sort((a,b) => a.paid - b.paid || a.p.name.localeCompare(b.p.name));
+    if (!few.length) rows.push(['근무 10일 미만인 분 없음']);
+    few.forEach(({ p, paid }) => { const ld = lastDayIn(p, mk);
+      rows.push([seniorOf(p), p.name, `${paid}일 근무`, ld ? `끝나는 날 ${ld}일` : '-', reasonsIn(p, mk)]); });
+    rows.push([]);
+  });
+  const pens = mine.filter(p => penIn(p, mk) > 0).sort((a,b) => a.town.localeCompare(b.town) || a.name.localeCompare(b.name));
+  rows.push(['벌점']);
+  rows.push(['경로당','이름','벌점','일당 미지급']);
+  if (!pens.length) rows.push(['벌점 받은 분 없음']);
+  pens.forEach(p => rows.push([seniorOf(p), p.name, `-${penIn(p, mk)}점`, `${unpaidIn(p, mk)}일`]));
+  rows.push([]);
+  const quits = mine.filter(p => p.quit && (p.quitYear || 0) === Number(mk.slice(0,4)));
+  rows.push(['중도포기']);
+  rows.push(['경로당','이름','사유']);
+  if (!quits.length) rows.push(['중도포기 없음']);
+  quits.forEach(p => rows.push([seniorOf(p), p.name, p.quitWhy || '-']));
+  rows.push([]);
+  const hosp = mine.filter(p => inHospNow(p));
+  rows.push(['특이사항']);
+  rows.push(['경로당','이름','내용']);
+  if (!hosp.length) rows.push(['현재 입원 중인 분 없음']);
+  hosp.forEach(p => rows.push([seniorOf(p), p.name, '현재 입원 중']));
+  return rows;
+}
+function monthlyExcel(){
+  const mk = monthKey();
+  const ws = XLSX.utils.aoa_to_sheet(monthlyRows(mk));
+  ws['!cols'] = [{wch:18},{wch:12},{wch:16},{wch:16},{wch:30}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '월간 정리표');
+  XLSX.writeFile(wb, `${curMonth}월_월간_정리표.xlsx`);
+  notify(`${curMonth}월 월간 정리표를 엑셀로 받았어요.`);
+}
 function exportExcel(){
-  const town0 = (document.getElementById('filter-town').value || '전체');
+  const town0 =(document.getElementById('filter-town').value || '전체');
   const list = participants.filter(p => town0==='전체' ? visibleTowns().includes(p.town) : p.town===town0)
     .sort((a,b) => a.town.localeCompare(b.town) || seniorRank(a.senior)-seniorRank(b.senior) || (a.senior||'').localeCompare(b.senior||'') || a.name.localeCompare(b.name));
   if (!list.length) return notify('내려받을 명단이 없습니다.');
@@ -7908,6 +7963,7 @@ function exportExcel(){
   const ws3 = chgRows.length ? XLSX.utils.json_to_sheet(chgRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 근무일 변경 인원이 없습니다.`]]);
   ws3['!cols'] = [8,14,10,9,40,20,30,20].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws3, '근무일 변경');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(monthlyRows(monthKey())), '월간 정리표');
   // 보충 근무 (사고·입원 후 몰아서 근무)
   const n2 = d => Number(d.slice(8,10));
   const cuRows = list.filter(p => customOf(p, monthKey())).map(p => { const cu = customOf(p, monthKey()), reg = monthDays(monthKey()), days = personDays(p, monthKey()); return {
