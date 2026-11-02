@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-142</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-143</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -617,18 +617,16 @@
         <label>제목 위치</label>
         <div class="ui-opts" id="ui-hdpos"></div>
       </div></details>
-      <div class="set-grp" data-sg="wx" style="margin-top:8px;"><b>🌤️ 날씨</b>
+      <details class="chg-box set-grp" data-sg="wx" style="margin:8px 0;"><summary><b>🌤️ 날씨·알림·알람</b><span class="chg-arrow"></span></summary><div style="margin-top:6px;">
         <label>날씨 표시</label>
         <div class="ui-opts" id="ui-wx" style="grid-template-columns:repeat(2,1fr);"></div>
         <label>날씨 효과</label>
         <div class="ui-opts" id="ui-wxfx" style="grid-template-columns:repeat(2,1fr);"></div>
-      </div>
-      <div class="set-grp" data-sg="alarm" style="margin-top:8px;"><b>⏰ 알림·알람</b>
         <label>🔔 알림 소리 (모든 소리·진동)</label>
         <div class="ui-opts" id="ui-sound" style="grid-template-columns:repeat(2,1fr);"></div>
         <label>⏰ 점검 결과 알람 시간</label>
         <input type="time" id="ui-alarmat" style="margin:5px 0 12px;">
-      </div>
+      </div></details>
       <div class="set-grp" data-sg="etc" style="margin-top:8px;"><b>⚙️ 기타 규칙</b>
         <label>⏳ 중도포기 기준 일수 (활동 중단 후)</label>
         <div class="ui-opts" style="grid-template-columns:52px 1fr 52px;align-items:center;margin:5px 0 12px;"><button type="button" onclick="quitDaysSet(-1)">－</button><b id="ui-qdays" style="text-align:center;">45일</b><button type="button" onclick="quitDaysSet(1)">＋</button></div>
@@ -6865,8 +6863,8 @@ function zmToggle(z){
   }
 }
 // ⚙️ 설정 묶음 순서 + 면별 배정 인원 (2026-11-01)
-const SET_DEF = ['base','font','title','wx','alarm','etc','quota'];
-const SET_TXT = {base:'기본', font:'글씨', title:'맨 위 제목', wx:'날씨', alarm:'알림·알람', etc:'기타 규칙', quota:'면별 배정 인원'};
+const SET_DEF = ['base','font','title','wx','etc','quota'];
+const SET_TXT = {base:'기본', font:'글씨', title:'맨 위 제목', wx:'날씨·알림·알람', etc:'기타 규칙', quota:'면별 배정 인원'};
 let setEdit = false, setBefore = '';
 function setOrder(){
   try { const a = JSON.parse(localStorage.getItem('jinan_setorder') || 'null');
