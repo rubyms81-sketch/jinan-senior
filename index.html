@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-96</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-97</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -1821,8 +1821,8 @@ function issuesDialog(d){
     if (!pick.length) return notify('문자 보낼 어르신을 골라 주세요.');
     const isToday = d === today(), when = isToday ? '오늘' : `${M}월 ${D}일`;
     const text = `[진안군노인회] ${M}월 ${D}일 현장 점검 결과\n\n안녕하세요, ${g.L ? g.L.name + ' 팀장님' : '팀장님'}.\n진안군 노인회입니다.\n${isToday ? '오늘도' : '늘'} 수고가 많으시고 고생이 많으십니다.\n\n아래 어르신들은 ${when} 현장 점검을 다니며 확인된 문제들입니다.\n\n`
-      + pick.map(r => `· ${seniorOf(r.q)} ${r.q.name} 어르신${r.time ? ` (${Number(r.time.slice(0,2))}시 ${Number(r.time.slice(3,5))}분)` : ''}\n  ${r.t.join(', ')}${r.l.memo ? ` - ${r.l.memo}` : ''}`).join('\n')
-      + `\n\n어르신들께 주의 말씀 전해 주시고, 지도 편달 부탁드립니다.\n${isToday ? '오늘도' : '늘'} 애써 주셔서 진심으로 감사합니다.\n\n진안군 노인회 드림`;
+      + pick.map(r => `· ${seniorOf(r.q)} ${r.q.name} 어르신${r.time ? ` (${Number(r.time.slice(0,2))}시 ${Number(r.time.slice(3,5))}분)` : ''}\n\n  ${r.t.join(', ')}${r.l.memo ? ` - ${r.l.memo}` : ''}`).join('\n\n')
+      + `\n\n어르신들께 주의 말씀 전해 주시고, 지도 편달 부탁드립니다.\n${isToday ? '오늘도' : '늘'} 애써 주셔서 진심으로 감사합니다.\n\n진안군 노인회 드림.`;
     smsBox({ title: `${M}월 ${dd(d)} 점검 결과 → ${g.L ? g.L.name + ' 팀장' : '팀장'}`, people: [...new Set(pick.map(r => r.q))], text, logType: '점검 결과 팀장 문자',
       logDetail: `${d} ${pick.map(r => `${r.q.name}(${r.time}): ${r.t.join(', ')}`).join(' / ')}`, leaderOnly: true });
   });
