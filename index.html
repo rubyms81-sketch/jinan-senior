@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-111</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-112</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -545,7 +545,7 @@
     <details class="chg-box" id="close-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3>📊 통계</h3><span class="chg-arrow"></span></summary>
       <div style="margin-top:8px;" id="st-box">
-        <button class="full" id="st-monthly" onclick="monthlyExcel()" style="margin:0 0 8px;background:#2f6db0;">📋 월간 정리표 엑셀 받기</button>
+        <button class="full" id="st-monthly" onclick="monthlyPreview()" style="margin:0 0 8px;background:#2f6db0;">📋 월간 정리표 미리 보기 · 받기</button>
         <button class="secondary full" id="st-ord-btn" onclick="stOrderToggle()" style="margin:0 0 8px;">↕ 박스 순서 바꾸기</button>
         <p class="muted hidden" style="margin-top:0;" id="export-desc"></p>
         <details class="stat-box chg-box" id="st-period">
@@ -7890,6 +7890,37 @@ function monthlyRows(mk){
   if (!hosp.length) rows.push(['현재 입원 중인 분 없음']);
   hosp.forEach(p => rows.push([seniorOf(p), p.name, '현재 입원 중']));
   return rows;
+}
+// 받기 전에 내용을 먼저 보는 창 (v112)
+function monthlyPreview(){
+  const rows = monthlyRows(monthKey());
+  const TD = 'border:1px solid #bbb;padding:4px 6px;text-align:center;';
+  let h = '', tbl = '';
+  const flush = () => { if (tbl) { h += `<table style="border-collapse:collapse;width:100%;font-size:.85rem;margin-bottom:8px;">${tbl}</table>`; tbl = ''; } };
+  rows.forEach(r => {
+    if (!r.length) { flush(); return; }
+    if (r.length === 1) {
+      flush();
+      const txt = String(r[0] ?? '');
+      h += txt.includes('없음') ? `<div class="muted" style="font-size:.85rem;margin:4px 0 8px;">${esc(txt)}</div>`
+        : `<div style="background:#c6e0b4;font-weight:bold;padding:5px 8px;margin-top:6px;">${esc(txt)}</div>`;
+      return;
+    }
+    const head = r[0] === '경로당';
+    tbl += `<tr>${r.map(c => head ? `<th style="${TD}background:#f2f2f2;">${esc(String(c ?? ''))}</th>` : `<td style="${TD}">${esc(String(c ?? ''))}</td>`).join('')}</tr>`;
+  });
+  flush();
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg" style="max-height:88vh;display:flex;flex-direction:column;">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">📋 ${curMonth}월 월간 정리표 미리 보기</div>
+    <div class="muted" style="font-size:.85rem;margin-bottom:8px;">내용을 확인한 뒤 엑셀로 받을 수 있어요.</div>
+    <div style="overflow:auto;flex:1;">${h}</div>
+    <div class="grid-2" style="margin-top:10px;"><button class="secondary" id="mp-close">닫기</button><button id="mp-xls" style="background:#2f6db0;">📥 엑셀로 받기</button></div>
+  </div>`;
+  document.body.appendChild(back);
+  back.querySelector('#mp-close').onclick = () => back.remove();
+  back.querySelector('#mp-xls').onclick = () => { back.remove(); monthlyExcel(); };
+  back.addEventListener('click', e => { if (e.target === back) back.remove(); });
 }
 function monthlyExcel(){
   const mk = monthKey();
