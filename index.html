@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-108</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-109</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -7508,7 +7508,8 @@ function shortData(){
       const un = r.p.logs.filter(l => l.date.startsWith(mk)).reduce((n, l) => n + (pi[l.id] || 0), 0);
       const got = r.p.start && mk < r.p.start ? 0 : Math.max(0, workDays(r.p, mk).length - un);   // 들어오기 전 달은 0일로 셈 (2번 방식)
       const before = r.p.start && mk < r.p.start;   // 근무 시작 전 달은 0일로 셈 (2번 방식: 들어오기 전 달도 모자람)
-      return { m: Number(mk.slice(5)), mk, got: before ? 0 : got, lack: Math.max(0, WORK_TARGET - (before ? 0 : got)) };
+      const afterQuit = !!qm && mk > qm;             // (v109) 그만둔 뒤 달은 모자람에서 뺌 (2번)
+      return { m: Number(mk.slice(5)), mk, got: before ? 0 : got, lack: afterQuit ? 0 : Math.max(0, WORK_TARGET - (before ? 0 : got)) };
     });
     const paid = byM.reduce((n, x) => n + x.got, 0), lack = byM.reduce((n, x) => n + x.lack, 0);
     const before = qm ? byM.filter(x => x.mk <= qm).reduce((n, x) => n + x.lack, 0) : lack;
