@@ -545,6 +545,7 @@
     <details class="chg-box" id="close-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3>📊 통계</h3><span class="chg-arrow"></span></summary>
       <div style="margin-top:8px;">
+        <button class="full" onclick="monthlyExcel()" style="margin:0 0 8px;background:#2f6db0;">📋 월간 정리표 엑셀 받기</button>
         <p class="muted hidden" style="margin-top:0;" id="export-desc"></p>
         <details class="stat-box chg-box">
           <summary><span style="font-weight:bold;">📊 기간 통계</span><span class="chg-arrow"></span></summary>
@@ -552,7 +553,6 @@
           <div class="grid-2" style="margin-top:8px;"><button class="secondary" onclick="showStats()">화면으로 보기</button><button onclick="exportStats()">통계 엑셀</button></div>
           <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #cbd5e0;font-weight:bold;">📉 근무 미달 인원 <span class="muted" style="font-weight:normal;font-size:.85rem;">(1월 1일 ~ 11월 30일)</span></div>
           <div class="grid-2" style="margin-top:6px;"><button class="secondary" onclick="showShort()">화면으로 보기</button><button onclick="exportShort()" style="background:#b7791f;">미달 엑셀</button></div>
-          <button class="full" onclick="monthlyExcel()" style="margin-top:12px;background:#2f6db0;">📋 월간 정리표 엑셀 받기</button>
           <button class="full" id="btn-close-xls" onclick="exportExcel()" style="margin-top:8px;">📥 마감 엑셀 파일로 내려받기</button>
         </details>
         <details class="stat-box chg-box" id="edu-box">
