@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-146</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-147</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -624,10 +624,9 @@
         <label>⏰ 점검 결과 알람 시간</label>
         <input type="time" id="ui-alarmat" style="margin:5px 0 12px;">
       </div></details>
-      <div class="set-grp" data-sg="etc" style="margin-top:8px;"><b>⚙️ 기타 규칙</b>
-        <label>⏳ 중도포기 기준 일수 (활동 중단 후)</label>
+      <details class="chg-box set-grp" data-sg="quitdays" style="margin:8px 0;"><summary><b>⏳ 중도포기 기준일수 조정</b><span class="chg-arrow"></span></summary><div style="margin-top:6px;">
         <div class="ui-opts" style="grid-template-columns:52px 1fr 52px;align-items:center;margin:5px 0 12px;"><button type="button" onclick="quitDaysSet(-1)">－</button><b id="ui-qdays" style="text-align:center;">45일</b><button type="button" onclick="quitDaysSet(1)">＋</button></div>
-      </div>
+      </div></details>
       <details class="chg-box set-grp" data-sg="pts" style="margin:8px 0;"><summary><b>⚙️ 벌점 고치기</b><span class="chg-arrow"></span></summary><div style="margin-top:6px;">
         <button type="button" class="secondary full" onclick="openItemCfg('pts')">⚙️ 벌점 고치기 (항목 추가·삭제 포함)</button>
       </div></details>
@@ -6863,8 +6862,8 @@ function zmToggle(z){
   }
 }
 // ⚙️ 설정 묶음 순서 + 면별 배정 인원 (2026-11-01)
-const SET_DEF = ['lock','catorder','font','title','wx','etc','pts','quota','reset'];
-const SET_TXT = {lock:'비밀번호 잠금', catorder:'경로당 사업 순서', font:'글씨', title:'맨 위 제목', wx:'날씨·알림·알람', etc:'기타 규칙', pts:'벌점 고치기', quota:'면별 배정 인원', reset:'기록 초기화'};
+const SET_DEF = ['lock','catorder','font','title','wx','quitdays','pts','quota','reset'];
+const SET_TXT = {lock:'비밀번호 잠금', catorder:'경로당 사업 순서', font:'글씨', title:'맨 위 제목', wx:'날씨·알림·알람', quitdays:'중도포기 기준일수 조정', pts:'벌점 고치기', quota:'면별 배정 인원', reset:'기록 초기화'};
 let setEdit = false, setBefore = '';
 function setOrder(){
   try { const a = JSON.parse(localStorage.getItem('jinan_setorder') || 'null');
