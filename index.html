@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-129</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-130</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -5392,16 +5392,16 @@ const leaderItems = l => { const t = logItems(l); if (l.attitude === '불량') t
 function issueLeaderText(p, l){
   const L = leaderOf(p), d = `${Number(l.date.slice(5,7))}월 ${Number(l.date.slice(8,10))}일`;
   const memo = (l.memo || '').trim();
-  return `[진안군노인회] ${d} 현장 점검 확인 사항\n\n${L ? L.name + ' 팀장님' : '팀장님'}, 안녕하세요.\n진안군 노인회입니다.\n\n${seniorOf(p)} ${p.name} 어르신 점검 중 아래 내용이 확인되었습니다.\n${leaderItems(l).map(x => '· ' + x).join('\n')}${memo ? `\n메모: ${memo}` : ''}\n\n어르신께 주의 말씀 전해 주시고 확인 부탁드립니다.${brokenOf(l) ? '\n\n다음부터는 미리 파악하시어 저에게 알려주시길 바랍니다.' : ''}\n\n진안군 노인회 드림`;
+  return `[진안군노인회] ${d} 현장 점검 확인 사항\n\n${L ? L.name + ' 팀장님' : '팀장님'}, 안녕하세요.\n진안군 노인회입니다.\n\n${seniorOf(p)} ${p.name} 어르신 점검 중 아래 내용이 확인되었습니다.\n${leaderItems(l).map(x => '· ' + x).join('\n')}${memo ? `\n메모: ${memo}` : ''}\n\n어르신께 말씀 한번 나눠 주시고 살펴봐 주시면 감사하겠습니다.${brokenOf(l) ? '\n\n앞으로는 미리 살펴보시고 알려 주시면 감사하겠습니다.' : ''}\n\n진안군 노인회 드림`;
 }
 function penaltyText(p, l){
   const d = `${l.date.slice(0,4)}년 ${Number(l.date.slice(5,7))}월 ${Number(l.date.slice(8,10))}일`;
   const cum = cumPts(p, l), up = unpaidOf(p, l);
-  const head = `[진안군노인회] 현장 점검 벌점 안내\n\n${p.name} 어르신,\n${d} 현장 점검 결과\n${logItems(l).map(x => '· ' + x).join('\n')}\n벌점 -${logPts(l)}점이 생겼습니다.`;
+  const head = `[진안군노인회] 현장 점검 벌점 안내\n\n${p.name} 어르신,\n${d} 현장 점검 결과\n${logItems(l).map(x => '· ' + x).join('\n')}\n벌점 -${logPts(l)}점이 기록되어 안내드립니다.`;
   const tail = `\n${leaderLine(p, '이 상황을')}\n궁금한 점은 담당자에게 연락 주세요.\n감사합니다.`;
   if (cum >= MAX_LEAVE)
     return head + `\n\n벌점이 -${MAX_LEAVE}점이 되어, 규정에 따라 더 이상 참여하실 수 없게 되었습니다.` + tail;
-  return head + `\n(지금까지 벌점: -${cum}점)\n\n` + (up ? `이번에 벌점 -1점이 채워져 하루치 일당이 나오지 않습니다.\n` : '')
+  return head + `\n(지금까지 벌점: -${cum}점)\n\n` + (up ? `이번에 벌점이 쌓여 하루치 일당은 나오지 않게 되었습니다.\n` : '')
     + `※ 벌점 -1점마다 하루치 일당이 나오지 않습니다.\n(근무지 이탈 ${ptWord('이탈')} / 자리 비움 ${ptWord('자리비움')} · 조끼 ${ptWord('조끼')} · 명찰 미착용 ${ptWord('명찰')})\n벌점이 -${MAX_LEAVE}점이 되면 더 이상 일하실 수 없으니, 근무지를 지키고 조끼·명찰을 꼭 착용해 주세요.` + tail;
 }
 function smsForLog(logId){
@@ -5947,7 +5947,7 @@ function leaderChangeText(dl, pairs, reason, memo){
   const who = dl.map(x => `${seniorOf(x)} ${x.name} 어르신`).join(', ');
   const ch = pairs.map(x => x.to ? `${Number(x.from.slice(8,10))}일을 ${Number(x.to.slice(8,10))}일로` : `${Number(x.from.slice(8,10))}일 근무를 뺌`).join(', ');
   const why = (reason || '사정') + (memo ? ` (${memo})` : '');
-  return `안녕하세요 ${L ? L.name + ' ' : ''}팀장님\n활동자 날짜변경요청 보고드립니다.\n${who} ${why}으로 인해 ${ch} 날짜 변경하였습니다.\n확인부탁드립니다. 감사합니다.\n진안군 노인회 드림`;
+  return `안녕하세요 ${L ? L.name + ' ' : ''}팀장님\n활동자 근무일 변경을 보고드립니다.\n${who} ${why}으로 인해 ${ch} 날짜 변경하였습니다.\n확인 부탁드립니다. 감사합니다.\n진안군 노인회 드림`;
 }
 function changeText(p, from, to, reason, lp){
   const ymdK = d => d ? `${Number(d.slice(5,7))}월 ${dd(d)}` : '근무 안 함';
