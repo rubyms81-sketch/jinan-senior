@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-84</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-85</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -773,7 +773,7 @@
     <label>경로당 이름</label><div class="senior-combo"><input type="text" id="m-senior" class="senior-in" data-town="m-town" placeholder="예: 지사" autocomplete="off"><button type="button" class="combo-btn" data-for="m-senior" aria-label="경로당 목록">▼</button><div class="combo-list hidden"></div></div>
     <label>연락처</label><input type="tel" id="m-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off">
     <label>주소</label><input type="text" id="m-address" class="addr-in" data-town="m-town" autocomplete="off">
-    <label>근무 시작 달</label><select id="m-start" class="start-sel"></select>
+    <label>근무 시작 달 · 시작일</label><div class="grid-2"><select id="m-start" class="start-sel"></select><input type="date" id="m-startday" style="margin:0;"></div>
     <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-bottom:12px;"><input type="checkbox" id="m-link" style="width:22px;height:22px;margin:0;"> 🔗 신규 연계 중</label>
     <button class="full" onclick="saveInfo()">정보 저장</button>
     <button class="danger full" onclick="deleteParticipant()">명단에서 삭제</button>
@@ -800,7 +800,7 @@
   <div class="n-geo"><label>나이</label><input type="text" inputmode="numeric" id="n-age" class="age-in" placeholder="예: 1948 또는 78"></div>
   <label>연락처</label><input type="tel" id="n-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off">
   <div class="n-geo"><label>주소</label><input type="text" id="n-address" class="addr-in" data-town="n-town" placeholder="진안군 동향면 OOO" autocomplete="off"></div>
-  <div class="n-geo"><label>근무 시작 달</label><select id="n-start" class="start-sel"></select></div>
+  <div class="n-geo"><label>근무 시작 달 · 시작일</label><div class="grid-2"><select id="n-start" class="start-sel"></select><input type="date" id="n-startday" style="margin:0;"></div></div>
   <div class="n-geo"><label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-bottom:12px;"><input type="checkbox" id="n-link" checked style="width:22px;height:22px;margin:0;"> 🔗 <b>신규 연계 중</b></label></div>
   <div class="grid-2">
     <button onclick="addParticipant()">등록하기</button>
@@ -4656,6 +4656,7 @@ function openAdd(){
   setNKind('senior');
   document.getElementById('n-link').checked = true;
   document.getElementById('n-start').value = String(Number(today().slice(5,7)));   // 기본: 이번 달
+  syncStartDay('n-start');
   const t = (document.getElementById('filter-town').value || '전체');
   if (t!=='전체') document.getElementById('n-town').value = t;
   const cs = curSenior || '';
@@ -4760,6 +4761,12 @@ document.addEventListener('focusout', e => {
 // 근무 시작 달 고르기 (1월 = 처음부터)
 document.querySelectorAll('.start-sel').forEach(sel => sel.innerHTML = [1,2,3,4,5,6,7,8,9,10,11,12].map(m => `<option value="${m}">${m}월${m===1?' (처음부터)':''}</option>`).join(''));
 const startVal = id => { const m = Number(document.getElementById(id).value) || 1; return m > 1 ? `${viewYear()}-${String(m).padStart(2,'0')}` : ''; };
+// 시작일 칸: 달을 고르면 그 달 날짜만 고를 수 있게 (기본 1일), 1월(처음부터)이면 비움
+const startDayId = id => id.replace('start', 'startday');
+const syncStartDay = id => { const m = startVal(id), el = document.getElementById(startDayId(id));
+  el.disabled = !m; el.min = m ? m + '-01' : ''; el.max = m ? m + '-31' : '';
+  if (!m) el.value = ''; else if (!el.value.startsWith(m)) el.value = m + '-01'; };
+const startDayVal = id => { const m = startVal(id), d = document.getElementById(startDayId(id)).value; return m && d && d.startsWith(m) ? d : ''; };
 // 연락처 칸: "010-"은 미리 들어가 있고 뒷자리만 누르면 "010-1234-5678"처럼 자동으로 나눠 줌 (063 같은 집 전화도 됨)
 // 전화번호 칸(앱 전체): 누르면 010- 이 먼저 들어가고, 칸을 나가면 010-0000-0000 모양으로 정리 (v43)
 const isPhoneIn = el => !!el && el.tagName === 'INPUT' && (el.type === 'tel' || el.classList.contains('phone-in') || el.getAttribute('inputmode') === 'tel');
@@ -4823,11 +4830,12 @@ async function addParticipant(){
     ['n-name', 'n-phone', 'nm-age', 'nm-zip'].forEach(id => document.getElementById(id).value = ''); document.getElementById('nm-age').dataset.birth = ''; document.getElementById('nm-addr').value = '진안군 '; document.getElementById('nm-age-show').textContent = ''; closeAdd(); notify('모임에 넣었습니다.'); return;
   }
   if (!v('n-name')) return notify('어르신 성명은 꼭 적어 주세요.');
+  if (startVal('n-start') && !startDayVal('n-start')) return notify('근무 시작 달을 골랐어요. 시작일(며칠부터)도 골라 주세요.');
   if (isDup(participants, v('n-name'), normSenior(v('n-town'), v('n-senior')), v('n-phone')) && !await ask('같은 분이 이미 등록되어 있습니다. 그래도 등록할까요?')) return;
   const ag = parseAge(v('n-age')); if (ag.bad) return notify(AGE_BAD);
   participants.push({ id: Date.now(), town:v('n-town'), senior:normSenior(v('n-town'), v('n-senior')), name:v('n-name'), ...(normSex(v('n-sex')) ? { sex: normSex(v('n-sex')) } : {}), age:ag.age, ...(ag.birth ? { birth: ag.birth } : {}),
     phone:fmtPhone(v('n-phone')), address:v('n-address'), ...(startVal('n-start') ? { start: startVal('n-start') } : {}),
-    ...(document.getElementById('n-link').checked ? { linking: { since: today() } } : {}), ...(startVal('n-start') ? { startDay: startVal('n-start') > today().slice(0,7) ? startVal('n-start') + '-01' : today() } : {}), regDay: today(), quit:false, logs:[] });
+    ...(document.getElementById('n-link').checked ? { linking: { since: today() } } : {}), ...(startVal('n-start') ? { startDay: startDayVal('n-start') } : {}), regDay: today(), quit:false, logs:[] });
   logEvent('신규 등록', participants[participants.length-1], '한 명씩 등록' + (startVal('n-start') ? ` · ${Number(startVal('n-start').slice(5))}월부터 근무` : '') + (document.getElementById('n-link').checked ? ' · 연계 중' : ''));
   saveData();
   ['n-senior','n-name','n-age','n-phone','n-address'].forEach(id => document.getElementById(id).value=''); setSex('n-sex', '');
@@ -5830,6 +5838,7 @@ function leaderMenu(p){
     logEvent('팀장 문자', p, `${L.name} 팀장 (${p.name} 어르신 점검 중)`);
     openSmsApp([L.num], `[진안군노인회] ${L.name} 팀장님, ${p.name} 어르신(${seniorOf(p)}) 관련 연락드립니다.\n`); });
 }
+['n-start','m-start'].forEach(id => document.getElementById(id).addEventListener('change', () => syncStartDay(id)));
 function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, selfOnly, onSendText, noPhoto, onSent }){
   return new Promise(resolve => {
     const recips = people.filter(p => telOf(p)).map(p => ({ key: 'p'+p.id, label: `${p.name} 어르신`, num: telOf(p), p }));
@@ -5948,6 +5957,7 @@ function openModal(id){
   document.getElementById('m-age').value = ageShow(p.age, p.birth); setSex('m-sex', p.sex);
   document.getElementById('m-link').checked = !!p.linking;
   document.getElementById('m-start').value = p.start && Number(p.start.slice(0,4)) === viewYear() ? String(Number(p.start.slice(5,7))) : '1';
+  syncStartDay('m-start'); if (p.startDay && p.start && p.startDay.startsWith(p.start)) document.getElementById('m-startday').value = p.startDay;
   document.getElementById('m-senior').value = p.senior || '';
   document.getElementById('m-phone').value = p.phone || '';
   document.getElementById('m-address').value = p.address || '';
@@ -6994,12 +7004,14 @@ function saveInfo(){
   const p = current(); const g = id => document.getElementById(id).value.trim();
   if (!g('m-name')) return notify('성명은 비워 둘 수 없습니다.');
   const ag = parseAge(g('m-age')); if (ag.bad) return notify(AGE_BAD);
+  if (startVal('m-start') && !startDayVal('m-start')) return notify('근무 시작 달을 골랐어요. 시작일(며칠부터)도 골라 주세요.');
   if (ag.birth) p.birth = ag.birth; else if (String(p.age||'') !== ag.age) delete p.birth;
   const lk = document.getElementById('m-link').checked;
   if (lk && !p.linking) { delete p.linkDone; p.linking = { since: today() }; logEvent('신규 연계 중', p, '연계 중으로 표시'); }
   if (!lk && p.linking) { logEvent('연계 완료', p, `${p.linking.since}부터 연계 → 끝남`); p.linkDone = { since: p.linking.since, day: today() }; delete p.linking; }
   const ns = startVal('m-start'), os = p.start && Number(p.start.slice(0,4)) === viewYear() ? p.start : '';
-  if (ns !== os) { logEvent('정보 수정', p, `근무 시작 달: ${os ? Number(os.slice(5))+'월' : '처음부터'} → ${ns ? Number(ns.slice(5))+'월' : '처음부터'}`); if (ns) { p.start = ns; p.startDay = (p.startDay && p.startDay.startsWith(ns)) ? p.startDay : ns + '-01'; } else { delete p.start; delete p.startDay; } }
+  const nsDay = startDayVal('m-start');
+  if (ns !== os || (ns && nsDay !== (p.startDay || ''))) { logEvent('정보 수정', p, `근무 시작: ${os ? Number(os.slice(5))+'월' : '처음부터'} → ${ns ? Number(ns.slice(5))+'월 '+Number(nsDay.slice(8))+'일' : '처음부터'}`); if (ns) { p.start = ns; p.startDay = nsDay; } else { delete p.start; delete p.startDay; } }
   const NEWV = { town:g('m-town'), name:g('m-name'), sex:normSex(g('m-sex')), age:ag.age, senior:normSenior(g('m-town'), g('m-senior')), phone:fmtPhone(g('m-phone')), address:g('m-address') };
   const LB = { town:'읍면', name:'성명', sex:'성별', age:'나이', senior:'경로당', phone:'연락처', address:'주소' };
   const diff = Object.keys(NEWV).filter(k => String(p[k]||'') !== NEWV[k]).map(k => `${LB[k]}: ${p[k]||'(없음)'} → ${NEWV[k]||'(없음)'}`);
