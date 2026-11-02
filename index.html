@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-138</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-139</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6289,29 +6289,20 @@ async function reportShared(p, log, items){
 const siteGroup = p => matesOf(p).filter(counted);
 const startTxt = p => p.startDay ? `${Number(p.startDay.slice(5,7))}월 ${Number(p.startDay.slice(8,10))}일` : (p.start ? `${Number(p.start.slice(5))}월 1일` : '처음부터');
 const brokenOf = l => checkItems.some(it => it.track && l.ex?.[it.id]?.v);
-// 🏠 경로당 관리 상태(우수·보통·미흡): 종합 문자에 한 줄로 들어감. 그 날 경로당별로 저장(jinan_sitestat)
-const SITE_STATUS = ['우수', '보통', '미흡'];
-let siteStat = (() => { try { return JSON.parse(load('jinan_sitestat')) || {}; } catch(e) { return {}; } })();
-function pickSiteStatus(site){
-  return new Promise(res => {
-    const back = document.createElement('div'); back.className = 'dlg-back';
-    back.innerHTML = `<div class="dlg"><div style="font-weight:bold;margin-bottom:8px;">🏠 ${esc(site)} 경로당 관리 상태</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;">${SITE_STATUS.map(s => `<button type="button" data-s="${s}" style="margin:0;">${s}</button>`).join('')}</div>
-      <button type="button" class="secondary full" data-s="" style="margin:0;">넣지 않기</button></div>`;
-    document.body.appendChild(back);
-    back.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { back.remove(); res(b.dataset.s || null); });
-    back.addEventListener('click', e => { if (e.target === back) { back.remove(); res(null); } });
-  });
-}
-function siteSummaryText(site, date, rows, st){
+// 🏠 경로당 관리 상태: 점검 항목 '경로당 관리 상태'에서 고른 값을 종합 의견 앞에 한 줄로 넣음 (따로 묻지 않음)
+const isSiteStatus = x => String(x.n || '').includes('경로당 관리');
+const siteStatusOf = l => { const x = Object.values(l.ex || {}).find(isSiteStatus); return x && x.v ? x.v : null; };
+function siteSummaryText(site, date, rows){
   const d = `${Number(date.slice(5,7))}월 ${Number(date.slice(8,10))}일`, cats = new Set();
-  // 1명이면 어르신 줄은 빼고 종합 의견만, 2명 이상이면 어르신별 줄 + 종합 의견
-  const itemsOf = l => [...new Set(logItems(l).map(x => x.replace(/ -[\d.]+점$| \(주의\)$/, '')))];
+  const itemsOf = l => [...new Set(logItems(l).filter(s => !s.includes('경로당 관리')).map(x => x.replace(/ -[\d.]+점$| \(주의\)$/, '')))];
   rows.forEach(({ l }) => itemsOf(l).forEach(x => cats.add(x)));
+  // 1명이면 어르신 줄은 빼고 종합 의견만, 2명 이상이면 어르신별 줄 + 종합 의견
   const lines = rows.length >= 2 ? rows.map(({ q, l }) => {
     const memo = (l.memo || '').trim();
-    return `${q.name} 어르신 - ${[itemsOf(l).join(', '), memo].filter(Boolean).join(' / ')}`;
-  }) : [];
+    const txt = [itemsOf(l).join(', '), memo].filter(Boolean).join(' / ');
+    return txt ? `${q.name} 어르신 - ${txt}` : '';   // 문제·메모가 없는 분은 줄을 뺌 (경로당 상태는 종합 의견에)
+  }).filter(Boolean) : [];
+  const st = rows.map(x => siteStatusOf(x.l)).find(Boolean) || null;
   const cl = [...cats];
   let summary = cl.length ? `${cl.join(', ')} 확인 및 어르신께 주의 말씀 부탁드립니다.` : '메모 내용 확인 부탁드립니다.';
   if (st) summary = `경로당 관리 상태 ${st}. ${summary}`;
@@ -6324,10 +6315,8 @@ async function offerSiteSummary(p, date, grp){
   const rows = grp.map(q => ({ q, l: q.logs.find(l => l.date === date) })).filter(x => logItems(x.l).length || (x.l.memo || '').trim());
   if (!rows.length) return;
   if (grp.length >= 2 && !await showDialog(`${seniorOf(p)} 같이 근무 ${grp.length}명의 점검이 모두 끝났어요.\n팀장님께 종합 문자를 보낼까요?`, true, ['문자 보내기', '나중에'])) return;
-  const site = seniorOf(p), st = await pickSiteStatus(site), key = `${date}|${site}`;
-  if (st) { siteStat[key] = st; store('jinan_sitestat', JSON.stringify(siteStat)); logEvent('경로당 관리 상태', null, `${site} · ${st}`, date); }
-  else if (siteStat[key]) { delete siteStat[key]; store('jinan_sitestat', JSON.stringify(siteStat)); }
-  await smsBox({ title: `${site} 종합 점검 → 팀장님께 문자`, people: [p], leaderOnly: true, text: siteSummaryText(site, date, rows, st), logType: '경로당 종합 문자', logDetail: `${date} ${rows.map(x => x.q.name).join(', ')}${st ? ` · 관리 상태 ${st}` : ''}` });
+  const site = seniorOf(p);
+  await smsBox({ title: `${site} 종합 점검 → 팀장님께 문자`, people: [p], leaderOnly: true, text: siteSummaryText(site, date, rows), logType: '경로당 종합 문자', logDetail: `${date} ${rows.map(x => x.q.name).join(', ')}` });
 }
 
 async function saveCheck(){
