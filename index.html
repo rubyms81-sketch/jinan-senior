@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-120</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-121</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -7871,10 +7871,16 @@ function monthlyRows(mk){
       rows.push([seniorOf(p), p.name, `${paid}일`, ld ? `${ld}일` : '-', reasonsIn(p, mk)]); });
     rows.push([]);
   });
-  const pens = mine.filter(p => penIn(p, mk) > 0).sort((a,b) => a.town.localeCompare(b.town) || a.name.localeCompare(b.name));
+  // 벌점은 올해 누계 (선택한 달까지). 맞은 날짜를 같이 적음 (v121)
+  const yr = mk.slice(0,4), md = d => `${Number(d.slice(5,7))}/${Number(d.slice(8,10))}`;
+  const pens = mine.map(p => {
+    const ls = p.logs.filter(l => l.date.startsWith(yr) && l.date.slice(0,7) <= mk && logPts(l) > 0).sort((a,b) => a.date.localeCompare(b.date) || a.id - b.id);
+    const pi = payInfo(p, yr);
+    return { p, ls, pts: ls.reduce((n,l) => n + logPts(l), 0), unpaid: ls.reduce((n,l) => n + (pi[l.id] || 0), 0) };
+  }).filter(x => x.ls.length).sort((a,b) => a.p.town.localeCompare(b.p.town) || a.p.name.localeCompare(b.p.name));
   rows.push(['벌점']);
-  rows.push(['경로당','이름','벌점','일당 미지급']);
-  pens.forEach(p => rows.push([seniorOf(p), p.name, `-${penIn(p, mk)}점`, `${unpaidIn(p, mk)}일`]));
+  rows.push(['경로당','이름','벌점 누계','맞은 날짜','일당 미지급']);
+  pens.forEach(({ p, ls, pts, unpaid }) => rows.push([seniorOf(p), p.name, `-${pts}점`, ls.map(l => `${md(l.date)} -${logPts(l)}점`).join(', '), `${unpaid}일`]));
   rows.push([]);
   const quits = mine.filter(p => p.quit && (p.quitYear || 0) === Number(mk.slice(0,4)));
   rows.push(['중도포기']);
