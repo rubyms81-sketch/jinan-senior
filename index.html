@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-100</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-101</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -7529,8 +7529,8 @@ function showShort(){
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📉 ${d.y}년 1월~${SHORT_TO}월 근무 미달</div>
     <div class="close-sum" style="grid-template-columns:repeat(${Math.min(towns.length, 4) || 1},1fr);margin:6px 0;">${towns.map((x, i) => `<button type="button" data-go="${i}" style="background:#fffff0;border:1px solid ${COL[i % 6]}33;border-radius:8px;padding:8px 2px;font-size:.85rem;color:#2d3748;">📍 <b>${esc(x.t)}</b><br>총 ${x.total}명 중<b style="display:block;font-size:1.25rem;color:${COL[i % 6]}">미달 ${x.miss}명</b></button>`).join('') || '<div class="pen-none">대상 인원이 없어요</div>'}</div>
     <div style="font-size:.9rem;background:#f7fafc;border-radius:8px;padding:6px 8px;margin-bottom:6px;">미달 <b style="color:var(--danger)">${rows.length}명</b> (🚪 중도포기 ${quitN}명 포함) · 총 모자란 일수 <b style="color:var(--danger)">${tot}일</b></div>
-    <div style="display:flex;align-items:flex-end;gap:4px;height:100px;border-bottom:1px solid #cbd5e0;margin:6px 0 2px;">
-      ${(() => { const mx = Math.max(1, ...months.map(y => y.lack)); return months.map(x => { const h = x.lack ? Math.max(6, Math.round(x.lack / mx * 70)) : 2; return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;"><span style="font-size:.7rem;color:var(--danger);">${x.lack ? '-' + x.lack : ''}</span><div style="width:100%;height:${h}px;background:${x.lack ? '#fc8181' : '#e2e8f0'};border-radius:4px 4px 0 0;"></div><span style="font-size:.75rem;margin-top:3px;">${x.m}월</span></div>`; }).join(''); })()}
+    <div style="margin:6px 0 2px;">
+      ${months.filter(x => x.lack > 0).map(x => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 6px;border-bottom:1px solid #e2e8f0;font-size:.95rem;"><b>${x.m}월</b><span><span style="color:var(--danger);">${x.n}명</span> · <b style="color:var(--danger);">-${x.lack}일</b></span></div>`).join('')}
     </div>
     <div class="grid-2" style="margin:8px 0;"><button type="button" class="secondary small" id="sh-all">☑ 전체 선택</button><button type="button" class="small" id="sh-startset" disabled>🗓 고른 0명 근무 시작 날짜 넣기</button></div>
     ${towns.map((x, i) => { const rs = rows.filter(r => r.p.town === x.t);
