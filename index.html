@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-80</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-81</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -4927,9 +4927,10 @@ function leaderImport(input){
     // 경로당 기준(팀장 명단): 빠진 곳·새로 생긴 곳을 게시판에 공지
     { const now = [...new Set(rows.flatMap(L => L.sites.map(x => x.town + '|' + x.senior)))];
       const prevS = sitesSnap();
-      if (prevS) { const g = prevS.filter(k => !now.includes(k)).map(k => k.split('|').join(' ')), nw = now.filter(k => !prevS.includes(k)).map(k => k.split('|').join(' '));
-        if (g.length) addNotice(`팀장 명단에서 빠진 경로당 ${g.length}곳: ${g.join(', ')}`);
-        if (nw.length) addNotice(`팀장 명단에 새로 생긴 경로당 ${nw.length}곳: ${nw.join(', ')}`); }
+      if (prevS) { const inFile = new Set(rows.map(L => L.town)); const shown = a => a.length > 10 ? a.slice(0, 10).join(', ') + ` 외 ${a.length - 10}곳` : a.join(', ');
+        const g = prevS.filter(k => inFile.has(k.split('|')[0]) && !now.includes(k)).map(k => k.split('|').join(' ')), nw = now.filter(k => !prevS.includes(k)).map(k => k.split('|').join(' '));
+        if (g.length) addNotice(`팀장 명단에서 빠진 경로당 ${g.length}곳: ${shown(g)}`);
+        if (nw.length) addNotice(`팀장 명단에 새로 생긴 경로당 ${nw.length}곳: ${shown(nw)}`); }
       store('jinan_sitesnap', JSON.stringify(now)); }
     rows.forEach(L => { let m = findM(L);
       const v = { town: L.town, name: L.name, phone: L.phone || m?.phone || '', addr: L.addr || m?.addr || '', car: L.car || m?.car || '', carNo: L.carNo || m?.carNo || '', sites: L.sites.length ? L.sites : (m?.sites || []) };
@@ -5186,7 +5187,8 @@ var bizPick = null;               // 지금 올리려는 사업 이름 (없으�
 var bizSnap = (() => { try { return JSON.parse(load('jinan_biz')) || {}; } catch(e) { return {}; } })();
 var notices = (() => { try { return JSON.parse(load('jinan_notice')) || []; } catch(e) { return []; } })();
 const bizKeyOf = s => String(s || '').replace(/\s/g, '');
-const sitesSnap = () => { try { return JSON.parse(load('jinan_sitesnap')); } catch(e) { return null; } };
+// 경로당 기준: 팀장 명단을 올린 적이 없으면 11개 읍·면 기본 경로당 목록(KNOWN_SENIORS)을 기준으로 씀
+const sitesSnap = () => { try { const v = JSON.parse(load('jinan_sitesnap')); if (Array.isArray(v)) return v; } catch(e) {} return Object.entries(KNOWN_SENIORS).flatMap(([t, a]) => a.filter(k => k !== '개별관리' && !/파크골프|그라운드골프/.test(k)).map(k => t + '|' + k)); };
 const sameBizPerson = (a, b) => a.name === b.name && ((a.ph && a.ph === b.ph) || (a.b6 && a.b6 === b.b6));
 const bizLine = r => `${r.name} · ${r.town || '면 모름'}${r.senior ? ' · ' + r.senior : ''}${r.b6 ? ' · 생년 앞 6자리 ' + r.b6 : ''}${r.addr ? ' · ' + r.addr : ''}`;
 function addNotice(text){
