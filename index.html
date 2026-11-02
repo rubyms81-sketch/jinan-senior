@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-135</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-136</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -7907,12 +7907,12 @@ function monthlyRows(mk){
   visibleTowns().forEach(t => {
     const n = ok.filter(p => p.town === t).length;
     rows.push([`${t}(${n}명)`]);
-    rows.push(['경로당','이름','총 근무','끝나는 날','사유']);
-    const few = ok.filter(p => p.town === t).map(p => ({ p, paid: workDays(p, mk).length - unpaidIn(p, mk), multi: penHist(p, mk).length >= 2 }))
-      .filter(x => x.paid < WORK_TARGET || x.multi).sort((a,b) => a.paid - b.paid || a.p.name.localeCompare(b.p.name));
-    few.forEach(({ p, paid, multi }) => { const ld = lastDayIn(p, mk), ph = penHist(p, mk);
-      const why = [reasonsIn(p, mk), multi ? `벌점 ${ph.length}회 (${penDates(ph)})` : ''].filter(Boolean).join(' · ');
-      rows.push([seniorOf(p), p.name, `${paid}일`, ld ? `${ld}일` : '-', why]); });
+    rows.push(['경로당','이름','총 근무','끝나는 날']);
+    // (v136) 이번 달 근무하는 모든 인원: 총 근무 일수 + 실제 끝난 날 (마감 전에 끝나도 그 날짜)
+    const all = ok.filter(p => p.town === t).map(p => ({ p, paid: workDays(p, mk).length - unpaidIn(p, mk) }))
+      .sort((a,b) => seniorOf(a.p).localeCompare(seniorOf(b.p)) || a.p.name.localeCompare(b.p.name));
+    all.forEach(({ p, paid }) => { const ld = lastDayIn(p, mk);
+      rows.push([seniorOf(p), p.name, `${paid}일`, ld ? `${ld}일` : '-']); });
     rows.push([]);
   });
   // 벌점은 올해 누계 (선택한 달까지). 맞은 날짜를 같이 적음 (v121)
