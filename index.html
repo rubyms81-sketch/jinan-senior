@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-83</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-84</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -4827,7 +4827,7 @@ async function addParticipant(){
   const ag = parseAge(v('n-age')); if (ag.bad) return notify(AGE_BAD);
   participants.push({ id: Date.now(), town:v('n-town'), senior:normSenior(v('n-town'), v('n-senior')), name:v('n-name'), ...(normSex(v('n-sex')) ? { sex: normSex(v('n-sex')) } : {}), age:ag.age, ...(ag.birth ? { birth: ag.birth } : {}),
     phone:fmtPhone(v('n-phone')), address:v('n-address'), ...(startVal('n-start') ? { start: startVal('n-start') } : {}),
-    ...(document.getElementById('n-link').checked ? { linking: { since: today() } } : {}), ...(startVal('n-start') ? { startDay: today() } : {}), regDay: today(), quit:false, logs:[] });
+    ...(document.getElementById('n-link').checked ? { linking: { since: today() } } : {}), ...(startVal('n-start') ? { startDay: startVal('n-start') > today().slice(0,7) ? startVal('n-start') + '-01' : today() } : {}), regDay: today(), quit:false, logs:[] });
   logEvent('신규 등록', participants[participants.length-1], '한 명씩 등록' + (startVal('n-start') ? ` · ${Number(startVal('n-start').slice(5))}월부터 근무` : '') + (document.getElementById('n-link').checked ? ' · 연계 중' : ''));
   saveData();
   ['n-senior','n-name','n-age','n-phone','n-address'].forEach(id => document.getElementById(id).value=''); setSex('n-sex', '');
@@ -6999,7 +6999,7 @@ function saveInfo(){
   if (lk && !p.linking) { delete p.linkDone; p.linking = { since: today() }; logEvent('신규 연계 중', p, '연계 중으로 표시'); }
   if (!lk && p.linking) { logEvent('연계 완료', p, `${p.linking.since}부터 연계 → 끝남`); p.linkDone = { since: p.linking.since, day: today() }; delete p.linking; }
   const ns = startVal('m-start'), os = p.start && Number(p.start.slice(0,4)) === viewYear() ? p.start : '';
-  if (ns !== os) { logEvent('정보 수정', p, `근무 시작 달: ${os ? Number(os.slice(5))+'월' : '처음부터'} → ${ns ? Number(ns.slice(5))+'월' : '처음부터'}`); if (ns) p.start = ns; else delete p.start; }
+  if (ns !== os) { logEvent('정보 수정', p, `근무 시작 달: ${os ? Number(os.slice(5))+'월' : '처음부터'} → ${ns ? Number(ns.slice(5))+'월' : '처음부터'}`); if (ns) { p.start = ns; p.startDay = (p.startDay && p.startDay.startsWith(ns)) ? p.startDay : ns + '-01'; } else { delete p.start; delete p.startDay; } }
   const NEWV = { town:g('m-town'), name:g('m-name'), sex:normSex(g('m-sex')), age:ag.age, senior:normSenior(g('m-town'), g('m-senior')), phone:fmtPhone(g('m-phone')), address:g('m-address') };
   const LB = { town:'읍면', name:'성명', sex:'성별', age:'나이', senior:'경로당', phone:'연락처', address:'주소' };
   const diff = Object.keys(NEWV).filter(k => String(p[k]||'') !== NEWV[k]).map(k => `${LB[k]}: ${p[k]||'(없음)'} → ${NEWV[k]||'(없음)'}`);
@@ -8098,6 +8098,12 @@ drawCkToggle();
 rptInit();
 drawStorage();
 migrateSiteNames();
+// 근무 시작 달만 있고 시작일이 없는 분: 그 달 1일을 시작일로 채움 (이전 달 근무일이 잘못 세지지 않게, 한 번만)
+(function fillStartDays(){
+  let ch = false;
+  participants.forEach(p => { if (p.start && !p.startDay) { p.startDay = p.start + '-01'; ch = true; logEvent('정보 수정', p, `근무 시작일 채움: ${p.startDay} (시작 달 ${Number(p.start.slice(5))}월 기준)`); } });
+  if (ch) saveData(false);
+})();
 fillTownSelects();
 renderList();
 loadWeather();
