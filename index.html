@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-110</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-111</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -544,10 +544,11 @@
   <div class="card" id="stats-card" data-mv="stats">
     <details class="chg-box" id="close-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3>📊 통계</h3><span class="chg-arrow"></span></summary>
-      <div style="margin-top:8px;">
-        <button class="full" onclick="monthlyExcel()" style="margin:0 0 8px;background:#2f6db0;">📋 월간 정리표 엑셀 받기</button>
+      <div style="margin-top:8px;" id="st-box">
+        <button class="full" id="st-monthly" onclick="monthlyExcel()" style="margin:0 0 8px;background:#2f6db0;">📋 월간 정리표 엑셀 받기</button>
+        <button class="secondary full" id="st-ord-btn" onclick="stOrderToggle()" style="margin:0 0 8px;">↕ 박스 순서 바꾸기</button>
         <p class="muted hidden" style="margin-top:0;" id="export-desc"></p>
-        <details class="stat-box chg-box">
+        <details class="stat-box chg-box" id="st-period">
           <summary><span style="font-weight:bold;">📊 기간 통계</span><span class="chg-arrow"></span></summary>
           <div style="display:flex;margin-top:6px;gap:6px;align-items:center;"><select id="st-from" style="margin:0;"></select><span>~</span><select id="st-to" style="margin:0;"></select></div>
           <div class="grid-2" style="margin-top:8px;"><button class="secondary" onclick="showStats()">화면으로 보기</button><button onclick="exportStats()">통계 엑셀</button></div>
@@ -7808,6 +7809,44 @@ function newcomers(list, mk){
   const reg = new Set(eventLog.filter(h => h.type==='신규 등록' && h.date.startsWith(mk)).map(h => h.town+'|'+h.name));
   return list.filter(p => (p.start === mk) || reg.has(p.town+'|'+p.name) || (p.linking && p.linking.since.startsWith(mk)));
 }
+// ---------- 📊 통계 박스 순서 바꾸기 (v111, ▲▼) ----------
+const ST_ITEMS = { 'st-monthly': '📋 월간 정리표', 'st-period': '📊 기간 통계', 'edu-box': '📚 교육 불참·시간', 'ex-box': '🚫 참여 제외 대상', 'rs-box': '🗑 기록 초기화' };
+const stBox = () => document.getElementById('st-box');
+const stList = () => [...stBox().children].filter(el => ST_ITEMS[el.id]);
+function stSaveOrder(){ store('jinan_st_order', JSON.stringify(stList().map(el => el.id))); }
+function applyStOrder(){
+  let ord = []; try { ord = JSON.parse(load('jinan_st_order') || '[]'); } catch(e) { ord = []; }
+  if (!Array.isArray(ord) || !ord.length) return;
+  const box = stBox();
+  ord.forEach(id => { const el = document.getElementById(id); if (el && ST_ITEMS[id] && el.parentNode === box) box.appendChild(el); });
+}
+let stEditing = false, stChanged = false;
+function stDrawMv(show = stEditing){
+  stBox().querySelectorAll('.st-mv').forEach(b => b.remove());
+  if (!show) return;
+  stList().forEach((el, i, arr) => {
+    const bar = document.createElement('div'); bar.className = 'st-mv';
+    bar.style.cssText = 'display:flex;gap:6px;justify-content:flex-end;margin:4px 0;';
+    bar.innerHTML = `<button type="button" class="small secondary" style="width:auto;margin:0;" ${i===0?'disabled':''} onclick="stMove('${el.id}',-1)">▲ 위로</button><button type="button" class="small secondary" style="width:auto;margin:0;" ${i===arr.length-1?'disabled':''} onclick="stMove('${el.id}',1)">▼ 아래로</button>`;
+    el.parentNode.insertBefore(bar, el);
+  });
+}
+function stMove(id, dir){
+  const list = stList(), i = list.findIndex(el => el.id === id), j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  stDrawMv(false);
+  list.forEach(el => stBox().appendChild(el));
+  stChanged = true; stSaveOrder(); stDrawMv(true);
+}
+function stOrderToggle(){
+  stEditing = !stEditing;
+  document.getElementById('st-ord-btn').textContent = stEditing ? '✔ 순서 끝내기' : '↕ 박스 순서 바꾸기';
+  stDrawMv(stEditing);
+  if (!stEditing && stChanged) { logEvent('화면 순서', null, '통계 박스 순서 바꿈'); stChanged = false; }
+}
+
+applyStOrder();
 // ---------- 📋 월간 정리표 (메인 담당자용, v110) ----------
 // 면별 근무 10일 미만 분 + 벌점 + 중도포기 + 현재 입원 중. 벌점 일수는 앱 일당 계산(payInfo) 그대로.
 const unpaidIn = (p, mk) => { const pi = payInfo(p, mk.slice(0,4)); return p.logs.filter(l => l.date.startsWith(mk)).reduce((n,l) => n + (pi[l.id] || 0), 0); };
