@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-86</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-87</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -7941,12 +7941,9 @@ function exportExcel(){
   XLSX.writeFile(wb, fname + '.xlsx');
 }
 
-// 예전 버전에서 한 명씩 등록한 분: 등록한 달을 근무 시작 달로 (1월 등록은 표시 안 함)
 // 예전에 한 명씩 등록한 분(엑셀 명단은 빼고): 변경 이력의 등록 날짜를 (신규) 기준 날짜로
 eventLog.filter(h => h.type === '신규 등록' && (h.detail || '').startsWith('한 명씩 등록')).forEach(h => { const p = participants.find(x => x.name === h.name && x.town === h.town && !x.regDay); if (p && h.date) p.regDay = h.date.slice(0,10); });
-eventLog.filter(h => h.type === '신규 등록' && (h.detail || '').startsWith('한 명씩 등록')).forEach(h => {
-  const p = participants.find(x => x.name === h.name && x.town === h.town && !x.start); if (p) p.start = h.date.slice(0,7);
-});
+// (v87) 등록한 달을 근무 시작 달로 채우던 복구 코드는 뺌: 1월(처음부터)로 등록·수정한 분에게 매번 등록 달(예: 11월)이 다시 들어가는 문제가 있었음
 document.getElementById('st-from').value = '1'; document.getElementById('st-to').value = String(curMonth);
 // 태어난 해를 적어 둔 분은 해가 바뀌면 나이도 저절로 바뀜
 // ---------- 🧩 화면 배치: 칸 제목을 꾹 눌러 옮기기·겹쳐서 묶기·이름 바꾸기 (이 휴대폰에만 저장, jinan_layout) ----------
