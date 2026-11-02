@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-114</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-115</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -7921,25 +7921,30 @@ function monthlyHtml(mk){
 }
 // 받기 전에 내용을 먼저 보는 창 (v112)
 function monthlyPreview(){
-  const h = monthlyHtml(monthKey());
+  let mk = monthKey();
   const back = document.createElement('div'); back.className = 'dlg-back';
+  const opts = Array.from({ length: 12 }, (_, i) => i + 1).map(m => `<option value="${m}">${m}월</option>`).join('');
   back.innerHTML = `<div class="dlg" style="max-height:88vh;display:flex;flex-direction:column;">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">📋 ${curMonth}월 월간 정리표 미리 보기</div>
-    <div class="muted" style="font-size:.85rem;margin-bottom:8px;">내용을 확인한 뒤 엑셀로 받을 수 있어요.</div>
-    <div style="overflow:auto;flex:1;">${h}</div>
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📋 월간 정리표 미리 보기</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><select id="mp-mon" style="margin:0;width:auto;">${opts}</select><span class="muted" style="font-size:.85rem;">달을 고르면 내용이 바뀌어요</span></div>
+    <div style="overflow:auto;flex:1;" id="mp-body"></div>
     <button class="full" id="mp-kakao" style="background:#FEE500;color:#3c1e1e;font-weight:bold;margin-top:10px;">🟡 카카오톡으로 보내기 (그림 PNG)</button>
     <div class="grid-2" style="margin-top:8px;"><button class="secondary" id="mp-close">닫기</button><button id="mp-xls" style="background:#2f6db0;">📥 엑셀로 받기</button></div>
   </div>`;
   document.body.appendChild(back);
+  const sel = back.querySelector('#mp-mon');
+  const draw = () => { sel.value = String(Number(mk.slice(5))); back.querySelector('#mp-body').innerHTML = monthlyHtml(mk); };
+  sel.onchange = () => { mk = `${YEAR}-${String(sel.value).padStart(2, '0')}`; draw(); };
+  draw();
   back.querySelector('#mp-close').onclick = () => back.remove();
-  back.querySelector('#mp-xls').onclick = () => { back.remove(); monthlyExcel(); };
-  back.querySelector('#mp-kakao').onclick = () => monthlyShare();
+  back.querySelector('#mp-xls').onclick = () => { back.remove(); monthlyExcel(mk); };
+  back.querySelector('#mp-kakao').onclick = () => monthlyShare(mk);
   back.addEventListener('click', e => { if (e.target === back) back.remove(); });
 }
 // 표를 PNG 그림으로 만들기 (v114): 캔버스에 직접 그림 (외부 그림을 쓰지 않아 저장이 막히지 않음)
-function monthlyPng(){
+function monthlyPng(mk = monthKey()){
   const W = 760, PAD = 20, FONT = '15px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif', RH = 28;
-  const rows = monthlyRows(monthKey());
+  const rows = monthlyRows(mk);
   const cv = document.createElement('canvas'), ctx = cv.getContext('2d');
   // 1) 높이 계산
   const plan = []; let y = PAD + 40;   // 제목 자리
@@ -7953,7 +7958,7 @@ function monthlyPng(){
   cv.width = W * 2; cv.height = H * 2; ctx.scale(2, 2);
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#222'; ctx.font = 'bold 22px ' + FONT.split(' ').slice(1).join(' ');
-  ctx.fillText(`📋 ${curMonth}월 월간 정리표`, PAD, PAD + 22);
+  ctx.fillText(`📋 ${Number(mk.slice(5))}월 월간 정리표`, PAD, PAD + 22);
   const fit = (txt, maxW) => { if (ctx.measureText(txt).width <= maxW) return txt; let t = txt; while (t.length && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1); return t + '…'; };
   plan.forEach(it => {
     if (it.t === 'gap') return;
@@ -7976,25 +7981,25 @@ function monthlyPng(){
   return new Promise((ok, no) => cv.toBlob(b => b ? ok(b) : no(new Error('png')), 'image/png'));
 }
 // 카카오톡으로 PNG 보내기 (공유 창이 없으면 PNG 파일 내려받기) (v114)
-async function monthlyShare(){
-  const name = `${curMonth}월_월간_정리표.png`;
+async function monthlyShare(mk = monthKey()){
+  const mo = Number(mk.slice(5)), name = `${mo}월_월간_정리표.png`;
   let blob;
-  try { blob = await monthlyPng(); } catch(e) { return notify('그림을 만들지 못했어요.\n엑셀로 받아 주세요.'); }
-  logEvent('월간 정리표 보냄', null, `${curMonth}월 월간 정리표 그림 → 카카오톡`);
+  try { blob = await monthlyPng(mk); } catch(e) { return notify('그림을 만들지 못했어요.\n엑셀로 받아 주세요.'); }
+  logEvent('월간 정리표 보냄', null, `${mo}월 월간 정리표 그림 → 카카오톡`);
   const file = new File([blob], name, { type: 'image/png' });
   try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); return; } }
   catch(e) { if (e && e.name === 'AbortError') return; }
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
   notify('공유 창을 열 수 없어서 그림 파일을 내려받았어요.\n카카오톡 대화방에서 그 파일을 골라 보내 주세요.');
 }
-function monthlyExcel(){
-  const mk = monthKey();
+function monthlyExcel(mk = monthKey()){
+  const mo = Number(mk.slice(5));
   const ws = XLSX.utils.aoa_to_sheet(monthlyRows(mk));
   ws['!cols'] = [{wch:18},{wch:12},{wch:16},{wch:16},{wch:30}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '월간 정리표');
-  XLSX.writeFile(wb, `${curMonth}월_월간_정리표.xlsx`);
-  notify(`${curMonth}월 월간 정리표를 엑셀로 받았어요.`);
+  XLSX.writeFile(wb, `${mo}월_월간_정리표.xlsx`);
+  notify(`${mo}월 월간 정리표를 엑셀로 받았어요.`);
 }
 function exportExcel(){
   const town0 =(document.getElementById('filter-town').value || '전체');
