@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-81</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-82</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3437,8 +3437,16 @@ function addChange(pre){
     saveData(false); back.remove(); renderModal();
     const dl = [...done], txt = pairs.map(x => `${dd(x.from)} → ${dd(x.to)}`).join('\n');
     if (!dl.length) return notify('바꿀 수 있는 날짜가 없었어요.');
-    showDialog(`${dl.length > 1 ? dl.length+'명 ' : ''}근무일 변경이 저장되었습니다.\n${txt}\n\n팀장님께 날짜 변경을 보고하는 문자를 보낼까요?${dl.some(leaderOf) ? '' : '\n(이 어르신의 구역 팀장이 아직 없어요)'}`, true, ['문자 보내기', '나중에']).then(ok => {
-      if (ok) smsBox({ title: '팀장님께 날짜 변경 보고 문자', people: dl, leaderOnly: true, text: leaderChangeText(dl, pairs, reason, memo), logType: '근무일 변경 문자', logDetail: pairs.map(x => `${dd(x.from)} → ${dd(x.to)}`).join(', '), onSent: () => { made.forEach(r => r.leaderSms = today()); saveData(false); renderModal(); } });
+    showDialog(`${dl.length > 1 ? dl.length+'명 ' : ''}근무일 변경이 저장되었습니다.\n${txt}\n\n어르신과 팀장님께 변경 문자를 보낼까요?${dl.some(leaderOf) ? '' : '\n(이 어르신의 구역 팀장이 아직 없어요)'}\n(어르신께 먼저, 이어서 팀장님께 보내요)`, true, ['문자 보내기', '나중에']).then(async ok => {
+      if (!ok) return;
+      // 1) 어르신 본인께 한 분씩 (본인 글: 바뀐 날짜 안내 + 팀장 연락 문구)
+      for (const x of dl) {
+        await smsBox({ title: '어르신께 근무일 변경 안내 문자', people: [x], selfOnly: true, text: changeText(x, pairs.map(q => ({ from: q.from, to: q.to })), null, reason),
+          logType: '근무일 변경 안내 문자', logDetail: pairs.map(q => `${dd(q.from)} → ${dd(q.to)}`).join(', ') });
+      }
+      // 2) 팀장님께 보고 (한 번에 묶어서)
+      await smsBox({ title: '팀장님께 날짜 변경 보고 문자', people: dl, leaderOnly: true, text: leaderChangeText(dl, pairs, reason, memo), logType: '근무일 변경 문자',
+        logDetail: pairs.map(x => `${dd(x.from)} → ${dd(x.to)}`).join(', '), onSent: () => { made.forEach(r => r.leaderSms = today()); saveData(false); renderModal(); } });
     });
   };
 }
