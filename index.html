@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-128</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-129</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -5392,7 +5392,7 @@ const leaderItems = l => { const t = logItems(l); if (l.attitude === '불량') t
 function issueLeaderText(p, l){
   const L = leaderOf(p), d = `${Number(l.date.slice(5,7))}월 ${Number(l.date.slice(8,10))}일`;
   const memo = (l.memo || '').trim();
-  return `[진안군노인회] ${d} 현장 점검 확인 사항\n\n${L ? L.name + ' 팀장님' : '팀장님'}, 안녕하세요.\n진안군 노인회입니다.\n\n${seniorOf(p)} ${p.name} 어르신 점검 중 아래 내용이 확인되었습니다.\n${leaderItems(l).map(x => '· ' + x).join('\n')}${memo ? `\n메모: ${memo}` : ''}\n\n어르신께 주의 말씀 전해 주시고 확인 부탁드립니다.\n\n진안군 노인회 드림`;
+  return `[진안군노인회] ${d} 현장 점검 확인 사항\n\n${L ? L.name + ' 팀장님' : '팀장님'}, 안녕하세요.\n진안군 노인회입니다.\n\n${seniorOf(p)} ${p.name} 어르신 점검 중 아래 내용이 확인되었습니다.\n${leaderItems(l).map(x => '· ' + x).join('\n')}${memo ? `\n메모: ${memo}` : ''}\n\n어르신께 주의 말씀 전해 주시고 확인 부탁드립니다.${brokenOf(l) ? '\n\n다음부터는 미리 파악하시어 저에게 알려주시길 바랍니다.' : ''}\n\n진안군 노인회 드림`;
 }
 function penaltyText(p, l){
   const d = `${l.date.slice(0,4)}년 ${Number(l.date.slice(5,7))}월 ${Number(l.date.slice(8,10))}일`;
