@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-134</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-135</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -5398,10 +5398,23 @@ function bulkImport(input){
 // (v125) 팀장 문자 대상: 점검 항목(자리 비움·조끼·명찰·활동일지 미리 씀·항목 미흡) + 응대 태도 불량
 const leaderItems = l => { const t = logItems(l); if (l.attitude === '불량') t.push('응대 태도 불량'); return t; };
 // (v90) 점검에서 자리 비움·조끼/명찰 미착용·활동일지 미리 씀·항목 미흡이 있으면 저장 직후 팀장께 보내는 문자 (문제 없으면 안 보냄)
-function issueLeaderText(p, l){
-  const L = leaderOf(p), d = `${Number(l.date.slice(5,7))}월 ${Number(l.date.slice(8,10))}일`;
-  const memo = (l.memo || '').trim();
-  return `[진안군노인회] ${d} 현장 점검 확인 사항\n\n${L ? L.name + ' 팀장님' : '팀장님'}, 안녕하세요.\n진안군 노인회입니다.\n\n${seniorOf(p)} ${p.name} 어르신 점검 중 아래 내용이 확인되었습니다.\n${leaderItems(l).map(x => '· ' + x).join('\n')}${memo ? `\n메모: ${memo}` : ''}\n\n어르신께 말씀 한번 나눠 주시고 살펴봐 주시면 감사하겠습니다.${brokenOf(l) ? '\n\n앞으로는 미리 살펴보시고 알려 주시면 감사하겠습니다.' : ''}\n\n진안군 노인회 드림`;
+// (v135) 점검 확인 팀장 문자: 고친 글은 jinan_tpl.issue에 자리표시로 저장 → 다음에도 그대로 나옴
+const ISSUE_DEF = '[진안군노인회] {날짜} 현장 점검 확인 사항\n\n{팀장}, 안녕하세요.\n진안군 노인회입니다.\n\n{경로당} {이름} 어르신 점검 중 아래 내용이 확인되었습니다.\n{항목}{메모줄}\n\n어르신께 말씀 한번 나눠 주시고 살펴봐 주시면 감사하겠습니다.{파손}\n\n진안군 노인회 드림';
+const issueVals = (p, l) => { const L = leaderOf(p), memo = (l.memo || '').trim();
+  return { 날짜: `${Number(l.date.slice(5,7))}월 ${Number(l.date.slice(8,10))}일`, 팀장: L ? L.name + ' 팀장님' : '팀장님', 경로당: seniorOf(p), 이름: p.name,
+    항목: leaderItems(l).map(x => '· ' + x).join('\n'), 메모줄: memo ? `\n메모: ${memo}` : '', 파손: brokenOf(l) ? '\n\n앞으로는 미리 살펴보시고 알려 주시면 감사하겠습니다.' : '' }; };
+function issueLeaderText(p, l){ const v = issueVals(p, l);
+  return (smsTpl.issue || ISSUE_DEF).replace(/\{(날짜|팀장|경로당|이름|항목|메모줄|파손)\}/g, (_, k) => v[k]); }
+// 문자 화면에서 고친 글 → 자리표시로 바꿔 저장
+function saveIssueTpl(edited, p, l){
+  const v = issueVals(p, l); let t = edited;
+  const rep = (val, key) => { if (val) t = t.split(val).join(`{${key}}`); };
+  rep(v.파손, '파손'); rep(v.메모줄, '메모줄'); rep(v.항목, '항목'); rep(v.팀장, '팀장'); rep(v.날짜, '날짜');
+  rep(`${v.경로당} ${v.이름} 어르신`, '경로당 이름 어르신');
+  t = t.split('{경로당 이름 어르신}').join('{경로당} {이름} 어르신');
+  rep(v.이름, '이름'); rep(v.경로당, '경로당');
+  smsTpl.issue = t; store('jinan_tpl', JSON.stringify(smsTpl));
+  logEvent('점검 확인 팀장 문자 글 저장', null, '다음에도 이 글로 보냄');
 }
 function penaltyText(p, l){
   const d = `${l.date.slice(0,4)}년 ${Number(l.date.slice(5,7))}월 ${Number(l.date.slice(8,10))}일`;
@@ -7062,7 +7075,7 @@ async function commitLog(p, log, named, quiet){
   const s = stats(p);
   const pt = logPts(log), up = pt ? unpaidOf(p, log) : 0;
   if (pt) logEvent(log.leave==='이탈' ? '근무지 이탈' : '벌점', p, `${logItems(log).join(', ')} → 감점 -${pt}점 (${viewYear()}년 누적 ${s.penalty}점)` + (up ? ' · 일당 미지급' : '') + (s.pts >= MAX_LEAVE ? ' → 감점 누적 중도포기' : '') + (log.memo ? ` · ${log.memo}` : ''), log.date);
-  if (leaderItems(log).length && !quiet) await smsBox({ title: `${nm(p)} 어르신 점검 확인 → 팀장님께 문자`, people: [p], leaderOnly: true, text: issueLeaderText(p, log), logType: '점검 확인 팀장 문자', logDetail: `${log.date} ${leaderItems(log).join(', ')}` });
+  if (leaderItems(log).length && !quiet) await smsBox({ title: `${nm(p)} 어르신 점검 확인 → 팀장님께 문자`, people: [p], leaderOnly: true, text: issueLeaderText(p, log), onSendText: e => { if (e !== issueLeaderText(p, log)) saveIssueTpl(e, p, log); }, logType: '점검 확인 팀장 문자', logDetail: `${log.date} ${leaderItems(log).join(', ')}` });
   if (pt) {
     let msg = `${named ? nm(p) + ' 어르신\n' : ''}${logItems(log).join('\n')}\n→ 벌점 -${pt}점 (누적 ${s.penalty}점)`;
     msg += up ? `\n\n벌점 -1점이 채워져 하루치 일당 미지급입니다.` : `\n\n(벌점 -1점마다 하루치 일당 미지급)`;
