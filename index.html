@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-85</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-86</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -8133,6 +8133,35 @@ setTimeout(() => {
   if (due.length) msg.push(`📞 오늘 안부 전화할 입원 어르신 ${due.length}명\n${due.map(p => `· ${p.name} (${seniorOf(p)})${p.phone?' '+p.phone:''}`).join('\n')}`);
   if (msg.length) notify(msg.join('\n\n') + '\n\n맨 위 칸에서 번호를 누르면 바로 전화돼요.');
 }, 400);
+// ---------- 🪟 창 기억: 화면을 내렸다 올려 앱이 다시 불러와져도, 열려 있던 창을 다시 엶 ----------
+(() => {
+  const KEY = 'jinan_keep_win';
+  const FNS = ['openWorkdays','openNote','openZone','openQuickChange','openAddExclude','showPenalty','showClose','openMyTowns','openGuessFix','openBulkGuide','openAddrGuide','openGroupSms','openModal','openCounter','openCatOrder','openMoim','openEduCheck','openEduAttend','openHelp','showShort','showEduLack','openEduHours','showStats','openItemCfg','openTrip','openHistory','showPenReasons','openZoneAtt'];
+  const get = () => { try { return sessionStorage.getItem(KEY); } catch(e) { return null; } };
+  const put = v => { try { v == null ? sessionStorage.removeItem(KEY) : sessionStorage.setItem(KEY, v); } catch(e) {} };
+  const enc = a => a.map(x => x && typeof x === 'object' && x.id !== undefined ? { o: 1, id: x.id } : x);
+  const ok = a => a.every(x => x === undefined || ['string','number','boolean'].includes(typeof x) || (x && typeof x === 'object' && x.id !== undefined));
+  FNS.forEach(name => {
+    const orig = window[name]; if (typeof orig !== 'function') return;
+    window[name] = function(...a) {
+      if (ok(a)) put(JSON.stringify({ name, args: enc(a) }));
+      return orig.apply(this, a);
+    };
+  });
+  // 창이 하나도 안 남으면 기억을 지움 (닫은 창이 다시 열리지 않게)
+  new MutationObserver(recs => { if (recs.some(r => [...r.removedNodes].some(n => n.classList && n.classList.contains('dlg-back'))) && !document.querySelector('.dlg-back')) put(null); }).observe(document.body, { childList: true });
+  // 다시 불러와졌을 때: 기억한 창을 다시 엶 (잠금 화면이 떠 있으면 그때는 열지 않음, 시작 안내창은 그 위에 뜸)
+  setTimeout(() => {
+    let k = null; try { k = JSON.parse(get() || 'null'); } catch(e) {}
+    if (!k || typeof window[k.name] !== 'function' || document.querySelector('.pin-back')) return;
+    put(null);
+    const list = k.name === 'openZoneAtt' ? zones : participants;
+    const args = (k.args || []).map(x => x && x.o ? (list.find(y => y.id === x.id) || null) : x);
+    if (args.some(x => x === null)) return;
+    try { window[k.name](...args); } catch(e) {}
+  }, 800);
+})();
+
 </script>
 </body>
 </html>
