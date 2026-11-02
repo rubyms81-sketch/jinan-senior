@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-95</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-96</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6265,7 +6265,7 @@ function siteSummaryText(site, date, rows){
   const cl = [...cats];
   let summary = cl.length ? `${cl.join(', ')} 확인 및 어르신께 주의 말씀 부탁드립니다.` : '메모 내용 확인 부탁드립니다.';
   if (rows.some(x => brokenOf(x.l))) summary += ' 파손 사항은 최대한 빠른 시일 내에 팀장님께 전달드리겠습니다.';
-  return `[진안군노인회] ${d} ${site} 점검 확인 사항\n\n${lines.join('\n')}\n\n종합 의견 - ${summary}\n\n진안군 노인회 드림`;
+  return `[진안군노인회] ${d} ${site} 점검 확인 사항\n\n${lines.join('\n\n')}\n\n종합 의견 - ${summary}\n\n진안군 노인회 드림.`;
 }
 async function offerSiteSummary(p, date, grp){
   if (!grp.every(q => q.logs.some(l => l.date === date))) return;
