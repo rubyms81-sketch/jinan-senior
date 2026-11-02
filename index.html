@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-130</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-131</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -632,6 +632,7 @@
       <div class="set-grp" data-sg="etc" style="margin-top:8px;"><b>⚙️ 기타 규칙</b>
         <label>⏳ 중도포기 기준 일수 (활동 중단 후)</label>
         <div class="ui-opts" style="grid-template-columns:52px 1fr 52px;align-items:center;margin:5px 0 12px;"><button type="button" onclick="quitDaysSet(-1)">－</button><b id="ui-qdays" style="text-align:center;">45일</b><button type="button" onclick="quitDaysSet(1)">＋</button></div>
+      <div class="grid-2" style="margin:6px 0 10px;"><button type="button" class="small secondary" onclick="openItemCfg('pts')" style="margin:0;">⚙️ 벌점 고치기</button><button type="button" class="small secondary" onclick="openItemCfg('items')" style="margin:0;">＋ 항목 추가·삭제</button></div>
       </div>
       <details class="chg-box set-grp" data-sg="quota" style="margin:8px 0;"><summary><b>📌 면별 배정 인원</b><span class="chg-arrow"></span></summary><div id="quota-box" style="margin-top:6px;"></div></details>
       <div data-sg-end="1"></div>
@@ -727,7 +728,6 @@
     </div>
 
     <div id="ex-items"></div>
-    <div class="grid-2" style="margin:2px 0 10px;"><button type="button" class="small secondary" onclick="openItemCfg('pts')" style="margin:0;">⚙️ 벌점 고치기</button><button type="button" class="small secondary" onclick="openItemCfg('items')" style="margin:0;">＋ 항목 추가·삭제</button></div>
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:6px;margin-top:4px;">
@@ -1004,7 +1004,7 @@ function unpaidDaysOf(p, mk){
 const PT_DEF = { 이탈: 1, 자리비움: 0, 조끼: 0, 명찰: 0 };   // 2026-10-17: 자리 비움·조끼·명찰은 경고(감점 없음)로
 let PT = Object.assign({}, PT_DEF, (() => { try { return JSON.parse(load('jinan_pts')) || {}; } catch(e) { return {}; } })());
 let checkItems = (() => { try { const v = JSON.parse(load('jinan_items')); if (Array.isArray(v)) return v; } catch(e) {}
-  return [{ id: 'diary', name: '활동일지', ok: '정상', bad: '미리 씀', pts: 0 }]; })();
+  return [{ id: 'diary', name: '활동일지', ok: '정상', bad: '미리 씀', pts: -1 }]; })();
 // 기본 항목(근무지 이탈·조끼·명찰·태도)도 이름·선택지 글자 고치기·지우기(숨김) (jinan_basecfg) — 저장 값은 그대로라 규칙은 같음
 const BASE_DEF = { leave: { label: '근무지 이탈 (벌점)', opts: { 정상: '정상 근무', 자리비움: '자리 비움', 이탈: '이탈' } }, vest: { label: '조끼 착용', opts: { 정상: '착용', 미착용: '미착용' } },
   badge: { label: '명찰 착용', opts: { 정상: '착용', 미착용: '미착용' } }, attitude: { label: '응대 태도', opts: { 우수: '우수', 보통: '보통', 불량: '불량' } } };
@@ -1020,8 +1020,10 @@ const saveItemCfg = () => { store('jinan_pts', JSON.stringify(PT)); store('jinan
 // 🔧 조끼·명찰 파손: 기본으로 한 번 넣어 줌(지울 수 있음). track = 교체할 때까지 게시판에
 if (load('jinan_items_fix') !== '1') { [['vestfix', '조끼 파손'], ['badgefix', '명찰 파손']].forEach(([id, n]) => { if (!checkItems.some(it => it.id === id)) checkItems.push({ id, name: n, single: true, ok: '정상', bad: n, pts: null, track: true }); });
   store('jinan_items_fix', '1'); store('jinan_items', JSON.stringify(checkItems)); }
-const ptTxt = n => n ? ` -${n}점` : '';
-const ptWord = k => PT[k] ? `-${PT[k]}점` : '경고';   // 화면·문자용: 감점 또는 경고
+// (v131, 2026-11-02) 조끼·명찰 미착용·활동일지 미리 씀 = 주의(-1): 감점 없고 경고 건수에도 안 셈 (한 번만)
+if (load('jinan_caution1') !== '1') { PT.조끼 = -1; PT.명찰 = -1; checkItems.forEach(it => { if (it.id === 'diary' && it.pts === 0) it.pts = -1; }); store('jinan_pts', JSON.stringify(PT)); store('jinan_items', JSON.stringify(checkItems)); store('jinan_caution1', '1'); }
+const ptTxt = n => n > 0 ? ` -${n}점` : n < 0 ? ' (주의)' : '';
+const ptWord = k => PT[k] > 0 ? `-${PT[k]}점` : PT[k] < 0 ? '주의' : '경고';   // 화면·문자용: 감점 또는 경고
 // 점검 기록 한 건의 감점 항목·점수
 function logItems(l){ const t = [], v = l.pv || PT_DEF;
   if (l.leave==='이탈') t.push('근무지 이탈' + ptTxt(v.이탈)); if (l.leave==='자리비움') t.push('잠깐 자리 비움' + ptTxt(v.자리비움));
@@ -1029,9 +1031,11 @@ function logItems(l){ const t = [], v = l.pv || PT_DEF;
   Object.values(l.ex || {}).forEach(x => { if (x.bad) t.push((x.n === x.v ? x.v : `${x.n} ${x.v}`) + ptTxt(x.pt)); });
   return t; }
 const shortItems = l => logItems(l).map(x => x.replace(/ -[\d.]+점$/, '').replace('근무지 ', '').replace('잠깐 ', '')).join('·');
+// (v131) 주의 = 음수 점수(-1): 감점 0, 경고 건수에도 안 셈
+const cpt = n => Math.max(0, Number(n) || 0);
 const logPts = l => { const v = l.pv || PT_DEF;
-  return (l.leave==='이탈' ? v.이탈 : 0) + (l.leave==='자리비움' ? v.자리비움 : 0) + (l.vest==='미착용' ? v.조끼 : 0) + (l.badge==='미착용' ? v.명찰 : 0)
-    + Object.values(l.ex || {}).reduce((n, x) => n + (x.bad ? (x.pt || 0) : 0), 0); };
+  return cpt(l.leave==='이탈' ? v.이탈 : 0) + cpt(l.leave==='자리비움' ? v.자리비움 : 0) + cpt(l.vest==='미착용' ? v.조끼 : 0) + cpt(l.badge==='미착용' ? v.명찰 : 0)
+    + Object.values(l.ex || {}).reduce((n, x) => n + (x.bad ? cpt(x.pt) : 0), 0); };
 // 일당 미지급: 이탈한 날 + 0.5점이 쌓여 -1점이 되는 날 (한 해 단위)  → { 기록id: 미지급 일수 }
 function payInfo(p, y){
   const out = {}; let half = 0;
@@ -1092,7 +1096,7 @@ function exVal(it, v){
   return { n: it.name, v: it.ok || '정상', bad: false, pt: 0 };
 }
 const exSegV = x => x?.mid ? 'mid' : (x?.bad || x?.rec) ? 'bad' : '정상';
-const ptLbl = n => n ? ` (-${n}점)` : ' (경고)';
+const ptLbl = n => n > 0 ? ` (-${n}점)` : n < 0 ? ' (주의)' : ' (경고)';
 // 지금 고른 새 항목 값 → 기록용 { id: {n, v, bad, pt} } (지난 기록에만 있는 항목은 keep 그대로)
 function exFromForm(keep){
   const ex = {}; Object.entries(keep || {}).forEach(([k, x]) => { if (!checkItems.some(it => it.id === k)) ex[k] = x; });
@@ -1165,10 +1169,10 @@ async function memoAuto(text, fr){
 const exText = ex => Object.values(ex || {}).filter(x => x.v).map(x => x.n === x.v ? x.v : `${x.n} ${x.v}`).join('·');
 async function openItemCfg(focus){
   let pt = Object.assign({}, PT), items = checkItems.map(x => ({ ...x, o1: x.single ? x.bad : x.ok || '정상', o2: x.single ? '' : x.mid || x.bad || '', o3: x.mid ? x.bad : '' }));
-  const OPTS = [0, 0.5, 1, 1.5, 2, 3];
+  const OPTS = [0, -1, 0.5, 1, 1.5, 2, 3];
   const nOpt = it => [it.o1, it.o2, it.o3].filter(x => String(x || '').trim()).length;
-  const midSel = (v, attr, none) => `<select ${attr} style="margin:0;width:auto;"><option value="" ${v == null || v === '' ? 'selected' : ''}>${none || '문제 아님'}</option>${OPTS.map(o => `<option value="${o}" ${v != null && v !== '' && Number(v)===o ? 'selected' : ''}>${o ? '-' + o + '점' : '경고만'}</option>`).join('')}</select>`;
-  const sel = (v, attr) => `<select ${attr} style="margin:0;width:auto;">${OPTS.map(o => `<option value="${o}" ${Number(v)===o ? 'selected' : ''}>${o ? '-' + o + '점' : '경고만'}</option>`).join('')}</select>`;
+  const midSel = (v, attr, none) => `<select ${attr} style="margin:0;width:auto;"><option value="" ${v == null || v === '' ? 'selected' : ''}>${none || '문제 아님'}</option>${OPTS.map(o => `<option value="${o}" ${v != null && v !== '' && Number(v)===o ? 'selected' : ''}>${o < 0 ? '주의' : o ? '-' + o + '점' : '경고만'}</option>`).join('')}</select>`;
+  const sel = (v, attr) => `<select ${attr} style="margin:0;width:auto;">${OPTS.map(o => `<option value="${o}" ${Number(v)===o ? 'selected' : ''}>${o < 0 ? '주의' : o ? '-' + o + '점' : '경고만'}</option>`).join('')}</select>`;
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
     <div id="ic-pts" style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">⚙️ 점검 항목 · 벌점</div>
@@ -1224,9 +1228,9 @@ async function openItemCfg(focus){
       return r; });
     const bad = items.find(it => !it.name || !it.bad); if (bad) return notify('항목 이름과 선택지를 1개 이상 적어 주세요.');
     const sj = x => JSON.stringify(Object.fromEntries(Object.entries(x).filter(([, v]) => v != null).sort()));
-    const optTxt = it => it.single ? `${it.bad} ${it.pts == null ? '기록만' : it.pts ? '-' + it.pts + '점' : '경고'}${it.track ? ' · 교체 전까지 게시판' : ''}` : [it.ok, it.mid, it.bad].filter(Boolean).join('/') + ` ${it.pts ? '-' + it.pts + '점' : '경고'}`;
+    const optTxt = it => it.single ? `${it.bad} ${it.pts == null ? '기록만' : it.pts < 0 ? '주의' : it.pts ? '-' + it.pts + '점' : '경고'}${it.track ? ' · 교체 전까지 게시판' : ''}` : [it.ok, it.mid, it.bad].filter(Boolean).join('/') + ` ${it.pts < 0 ? '주의' : it.pts ? '-' + it.pts + '점' : '경고'}`;
     const ch = [];
-    BASE.forEach(([k, l]) => { if (pt[k] !== PT[k]) ch.push(`${l} ${PT[k] ? '-' + PT[k] + '점' : '경고'} → ${pt[k] ? '-' + pt[k] + '점' : '경고'}`); });
+    BASE.forEach(([k, l]) => { if (pt[k] !== PT[k]) ch.push(`${l} ${PT[k] < 0 ? '주의' : PT[k] ? '-' + PT[k] + '점' : '경고'} → ${pt[k] < 0 ? '주의' : pt[k] ? '-' + pt[k] + '점' : '경고'}`); });
     items.forEach(it => { const o = checkItems.find(x => x.id === it.id);
       if (!o) ch.push(`항목 추가: ${it.name}(${optTxt(it)})`);
       else if (sj(o) !== sj(it)) ch.push(`항목 수정: ${o.name} → ${it.name}(${optTxt(it)})`); });
@@ -1312,7 +1316,7 @@ function mstats(p){
   const vestEdu = Object.entries(p.eduChk || {}).filter(([x, c]) => x.startsWith(monthKey()) && c.arr && c.vest === false).length;
   const leaves = ls.filter(l => l.leave==='이탈'), aways = ls.filter(l => l.leave==='자리비움');
   const pi = payInfo(p, monthKey().slice(0,4));
-  return { attWarn, vestEdu, leaves, aways, pts: ls.reduce((n,l) => n + logPts(l), 0), unpaid: ls.reduce((n,l) => n + (pi[l.id] || 0), 0), pens: ls.filter(l => logPts(l) > 0), wlogs: ls.filter(l => !logPts(l) && issueText(l).length), warns: ls.filter(l => l.badge==='미착용' || l.vest==='미착용'),
+  return { attWarn, vestEdu, leaves, aways, pts: ls.reduce((n,l) => n + logPts(l), 0), unpaid: ls.reduce((n,l) => n + (pi[l.id] || 0), 0), pens: ls.filter(l => logPts(l) > 0), wlogs: ls.filter(l => !logPts(l) && issueText(l).some(x => !x.endsWith('(주의)'))), warns: ls.filter(l => l.badge==='미착용' || l.vest==='미착용'),
            vest: ls.filter(l => l.vest==='미착용').length, badge: ls.filter(l => l.badge==='미착용').length };
 }
 const warnN = m => m.wlogs.length + (m.vestEdu || 0) + (m.attWarn || 0);   // 경고 = 점검 경고 + 교육 조끼 미착용
@@ -1785,7 +1789,7 @@ function renderPersonDays(p){
 
 // 📋 그날 문제(경고·벌점) 있었던 어르신: 같은 구역(팀장) 안에서, 고른 분들을 팀장에게 문자로
 function issueText(l){
-  const t = logItems(l).map(x => / -[\d.]+점$/.test(x) ? x : x + '(경고)');
+  const t = logItems(l).map(x => / -[\d.]+점$|\(주의\)$/.test(x) ? x : x + '(경고)');
   if (l.attitude === '불량') t.push('응대 태도 불량(경고)');
   return t;
 }
@@ -3632,7 +3636,7 @@ function showClose(kind){
   const KIND = { leave:{title:'벌점', test:l => logPts(l) > 0},
                  vest:{title:'조끼 미착용', test:l => l.vest==='미착용'},
                  badge:{title:'명찰 미착용', test:l => l.badge==='미착용'},
-                 warn:{title:'경고', test:l => !logPts(l) && issueText(l).length > 0},
+                 warn:{title:'경고', test:l => !logPts(l) && issueText(l).some(x => !x.endsWith('(주의)'))},
                  fix:{title:'🔧 교체 필요'} }[kind];
   const wTxt = l => issueText(l).map(x => x.replace(/\(경고\)$/, '').replace('잠깐 ', '').replace('근무지 ', '')).join('·');
   const list = participants.filter(p => town==='전체' ? visibleTowns().includes(p.town) : p.town===town)
