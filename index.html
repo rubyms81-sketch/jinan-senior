@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-79</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-80</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2014,7 +2014,7 @@ function renderCallAlert(){
   const box = document.getElementById('call-alert'), td = today();
   const all = participants.filter(p => p.hospCall), due = callDue();
   const chg = chgOn(td), tmr = chgOn(addDays(td, 1));
-  let h = '';
+  let h = noticeHtml();
   if (chg.length || tmr.length) {
     const left = chg.filter(x => !dayCalled(x.p, td)).length;
     h += alertCard('chg', 'background:#fffaf0;border-color:var(--warning);', `<div style="font-weight:bold;color:#c05621;">${chg.length ? `🔄 오늘 바뀐 날짜로 근무하는 어르신 ${chg.length}명${left ? ` · 📞 확인 전화 ${left}명 남음` : ' · ✔ 모두 통화함'}` : '🔄 오늘은 바뀐 날짜로 근무하는 어르신이 없어요'}</div>`, `
@@ -4860,7 +4860,7 @@ function guessSenior(p, pool){
 // ---------- 엑셀로 여러 명 한번에 등록 ----------
 // 직접 만든 양식과 노인일자리 업무시스템에서 내려받은 명단 둘 다 읽습니다.
 const COLS = { town:['읍면','면','소속면','읍·면','읍면동'], senior:['경로당','경로당이름','경로당명','근무장소','근무지'], name:['성명','이름','어르신성명'],
-  sex:['성별','남녀'], bday:['생일','생년월일','출생일'], age:['나이','연령'], phone:['연락처','전화번호','휴대폰'], address:['주소','거주지'], state:['참여상태'], start:['참여시작일','시작일'] };
+  sex:['성별','남녀'], bday:['생일','생년월일','출생일'], age:['나이','연령'], phone:['연락처','전화번호','휴대폰'], address:['주소','거주지'], state:['참여상태'], start:['참여시작일','시작일'], rrn:['주민등록번호','주민번호'], biz:['사업명'] };
 // 참여시작일 글자 → 'YYYY-MM-DD' (엑셀 날짜 칸의 여러 표시 모양을 다 받음)
 const parseStartDay = v => {
   const s = String(v ?? '').trim(); if (!s) return '';
@@ -4924,6 +4924,13 @@ function leaderImport(input){
     const mine = rows.filter(L => myTowns.includes(L.town) && L.sites.length);
     const byTown = TOWNS.map(t => [t, rows.filter(L => L.town === t)]).filter(([, v]) => v.length).map(([t, v]) => `${t} ${v.length}명: ${v.map(L => L.name).join(', ')}`).join('\n');
     if (!await ask(`👤 팀장(시니어 안전 모니터링) ${rows.length}명을 등록할까요?\n새로 ${nNew}명 · 고침 ${nUpd}명\n\n${byTown}${mine.length && mine.length <= ZONE_MAX ? `\n\n구역을 팀장 ${mine.length}명에 맞춰 ${mine.length}구역으로 새로 나눠요.\n(${mine.map(L => `${L.name} ${L.sites.length}곳`).join(', ')})` : ''}`)) return;
+    // 경로당 기준(팀장 명단): 빠진 곳·새로 생긴 곳을 게시판에 공지
+    { const now = [...new Set(rows.flatMap(L => L.sites.map(x => x.town + '|' + x.senior)))];
+      const prevS = sitesSnap();
+      if (prevS) { const g = prevS.filter(k => !now.includes(k)).map(k => k.split('|').join(' ')), nw = now.filter(k => !prevS.includes(k)).map(k => k.split('|').join(' '));
+        if (g.length) addNotice(`팀장 명단에서 빠진 경로당 ${g.length}곳: ${g.join(', ')}`);
+        if (nw.length) addNotice(`팀장 명단에 새로 생긴 경로당 ${nw.length}곳: ${nw.join(', ')}`); }
+      store('jinan_sitesnap', JSON.stringify(now)); }
     rows.forEach(L => { let m = findM(L);
       const v = { town: L.town, name: L.name, phone: L.phone || m?.phone || '', addr: L.addr || m?.addr || '', car: L.car || m?.car || '', carNo: L.carNo || m?.carNo || '', sites: L.sites.length ? L.sites : (m?.sites || []) };
       if (!m) { monitors.push({ id: Date.now() + Math.random(), ...v }); logEvent('팀장 등록', null, `${L.town} ${L.name}${L.phone ? ' ' + L.phone : ''}${L.sites.length ? ' · 경로당 ' + L.sites.map(x => x.senior).join(', ') : ''}`); }
@@ -4992,6 +4999,8 @@ function openBulkGuide(){
     <label style="margin-top:10px;">어떻게 올릴까요?</label>
     <button type="button" class="full" id="bk-full" style="text-align:left;">📋 <b>올해 명단으로 정리</b><br><span style="font-size:.85rem;font-weight:normal;">겹치는 분은 건강·정보 그대로 · 새로 오신 분은 넣고 · 올해 명단에 없는 분은 뺌</span></button>
     <button type="button" class="warning full" id="bk-fill" style="text-align:left;">✏️ <b>추가 정보만 넣기</b><br><span style="font-size:.85rem;font-weight:normal;">이미 있는 분의 정보만 채워요 (예: 이름+경로당만 있는 파일). 새 사람 추가·빼기 없음</span></button>
+    <label style="margin-top:12px;">🏷 사업별 명단 (사업마다 따로 올리면 그 사업 명단을 새로 덮어써요)</label>
+    ${BIZ_LIST.map((b, i) => `<button type="button" class="secondary full" id="bk-b${i}" style="margin:0 0 6px;">📂 ${b[0]} 명단 올리기</button>`).join('')}
     <label style="margin-top:12px;">👤 팀장 명단 (구역 자동 정리)</label>
     <table class="st-tbl" style="margin:0 0 6px;background:#fff;font-size:.8rem;"><tr>${LEADER_TPL[0].map(h => `<th>${h}</th>`).join('')}</tr><tr>${LEADER_TPL[1].map(c => `<td>${esc(c)}</td>`).join('')}</tr></table>
     <div class="grid-2"><button type="button" class="secondary" id="bk-ltpl" style="margin:0;">⬇️ 팀장 양식</button><button type="button" id="bk-lead" style="margin:0;background:#276749;">👤 팀장 명단 올리기</button></div>
@@ -5000,8 +5009,9 @@ function openBulkGuide(){
   bg.querySelector('#bk-ltpl').onclick = () => downloadLeaderTpl();
   bg.querySelector('#bk-lead').onclick = () => { bg.remove(); document.getElementById('lead-file').click(); };
   bg.querySelector('#bk-tpl').onclick = () => downloadTemplate();
-  bg.querySelector('#bk-full').onclick = () => { bulkMode = 'full'; bg.remove(); document.getElementById('bulk-file').click(); };
-  bg.querySelector('#bk-fill').onclick = () => { bulkMode = 'fill'; bg.remove(); document.getElementById('bulk-file').click(); };
+  bg.querySelector('#bk-full').onclick = () => { bulkMode = 'full'; bizPick = null; bg.remove(); document.getElementById('bulk-file').click(); };
+  bg.querySelector('#bk-fill').onclick = () => { bulkMode = 'fill'; bizPick = null; bg.remove(); document.getElementById('bulk-file').click(); };
+  BIZ_LIST.forEach((b, i) => bg.querySelector('#bk-b' + i).onclick = () => { bulkMode = 'full'; bizPick = b[0]; bg.remove(); document.getElementById('bulk-file').click(); });
   bg.querySelector('#bk-close').onclick = () => bg.remove();
 }
 
@@ -5168,14 +5178,76 @@ function pickSchedule(onPick){
   };
   inp.click();
 }
+// ---------- 🏷 사업별 명단 (경로당지킴이 · 노인체육시설 · 시니어 안전 모니터링) ----------
+// 사업마다 따로 올리면 그 사업 이전 명단을 덮어씀. 한 사람이 두 사업에 있으면 알려 줌.
+// 주민번호는 앞 6자리(생년월일)만 저장하고, 뒷자리는 저장하지 않음.
+var BIZ_LIST = [['경로당지킴이'], ['노인체육시설'], ['시니어 안전 모니터링']];
+var bizPick = null;               // 지금 올리려는 사업 이름 (없으면 null)
+var bizSnap = (() => { try { return JSON.parse(load('jinan_biz')) || {}; } catch(e) { return {}; } })();
+var notices = (() => { try { return JSON.parse(load('jinan_notice')) || []; } catch(e) { return []; } })();
+const bizKeyOf = s => String(s || '').replace(/\s/g, '');
+const sitesSnap = () => { try { return JSON.parse(load('jinan_sitesnap')); } catch(e) { return null; } };
+const sameBizPerson = (a, b) => a.name === b.name && ((a.ph && a.ph === b.ph) || (a.b6 && a.b6 === b.b6));
+const bizLine = r => `${r.name} · ${r.town || '면 모름'}${r.senior ? ' · ' + r.senior : ''}${r.b6 ? ' · 생년 앞 6자리 ' + r.b6 : ''}${r.addr ? ' · ' + r.addr : ''}`;
+function addNotice(text){
+  notices.push({ id: Date.now() + Math.random(), at: today(), text, done: false });
+  store('jinan_notice', JSON.stringify(notices));
+  logEvent('명단 공지', null, text);
+}
+function noticeDone(id){
+  const n = notices.find(x => x.id === id); if (n) n.done = true;
+  store('jinan_notice', JSON.stringify(notices)); renderCallAlert();
+}
+// 게시판 공지 칸 (확인 전까지 남음)
+function noticeHtml(){
+  const open = notices.filter(n => !n.done);
+  if (!open.length) return '';
+  return alertCard('biznote', 'background:#f0fff4;border-color:#276749;', `<div style="font-weight:bold;color:#276749;">📢 게시판 공지 ${open.length}건</div>`,
+    open.map(n => `<div class="call-row"><span style="font-size:.9rem;">${esc(n.at)} · ${esc(n.text)}</span><button class="done-btn" onclick="noticeDone(${n.id})">✔ 확인</button></div>`).join(''));
+}
+// 사업 파일 검사: 새로 온 분·빠진 분·두 사업 중복·팀장 명단에 없는 경로당
+function bizCheck(pick, rows, list){
+  const prev = (bizSnap[pick] && bizSnap[pick].rows) || [];
+  const added = prev.length ? rows.filter(r => !prev.some(q => sameBizPerson(q, r))) : [];
+  const gone = prev.filter(q => !rows.some(r => sameBizPerson(q, r)));
+  const others = Object.keys(bizSnap).filter(k => k !== pick);
+  const whereElse = r => others.filter(k => (bizSnap[k].rows || []).some(q => sameBizPerson(q, r)));
+  const dups = rows.map(r => ({ r, w: whereElse(r) })).filter(x => x.w.length);
+  const ss = sitesSnap();
+  const noSite = ss ? [...new Set(rows.filter(r => r.senior && !ss.includes(r.town + '|' + r.senior)).map(r => r.senior))] : [];
+  const cnt = {}; rows.forEach(r => { if (r.biz) cnt[r.biz] = (cnt[r.biz] || 0) + 1; });
+  const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+  const mismatch = !!top && !(bizKeyOf(pick).includes(bizKeyOf(top[0])) || bizKeyOf(top[0]).includes(bizKeyOf(pick)));
+  const notes = [];
+  let msg = `\n\n🏷 사업: ${pick} · ${rows.length}명 (이 사업 명단은 새 파일로 덮어쓰고, 다른 사업 명단은 그대로 둬요)`;
+  if (mismatch) msg += `\n⚠️ 파일의 사업명(${top[0]})이 고른 사업(${pick})과 달라요. 맞는지 확인해 주세요.`;
+  if (!prev.length) msg += '\n(이 사업은 처음 올리는 거예요)';
+  else {
+    if (added.length) { msg += `\n➕ 이 사업에 새로 온 분 ${added.length}명: ${list(added.map(bizLine))}`; notes.push(`${pick} 새로 온 분 ${added.length}명: ${added.map(r => r.name).join(', ')}`); }
+    if (gone.length) { msg += `\n➖ 이 사업에서 빠진 분 ${gone.length}명: ${list(gone.map(bizLine))}`; notes.push(`${pick} 빠진 분 ${gone.length}명: ${gone.map(q => q.name).join(', ')}`); }
+  }
+  if (dups.length) {
+    msg += `\n\n🚨 두 사업에 함께 있는 분 ${dups.length}명 (동명이인일 수 있어요. 앞 6자리·주소를 확인해 주세요)\n` + dups.map(x => `· ${bizLine(x.r)} ↔ ${x.w.join(', ')}`).join('\n');
+    notes.push(`두 사업 중복 확인: ${dups.map(x => x.r.name + '(' + x.w.join('·') + ')').join(', ')}`);
+  }
+  if (noSite.length) { msg += `\n📍 팀장 명단에 없는 경로당 ${noSite.length}곳: ${noSite.join(', ')}`; notes.push(`${pick} 파일의 팀장 명단에 없는 경로당: ${noSite.join(', ')}`); }
+  const snap = { at: today(), rows: rows.map(r => ({ name: r.name, ph: r.ph, b6: r.b6, addr: r.addr, town: r.town, senior: r.senior || '', biz: r.biz || '' })) };
+  return { msg, notes, snap };
+}
+function saveBizCheck(pick, bz){
+  bizSnap[pick] = bz.snap; store('jinan_biz', JSON.stringify(bizSnap));
+  bz.notes.forEach(addNotice);
+}
+
 function bulkImport(input){
   const file = input.files && input.files[0];
-  if (!file) return;
-  if (typeof XLSX === 'undefined') { input.value=''; return notify('엑셀을 읽는 기능을 불러오지 못했습니다.\n인터넷 연결을 확인한 뒤 앱을 새로고침하고 다시 시도해 주세요.'); }
+  if (!file) { bizPick = null; return; }
+  if (typeof XLSX === 'undefined') { input.value=''; bizPick = null; return notify('엑셀을 읽는 기능을 불러오지 못했습니다.\n인터넷 연결을 확인한 뒤 앱을 새로고침하고 다시 시도해 주세요.'); }
   const reader = new FileReader();
   reader.onerror = () => notify('파일을 열 수 없습니다. 다시 시도해 주세요.');
   reader.onload = async e => {
     input.value = '';
+    const pick = bizPick; bizPick = null;
     try {
       const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
       // 명단이 들어 있는 시트와 제목 줄 찾기 (맨 위에 제목·합계 줄이 있어도 됨)
@@ -5195,6 +5267,7 @@ function bulkImport(input){
       let seq = 0;
       const digits = x => String(x||'').replace(/[^0-9]/g,'');
       const matched = new Set(), same = [], updated = [], unquit = [], fileTowns = new Set(), notFound = [];
+      const bizRows = [];
       grid.slice(hRow+1).forEach(r => {
         const get = f => col[f] >= 0 ? String(r[col[f]] ?? '').trim() : '';
         const name = get('name');
@@ -5212,6 +5285,7 @@ function bulkImport(input){
         // 참여시작일: 올해 2월 이후 시작한 분만 근무 시작일로 넣음 (1월 시작 = 처음부터, 기록 없음)
         const sd = parseStartDay(get('start')), sdLater = !!sd && sd.slice(0,4) === String(YEAR) && Number(sd.slice(5,7)) > 1;
         fileTowns.add(town);
+        if (pick) bizRows.push({ name, ph: digits(phone), b6: digits(get('rrn')).slice(0, 6), addr: address, town, senior, biz: get('biz') });
         // 이미 있는 분 찾기: 이름 + (연락처 또는 경로당 또는 주소), 없으면 같은 면에 같은 이름이 한 분뿐일 때
         let ex = participants.find(p => !matched.has(p.id) && p.name===name && (
           (digits(phone) && digits(p.phone)===digits(phone)) || (senior && p.senior===senior) || (address && p.address===address)));
@@ -5237,9 +5311,11 @@ function bulkImport(input){
         added.push({ id: Date.now() + (seq++), town, senior, name, ...(sex ? { sex } : {}), ...(bday ? { bday } : {}), age, ...(birth ? { birth } : {}), phone, address, ...(sdLater ? { start: sd.slice(0,7), startDay: sd } : {}), quit:false, logs:[] });
       });
       // 새 명단에 없는 분 (파일에 들어 있는 면만 비교)
-      const gone = bulkMode === 'fill' ? [] : participants.filter(p => fileTowns.has(p.town) && !matched.has(p.id));
+      // 사업별 파일은 다른 사업 분을 빼지 않음 (빠진 분은 🏷 사업 확인에서만 알려 줌)
+      const gone = (bulkMode === 'fill' || pick) ? [] : participants.filter(p => fileTowns.has(p.town) && !matched.has(p.id));
 
       const list = (a) => a.slice(0,10).join(', ') + (a.length>10 ? ` 외 ${a.length-10}명` : '');
+      const bz = pick ? bizCheck(pick, bizRows, list) : null;
       // 경로당이 비어 있으면 주소로 추정
       added.filter(p => !p.senior).forEach(p => { const g = guessSenior(p, participants); if (g) { p.senior = g; p.guess = true; } });
       let msg = `${bulkMode === 'fill' ? '✏️ 추가 정보만 넣기' : '📋 명단 정리'} (${[...fileTowns].join(', ')})\n`;
@@ -5259,8 +5335,10 @@ function bulkImport(input){
       if (dup.length) msg += `\n\n파일 안에서 겹쳐 건너뜀 ${dup.length}명: ${list(dup)}`;
       if (notActive.length) msg += `\n\n참여 중이 아니어서 건너뜀 ${notActive.length}명: ${list(notActive)}`;
       if (noTown.length) msg += `\n\n읍·면을 알 수 없어 건너뜀 ${noTown.length}명: ${list(noTown)}\n(위에서 담당 면을 고른 뒤 다시 넣으면 그 면으로 등록됩니다)`;
-      if (!added.length && !updated.length && !gone.length && !unquit.length) return notify(msg + '\n\n바뀐 내용이 없습니다.');
+      if (bz) msg += bz.msg;
+      if (!added.length && !updated.length && !gone.length && !unquit.length) { if (bz) saveBizCheck(pick, bz); return notify(msg + '\n\n바뀐 내용이 없습니다.'); }
       if (!await ask(msg + '\n\n이대로 정리할까요?')) return;
+      if (bz) saveBizCheck(pick, bz);
 
       participants.push(...added);
       added.forEach(p => logEvent('신규 등록', p, '엑셀 명단' + (p.guess ? ' · 경로당 추정' : '') + (p.startDay ? ' · 참여시작 ' + p.startDay : '')));
@@ -7801,6 +7879,8 @@ function exportExcel(){
     const qr = TOWNS.filter(t => qa[t] && (qa[t].n != null || qa[t].g != null)).map(t => { const c = townCount(t), n = qa[t].n, g = qa[t].g;
       return { '면': t, '배정 일반': n ?? '', '현재 일반': c.act, '일반 차이(현재-배정)': n != null ? c.act - n : '', '배정 게이트': g ?? '', '현재 게이트': c.gate, '게이트 차이(현재-배정)': g != null ? c.gate - g : '' }; });
     XLSX.utils.book_append_sheet(wb, qr.length ? XLSX.utils.json_to_sheet(qr) : XLSX.utils.aoa_to_sheet([['면별 배정 인원을 아직 넣지 않았습니다.']]), '면별 배정 인원'); }
+  { const br = []; Object.entries(bizSnap).forEach(([k, v]) => (v.rows || []).forEach(r => br.push({ '사업': k, '올린 날': v.at, '읍면': r.town, '경로당': r.senior, '성명': r.name, '연락처': r.ph ? fmtPhone(r.ph) : '', '생년 앞 6자리': r.b6 || '', '주소': r.addr || '' })));
+    XLSX.utils.book_append_sheet(wb, br.length ? XLSX.utils.json_to_sheet(br) : XLSX.utils.aoa_to_sheet([['사업별 명단을 아직 올리지 않았습니다.']]), '사업별 명단'); }
   XLSX.utils.book_append_sheet(wb, ws5, '변경 이력');
   // 올려서 넣은 일정표 (활동일·역량강화교육)
   const sch = schedLoad();
