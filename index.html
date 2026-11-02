@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-90</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-91</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -5847,7 +5847,7 @@ function leaderMenu(p){
 ['n-start','m-start'].forEach(id => document.getElementById(id).addEventListener('change', () => syncStartDay(id)));
 function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, selfOnly, onSendText, noPhoto, onSent }){
   return new Promise(resolve => {
-    const recips = people.filter(p => telOf(p)).map(p => ({ key: 'p'+p.id, label: `${p.name} 어르신`, num: telOf(p), p }));
+    const recips = people.filter(p => telOf(p)).map(p => ({ key: 'p'+p.id, label: p._guard ? `${p.name} 경로당지킴이` : `${p.name} 어르신`, num: telOf(p), p }));
     const noTel = people.filter(p => !telOf(p));
     // 같은 구역 팀장은 한 번만
     const seen = new Set();
@@ -6221,6 +6221,35 @@ function keepDraft(p){
   const plain = dr.how !== '보고' && dr.leave === '정상' && dr.vest !== '미착용' && dr.badge !== '미착용' && dr.attitude === '우수' && !dr.memo.trim() && Object.values(dr.ex).every(v => v === '정상');
   if (plain && !window._segTouched) delete checkDrafts[p.id]; else checkDrafts[p.id] = dr;
 }
+// (v91) 공동 구역(화장실 등) 문제: 개인 벌점·경고가 아니라 경로당 단위로 기록하고, 그 경로당 경로당지킴이께 문자
+const SHARED_WORDS = ['화장실'];
+const isSharedText = t => SHARED_WORDS.some(w => String(t).includes(w));
+const guardsOf = senior => ((bizSnap['경로당지킴이'] || {}).rows || []).filter(r => r.senior === senior && r.name);
+let sharedIssues = (() => { try { return JSON.parse(load('jinan_shared')) || []; } catch(e) { return []; } })();
+// 공동 구역 항목을 기록에서 떼어 냄 (벌점에 안 셈). 떼어 낸 항목 목록을 돌려줌
+function splitShared(p, log){
+  const out = [], ex = {};
+  Object.entries(log.ex || {}).forEach(([id, x]) => {
+    const t = x && x.bad ? (x.n === x.v ? x.v : `${x.n} ${x.v}`) : '';
+    if (t && isSharedText(t)) out.push({ text: t, id }); else ex[id] = x;
+  });
+  if (out.length) log.ex = ex;
+  return out;
+}
+function sharedLeaderText(p, date, items, memo){
+  const d = `${Number(date.slice(5,7))}월 ${Number(date.slice(8,10))}일`;
+  return `[진안군노인회] ${d} 경로당 공동 구역 확인 사항\n\n경로당지킴이 선생님, 안녕하세요.\n진안군 노인회입니다.\n\n${seniorOf(p)} 경로당 공동 구역에서 아래 내용이 확인되었습니다.\n${items.map(x => '· ' + x.text).join('\n')}${memo ? `\n메모: ${memo}` : ''}\n\n경로당 모두가 쓰는 곳이라 살펴 주시고 조치 부탁드립니다.\n\n진안군 노인회 드림`;
+}
+async function reportShared(p, log, items){
+  if (!items.length) return;
+  sharedIssues.push(...items.map(x => ({ id: Date.now() + Math.random(), date: log.date, senior: seniorOf(p), item: x.text, memo: (log.memo || '').trim(), by: p.name })));
+  store('jinan_shared', JSON.stringify(sharedIssues));
+  logEvent('경로당 공동 문제', null, `${seniorOf(p)} · ${items.map(x => x.text).join(', ')}${log.memo ? ' · ' + log.memo : ''}`, log.date);
+  const gs = guardsOf(seniorOf(p)).map((r, i) => ({ id: 'g' + i + Math.random(), name: r.name, phone: r.ph, town: p.town, senior: p.senior, _guard: true }));
+  if (!gs.length) return notify(`${seniorOf(p)} 경로당지킴이 명단이 없어서 문자를 못 보내요.\n경로당지킴이 명단을 먼저 올려 주세요. (기록은 저장했어요)`);
+  await smsBox({ title: `${seniorOf(p)} 공동 구역 → 경로당지킴이께 문자`, people: gs, text: sharedLeaderText(p, log.date, items, (log.memo || '').trim()), logType: '경로당 공동 문제 문자', logDetail: `${log.date} ${items.map(x => x.text).join(', ')}` });
+}
+
 async function saveCheck(){
   const p = current(); if(!p) return;
   try { document.activeElement && document.activeElement.blur(); } catch(e) {}
@@ -6257,7 +6286,9 @@ async function saveCheck(){
   if (log.leave==='이탈' && p.logs.some(l => l.date===date && l.leave==='이탈'))
     if (!await ask('같은 날짜에 이미 이탈 기록이 있습니다. 한 번 더 감점할까요?')) return;
 
+  const sharedMain = splitShared(p, log);
   let pt = await commitLog(p, log, false);
+  await reportShared(p, log, sharedMain);
   window._segTouched = false;
   // 같은 경로당에서 먼저 눌러 두고 넘어간 분들도 함께 저장
   const saved = [p];
@@ -6268,7 +6299,9 @@ async function saveCheck(){
     const lead = dr.how === '보고';
     const ql = { id: Date.now() + Math.random(), date, how: lead ? '보고' : '직접', badge: lead ? '정상' : dr.badge, vest: lead ? '정상' : dr.vest, attitude: dr.attitude, leave: lead ? '정상' : dr.leave, memo: (dr.memo || '').trim(), pv: Object.assign({}, PT), time: hhmm(new Date()),
       ex: Object.fromEntries(checkItems.map(it => [it.id, exVal(it, lead && !leadOK(it) ? '정상' : (dr.ex?.[it.id] || '정상'))])) };
+    const sharedQ = splitShared(q, ql);
     pt += await commitLog(q, ql, true); saved.push(q);
+    await reportShared(q, ql, sharedQ);
   }
   const next = matesOf(p).find(q => q.id !== p.id && !stats(q).dropped && !q.logs.some(l => l.date===date));
   document.getElementById('c-memo').value = ''; resetExItems();
