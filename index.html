@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-117</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-118</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -7867,7 +7867,6 @@ function monthlyRows(mk){
     rows.push(['경로당','이름','총 근무','끝나는 날','사유']);
     const few = ok.filter(p => p.town === t).map(p => ({ p, paid: workDays(p, mk).length - unpaidIn(p, mk) }))
       .filter(x => x.paid < WORK_TARGET).sort((a,b) => a.paid - b.paid || a.p.name.localeCompare(b.p.name));
-    if (!few.length) rows.push(['근무 10일 미만인 분 없음']);
     few.forEach(({ p, paid }) => { const ld = lastDayIn(p, mk);
       rows.push([seniorOf(p), p.name, `${paid}일 근무`, ld ? `끝나는 날 ${ld}일` : '-', reasonsIn(p, mk)]); });
     rows.push([]);
