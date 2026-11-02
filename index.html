@@ -407,11 +407,12 @@
   .pin-title { font-size:1.15rem; font-weight:700; margin-bottom:6px; }
   .lock-opts button { display:block; width:100%; }
 .help-fab{position:fixed;right:14px;bottom:14px;width:52px;height:52px;border-radius:26px;border:none;background:#2b6cb0;color:#fff;font-size:24px;box-shadow:0 4px 10px rgba(43,108,176,.45);z-index:40;margin:0;padding:0;display:flex;align-items:center;justify-content:center;}
+body.ord-hide .ord-btn { display: none !important; }
 </style>
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-149</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-150</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -546,7 +547,7 @@
       <summary><h3>📊 통계</h3><span class="chg-arrow"></span></summary>
       <div style="margin-top:8px;" id="st-box">
         <button class="full" id="st-monthly" onclick="monthlyPreview()" style="margin:0 0 8px;background:#2f6db0;">📋 월간 정리표 미리 보기 · 받기</button>
-        <button class="secondary full" id="st-ord-btn" onclick="stOrderToggle()" style="margin:0 0 8px;">↕ 박스 순서 바꾸기</button>
+        <button class="secondary full ord-btn" id="st-ord-btn" onclick="stOrderToggle()" style="margin:0 0 8px;">↕ 박스 순서 바꾸기</button>
         <p class="muted hidden" style="margin-top:0;" id="export-desc"></p>
         <details class="stat-box chg-box" id="st-period">
           <summary><span style="font-weight:bold;">📊 기간 통계</span><span class="chg-arrow"></span></summary>
@@ -573,9 +574,8 @@
   </div>
 
   <div class="card" id="ui-card" data-mv="ui">
-    <details class="chg-box" id="ui-box" style="margin-top:0;border-top:none;padding-top:0;" ontoggle="if(this.open) renderUI()">
-      <summary><h3>🛠️ 설정</h3><span class="chg-arrow"></span></summary>
-      <div style="margin-top:8px;" id="set-body"><div style="text-align:right;margin:0 0 6px;"><button type="button" class="secondary small" id="set-hide-btn" style="width:auto;margin:0 6px 0 0;padding:6px 12px;font-size:.9rem;">🙈 가리기</button><span id="set-order-wrap" style="display:inline-block;"><button type="button" class="secondary small" id="set-order-btn" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↕ 묶음 순서 바꾸기</button></span></div>
+    <div id="ui-box" style="margin-top:0;">
+      <div style="margin-top:8px;" id="set-body"><div style="text-align:right;margin:0 0 6px;"><span id="set-order-wrap" class="ord-btn" style="display:inline-block;"><button type="button" class="secondary small" id="set-order-btn" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↕ 묶음 순서 바꾸기</button></span></div>
       <details class="chg-box set-grp" data-sg="lock" style="margin:8px 0;"><summary><b>🔒 비밀번호 잠금</b><span class="chg-arrow"></span></summary><div style="margin-top:6px;">
         <button type="button" class="secondary full" id="lk-btn" onclick="setLockMode()">🔒 잠금 설정</button>
       </div></details>
@@ -634,8 +634,9 @@
         <button class="danger small full" id="btn-reset" onclick="resetMonth()" style="margin-top:6px;"></button>
       </div></details>
       <div data-sg-end="1"></div>
+        <div style="text-align:right;margin:10px 0 4px;"><button type="button" class="secondary small" id="set-hide-btn" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">🙈 가리기</button></div>
       </div>
-    </details>
+    </div>
   </div>
 
   <div class="card" id="me-card" data-mv="me">
@@ -2442,7 +2443,7 @@ function openZone(id){
       <details id="zn-manage" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
         <summary class="zn-pull"><b>⚙️ 메뉴 꺼내기 ▼</b><small>오늘 도착·조끼·명찰 체크 · 오늘 조끼·명찰 리셋 · 경로당 고르기 · 담당 경로당 · 코스표 · 팀장 · 리셋</small><span class="chg-arrow"></span></summary>
         <div style="padding-top:8px;">
-      <div style="text-align:right;margin:0 0 6px;"><button type="button" class="secondary small" id="zn-order-btn" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↕ 순서 바꾸기</button></div>
+      <div style="text-align:right;margin:0 0 6px;"><button type="button" class="secondary small ord-btn" id="zn-order-btn" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↕ 순서 바꾸기</button></div>
       <div id="zn-today" data-zk="today" style="text-align:center;font-size:1rem;margin:0 0 8px;"></div>
       <button type="button" class="full" id="zn-att" data-zk="att" style="margin:0 0 8px;">🙋 오늘 도착·조끼·명찰 체크</button>
       <div data-zk="vreset" style="text-align:center;margin:0 0 8px;"><button type="button" class="secondary small" id="zn-vreset" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↩ 오늘 조끼·명찰 리셋 (도착은 그대로)</button></div>
@@ -6902,13 +6903,14 @@ function setMove(k, dir){
 // 묶음 순서 단추 가리기 (이 휴대폰에만 저장, jinan_setorder_hide)
 function setHideApply(){
   const hid = load('jinan_setorder_hide') === '1';
-  const w = document.getElementById('set-order-wrap'), h = document.getElementById('set-hide-btn');
-  if (w) w.style.display = hid ? 'none' : 'inline-block';
+  document.body.classList.toggle('ord-hide', hid);
+  const h = document.getElementById('set-hide-btn');
   if (h) h.textContent = hid ? '👁 보이기' : '🙈 가리기';
 }
 function setHideToggle(){
   const hid = load('jinan_setorder_hide') === '1';
   if (!hid && setEdit) { setEdit = false; drawSetEdit(); }
+  if (!hid && typeof stEditing !== 'undefined' && stEditing) stOrderToggle();
   try { localStorage.setItem('jinan_setorder_hide', hid ? '0' : '1'); } catch(e) {}
   setHideApply();
 }
@@ -6953,7 +6955,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => dayWorkPop(false), 1500);   // 바뀐 날짜 당일이면 하루 한 번 안내 문자 팝업
   const ob = document.getElementById('set-order-btn'); if (ob) ob.onclick = setToggle;
   const hb = document.getElementById('set-hide-btn'); if (hb) hb.onclick = setHideToggle;
-  setHideApply();
+  setHideApply(); renderUI();
   const qb = document.getElementById('quota-box');
   if (qb) {
     qb.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.q) setQuotaDirty(true); });
