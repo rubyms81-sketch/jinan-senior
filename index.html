@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-148</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-149</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -575,8 +575,7 @@
   <div class="card" id="ui-card" data-mv="ui">
     <details class="chg-box" id="ui-box" style="margin-top:0;border-top:none;padding-top:0;" ontoggle="if(this.open) renderUI()">
       <summary><h3>🛠️ 설정</h3><span class="chg-arrow"></span></summary>
-      <div style="margin-top:8px;" id="set-body"><div id="maker" onclick="makerQuote()" style="text-align:center;font-size:.95rem;margin:0 0 8px;cursor:pointer;color:#4a5568;">제작자:김스템</div>
-      <div style="text-align:right;margin:0 0 6px;"><button type="button" class="secondary small" id="set-order-btn" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↕ 묶음 순서 바꾸기</button></div>
+      <div style="margin-top:8px;" id="set-body"><div style="text-align:right;margin:0 0 6px;"><button type="button" class="secondary small" id="set-hide-btn" style="width:auto;margin:0 6px 0 0;padding:6px 12px;font-size:.9rem;">🙈 가리기</button><span id="set-order-wrap" style="display:inline-block;"><button type="button" class="secondary small" id="set-order-btn" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↕ 묶음 순서 바꾸기</button></span></div>
       <details class="chg-box set-grp" data-sg="lock" style="margin:8px 0;"><summary><b>🔒 비밀번호 잠금</b><span class="chg-arrow"></span></summary><div style="margin-top:6px;">
         <button type="button" class="secondary full" id="lk-btn" onclick="setLockMode()">🔒 잠금 설정</button>
       </div></details>
@@ -647,6 +646,7 @@
         <label>내 휴대폰 번호</label><input type="tel" id="me-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off">
         <label>내 이메일</label><input type="email" id="me-email" autocomplete="off" placeholder="예: name@naver.com">
         <button class="full" onclick="saveMe()">저장</button>
+        <div id="maker" onclick="makerQuote()" style="text-align:center;font-size:.95rem;margin:12px 0 0;padding:8px;border:1px solid #d6dde6;border-radius:10px;cursor:pointer;color:#4a5568;">제작자:김스템</div>
       </div>
     </details>
   </div>
@@ -6899,6 +6899,19 @@ function setMove(k, dir){
   if (j < 0 || j >= a.length) return;
   [a[i], a[j]] = [a[j], a[i]]; setOrderSave(a); applySetOrder(); drawSetEdit();
 }
+// 묶음 순서 단추 가리기 (이 휴대폰에만 저장, jinan_setorder_hide)
+function setHideApply(){
+  const hid = load('jinan_setorder_hide') === '1';
+  const w = document.getElementById('set-order-wrap'), h = document.getElementById('set-hide-btn');
+  if (w) w.style.display = hid ? 'none' : 'inline-block';
+  if (h) h.textContent = hid ? '👁 보이기' : '🙈 가리기';
+}
+function setHideToggle(){
+  const hid = load('jinan_setorder_hide') === '1';
+  if (!hid && setEdit) { setEdit = false; drawSetEdit(); }
+  try { localStorage.setItem('jinan_setorder_hide', hid ? '0' : '1'); } catch(e) {}
+  setHideApply();
+}
 function setToggle(){
   if (!setEdit) { setEdit = true; setBefore = JSON.stringify(setOrder()); drawSetEdit(); return; }
   setEdit = false; drawSetEdit();
@@ -6939,6 +6952,8 @@ document.addEventListener('DOMContentLoaded', () => {
   applySetOrder(); drawQuota();
   setTimeout(() => dayWorkPop(false), 1500);   // 바뀐 날짜 당일이면 하루 한 번 안내 문자 팝업
   const ob = document.getElementById('set-order-btn'); if (ob) ob.onclick = setToggle;
+  const hb = document.getElementById('set-hide-btn'); if (hb) hb.onclick = setHideToggle;
+  setHideApply();
   const qb = document.getElementById('quota-box');
   if (qb) {
     qb.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.q) setQuotaDirty(true); });
