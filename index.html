@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-131</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-132</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -7500,10 +7500,26 @@ function reviewText(r, d){
     (r.pts ? `(벌점 -${r.pts}점${r.unpaid ? `, 일당 미지급 ${r.unpaid}일` : ''})` : '') + `. ` +
     (r.leave ? '근무지를 지키지 않은 일이 있어 ' : r.bad ? '응대 태도에 문제가 있어 ' : '복장·근무 규칙을 지키지 않은 일이 있어 ') + `내년도 일자리 사업 참여 여부에 대한 검토를 바랍니다.`;
 }
-// 🏅 성실도 순위 (사용자 요청, 2026-11-01): 잘못 비율 = (이탈×2 + 자리 비움 + 조끼 + 명찰 + 태도 불량) ÷ 점검 횟수 × 100, 낮은 순이 위. 제외 표시(2027)도 같은 줄에 표시
+// 🏅 성실도 순위 (사용자 요청, 2026-11-01): 잘못 비율 = (이탈×2 + 경고 + 주의×0.5) ÷ 점검 횟수 × 100, 낮은 순이 위. 제외 표시(2027)도 같은 줄에 표시
+// (v132) 성실도: 경고 1개 = 1, 주의 1개 = 0.5, 이탈 = 2. 점수 숫자는 화면에 안 보이고 개수만 보임
+const wUnit = v => (Number(v) < 0 ? 0.5 : 1);
+function wcount(r, d){
+  let leave = 0, warn = 0, caut = 0, wv = 0;
+  const add = w => { if (w < 1) caut++; else warn++; wv += w; };
+  d.mks.forEach(mk => { if (r.p.start && r.p.start > mk) return;   // 들어오기 전 달은 제외 (statsData의 active와 같음)
+    r.p.logs.filter(l => l.date.startsWith(mk)).forEach(l => { const v = l.pv || PT_DEF;
+      if (l.leave==='이탈') { leave++; wv += 2; }
+      if (l.leave==='자리비움') add(wUnit(v.자리비움));
+      if (l.vest==='미착용') add(wUnit(v.조끼));
+      if (l.badge==='미착용') add(wUnit(v.명찰));
+      if (l.attitude==='불량') add(1);
+      Object.values(l.ex || {}).forEach(x => { if (x.bad) add(wUnit(x.pt)); });
+    }); });
+  return { leave, warn, caut, wv };
+}
 function rankData(d){
-  return d.people.map(r => { const wv = r.leave * 2 + r.away + r.vest + r.badge + r.bad;
-    return { ...r, wv, rate: r.checks ? wv / r.checks * 100 : null, ex27: !!r.p.ex27 }; })
+  return d.people.map(r => { const c = wcount(r, d);
+    return { ...r, leaveN: c.leave, warn: c.warn, caut: c.caut, wv: c.wv, rate: r.checks ? c.wv / r.checks * 100 : null, ex27: !!r.p.ex27 }; })
     .sort((a, b) => (a.rate === null) - (b.rate === null) || (a.rate ?? 0) - (b.rate ?? 0) || a.p.name.localeCompare(b.p.name));
 }
 // 📉 근무 미달: 1월~11월 근무 인정일(활동일 - 일당 미지급)이 필요한 날(근무한 달 × 10일)보다 적은 분
@@ -7681,10 +7697,10 @@ function showStats(openGroup){
     ${few.length ? `<div style="font-weight:bold;margin:10px 0 4px;">🟨 근무일 적은 어르신 ${few.length}명</div>` + few.map(r => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#${FILL.few};border-left-color:#ecc94b;"><b>${nmH(r.p)}</b> <span class="muted">🏠 ${esc(r.p.town)} · ${esc(seniorOf(r.p))}</span><br><span style="font-size:.88rem;">활동일 ${r.days}일 · 인정 ${r.paid}일</span> <span class="arrow">›</span></button>`).join('') : ''}
     <details style="margin-top:12px;border:2px solid #2b6cb0;border-radius:10px;background:#f7fbff;padding:8px 10px;">
       <summary style="font-weight:bold;color:#2c5282;cursor:pointer;">🏅 성실도 순위 ${rk.length}명 (잘못 비율 낮은 순)</summary>
-      <div class="muted" style="font-size:.82rem;margin:6px 0;">잘못 비율 = (이탈×2 + 자리 비움 + 조끼 + 명찰 + 태도 불량) ÷ 점검 횟수. 낮을수록 위. 2027 제외 표시도 같은 줄에서 함께 봅니다.</div>
+      <div class="muted" style="font-size:.82rem;margin:6px 0;">잘못 비율 = (이탈×2 + 경고 + 주의×0.5) ÷ 점검 횟수. 낮을수록 위. 2027 제외 표시도 같은 줄에서 함께 봅니다.</div>
       ${rk.map((r, i) => `<div class="pen-row" style="background:#fff;border-left-color:${r.ex27 ? '#805ad5' : '#3182ce'};margin-top:4px;cursor:default;">
         <b>${r.rate === null ? '-' : i + 1}. ${nmH(r.p)}</b> ${r.ex27 ? '<span class="badge bg-danger">2027 제외</span>' : ''} <span class="muted">🏠 ${esc(seniorOf(r.p))}</span><br>
-        <span style="font-size:.88rem;">${r.rate === null ? '점검 기록 없음' : `잘못 ${r.rate.toFixed(1)}% · 점검 ${r.checks}번 (잘못 ${r.wv}점)`}</span>
+        <span style="font-size:.88rem;">${r.rate === null ? '점검 기록 없음' : `잘못 ${r.rate.toFixed(1)}% · 점검 ${r.checks}번 · 경고 ${r.warn}개 · 주의 ${r.caut}개${r.leaveN ? ` · 이탈 ${r.leaveN}회` : ''}`}</span>
         <div><button type="button" class="small secondary" data-ex27="${r.p.id}" style="width:auto;margin:4px 0 0;">${r.ex27 ? '2027 제외 해제' : '2027 제외 표시'}</button></div></div>`).join('') || '<div class="muted" style="font-size:.88rem;">명단이 없어요.</div>'}
     </details>
     <div style="margin-top:14px;padding:10px;border:2px solid #805ad5;border-radius:10px;background:#faf5ff;">
@@ -7742,8 +7758,8 @@ function exportStats(){
     const wsG = XLSX.utils.json_to_sheet(gRows); wsG['!cols'] = [18,6,8,14,10,30,10,12,15].map(w=>({wch:w}));
     XLSX.utils.book_append_sheet(wb, wsG, '항목별 명단'); }
   { const rk = rankData(d), kRows = rk.map((r, i) => ({ '순위': r.rate === null ? '' : i + 1, '읍면': r.p.town, '경로당': seniorOf(r.p), '성명': r.p.name, '점검 횟수': r.checks,
-      '이탈(×2)': r.leave * 2, '자리 비움': r.away, '조끼 미착용': r.vest, '명찰 미착용': r.badge, '태도 불량': r.bad, '잘못 점수': r.wv, '잘못 비율(%)': r.rate === null ? '점검 없음' : Number(r.rate.toFixed(1)), '2027 제외': r.ex27 ? '제외 표시' : '' }));
-    const wsK = XLSX.utils.aoa_to_sheet([[`${d.y}년 ${d.a}월~${d.b}월 성실도 순위 (잘못 비율 = (이탈×2 + 자리 비움 + 조끼 + 명찰 + 태도 불량) ÷ 점검 횟수, 낮을수록 위)`]]);
+      '이탈(×2)': r.leave * 2, '경고 개수': r.warn, '주의 개수': r.caut, '잘못 비율(%)': r.rate === null ? '점검 없음' : Number(r.rate.toFixed(1)), '2027 제외': r.ex27 ? '제외 표시' : '' }));
+    const wsK = XLSX.utils.aoa_to_sheet([[`${d.y}년 ${d.a}월~${d.b}월 성실도 순위 (잘못 비율 = (이탈×2 + 경고 + 주의×0.5) ÷ 점검 횟수, 낮을수록 위)`]]);
     if (kRows.length) XLSX.utils.sheet_add_json(wsK, kRows, { origin: 'A3' });
     wsK['!cols'] = [6,8,14,10,9,9,9,9,9,9,9,12,12].map(w => ({ wch: w }));
     XLSX.utils.book_append_sheet(wb, wsK, '성실도 순위'); }
