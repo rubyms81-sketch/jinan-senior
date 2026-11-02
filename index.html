@@ -411,7 +411,7 @@
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-132</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-133</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2831,6 +2831,10 @@ function openInfo(){
   const saved = !!(h.conds?.length || h.memo);   // 한 번이라도 저장했으면 고른 것만 보여 줌
   let open = false, memoEdit = !h.memo;   // 목록은 늘 접힌 채로 시작
   const z = zoneOf(p), L = z && z.leaderId ? participants.find(x => x.id === z.leaderId) : null, st = stats(p);
+  // (v133) 성실도: 올해 1월~이번 달 경고·주의·이탈 개수 (점수 숫자는 안 보임)
+  const yy = monthKey().slice(0,4), mm = Number(monthKey().slice(5,7));
+  const wc = wcount({ p }, { mks: Array.from({ length: mm }, (_, i) => `${yy}-${String(i+1).padStart(2,'0')}`) });
+  const sinc = (wc.warn || wc.caut || wc.leave) ? `경고 ${wc.warn}개 · 주의 ${wc.caut}개${wc.leave ? ` · 이탈 ${wc.leave}회` : ''} <span class="muted">(${yy}년 1월~${mm}월)</span>` : '<span class="muted">경고·주의 없음</span>';
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.25rem;margin-bottom:8px;">👤 ${nmH(p)} 어르신</div>
@@ -2847,6 +2851,7 @@ function openInfo(){
       <tr><th>연락처</th><td data-f="phone">${p.phone ? telBtn(p) : '-'} <button type="button" class="ed-pen-btn" data-ed="phone">✏️</button></td></tr>
       <tr><th>주소</th><td data-f="address">${p.address ? `<span class="map-link" id="if-map">🗺️ ${esc(p.address)}</span>` : '-'} <button type="button" class="ed-pen-btn" data-ed="address">✏️</button></td></tr>
       <tr><th>상태</th><td>${inHospNow(p) && st.status === '정상' ? '' : esc(st.status)}${st.penalty ? ` <b style="color:var(--danger)" class="pen-link" id="if-pen">(${st.penalty}점) 이유 보기 ›</b>` : ''}${inHospNow(p) ? ' <span class="badge bg-hosp">🏥 입원 중</span>' : ''}${startTag(p) ? ` <span class="muted">· ${Number(p.start.slice(5))}월부터 근무</span>` : ''}</td></tr>
+      <tr><th>성실도</th><td>${sinc}</td></tr>
     </table>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><label style="margin:0;">🩺 아픈 곳</label><button type="button" class="small secondary" id="if-toggle" style="margin:0;width:auto;"></button></div>
     <div class="cond-grid" id="if-conds"></div>
