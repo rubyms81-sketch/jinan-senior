@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-188</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-189</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2621,6 +2621,27 @@ async function pickMoimForZone(z, done){
     bg.remove(); done();
   });
 }
+// (v189) 👔 특별 구역 창: 회장·사무장 명단 + 전화 + 단체문자. 경로당 고르기·코스표·조끼·명찰 칸은 없음
+function openSpecialZone(z, bg){
+  const $ = q => bg.querySelector(q);
+  $('#zn-title').textContent = z.name;
+  $('#zn-lead-ed').remove(); $('#zn-pick').remove();
+  $('#zn-close').onclick = () => bg.remove();
+  const draw = () => {
+    $('#zn-main').innerHTML = `
+      <div style="font-size:.9rem;color:#4a5568;margin-bottom:8px;">회장·사무장 명단이에요. 전화하거나 단체문자를 보낼 수 있어요.</div>
+      ${smsStaff.length ? smsStaff.map(x => `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:6px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:10px;">
+        <div style="flex:1;min-width:0;"><b>${esc(x.role)}</b> ${esc(x.name || '')}${x.town ? ` <span class="muted">(${esc(x.town)})</span>` : ''}
+          ${x.addr ? `<div class="muted" style="font-size:.85rem;">${esc(x.addr)}</div>` : ''}</div>
+        ${x.tel ? `<a href="tel:${x.tel.replace(/[^0-9]/g, '')}" class="tel-link" style="padding:4px 10px;white-space:nowrap;">📞 전화</a>` : '<span class="muted">번호 없음</span>'}</div>`).join('')
+        : '<div class="muted" style="margin:8px 0;">아직 명단이 없어요.</div>'}
+      <button type="button" class="full" id="sp-group" style="margin:8px 0 6px;" ${smsStaff.some(x => x.tel) ? '' : 'disabled'}>📩 단체문자 보내기</button>
+      <button type="button" class="secondary full" id="sp-edit">✏️ 회장·사무장 명단 고치기 (엑셀도 가능)</button>`;
+    $('#sp-group').onclick = () => smsBox({ title: '회장·사무장 단체문자', people: [], staff: smsStaff, free: true, text: '안녕하세요, 진안군 노인회입니다.\n\n\n진안군 노인회 드림', logType: '회장·사무장 단체 문자', logDetail: smsStaff.filter(x => x.tel).map(x => x.role + ' ' + x.name).join(', ') });
+    $('#sp-edit').onclick = () => openSmsStaffEdit(draw);
+  };
+  draw();
+}
 function openZone(id){
   const z = zones.find(x => x.id === id); if (!z) return;
   const bg = document.createElement('div'); bg.className = 'dlg-back';
@@ -2666,6 +2687,7 @@ function openZone(id){
   document.body.appendChild(bg);
   const $ = q => bg.querySelector(q);
   if ($('#zn-name')) $('#zn-name').value = z.name; $('#zn-phone').value = z.phone || '';
+  if (z.special) return openSpecialZone(z, bg);   // (v189) 👔 특별 구역은 회장·사무장 명단만 보여 줌
   $('#zn-lead-ed').onclick = () => {
     const L = participants.find(x => x.id === z.leaderId), d2 = document.createElement('div'); d2.className = 'dlg-back';
     const zTown0 = zoneTown(z) || myTowns[0];
@@ -7001,7 +7023,7 @@ const STAFF_TOWNS = ['진안읍','마령면','백운면','부귀면','성수면'
 let smsStaff = (() => { try { const v = JSON.parse(load('jinan_smsstaff')); if (Array.isArray(v)) return v; } catch(e) {} return [{ role: '회장', name: '구동수', town: '', tel: '' }]; })();
 const saveSmsStaff = () => { try { store('jinan_smsstaff', JSON.stringify(smsStaff)); } catch(e) {} };
 const smsStaffFor = towns => smsStaff.filter(x => x.role === '회장' || (x.role === '사무장' && towns.includes(x.town)));
-function openSmsStaffEdit(){
+function openSmsStaffEdit(onDone){
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   const work = smsStaff.map(x => ({ ...x }));
   const rowH = (x, i) => `<div style="margin:6px 0;border-bottom:1px dashed #cbd5e0;padding-bottom:6px;"><div style="display:grid;grid-template-columns:64px 1fr 96px 1fr 30px;gap:4px;align-items:center;margin:0;">
@@ -7025,15 +7047,15 @@ function openSmsStaffEdit(){
     <div class="grid-2" style="margin-top:8px;"><button class="secondary" id="stf-cancel">취소</button><button id="stf-save">저장</button></div></div>`;
   document.body.appendChild(bg);
   bg.querySelector('#stf-add').onclick = () => { work.push({ role: '사무장', name: '', town: '진안읍', tel: '', addr: '' }); draw(); };
-  bg.querySelector('#stf-cancel').onclick = () => bg.remove();
+  bg.querySelector('#stf-cancel').onclick = () => { bg.remove(); if (onDone) onDone(); };
   const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel'; fi.className = 'hidden'; bg.appendChild(fi);
-  fi.onchange = () => staffImport(fi, () => { bg.remove(); openSmsStaffEdit(); });
+  fi.onchange = () => staffImport(fi, () => { bg.remove(); openSmsStaffEdit(onDone); });
   bg.querySelector('#stf-xls').onclick = () => fi.click();
   bg.querySelector('#stf-tpl').onclick = () => staffTemplate();
   bg.querySelector('#stf-save').onclick = () => {
     const bad = work.find(x => x.tel && !/^[0-9-]{9,}$/.test(x.tel));
     if (bad) return notify('전화번호 칸을 다시 확인해 주세요.');
-    smsStaff = work.filter(x => x.name || x.tel); saveSmsStaff(); logEvent('회장·사무장 연락처', null, `${smsStaff.map(x => x.role + ' ' + x.name + (x.town ? '(' + x.town + ')' : '')).join(', ') || '없음'}`); bg.remove();
+    smsStaff = work.filter(x => x.name || x.tel); saveSmsStaff(); logEvent('회장·사무장 연락처', null, `${smsStaff.map(x => x.role + ' ' + x.name + (x.town ? '(' + x.town + ')' : '')).join(', ') || '없음'}`); bg.remove(); if (onDone) onDone();
   };
   draw();
 }
