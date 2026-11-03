@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-167</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-168</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6922,6 +6922,7 @@ function openEduCheck(){
   const ensure = day => people(day).forEach(p => { const k = day + '|' + p.id; if (dv[k]) return; const c = eduChkOf(p, day); dv[k] = { arr: !!(c && c.arr), vest: c ? (c.vest ?? null) : null, at: c?.at || '', note: c?.note || '' }; });
   const st = p => dv[d + '|' + p.id] || { arr: false, vest: null, at: '' };
   const draw = () => {
+    const keepTop = dlg.scrollTop, keepList = dlg.querySelector('[data-eclist]')?.scrollTop || 0;
     ensure(d);
     const all = people(d), vis = visibleTowns(), ts = [...new Set(all.map(p => p.town))].sort((a, b) => (vis.includes(a) ? 0 : 1) - (vis.includes(b) ? 0 : 1) || a.localeCompare(b));
     if (!ts.includes(t)) t = ts.find(x => vis.includes(x)) || ts[0] || null;
@@ -6942,7 +6943,7 @@ function openEduCheck(){
       ${full ? '<div style="text-align:center;font-weight:700;color:#2f855a;font-size:1.1rem;">✔ 완료되었습니다</div>' : ''}
       <div class="grid-2" style="margin:8px 0 4px;"><button type="button" class="${onlyAbsent ? 'secondary' : ''}" data-act="all" style="margin:0;">전체 ${n}명</button><button type="button" class="${onlyAbsent ? '' : 'secondary'}" data-act="absent" style="margin:0;">안 온 사람만 ${n - got}명</button></div>
       <input type="search" id="ec-q" placeholder="🔍 이름으로 찾기" value="${esc(q)}" autocomplete="off" style="margin:4px 0 8px;">
-      <div style="flex:0 1 auto;min-height:120px;overflow:auto;-webkit-overflow-scrolling:touch;">${list.map(p => { const s = st(p); return `
+      <div data-eclist style="flex:0 1 auto;min-height:120px;overflow:auto;-webkit-overflow-scrolling:touch;">${list.map(p => { const s = st(p); return `
         <div style="display:flex;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px solid #edf2f7;${s.arr ? '' : 'background:#fff5f5;'}">
           <span style="flex:1;font-weight:600;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span>${p.phone && !s.arr ? ` <a class="tel-link" href="tel:${telOf(p)}" style="font-size:.85rem;font-weight:400;">📞</a>` : ''}${s.note ? `<br><span style="font-size:.8rem;color:#975a16;font-weight:400;">📝 ${esc(s.note)}</span>` : ''}</span>
           ${`<button type="button" class="small ${s.vest === false ? 'danger' : ''}" data-vest="${p.id}" style="width:auto;margin:0;padding:6px 8px;${s.vest === false ? '' : 'background:#fff;color:#2d3748;border:2px solid #cbd5e0;'}">🦺 조끼</button>`}
@@ -6952,6 +6953,7 @@ function openEduCheck(){
       <button type="button" class="full" data-act="save" style="margin:0 0 6px;">💾 저장 (안 온 분은 불참으로)</button>
       <button type="button" class="full" data-act="sms" style="margin:0 0 6px;" ${n - got ? '' : 'disabled'}>📩 ${esc(t || '')} 안 온 ${n - got}명에게 문자</button>
       <button type="button" class="full secondary" data-act="close">닫기</button>`;
+    dlg.scrollTop = keepTop; const nl = dlg.querySelector('[data-eclist]'); if (nl) nl.scrollTop = keepList;
   };
   const confirmClose = async () => { bg.remove(); return true; };
   dlg.addEventListener('input', e => {
