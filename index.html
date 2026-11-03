@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-162</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-164</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6262,7 +6262,7 @@ function renderModal(){
       <br>받은 시간: <b style="color:${es.lackSafe ? 'var(--danger)' : '#2c5282'}">안전 ${es.safe}/${EDU_NEED.safe}시간</b> · 전체 ${es.total}/${EDU_NEED.total}시간${es.lackSafe ? ` → <b style="color:var(--danger)">안전 ${es.lackSafe}시간 더 필요</b>` : es.lackTotal ? ` → <b>${es.lackTotal}시간 더 필요</b>` : ''}</div>` + n; }
   if (fixList(p).length) n = fixList(p).map(x => `<div class="notice" style="background:#fffaf0;border-color:#f6ad55;display:flex;align-items:center;gap:8px;"><b style="flex:1;color:#c05621;">🔧 ${esc(x.n)} <span class="muted" style="font-weight:normal;font-size:.85rem;">${md(x.date)}</span></b><button type="button" class="small" onclick="fixDone(${p.id}, '${x.id}')" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">✔ 교체함</button></div>`).join('') + n;
   if (docWait(p) && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;"><span class="tag-doc" style="font-size:1rem;">!</span><b style="flex:1;color:#22543d;">비대면 교육 서류</b><button type="button" class="small" onclick="docConfirm(${p.id})" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">📄 서류 확인</button></div>` + n;
-  if (p.docNeed && p.docOk && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="color:#22543d;">📄 비대면 서류 확인 완료</b>${p.docPhoto ? ` <span>📷 사진 있음</span> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docPhotoView(${p.id})">보기</button>` : ` ${p.docNoNeed ? '<span style="color:#22543d;">📷 사진 필요 없음 (처리됨)</span>' : `<b style="color:#c05621;">📷 사진 없음</b> <button type="button" class="small" style="width:auto;margin:0;" onclick="docPhotoAdd(${p.id})">사진 넣기</button> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docNoNeed(${p.id})">사진 필요 없음</button>`}`}</div>` + n;
+  if (p.docNeed && p.docOk && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="color:#22543d;">📄 ${esc(p.name)} · 비대면 서류 확인 완료</b>${p.docPhoto ? ` <span>📷 사진 있음</span> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docPhotoView(${p.id})">보기</button>` : ` ${p.docNoNeed ? '<span style="color:#22543d;">📷 사진 필요 없음 (처리됨)</span>' : `<b style="color:#c05621;">📷 사진 없음</b> <button type="button" class="small" style="width:auto;margin:0;" onclick="docPhotoAdd(${p.id})">사진 넣기</button> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docNoNeed(${p.id})">사진 필요 없음</button>`}`}</div>` + n;
   if (p.guess) n = `<div class="notice">📍 경로당 <b>"${esc(p.senior)}"</b>은 주소(${esc(p.address||'')})를 보고 자동으로 넣은 <b>추정</b>입니다.<br>맞으면 아래 "어르신 정보 고치기"에서 그대로 <b>정보 저장</b>, 틀리면 경로당 이름을 고쳐서 저장해 주세요.</div>` + n;
   if (!s.dropped && p.pause) n = `<div class="notice" style="background:#fff5f5;border-color:#742a2a;"><b style="color:#742a2a;">💀 활동 중단 ${mdK(p.pause)} 시작 · 만료 ${mdK(pauseEnd(p))} (${leftTxt(pauseLeft(p))})</b></div>` + n;
   document.getElementById('modal-notice').innerHTML = n;
@@ -7931,7 +7931,13 @@ function showNewQuit(){
   const r = nqRange(); if (!r) return;
   const rows = nqRows(r.from, r.to);
   const nNew = rows.filter(x => x.kind === '신규 시작').length, nQ = rows.length - nNew;
-  const body = rows.length ? rows.map(x => `<div class="log" style="font-size:.92rem;line-height:1.6;margin-bottom:6px;"><b>${mdw(x.date)}</b> · ${x.kind === '신규 시작' ? '🆕 신규' : '🚪 중도포기'} · ${nmH(x.p)} <span class="muted">${esc(x.p.town)} · ${esc(seniorOf(x.p))}</span></div>`).join('')
+  const body = rows.length ? rows.map(x => {
+    const idx = participants.indexOf(x.p);
+    const kindTxt = x.kind === '신규 시작' ? '🆕 신규' : '🚪 중도포기';
+    if (noSiteP(x.p) && idx >= 0) return `<div class="log" style="font-size:.92rem;line-height:1.6;margin-bottom:6px;"><b>${mdw(x.date)}</b> · ${kindTxt} · ${nmH(x.p)} <span class="muted">${esc(x.p.town)} · 경로당 미입력</span>
+      <div style="display:flex;gap:6px;margin-top:4px;"><input type="text" data-nqin="${idx}" placeholder="경로당 이름" style="flex:1;min-width:0;margin:0;"><button data-nqbtn="${idx}" style="width:auto;margin:0;">넣기</button></div></div>`;
+    return `<div class="log" style="font-size:.92rem;line-height:1.6;margin-bottom:6px;"><b>${mdw(x.date)}</b> · ${kindTxt} · ${nmH(x.p)} <span class="muted">${esc(x.p.town)} · ${esc(seniorOf(x.p))}</span></div>`;
+  }).join('')
     : '<div class="muted">이 기간에 해당하는 분이 없어요.</div>';
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = `<div class="dlg" style="max-height:90vh;overflow:auto;">
@@ -7940,6 +7946,18 @@ function showNewQuit(){
     ${body}
     <button class="secondary full" onclick="this.closest('.dlg-back').remove()" style="margin-top:8px;">닫기</button></div>`;
   document.body.appendChild(bg);
+  bg.querySelectorAll('[data-nqbtn]').forEach(btn => btn.onclick = async () => {
+    const p = participants[Number(btn.dataset.nqbtn)]; if (!p) return;
+    const inp = bg.querySelector(`[data-nqin="${btn.dataset.nqbtn}"]`);
+    const nn = (inp ? inp.value : '').trim();
+    if (!nn) return notify('경로당 이름을 적어 주세요.');
+    if (!await ask(`${p.name} 어르신을 "${nn}" 경로당으로 넣을까요?`)) return;
+    logEvent('경로당 변경', p, `${p.senior || '미입력'} → ${nn} (신규·중도포기 조회에서 입력)`);
+    p.senior = nn; delete p.guess;
+    saveData(false); bg.remove(); renderNewAlert(); renderList();
+    showNewQuit();
+    notify(`${p.name} 어르신을 "${nn}"으로 넣었어요.`);
+  });
 }
 function exportNewQuit(){
   if (typeof XLSX === 'undefined') return notify('인터넷이 연결될 때 다시 눌러 주세요.');
