@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-187</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-188</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2435,6 +2435,15 @@ const monitorOfSite = (town, senior) => monitors.find(m => m.sites?.some(x => x.
 const siteKey = (town, senior) => town + '|' + senior;
 const zoneOfSite = (town, senior) => zones.find(z => z.sites.some(x => x.town===town && x.senior===senior)) || null;
 const zoneOf = p => zoneOfSite(p.town, seniorOf(p));
+// (v188) 👔 특별 구역: 구역 목록에 한 줄로 넣고, 경로당은 사업(맥가이버·안전 모니터링)으로 자동으로 묶음 (경로당 칸은 비워 둠)
+const SPEC_CATS = ['시니어 맥가이버', '시니어 안전 모니터링'];
+const specKindOf = k => { const raw = String(k || '').trim(); const sv = (xCat[raw] && SITE_CATS.find(c => c.k === xCat[raw])) || SITE_CATS.find(c => c.k !== '경로당지킴이' && c.m.test(raw)) || SITE_CATS[SITE_CATS.length - 1]; return sv.k; };
+function ensureSpecZone(){
+  if (zones.some(z => z.special)) return;
+  const id = Math.max(0, ...zones.map(z => z.id)) + 1;
+  zones.push({ id, name: '👔 특별 구역', sites: [], special: true }); saveZones();
+  logEvent('구역 늘리기', null, '👔 특별 구역 추가 (회장·사무장·맥가이버·안전 모니터링)');
+}
 // 구역의 면: 고른 면(z.town) → 없으면 들어 있는 경로당의 면
 const zoneTown = z => z.town || z.sites[0]?.town || null;
 // 👤 팀장 고르기: 고른 면의 팀장만 보여 줌 (면 고르기는 따로 위에 둠)
@@ -2471,9 +2480,10 @@ async function zoneCount(d){
     zones.push(z); logEvent('구역 늘리기', null, `${z.name} 추가 (모두 ${zones.length}개)`);
   } else {
     if (zones.length <= ZONE_MIN) return notify(`구역은 ${ZONE_MIN}개보다 줄일 수 없어요.`);
-    const z = zones[zones.length - 1];
+    const ix = zones.map(z => !z.special).lastIndexOf(true); if (ix < 0) return notify('지울 구역이 없어요.');
+    const z = zones[ix];
     if (!await ask(`맨 끝 "${z.name}"을(를) 없앨까요?${z.sites.length ? `\n들어 있던 경로당 ${z.sites.length}곳은 구역이 없어져요.\n(어르신 명단은 그대로예요)` : ''}`)) return;
-    zones.pop(); logEvent('구역 줄이기', null, `${z.name} 삭제${z.sites.length ? ` (경로당 ${z.sites.length}곳: ${z.sites.map(x => x.senior).join(', ')})` : ''} (모두 ${zones.length}개)`);
+    zones.splice(ix, 1); logEvent('구역 줄이기', null, `${z.name} 삭제${z.sites.length ? ` (경로당 ${z.sites.length}곳: ${z.sites.map(x => x.senior).join(', ')})` : ''} (모두 ${zones.length}개)`);
   }
   saveZones(); renderZones();
 }
@@ -2497,6 +2507,7 @@ function townAllHtml(){
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 6px;">${c.ss.map(x => `<span style="padding:2px 7px;border-radius:10px;font-size:.78rem;background:${x.gate ? '#c6f6d5' : '#edf2f7'};color:${x.gate ? '#22543d' : '#2d3748'};">${esc(x.name)}${x.placed ? ` <b>${x.placed}</b>` : ''}${x.n && x.n !== x.placed ? ` <span style="color:#2b6cb0">(앱 ${x.n})</span>` : ''}</span>`).join('')}</div></details>`).join('');
 }
 function renderZones(){
+  ensureSpecZone();
   const box = document.getElementById('zone-btns'); if (!box) return;
   // 면별: 경로당 수 · 지킴이 / 게이트볼 = 전체 (예: 상전 20곳 79명/6명=85)
   const zs = document.getElementById('zone-sum');
@@ -5832,15 +5843,11 @@ function editSiteMap(town, senior, after){
 function smsGroups(){
   const live = p => !stats(p).dropped && seniorOf(p) !== '개별관리';   // 중도포기·개별관리 인원은 단체 문자에서 뺌
   const inZone = z => participants.filter(p => z.sites.some(x => x.town===p.town && x.senior===seniorOf(p)));
-  const gs = zones.map(z => ({ key: 'z'+z.id, label: z.name, zone: true, ps: inZone(z).filter(p => !isGate(p) && live(p)) }));
+  // (v188) 👔 특별 구역: 시니어 맥가이버·시니어 안전 모니터링 경로당 분 + 연락처 있는 회장·사무장
+  const gs = zones.map(z => z.special
+    ? { key: 'z'+z.id, label: z.name, zone: true, ps: [...participants.filter(p => SPEC_CATS.includes(specKindOf(seniorOf(p))) && live(p) && !isGate(p)), ...smsStaff.filter(x => x.tel).map((x, i) => ({ id: 'stf' + i, name: x.name, phone: x.tel, town: '', senior: x.role }))] }
+    : { key: 'z'+z.id, label: z.name, zone: true, ps: inZone(z).filter(p => !isGate(p) && live(p)) });
   const gate = participants.filter(p => isGate(p) && live(p) && (myTowns.includes(p.town) || zoneOf(p)));
-  // (v187) 👔 회장·사무장 + 시니어 맥가이버 + 시니어 안전 모니터링을 한 묶음으로 (연락처 있는 분만)
-  const specKind = k => { const raw = String(k || '').trim(); const sv = (xCat[raw] && SITE_CATS.find(c => c.k === xCat[raw])) || SITE_CATS.find(c => c.k !== '경로당지킴이' && c.m.test(raw)) || SITE_CATS[SITE_CATS.length - 1]; return sv.k; };
-  const specPs = [
-    ...smsStaff.filter(x => x.tel).map((x, i) => ({ id: 'stf' + i, name: x.name, phone: x.tel, town: '', senior: x.role })),
-    ...participants.filter(p => ['시니어 맥가이버', '시니어 안전 모니터링'].includes(specKind(seniorOf(p))) && live(p) && !isGate(p))
-  ];
-  gs.push({ key: 'special', label: '👔 회장·사무장 + 맥가이버 + 안전모니터링', ps: specPs, whoText: '회장님·사무장님·시니어 어르신' });
   gs.push({ key: '게이트볼', label: '게이트볼', ps: gate });
   const rest = participants.filter(p => myTowns.includes(p.town) && !isGate(p) && live(p) && !zoneOf(p));
   if (rest.length) gs.push({ key: 'rest', label: `구역에 안 넣은 분 (${myTowns.map(t => t.replace(/[면읍]$/,'')).join('·')})`, ps: rest });
@@ -6016,6 +6023,7 @@ function openSmsApp(nums, body){
 }
 const telOf = p => String(p.phone||'').replace(/[^0-9]/g,'');
 function openGroupSms(){
+  ensureSpecZone();
   const mk = monthKey(), days = monthDays(mk), groups = smsGroups();
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = `<div class="dlg">
