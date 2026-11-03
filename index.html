@@ -12,6 +12,9 @@
 <meta name="apple-mobile-web-app-title" content="현장점검">
 <title>현장점검</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';document.head.appendChild(s);"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.14.1/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.14.1/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.14.1/firebase-firestore-compat.js"></script>
 <style>
   :root { --primary-dk:#2c5282; --tint:#ebf8ff; --tint-bd:#90cdf4; --primary:#2b6cb0; --danger:#e53e3e; --warning:#dd6b20; --success:#38a169; --gray:#718096; --bg:#f7fafc; }
   * { box-sizing:border-box; }
@@ -415,8 +418,9 @@ body.ord-hide .ord-btn { display: none !important; }
 </style>
 </head>
 <body>
+<div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-198</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-199</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -660,6 +664,7 @@ body.ord-hide .ord-btn { display: none !important; }
     </details>
   </div>
   <div class="card" id="bk-card" data-mv="bk">
+    <div id="cloud-bar" style="font-size:.85rem;color:#2c5282;margin-bottom:8px;"></div>
     <details class="chg-box" id="bk-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3>💾 백업</h3><span class="chg-arrow"></span></summary>
       <div id="stor-use" onclick="drawStorage()" style="font-size:.85rem;color:#4a5568;margin-top:8px;cursor:pointer;">📊 저장 공간 확인 (누르세요)</div>
@@ -813,6 +818,174 @@ body.ord-hide .ord-btn { display: none !important; }
   </div>
 </div></div>
 
+<script>
+// ---------- ☁️ 구글 로그인 + 자료 동기화 (Firebase, 2026-11-04) ----------
+// 이 휴대폰의 jinan_ 자료를 구글 계정별 클라우드(Firestore)에도 같이 저장합니다.
+// 로그인해야 앱을 쓸 수 있고, 인터넷이 없으면 이 휴대폰 자료로 그대로 씁니다.
+// 사진(서류 사진 등)은 올리지 않고 각 휴대폰에만 둡니다.
+const FB_CONFIG = {
+  apiKey: "AIzaSyDiIcLMJlfbtKgi4e3K37ilW9wIuAxExw8",
+  authDomain: "jinan-senior-check.firebaseapp.com",
+  projectId: "jinan-senior-check",
+  storageBucket: "jinan-senior-check.firebasestorage.app",
+  messagingSenderId: "976802627283",
+  appId: "1:976802627283:web:eb623f93cb4568773c9e26"
+};
+// 이 휴대폰에만 두는 설정(클라우드에 올리지 않음)
+const CLOUD_DEVICE_ONLY = ['jinan_lock','jinan_edu_draft','jinan_weather','jinan_def148','jinan_def151','jinan_open','jinan_ck_open','jinan_photos'];
+const CLOUD_DEVICE_PREFIX = ['jinan_rptalarm_','jinan_daypop'];
+const CLOUD_CH = 200000; // 문서 하나에 넣을 글자 수 (Firestore 문서 1MB 제한 대비)
+let fbAuth = null, fbDb = null, fbUser = null, cloudBusy = false;
+const rawSet = Storage.prototype.setItem, rawRemove = Storage.prototype.removeItem;
+function cloudKey(k){
+  k = String(k);
+  return k.startsWith('jinan_') && !CLOUD_DEVICE_ONLY.includes(k) && !CLOUD_DEVICE_PREFIX.some(p => k.startsWith(p));
+}
+// 저장할 때마다 클라우드에도 씀 (로그인한 뒤에만)
+Storage.prototype.setItem = function(k, v){
+  rawSet.call(this, k, v);
+  if (this === localStorage && fbUser && cloudKey(k)) cloudPut(k, String(v));
+};
+Storage.prototype.removeItem = function(k){
+  rawRemove.call(this, k);
+  if (this === localStorage && fbUser && cloudKey(k)) cloudDel(k);
+};
+function kvCol(){ return fbDb.collection('users').doc(fbUser.uid).collection('kv'); }
+function cloudPut(k, v){
+  try {
+    const parts = [];
+    for (let i = 0; i < v.length; i += CLOUD_CH) parts.push(v.slice(i, i + CLOUD_CH));
+    if (!parts.length) parts.push('');
+    const col = kvCol(), b = fbDb.batch();
+    b.set(col.doc(k), { n: parts.length, v: parts[0], t: Date.now() });
+    for (let i = 1; i < parts.length; i++) b.set(col.doc(k + '#' + i), { v: parts[i] });
+    b.commit().catch(e => console.warn('클라우드 저장 대기', e));
+  } catch(e) { console.warn(e); }
+}
+function cloudDel(k){ try { kvCol().doc(k).delete().catch(() => {}); } catch(e) {} }
+async function cloudRead(){
+  const snap = await kvCol().get();
+  const docs = {};
+  snap.forEach(d => { docs[d.id] = d.data(); });
+  const out = {};
+  Object.keys(docs).forEach(id => {
+    if (id.includes('#') || docs[id].n === undefined) return;
+    let s = docs[id].v || '';
+    for (let i = 1; i < docs[id].n; i++) s += (docs[id + '#' + i] ? docs[id + '#' + i].v : '');
+    out[id] = s;
+  });
+  return { out, fromCache: snap.metadata.fromCache };
+}
+function localMap(){
+  const m = {};
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (cloudKey(k)) m[k] = localStorage.getItem(k); }
+  return m;
+}
+function reloadOnce(){
+  // 같은 창에서 1분 안에 두 번 다시 불러오지 않게 (무한 새로고침 방지)
+  try {
+    const t = +(sessionStorage.getItem('hyunjang_reload') || 0);
+    if (Date.now() - t < 60000) return;
+    sessionStorage.setItem('hyunjang_reload', String(Date.now()));
+  } catch(e) {}
+  location.reload();
+}
+async function cloudSync(){
+  if (!fbUser || cloudBusy) return;
+  cloudBusy = true;
+  try {
+    const { out: cloud, fromCache } = await cloudRead();
+    if (fromCache) return; // 인터넷이 안 되면 이 휴대폰 자료 그대로 둠
+    const local = localMap();
+    const cKeys = Object.keys(cloud), lKeys = Object.keys(local);
+    if (!cKeys.length) { lKeys.forEach(k => cloudPut(k, local[k])); return; } // 클라우드가 비었으면 올림
+    const same = cKeys.length === lKeys.length && cKeys.every(k => local[k] === cloud[k]);
+    if (same) return;
+    const linkedKey = 'hyunjang_linked_' + fbUser.uid;
+    const hasLocal = !!local.jinan_participants && local.jinan_participants !== '[]';
+    const hasCloud = !!cloud.jinan_participants && cloud.jinan_participants !== '[]';
+    if (hasLocal && hasCloud && !localStorage.getItem(linkedKey)) {
+      const toCloud = !confirm('이 휴대폰에도 자료가 있고, 구글(클라우드)에도 자료가 있습니다.\n\n[확인] 구글 자료를 이 휴대폰에 받기\n[취소] 이 휴대폰 자료를 구글에 올리기 (구글 자료는 바뀜)');
+      try { rawSet.call(localStorage, linkedKey, '1'); } catch(e) {}
+      if (toCloud) {
+        lKeys.forEach(k => cloudPut(k, local[k]));
+        cKeys.filter(k => !(k in local)).forEach(k => cloudDel(k));
+        return;
+      }
+    }
+    // 구글 자료를 이 휴대폰에 받기 (바꾸기 전 이 휴대폰 자료를 따로 남겨 둠)
+    if (hasLocal) { try { rawSet.call(localStorage, 'hyunjang_precloud', JSON.stringify({ at: new Date().toISOString(), data: local })); } catch(e) {} }
+    lKeys.filter(k => !(k in cloud)).forEach(k => rawRemove.call(localStorage, k));
+    cKeys.forEach(k => rawSet.call(localStorage, k, cloud[k]));
+    try { rawSet.call(localStorage, linkedKey, '1'); } catch(e) {}
+    if (typeof logEvent === 'function') logEvent('클라우드', null, '구글 자료를 이 휴대폰에 받음');
+    reloadOnce();
+  } catch(e) { console.warn('클라우드 동기화 실패', e); }
+  finally { cloudBusy = false; }
+}
+function gateShow(on, msg){
+  const g = document.getElementById('login-gate');
+  if (g) g.style.display = on ? 'flex' : 'none';
+  const m = document.getElementById('login-msg');
+  if (m && msg != null) m.textContent = msg;
+}
+function cloudBar(u){
+  const b = document.getElementById('cloud-bar');
+  if (!b) return;
+  b.textContent = '';
+  if (!u) return;
+  const s = document.createElement('span');
+  s.textContent = '☁️ 구글 연결됨: ' + (u.email || '');
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = '로그아웃';
+  btn.style.cssText = 'margin-left:8px;padding:3px 10px;border-radius:6px;border:1px solid #a0aec0;background:#fff;font-size:.8rem;';
+  btn.onclick = cloudLogout;
+  b.appendChild(s); b.appendChild(btn);
+}
+async function cloudLogin(){
+  if (!fbAuth) return;
+  const p = new firebase.auth.GoogleAuthProvider();
+  p.setCustomParameters({ prompt: 'select_account' });
+  const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  try {
+    if (mobile) await fbAuth.signInWithRedirect(p);
+    else await fbAuth.signInWithPopup(p);
+  } catch(e) {
+    if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) { return fbAuth.signInWithRedirect(p); }
+    if (e && e.code === 'auth/popup-closed-by-user') return;
+    gateShow(true, '로그인하지 못했습니다. 다시 눌러 주세요. (' + ((e && (e.code || e.message)) || '') + ')');
+  }
+}
+async function cloudLogout(){
+  if (!fbAuth) return;
+  if (!confirm('로그아웃하면 이 휴대폰에서 앱을 쓸 수 없습니다. 로그아웃할까요?')) return;
+  try { await fbAuth.signOut(); } catch(e) {}
+  location.reload();
+}
+function cloudInit(){
+  if (!window.firebase || !firebase.initializeApp) { gateShow(false); return; } // 라이브러리를 못 받으면 이 휴대폰 자료로만 씀
+  try {
+    firebase.initializeApp(FB_CONFIG);
+    fbAuth = firebase.auth();
+    fbDb = firebase.firestore();
+    fbDb.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+  } catch(e) { console.warn(e); gateShow(false); return; }
+  gateShow(true, '로그인 확인 중입니다…');
+  fbAuth.onAuthStateChanged(async u => {
+    fbUser = u || null;
+    cloudBar(fbUser);
+    if (!fbUser) {
+      // 인터넷이 없어 확인이 안 되는 경우에는 이 휴대폰 자료로 씀
+      gateShow(!navigator.onLine ? false : true, '구글 계정으로 로그인해 주세요.');
+      return;
+    }
+    gateShow(false);
+    await cloudSync();
+  });
+}
+cloudInit();
+</script>
 <script>
 const TOWNS = ['진안읍','용담면','안천면','동향면','상전면','백운면','성수면','마령면','부귀면','정천면','주천면'];
 const KEY = 'jinan_participants';
