@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-161</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-162</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2026,6 +2026,30 @@ function renderNewAlert(){
   box.querySelector('#is-open')?.addEventListener('click', () => issuesDialog(today()));
   bindAlerts(box);
 }
+// (v162) 14일·29일 보고 알림: 이번 달 신규·중도포기 목록 + 참여자 변경현황 엑셀 받기 (없으면 없다고 띄움)
+const rptMonthEvs = () => { const mk = monthKey(); return eventLog.filter(e => (e.date || '').startsWith(mk) && RPT_TYPES.includes(e.type) && !/엑셀 명단/.test(e.detail || '')).sort((a, b) => a.at.localeCompare(b.at)); };
+const isRptDay = (d = today().slice(8, 10)) => d === '14' || d === '29';
+function rptDayHtml(day){
+  if (!isRptDay(day)) return '';
+  const evs = rptMonthEvs();
+  if (!evs.length) return alertCard('rptday', 'background:#f7fafc;border-color:#718096;', `<div style="font-weight:bold;color:#4a5568;">📣 이번 달 보고할 신규·중도포기 없음</div>`, '');
+  return alertCard('rptday', 'background:#ebf8ff;border-color:#3182ce;', `<div style="font-weight:bold;color:#2b6cb0;">📣 이번 달 보고할 신규·중도포기 ${evs.length}건</div>`, `
+    ${evs.map(e => `<div style="font-size:.9rem;margin:4px 0;">${e.type === '신규 등록' ? '🆕 신규' : '🚪 중도포기'} · <b>${esc(e.name || '')}</b> <span class="muted">${esc(e.town || '')} · ${esc(e.senior || '')} · ${mdw(e.date)}</span></div>`).join('')}
+    <div class="grid-2" style="margin-top:8px;"><button type="button" class="small" onclick="exportChangeForm()" style="margin:0;background:#2b6cb0;">📥 참여자 변경현황 엑셀 받기</button><button type="button" class="small secondary" onclick="openReport()" style="margin:0;">📣 보고 창 열기</button></div>`);
+}
+// 14일·29일 아침 9시 이후 처음 열 때 알람 (하루 한 번)
+function rptDayAlarm(){
+  const t = today(), now = new Date();
+  if (!isRptDay() || now.getHours() < 9) return;
+  let done = false; try { done = !!localStorage.getItem('jinan_rptalarm_' + t); } catch(e) {}
+  if (done) return;
+  try { localStorage.setItem('jinan_rptalarm_' + t, '1'); } catch(e) {}
+  try { if (navigator.vibrate) navigator.vibrate([300, 150, 300]); } catch(e) {}
+  try { playDingDong(); } catch(e) {}
+  renderCallAlert();
+}
+setInterval(rptDayAlarm, 60000);
+
 function renderCallAlert(){
   renderNewAlert();
   const box = document.getElementById('call-alert'), td = today();
@@ -2042,6 +2066,7 @@ function renderCallAlert(){
       ${chg.length ? `<button type="button" class="small full" onclick="dayWorkPop(true)" style="margin:6px 0 2px;background:#2b6cb0;">📩 오늘 근무 안내 문자 보내기</button>` : ''}
       ${tmr.length ? `<div class="muted" style="font-size:.85rem;margin-top:4px;">내일 바뀐 날짜로 근무:${tmr.map(x => `<a href="#" onclick="openModal(${x.p.id});return false;" style="color:inherit;">${nmH(x.p)}</a>`).join(', ')}</div>` : ''}`);
   }
+  h += rptDayHtml();
   // (v152) 약 안내 알림: 통화 메모에서 정한 기간(N개월)이 되면 게시판에 띄움
   const memoDue = participants.filter(p => (p.calls || []).length && p.calls[p.calls.length - 1].due <= td)
     .sort((a, b) => a.calls[a.calls.length - 1].due.localeCompare(b.calls[b.calls.length - 1].due) || a.name.localeCompare(b.name));
