@@ -412,7 +412,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.02-151</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-152</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -762,8 +762,8 @@ body.ord-hide .ord-btn { display: none !important; }
     </div>
   </details>
 
-  <details class="info">
-    <summary>어르신 정보 고치기</summary>
+  <details class="info" id="info-form">
+    <summary>✏️ 기본 정보 고치기</summary>
     <div class="grid-2" style="margin-top:10px;">
       <div><label>소속 면</label><select id="m-town"></select></div>
       <div><label>나이</label><input type="text" inputmode="numeric" id="m-age" class="age-in" placeholder="예: 1948"></div>
@@ -2032,9 +2032,19 @@ function renderCallAlert(){
       ${chg.map(x => { const done = dayCalled(x.p, td); return `<div class="call-row ${done?'called':''}">
         <button class="who" onclick="openModal(${x.p.id})"><b>${nmH(x.p)}</b> <span class="muted">${esc(x.p.town)} · ${esc(seniorOf(x.p))}</span><br>
           <span style="font-size:.85rem;">${x.kind==='변경' ? `원래 ${dd(x.from)} → <b style="color:var(--warning)">오늘</b>` : '<b style="color:var(--warning)">보충 근무</b>'}${x.reason?` · ${esc(x.reason)}`:''}</span><br>${telBtn(x.p)}</button>
-        ${done ? '<span class="muted" style="white-space:nowrap;">✔ 통화함</span>' : `<button class="done-btn" onclick="dayCallDone(${x.p.id})">✔ 통화했어요</button>`}</div>`; }).join('')}
+        ${done ? '<span class="muted" style="white-space:nowrap;">✔ 통화함</span>' : `<button class="done-btn" onclick="openCallMemo(${x.p.id},'call')">✔ 통화했어요</button>`}</div>`; }).join('')}
       ${chg.length ? `<button type="button" class="small full" onclick="dayWorkPop(true)" style="margin:6px 0 2px;background:#2b6cb0;">📩 오늘 근무 안내 문자 보내기</button>` : ''}
       ${tmr.length ? `<div class="muted" style="font-size:.85rem;margin-top:4px;">내일 바뀐 날짜로 근무:${tmr.map(x => `<a href="#" onclick="openModal(${x.p.id});return false;" style="color:inherit;">${nmH(x.p)}</a>`).join(', ')}</div>` : ''}`);
+  }
+  // (v152) 약 안내 알림: 통화 메모에서 정한 기간(N개월)이 되면 게시판에 띄움
+  const memoDue = participants.filter(p => (p.calls || []).length && p.calls[p.calls.length - 1].due <= td)
+    .sort((a, b) => a.calls[a.calls.length - 1].due.localeCompare(b.calls[b.calls.length - 1].due) || a.name.localeCompare(b.name));
+  if (memoDue.length) {
+    h += alertCard('memo', 'background:#f0fff4;border-color:#38a169;', `<div style="font-weight:bold;color:#2f855a;">💊 약 안내 전화할 어르신 ${memoDue.length}명</div>`, `
+    ${memoDue.map(p => { const c = p.calls[p.calls.length - 1]; return `<div class="call-row">
+      <button class="who" onclick="openModal(${p.id})"><b>${nmH(p)}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
+        <span style="font-size:.9rem;">${esc(p.name)} 어르신 ${c.next}개월이 되었습니다. 약 타러 가실 때이니 안부 한번 물어봐 주세요.</span><br>${telBtn(p)}</button>
+      <button class="done-btn" onclick="openCallMemo(${p.id},'due')">✔ 통화했어요</button></div>`; }).join('')}`);
   }
   if (all.length) {
     const next = all.filter(p => p.hospCall.due > td).sort((a,b) => a.hospCall.due.localeCompare(b.hospCall.due));
@@ -2047,6 +2057,43 @@ function renderCallAlert(){
     ${next.length ? `<div class="muted" style="font-size:.85rem;margin-top:4px;">다음 안부 전화: ${next.map(p => `<a href="#" onclick="openModal(${p.id});return false;" style="color:inherit;">${nmH(p)} ${mdw(p.hospCall.due)}</a>`).join(', ')}</div>` : ''}`);
   }
   box.innerHTML = h; bindAlerts(box);
+}
+// (v152) 통화 메모: 내용 · 병명(건강 정보) · 병원 · 약 주기 · 다음 안내 기간 (1~12개월, 기본 3개월 또는 약 주기)
+function openCallMemo(id, mode){
+  const p = participants.find(x => x.id === id); if (!p) return;
+  const last = (p.calls || []).slice(-1)[0] || {}, hh = p.health || {};
+  const cyc0 = Number(hh.cycle) || 0, nx0 = mode === 'due' && last.next ? last.next : (cyc0 || 3);
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = `<div class="dlg" style="max-height:92vh;overflow:auto;">
+    <div style="font-weight:bold;font-size:1.15rem;margin-bottom:6px;">📞 ${nmH(p)} 통화 메모</div>
+    <label>통화 내용</label><textarea id="cm-text" rows="3" placeholder="예: 근무 날짜 확인함. 몸은 괜찮다고 하심."></textarea>
+    <label>🩺 병명 <span class="muted" style="font-weight:normal;">(건강 정보에 저장)</span></label><input type="text" id="cm-dx" placeholder="예: 뇌경색" autocomplete="off">
+    <label>🏥 병원</label><input type="text" id="cm-hosp" placeholder="예: 진안의료원" value="${esc(hh.hosp || '')}" autocomplete="off">
+    <div class="grid-2"><div><label>💊 약 타는 주기</label><select id="cm-cycle">${['없음',...Array.from({length:12},(_,i)=>`${i+1}개월마다`)].map((t,i)=>`<option value="${i}" ${i===cyc0?'selected':''}>${t}</option>`).join('')}</select></div>
+    <div><label>⏰ 다음 안내</label><select id="cm-next">${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i+1===nx0?'selected':''}>${i+1}개월 뒤</option>`).join('')}</select></div></div>
+    <div class="grid-2" style="margin-top:12px;"><button class="secondary" id="cm-cancel">취소</button><button id="cm-save">저장</button></div></div>`;
+  document.body.appendChild(bg);
+  const $ = q => bg.querySelector(q);
+  $('#cm-cycle').onchange = () => { const c = Number($('#cm-cycle').value); if (c) $('#cm-next').value = String(c); };
+  $('#cm-cancel').onclick = () => bg.remove();
+  $('#cm-save').onclick = () => {
+    const text = $('#cm-text').value.trim(), dx = $('#cm-dx').value.trim(), hosp = $('#cm-hosp').value.trim(), cycle = Number($('#cm-cycle').value) || 0, next = Number($('#cm-next').value) || 3;
+    const td = today();
+    bg.remove();
+    if (mode === 'call' && !dayCalled(p, td)) (p.dayCalls ||= []).push(td);
+    const due = calcDue(td, next);
+    (p.calls ||= []).push({ date: td, text, dx, hosp, cycle, next, due });
+    if (dx || hosp || cycle) {
+      const cur = p.health || { conds: [], memo: '' };
+      p.health = { ...cur, conds: [...(cur.conds || []), ...(dx && !(cur.conds || []).includes(dx) ? [dx] : [])], updated: td };
+      if (hosp) p.health.hosp = hosp;
+      if (cycle) p.health.cycle = cycle;
+    }
+    logEvent('통화 메모', p, [text || '통화함', dx ? `병명 ${dx}` : '', hosp ? `병원 ${hosp}` : '', cycle ? `약 ${cycle}개월마다` : '', `${next}개월 뒤 ${mdw(due)} 안내`].filter(Boolean).join(' · '), td);
+    saveData(false); renderList();
+    if (!document.getElementById('modal').classList.contains('hidden') && current()?.id === id) renderModal();
+    notify(`저장했어요.\n${next}개월 뒤 ${mdw(due)}에 알려 드릴게요.`);
+  };
 }
 function dayCallDone(id){
   const p = participants.find(x => x.id === id), td = today(); if (!p) return;
@@ -2830,9 +2877,22 @@ function openHistory(p){
   bg.querySelector('#hist-close').onclick = () => bg.remove();
   draw();
 }
+// (v152) 어르신 정보 창 하나로 합침: 기본 정보 고치기 칸(#info-form)은 정보 창 안으로 옮겨 쓰고, 닫으면 점검 화면으로 되돌림
+let infoForm = null, infoBg = null;
+function restoreInfoForm(){
+  if (!infoForm) return;
+  const { el, ph } = infoForm;
+  if (ph && ph.parentNode) ph.parentNode.insertBefore(el, ph);
+  el.open = false;
+}
+function closeInfo(){ restoreInfoForm(); if (infoBg) infoBg.remove(); infoBg = null; }
+const calcDue = (d, n) => { const [y, m, dd0] = d.split('-').map(Number), t = new Date(y, m - 1 + n, dd0); return ymd(t.getFullYear(), t.getMonth() + 1, t.getDate()); };
 function openInfo(){
+  restoreInfoForm();
   const p = current(); if (!p) return;
   const h = p.health || {}, sel = new Set(h.conds || []);
+  const callsHtml = (p.calls || []).slice().reverse().map(c => `<div class="log" style="font-size:.9rem;line-height:1.6;margin-bottom:6px;">📞 ${mdw(c.date)} · ${esc(c.text || '(내용 없음)')}${c.dx ? `<br>🩺 병명: ${esc(c.dx)}` : ''}${c.hosp ? ` · 🏥 ${esc(c.hosp)}` : ''}${c.cycle ? ` · 💊 ${c.cycle}개월마다 약` : ''}<br><span class="muted">다음 안내 ${mdw(c.due)} (${c.next}개월 뒤)</span></div>`).join('') || '<div class="muted" style="margin-bottom:8px;">통화 메모가 없어요.</div>';
+  const notesHtml = (p.notes || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map(n => { const ic = (NOTE_CATS.find(c => c[0] === n.cat) || [])[1] || '📌'; return `<div class="log" style="font-size:.9rem;line-height:1.6;margin-bottom:6px;">${ic} ${/^\d{4}-/.test(String(n.date)) ? mdw(n.date) : esc(n.date || '')} <span class="muted">[${esc(n.cat || '기타')}]</span> ${esc(n.text || '')}</div>`; }).join('') || '<div class="muted" style="margin-bottom:8px;">특이사항 기록이 없어요. (점검 화면 📝 특이사항에서 적어요)</div>';
   const saved = !!(h.conds?.length || h.memo);   // 한 번이라도 저장했으면 고른 것만 보여 줌
   let open = false, memoEdit = !h.memo;   // 목록은 늘 접힌 채로 시작
   const z = zoneOf(p), L = z && z.leaderId ? participants.find(x => x.id === z.leaderId) : null, st = stats(p);
@@ -2841,6 +2901,7 @@ function openInfo(){
   const wc = wcount({ p }, { mks: Array.from({ length: mm }, (_, i) => `${yy}-${String(i+1).padStart(2,'0')}`) });
   const sinc = (wc.warn || wc.caut || wc.leave) ? `경고 ${wc.warn}개 · 주의 ${wc.caut}개${wc.leave ? ` · 이탈 ${wc.leave}회` : ''} <span class="muted">(${yy}년 1월~${mm}월)</span>` : '<span class="muted">경고·주의 없음</span>';
   const bg = document.createElement('div'); bg.className = 'dlg-back';
+  infoBg = bg;
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.25rem;margin-bottom:8px;">👤 ${nmH(p)} 어르신</div>
     ${photoOf(p) ? `<img id="if-photo" src="${photoOf(p)}" alt="" style="display:block;width:100%;max-height:62vh;object-fit:contain;border-radius:10px;background:#f7fafc;margin-bottom:6px;cursor:zoom-in;">
@@ -2864,11 +2925,26 @@ function openInfo(){
     <label>📝 자세한 내용</label>
     <div id="if-memo-view" class="log" style="font-size:.95rem;line-height:1.7;"></div>
     <textarea id="if-memo" rows="4" placeholder="예: 혈압약 아침 복용, 무릎이 안 좋아 계단 조심, 아들 010-0000-0000"></textarea>
+    <div class="grid-2" style="margin-bottom:8px;"><input type="text" id="if-hosp" placeholder="🏥 다니는 병원" value="${esc(h.hosp || '')}" style="margin:0;"><select id="if-cycle" style="margin:0;"><option value="0">💊 약 주기 없음</option>${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${Number(h.cycle) === i + 1 ? 'selected' : ''}>💊 ${i + 1}개월마다 약</option>`).join('')}</select></div>
     ${h.updated ? `<div class="muted" style="font-size:.82rem;margin:-4px 0 8px;">마지막 수정 ${h.updated}</div>` : ''}
-    <button type="button" class="secondary full" id="if-hist" style="margin-bottom:10px;">📜 지난 행적 보기 (월별)</button>
-    <div class="grid-2"><button class="secondary" id="if-close">닫기</button><button id="if-save">저장</button></div></div>`;
+    <label>📞 통화 기록 · 약 안내</label>
+    <div id="if-calls" style="margin-bottom:10px;">${callsHtml}</div>
+    <label>👪 가족·상황 (특이사항 기록)</label>
+    <div id="if-notes" style="margin-bottom:10px;">${notesHtml}</div>
+    <label>✏️ 기본 정보 고치기</label>
+    <div id="if-form-slot"></div>
+    <button type="button" class="secondary full" id="if-hist" style="margin:10px 0;">📜 지난 행적 보기 (월별)</button>
+    <div class="grid-2"><button class="secondary" id="if-close">닫기</button><button id="if-save">건강 정보 저장</button></div></div>`;
   document.body.appendChild(bg);
   const $ = q => bg.querySelector(q);
+  // 기본 정보 고치기 칸을 정보 창 안으로 옮김 (닫을 때 점검 화면으로 되돌림)
+  const fEl = document.getElementById('info-form');
+  if (fEl) {
+    const ph = document.createComment('info-form-home');
+    fEl.parentNode.insertBefore(ph, fEl);
+    infoForm = { el: fEl, ph };
+    $('#if-form-slot').appendChild(fEl);
+  }
   $('#if-hist').onclick = () => openHistory(p);
   $('#if-memo').value = h.memo || '';
   const draw = () => {
@@ -2940,16 +3016,16 @@ function openInfo(){
     sel.add(v); draw(); }, 50); };
   $('#if-add').onclick = addNew;
   $('#if-new').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addNew(); } });
-  $('#if-close').onclick = () => bg.remove();
+  $('#if-close').onclick = () => closeInfo();
   $('#if-save').onclick = () => {
-    const conds = [...sel], memo = $('#if-memo').value.trim();
-    const before = JSON.stringify([...(h.conds||[])].sort()) + (h.memo||''), after = JSON.stringify([...conds].sort()) + memo;
+    const conds = [...sel], memo = $('#if-memo').value.trim(), hosp = $('#if-hosp').value.trim(), cycle = Number($('#if-cycle').value) || 0;
+    const before = JSON.stringify([...(h.conds||[])].sort()) + (h.memo||'') + (h.hosp||'') + (h.cycle||0), after = JSON.stringify([...conds].sort()) + memo + hosp + cycle;
     if (before !== after) {
-      if (conds.length || memo) p.health = { conds, memo, updated: today() }; else delete p.health;
-      logEvent('건강 정보 수정', p, conds.length ? conds.join(', ') : '지움');
+      if (conds.length || memo || hosp || cycle) p.health = { conds, memo, ...(hosp ? { hosp } : {}), ...(cycle ? { cycle } : {}), updated: today() }; else delete p.health;
+      logEvent('건강 정보 수정', p, [conds.length ? conds.join(', ') : '', hosp ? `병원 ${hosp}` : '', cycle ? `약 ${cycle}개월마다` : ''].filter(Boolean).join(' · ') || '지움');
       saveData(false);
     }
-    bg.remove(); renderModal(); notify('저장했어요.');
+    closeInfo(); renderModal(); notify('저장했어요.');
   };
   draw();
 }
@@ -5987,6 +6063,7 @@ function changeText(p, from, to, reason, lp){
 function current(){ const id = Number(document.getElementById('edit-id').value); return participants.find(p => p.id===id); }
 
 function openModal(id){
+  restoreInfoForm();
   dayTabMk = null;   // 점검 화면을 열 때는 이번 달로
   document.querySelectorAll('.m-sec').forEach(d => d.open = false);   // 목록은 접힌 채로 시작
   const p = participants.find(x => x.id===id); if(!p) return;
@@ -7154,7 +7231,7 @@ function saveInfo(){
   else if (p.guess) logEvent('경로당 확정', p, `추정 경로당 "${seniorOf(p)}" 확정`);
   Object.assign(p, NEWV);
   delete p.guess;   // 저장하면 확인된 경로당
-  saveData(false); renderModal(); notify('인적사항이 저장되었습니다.');
+  saveData(false); closeInfo(); renderModal(); notify('인적사항이 저장되었습니다.');
 }
 
 async function toggleQuit(){
@@ -8302,6 +8379,11 @@ function exportExcel(){
     XLSX.utils.book_append_sheet(wb, qr.length ? XLSX.utils.json_to_sheet(qr) : XLSX.utils.aoa_to_sheet([['면별 배정 인원을 아직 넣지 않았습니다.']]), '면별 배정 인원'); }
   { const br = []; Object.entries(bizSnap).forEach(([k, v]) => (v.rows || []).forEach(r => br.push({ '사업': k, '올린 날': v.at, '읍면': r.town, '경로당': r.senior, '성명': r.name, '연락처': r.ph ? fmtPhone(r.ph) : '', '생년 앞 6자리': r.b6 || '', '주소': r.addr || '' })));
     XLSX.utils.book_append_sheet(wb, br.length ? XLSX.utils.json_to_sheet(br) : XLSX.utils.aoa_to_sheet([['사업별 명단을 아직 올리지 않았습니다.']]), '사업별 명단'); }
+  // (v152) 통화·건강 메모
+  const cRows = participants.flatMap(p => (p.calls || []).map(c => ({ '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '통화일':c.date, '통화 내용':c.text || '', '병명':c.dx || '', '병원':c.hosp || '', '약 주기(개월)':c.cycle || '', '다음 안내(개월 뒤)':c.next, '안내 날짜':c.due })));
+  const wsC = cRows.length ? XLSX.utils.json_to_sheet(cRows) : XLSX.utils.aoa_to_sheet([['통화 메모를 아직 쓰지 않았습니다.']]);
+  wsC['!cols'] = [{wch:8},{wch:12},{wch:10},{wch:12},{wch:40},{wch:12},{wch:12},{wch:10},{wch:14},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, wsC, '통화·건강 메모');
   XLSX.utils.book_append_sheet(wb, ws5, '변경 이력');
   // 올려서 넣은 일정표 (활동일·역량강화교육)
   const sch = schedLoad();
