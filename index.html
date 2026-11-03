@@ -412,7 +412,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-152</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-153</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -766,13 +766,9 @@ body.ord-hide .ord-btn { display: none !important; }
     <summary>✏️ 기본 정보 고치기</summary>
     <div class="grid-2" style="margin-top:10px;">
       <div><label>소속 면</label><select id="m-town"></select></div>
-      <div><label>나이</label><input type="text" inputmode="numeric" id="m-age" class="age-in" placeholder="예: 1948"></div>
+      <div><label>성명</label><input type="text" id="m-name"></div>
     </div>
-    <label>성명</label><input type="text" id="m-name">
-    <label>성별</label><div class="grid-2 sex-pick" data-for="m-sex" style="margin-bottom:10px;"><button type="button" class="reason" data-v="남">👨 남</button><button type="button" class="reason" data-v="여">👩 여</button></div><input type="hidden" id="m-sex">
     <label>경로당 이름</label><div class="senior-combo"><input type="text" id="m-senior" class="senior-in" data-town="m-town" placeholder="예: 지사" autocomplete="off"><button type="button" class="combo-btn" data-for="m-senior" aria-label="경로당 목록">▼</button><div class="combo-list hidden"></div></div>
-    <label>연락처</label><input type="tel" id="m-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off">
-    <label>주소</label><input type="text" id="m-address" class="addr-in" data-town="m-town" autocomplete="off">
     <label>근무 시작 달 · 시작일</label><div class="grid-2"><select id="m-start" class="start-sel"></select><input type="date" id="m-startday" style="margin:0;"></div>
     <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-bottom:12px;"><input type="checkbox" id="m-link" style="width:22px;height:22px;margin:0;"> 🔗 신규 연계 중</label>
     <button class="full" onclick="saveInfo()">정보 저장</button>
@@ -6070,13 +6066,10 @@ function openModal(id){
   document.getElementById('edit-id').value = p.id;
   document.getElementById('m-town').value = p.town;
   document.getElementById('m-name').value = p.name;
-  document.getElementById('m-age').value = ageShow(p.age, p.birth); setSex('m-sex', p.sex);
   document.getElementById('m-link').checked = !!p.linking;
   document.getElementById('m-start').value = p.start && Number(p.start.slice(0,4)) === viewYear() ? String(Number(p.start.slice(5,7))) : '1';
   syncStartDay('m-start'); if (p.startDay && p.start && p.startDay.startsWith(p.start)) document.getElementById('m-startday').value = p.startDay;
   document.getElementById('m-senior').value = p.senior || '';
-  document.getElementById('m-phone').value = p.phone || '';
-  document.getElementById('m-address').value = p.address || '';
   setCheckDate(today());
   editingLogId = null; showEditBar();
   setSeg('c-how','직접'); ['c-badge','c-vest','c-leave'].forEach(i => setSeg(i,'정상'));
@@ -6431,7 +6424,6 @@ async function saveCheck(){
     leave:fr.leave, memo:g('c-memo').trim(), pv: fr.pv || Object.assign({}, PT), ex: fr.ex, time: hhmm(new Date()) };
   try { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); } catch(e) {}   // 11:50 알람용
 
-  p.phone = g('m-phone').trim();
   delete checkDrafts[p.id];
   if (log.leave==='이탈' && p.logs.some(l => l.date===date && l.leave==='이탈'))
     if (!await ask('같은 날짜에 이미 이탈 기록이 있습니다. 한 번 더 감점할까요?')) return;
@@ -7215,16 +7207,15 @@ async function deleteLog(logId){
 function saveInfo(){
   const p = current(); const g = id => document.getElementById(id).value.trim();
   if (!g('m-name')) return notify('성명은 비워 둘 수 없습니다.');
-  const ag = parseAge(g('m-age')); if (ag.bad) return notify(AGE_BAD);
+  const ag = { age: p.age, birth: p.birth };   // 나이·성별·연락처·주소는 정보 표에서 고침
   if (startVal('m-start') && !startDayVal('m-start')) return notify('근무 시작 달을 골랐어요. 시작일(며칠부터)도 골라 주세요.');
-  if (ag.birth) p.birth = ag.birth; else if (String(p.age||'') !== ag.age) delete p.birth;
   const lk = document.getElementById('m-link').checked;
   if (lk && !p.linking) { delete p.linkDone; p.linking = { since: today() }; logEvent('신규 연계 중', p, '연계 중으로 표시'); }
   if (!lk && p.linking) { logEvent('연계 완료', p, `${p.linking.since}부터 연계 → 끝남`); p.linkDone = { since: p.linking.since, day: today() }; delete p.linking; }
   const ns = startVal('m-start'), os = p.start && Number(p.start.slice(0,4)) === viewYear() ? p.start : '';
   const nsDay = startDayVal('m-start');
   if (ns !== os || (ns && nsDay !== (p.startDay || ''))) { logEvent('정보 수정', p, `근무 시작: ${os ? Number(os.slice(5))+'월' : '처음부터'} → ${ns ? Number(ns.slice(5))+'월 '+Number(nsDay.slice(8))+'일' : '처음부터'}`); if (ns) { p.start = ns; p.startDay = nsDay; } else { delete p.start; delete p.startDay; } }
-  const NEWV = { town:g('m-town'), name:g('m-name'), sex:normSex(g('m-sex')), age:ag.age, senior:normSenior(g('m-town'), g('m-senior')), phone:fmtPhone(g('m-phone')), address:g('m-address') };
+  const NEWV = { town:g('m-town'), name:g('m-name'), sex:p.sex, age:p.age, senior:normSenior(g('m-town'), g('m-senior')), phone:p.phone, address:p.address };
   const LB = { town:'읍면', name:'성명', sex:'성별', age:'나이', senior:'경로당', phone:'연락처', address:'주소' };
   const diff = Object.keys(NEWV).filter(k => String(p[k]||'') !== NEWV[k]).map(k => `${LB[k]}: ${p[k]||'(없음)'} → ${NEWV[k]||'(없음)'}`);
   if (diff.length) logEvent('정보 수정', p, diff.join(' / '));
