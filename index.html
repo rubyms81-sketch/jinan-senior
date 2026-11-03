@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-186</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-187</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -5834,6 +5834,13 @@ function smsGroups(){
   const inZone = z => participants.filter(p => z.sites.some(x => x.town===p.town && x.senior===seniorOf(p)));
   const gs = zones.map(z => ({ key: 'z'+z.id, label: z.name, zone: true, ps: inZone(z).filter(p => !isGate(p) && live(p)) }));
   const gate = participants.filter(p => isGate(p) && live(p) && (myTowns.includes(p.town) || zoneOf(p)));
+  // (v187) 👔 회장·사무장 + 시니어 맥가이버 + 시니어 안전 모니터링을 한 묶음으로 (연락처 있는 분만)
+  const specKind = k => { const raw = String(k || '').trim(); const sv = (xCat[raw] && SITE_CATS.find(c => c.k === xCat[raw])) || SITE_CATS.find(c => c.k !== '경로당지킴이' && c.m.test(raw)) || SITE_CATS[SITE_CATS.length - 1]; return sv.k; };
+  const specPs = [
+    ...smsStaff.filter(x => x.tel).map((x, i) => ({ id: 'stf' + i, name: x.name, phone: x.tel, town: '', senior: x.role })),
+    ...participants.filter(p => ['시니어 맥가이버', '시니어 안전 모니터링'].includes(specKind(seniorOf(p))) && live(p) && !isGate(p))
+  ];
+  gs.push({ key: 'special', label: '👔 회장·사무장 + 맥가이버 + 안전모니터링', ps: specPs, whoText: '회장님·사무장님·시니어 어르신' });
   gs.push({ key: '게이트볼', label: '게이트볼', ps: gate });
   const rest = participants.filter(p => myTowns.includes(p.town) && !isGate(p) && live(p) && !zoneOf(p));
   if (rest.length) gs.push({ key: 'rest', label: `구역에 안 넣은 분 (${myTowns.map(t => t.replace(/[면읍]$/,'')).join('·')})`, ps: rest });
