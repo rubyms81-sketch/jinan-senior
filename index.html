@@ -275,7 +275,7 @@
   #how-bar #modal-sub .place { flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:0; }
   #how-bar #modal-sub .tel-row { flex:none; }
   #how-bar #modal-sub .tel-link { flex:none; }
-  #mate-tabs .mt-wrap { display:flex; flex-wrap:nowrap; align-items:center; gap:6px; margin:6px 0 0; padding:0 0 2px; background:none; border:0; border-radius:0; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
+  #mate-tabs .mt-wrap { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:6px 0 0; padding:0 0 2px; background:none; border:0; border-radius:0; overflow:visible; }
   #mate-tabs .mt-lbl { width:auto; flex:none; font-size:.8rem; color:#718096; white-space:nowrap; padding-right:2px; }
   #mate-tabs .mt-wrap button { flex:none; width:auto; margin:0; padding:5px 12px; border-radius:999px; font-size:.95rem; white-space:nowrap; }
   #mate-tabs .mt-wrap button small { display:inline; margin-left:4px; font-size:.72rem; }
@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-192</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-193</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -5828,6 +5828,36 @@ function openSiteMap(town, senior){
   if (!m.url) return openMap('전북 ' + m.addr);
   window.open(m.url, '_blank') || (location.href = m.url);
 }
+// 🗺️ 누르기: 위치가 있으면 지도, 없으면 주소 바로 넣는 창
+function siteMapTap(town, senior){
+  if (mapOf(town, senior)) return openSiteMap(town, senior);
+  quickSiteAddr(town, senior, () => openModal(Number(document.getElementById('edit-id').value)));
+}
+function quickSiteAddr(town, senior, after){
+  if (!town || town === '전체' || !senior) return;
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">📍 ${esc(senior)} 주소 넣기</div>
+    <div class="muted" style="font-size:.9rem;margin-bottom:8px;">주소를 적으면 🗺️ 을 누를 때 지도가 열려요.</div>
+    <input type="text" id="qa-in" placeholder="예: 동향면 자산리 977-5" autocomplete="off" style="width:100%;margin:0 0 6px;">
+    <div id="qa-note" class="muted" style="font-size:.85rem;margin:4px 0 8px;"></div>
+    <div class="grid-2"><button class="secondary" id="qa-cancel">취소</button><button id="qa-save">저장</button></div>
+    <button type="button" class="small secondary" id="qa-more" style="margin-top:8px;width:100%;">네이버 지도 링크·주소록으로 자세히 넣기</button>
+  </div>`;
+  document.body.appendChild(back);
+  const $ = q => back.querySelector(q), inp = $('#qa-in');
+  inp.oninput = () => { const r = parseMapShare(inp.value); $('#qa-note').innerHTML = !inp.value.trim() ? '' : !r ? '⚠️ 주소(예: 동향면 자산리 977-5)나 링크를 적어 주세요.' : r.addr ? `✔ 주소 찾음 · <b>${esc(r.addr)}</b>` : `✔ 링크 찾음${r.label ? ` · <b>${esc(r.label)}</b>` : ''}`; };
+  setTimeout(() => inp.focus(), 50);
+  $('#qa-cancel').onclick = () => back.remove();
+  $('#qa-more').onclick = () => { back.remove(); editSiteMap(town, senior, after); };
+  $('#qa-save').onclick = () => {
+    const r = parseMapShare(inp.value); if (!r) return notify('주소나 네이버 지도 링크를 적어 주세요.');
+    maps[town + '|' + senior] = r.addr ? { addr: r.addr, label: '', date: today() } : { url: r.url, label: r.label, date: today() }; saveMaps();
+    logEvent('경로당 위치', null, `${town} ${senior} → ${r.label ? r.label + ' ' : ''}${r.addr || r.url}`, today());
+    back.remove(); renderList(); renderZones(); after && after();
+    notify(`📍 ${senior} 주소를 저장했어요.`);
+  };
+}
 function siteMapBtn(town, senior){ if (mapOf(town, senior)) openSiteMap(town, senior); else editSiteMap(town, senior); }
 // 위치 넣기·바꾸기 창
 function editSiteMap(town, senior, after){
@@ -6347,7 +6377,7 @@ function openModal(id){
   // 전화번호를 누르면 바로 전화 걸기
   const tel = String(p.phone||'').replace(/[^0-9+]/g,'');
   // 동네(면)와 경로당 이름을 크게
-  document.getElementById('modal-sub').innerHTML = (p.phone ? `<span class="tel-row">${tel ? `<a class="tel-link" href="tel:${tel}" title="${esc(p.phone)}">📞 ${esc(String(p.phone).replace(/^\s*010[-\s]?/, ''))}</a>` : esc(p.phone)}</span>` : '') + `<span class="place">📍 <b>${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</b>${mapOf(p.town, seniorOf(p)) ? ` <a class="tel-link" href="#" onclick="openSiteMap('${esc(p.town)}', this.dataset.s);return false;" data-s="${esc(seniorOf(p))}"><span aria-hidden="true">🗺️</span></a>` : ''}</span>`;
+  document.getElementById('modal-sub').innerHTML = (p.phone ? `<span class="tel-row">${tel ? `<a class="tel-link" href="tel:${tel}" title="${esc(p.phone)}">📞 ${esc(String(p.phone).replace(/^\s*010[-\s]?/, ''))}</a>` : esc(p.phone)}</span>` : '') + `<span class="place">📍 <b>${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</b><a class="tel-link" href="#" onclick="siteMapTap('${esc(p.town)}', this.dataset.s);return false;" data-s="${esc(seniorOf(p))}" title="${mapOf(p.town, seniorOf(p)) ? '지도 열기' : '위치 없음 · 누르면 주소 넣기'}" style="${mapOf(p.town, seniorOf(p)) ? '' : 'opacity:.45;'}"><span aria-hidden="true">🗺️</span></a></span>`;
   renderModal();
   document.getElementById('modal').classList.remove('hidden');
   window.scrollTo(0,0);
