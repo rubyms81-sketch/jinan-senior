@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-169</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-170</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -5107,7 +5107,7 @@ function guessSenior(p, pool){
 // ---------- 엑셀로 여러 명 한번에 등록 ----------
 // 직접 만든 양식과 노인일자리 업무시스템에서 내려받은 명단 둘 다 읽습니다.
 const COLS = { town:['읍면','면','소속면','읍·면','읍면동'], senior:['경로당','경로당이름','경로당명','근무장소','근무지'], name:['성명','이름','어르신성명'],
-  sex:['성별','남녀'], bday:['생일','생년월일','출생일'], age:['나이','연령'], phone:['연락처','전화번호','휴대폰'], address:['주소','거주지'], state:['참여상태'], start:['참여시작일','시작일'], rrn:['주민등록번호','주민번호'], biz:['사업명'] };
+  sex:['성별','남녀'], bday:['생일','생년월일','출생일'], age:['나이','연령'], phone:['연락처','전화번호','휴대폰'], address:['주소','거주지'], state:['참여상태'], start:['참여시작일','시작일'], end:['참여종료일','종료일'], reason:['중도포기사유','중도포기 사유'], rrn:['주민등록번호','주민번호'], biz:['사업명'] };
 // 참여시작일 글자 → 'YYYY-MM-DD' (엑셀 날짜 칸의 여러 표시 모양을 다 받음)
 const parseStartDay = v => {
   const s = String(v ?? '').trim(); if (!s) return '';
@@ -5517,11 +5517,30 @@ function bulkImport(input){
       const digits = x => String(x||'').replace(/[^0-9]/g,'');
       const matched = new Set(), same = [], updated = [], unquit = [], fileTowns = new Set(), notFound = [];
       const bizRows = [];
+      // (v170) 중도포기 후 다시 신청한 분: 같은 이름의 "중도포기" 줄(종료일 있음)과 그 뒤 "참여" 줄을 짝지음
+      const reEnters = [];
+      const rawCell = (r, f) => col[f] >= 0 ? String(r[col[f]] ?? '').trim() : '';
+      const reent = new Map();
+      grid.slice(hRow+1).forEach(r => {
+        const nm = rawCell(r, 'name');
+        if (!nm || !rawCell(r, 'state').includes('중도포기')) return;
+        const qEnd = parseStartDay(rawCell(r, 'end')), qStart = parseStartDay(rawCell(r, 'start'));
+        if (!qEnd) return;
+        grid.slice(hRow+1).forEach(r2 => {
+          if (rawCell(r2, 'name') !== nm || !rawCell(r2, 'state').includes('참여')) return;
+          const rs = parseStartDay(rawCell(r2, 'start'));
+          if (!rs || rs <= qEnd) return;
+          reent.set(nm + '|' + rs, { name: nm, origStart: qStart, quitDay: qEnd, why: rawCell(r, 'reason'), restart: rs, memo: '중도포기 후 재신청, 활동 중' });
+        });
+      });
       grid.slice(hRow+1).forEach(r => {
         const get = f => col[f] >= 0 ? String(r[col[f]] ?? '').trim() : '';
         const name = get('name');
         if (!name || /합계|소계/.test(name)) return; // 빈 줄·합계 줄
         const state = get('state');
+        // (v170) 재신청 짝이 있는 분의 옛 "중도포기" 줄은 건너뜀 (재신청 기록으로 남김)
+        if (state.includes('중도포기') && [...reent.values()].some(v => v.name === name)) return;
+        const rk = reent.get(name + '|' + parseStartDay(get('start')));
         if (state && !state.includes('참여')) { notActive.push(`${name} (${state})`); return; }
         const bd = parseBday(get('bday')), bday = bd.md || '';
         const ag = parseAge(get('age') || (bd.year ? String(bd.year) : '')), age = ag.age, birth = ag.birth, sex = normSex(get('sex'));
@@ -5532,7 +5551,7 @@ function bulkImport(input){
         if (!town) { if (filterTown !== '전체') town = filterTown; else { noTown.push(name); return; } }
         const senior = get('senior') ? normSenior(town, get('senior')) : '';
         // 참여시작일: 올해 2월 이후 시작한 분만 근무 시작일로 넣음 (1월 시작 = 처음부터, 기록 없음)
-        const sd = parseStartDay(get('start')), sdLater = !!sd && sd.slice(0,4) === String(YEAR) && Number(sd.slice(5,7)) > 1 && sd.slice(0,7) !== today().slice(0,7);
+        const sd = rk ? rk.origStart : parseStartDay(get('start')), sdLater = !!sd && sd.slice(0,4) === String(YEAR) && Number(sd.slice(5,7)) > 1 && sd.slice(0,7) !== today().slice(0,7);
         fileTowns.add(town);
         if (pick) bizRows.push({ name, ph: digits(phone), b6: digits(get('rrn')).slice(0, 6), addr: address, town, senior, biz: get('biz') });
         // 이미 있는 분 찾기: 이름 + (연락처 또는 경로당 또는 주소), 없으면 같은 면에 같은 이름이 한 분뿐일 때
@@ -5541,6 +5560,7 @@ function bulkImport(input){
         if (!ex) { const c = participants.filter(p => !matched.has(p.id) && p.name===name && p.town===town); if (c.length===1) ex = c[0]; }
         if (ex) {
           matched.add(ex.id);
+          if (rk) reEnters.push([ex, rk]);
           const ch = [];
           if (ex.town!==town) ch.push(['town', town, '읍면']);
           if (senior && ex.senior!==senior) ch.push(['senior', senior, '경로당']);
@@ -5557,7 +5577,7 @@ function bulkImport(input){
         }
         if (fill) { notFound.push(name); return; }   // 추가 정보만 넣기: 명단에 없는 분은 건너뜀
         if (isDup(added, name, senior, phone)) { dup.push(name); return; }
-        added.push({ id: Date.now() + (seq++), town, senior, name, ...(sex ? { sex } : {}), ...(bday ? { bday } : {}), age, ...(birth ? { birth } : {}), phone, address, ...(sdLater ? { start: sd.slice(0,7), startDay: sd } : {}), quit:false, logs:[] });
+        const np = { id: Date.now() + (seq++), town, senior, name, ...(sex ? { sex } : {}), ...(bday ? { bday } : {}), age, ...(birth ? { birth } : {}), phone, address, ...(sdLater ? { start: sd.slice(0,7), startDay: sd } : {}), quit:false, logs:[] }; added.push(np); if (rk) reEnters.push([np, rk]);
       });
       // 새 명단에 없는 분 (파일에 들어 있는 면만 비교)
       // 사업별 파일은 다른 사업 분을 빼지 않음 (빠진 분은 🏷 사업 확인에서만 알려 줌)
@@ -5578,6 +5598,7 @@ function bulkImport(input){
       if (nGuess) msg += `\n\n📍 주소를 보고 경로당을 넣은 분: ${nGuess}명 (앱에 "추정"으로 표시)`;
       if (added.some(p => !p.senior)) msg += `\n※ 경로당을 찾지 못한 분: ${added.filter(p=>!p.senior).length}명`;
       if (unquit.length) msg += `\n\n🔁 다시 참여하시는 분(중도포기 풀림): ${list(unquit.map(p=>p.name))}`;
+      if (reEnters.length) msg += `\n\n🔁 중도포기 후 다시 신청한 분 ${reEnters.length}명: ${list(reEnters.map(([p]) => p.name))}\n(활동 중으로 바꾸고 재신청 기록을 남김. 그만둔 기간은 모자란 날로 셈)`;
       const exIn = [...same, ...updated.map(u => u[0])].filter(p => p.exclude && p.exclude.year >= new Date().getFullYear());
       if (exIn.length) msg += `\n\n🚫 참여 제외 대상으로 표시했는데 새 명단에 있는 분: ${list(exIn.map(p => `${p.name}(${p.exclude.reason||'제외'})`))}`;
       if (notFound.length) msg += `\n\n명단에 없어 건너뜀 ${notFound.length}명: ${list(notFound)}\n(새로 넣으려면 "전체 명단 올리기"로 올려 주세요)`;
@@ -5585,7 +5606,7 @@ function bulkImport(input){
       if (notActive.length) msg += `\n\n참여 중이 아니어서 건너뜀 ${notActive.length}명: ${list(notActive)}`;
       if (noTown.length) msg += `\n\n읍·면을 알 수 없어 건너뜀 ${noTown.length}명: ${list(noTown)}\n(위에서 담당 면을 고른 뒤 다시 넣으면 그 면으로 등록됩니다)`;
       if (bz) msg += bz.msg;
-      if (!added.length && !updated.length && !gone.length && !unquit.length) { if (bz) saveBizCheck(pick, bz); return notify(msg + '\n\n바뀐 내용이 없습니다.'); }
+      if (!added.length && !updated.length && !gone.length && !unquit.length && !reEnters.length) { if (bz) saveBizCheck(pick, bz); return notify(msg + '\n\n바뀐 내용이 없습니다.'); }
       if (!await ask(msg + '\n\n이대로 정리할까요?')) return;
       if (bz) saveBizCheck(pick, bz);
 
@@ -5595,6 +5616,11 @@ function bulkImport(input){
         logEvent('정보 수정', p, ch.map(([k, v, label]) => `${label}: ${p[k]||'(없음)'} → ${v}`).join(' / ') + (bulkMode === 'fill' ? ' (엑셀 추가 정보)' : ' (엑셀 명단)'));
         ch.forEach(([k, v]) => p[k] = v); if (ch.some(c => c[0]==='senior')) delete p.guess; });
       unquit.forEach(p => { p.quit = false; logEvent('중도포기 해제', p, '새 명단에 참여로 있음'); });
+      reEnters.forEach(([p, rk]) => {
+        p.reenter = { quitDay: rk.quitDay, why: rk.why, restart: rk.restart, memo: rk.memo };
+        p.quit = false;
+        logEvent('재신청', p, `${mdK(rk.quitDay)} 중도포기${rk.why ? ' (' + rk.why + ')' : ''} → ${mdK(rk.restart)} 재신청 · 활동 중`, rk.restart);
+      });
       let moved = 0;
       if (gone.length && await ask(`새 명단에 없는 ${gone.length}명을 목록에서 뺄까요?\n${list(gone.map(p=>p.name))}\n\n(점검 기록은 지워지지 않고 "지난 명단"에 보관됩니다. 빼기 전에 마감 엑셀을 받아 두시면 좋아요)`)) {
         let arc = []; try { arc = JSON.parse(load('jinan_archive')) || []; } catch(e) {}
@@ -8464,7 +8490,7 @@ function exportExcel(){
   XLSX.utils.book_append_sheet(wb, ws2, '점검 기록');
   // 그달 신규 인원
   const ncRows = nc.map(p => ({ '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '나이':p.age, '연락처':p.phone,
-    '근무 시작':p.start ? `${Number(p.start.slice(5))}월부터` : '', '중도포기 서류':p.quitDay ? (p.quitDocOk ? `확인 (${p.quitDocOk})${p.quitDocPhoto ? ' · 사진 있음' : ' · 사진 없음'}` : '미확인') : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : '연계 끝', '비대면 교육 서류':p.docNeed ? (p.docOk ? `확인 (${p.docOk})` : '미확인') : '', '서류 사진':p.docNeed && p.docOk ? (p.docPhoto ? `있음 (${p.docPhoto})` : (p.docNoNeed ? `사진 필요 없음 (${p.docNoNeed})` : '없음')) : '',
+    '근무 시작':p.start ? `${Number(p.start.slice(5))}월부터` : '', '재신청(중도포기 후)':p.reenter ? `${md(p.reenter.quitDay)} 중도포기${p.reenter.why ? '(' + p.reenter.why + ')' : ''} → ${md(p.reenter.restart)} 재신청 · ${p.reenter.memo}` : '', '중도포기 서류':p.quitDay ? (p.quitDocOk ? `확인 (${p.quitDocOk})${p.quitDocPhoto ? ' · 사진 있음' : ' · 사진 없음'}` : '미확인') : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : '연계 끝', '비대면 교육 서류':p.docNeed ? (p.docOk ? `확인 (${p.docOk})` : '미확인') : '', '서류 사진':p.docNeed && p.docOk ? (p.docPhoto ? `있음 (${p.docPhoto})` : (p.docNoNeed ? `사진 필요 없음 (${p.docNoNeed})` : '없음')) : '',
     [`${curMonth}월 활동일 수`]: personDays(p, monthKey()).length }));
   const wsN = ncRows.length ? XLSX.utils.json_to_sheet(ncRows) : XLSX.utils.aoa_to_sheet([[`${curMonth}월 신규 인원이 없습니다.`]]);
   wsN['!cols'] = [8,14,10,6,15,10,22,12].map(w=>({wch:w}));
