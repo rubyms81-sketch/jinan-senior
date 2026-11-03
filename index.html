@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-165</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-166</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2541,6 +2541,9 @@ function courseRows(z){
 }
 function downloadCourse(z){
   const { rows, leader } = courseRows(z);
+  const ymd = today(), dotted = ymd.replace(/-/g, '.');
+  rows.push(['', '', '', '', '', '']);
+  rows.push([`내려받은 날짜: ${dotted}`, '', '', '', '', '']);
   const merges = [];
   rows.forEach((r, i) => { if (r[0] !== '' && r.slice(1).every(c => c === '') && i !== 3) merges.push({ s: { r: i, c: 0 }, e: { r: i, c: 5 } }); });
   const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -2548,7 +2551,7 @@ function downloadCourse(z){
   ws['!merges'] = merges;
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, `${z.name} 코스표`.slice(0, 31));
-  XLSX.writeFile(wb, `${z.name}_모니터링_코스표${leader ? '_' + leader : ''}.xlsx`);
+  XLSX.writeFile(wb, `${z.name}_모니터링_코스표${leader ? '_' + leader : ''}_${ymd}.xlsx`);
 }
 // 📩 구역 단체 문자 글: 날씨 분위기 + 인사 + 그달 활동일 + 꼭 지킬 것 + 마무리
 function wxMoodText(){
