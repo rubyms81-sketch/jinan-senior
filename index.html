@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-189</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-190</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2627,17 +2627,31 @@ function openSpecialZone(z, bg){
   $('#zn-title').textContent = z.name;
   $('#zn-lead-ed').remove(); $('#zn-pick').remove();
   $('#zn-close').onclick = () => bg.remove();
+  let curT = null;   // 고른 면 (null이면 11개 읍·면 목록)
+  const telA = x => x.tel ? `<a href="tel:${x.tel.replace(/[^0-9]/g, '')}" class="tel-link" style="padding:4px 10px;white-space:nowrap;">📞 전화</a>` : '<span class="muted">번호 없음</span>';
+  const rowH = x => `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:6px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:10px;">
+    <div style="flex:1;min-width:0;"><b>${esc(x.role)}</b> ${esc(x.name || '')}${x.town ? ` <span class="muted">(${esc(x.town)})</span>` : ''}
+      ${x.addr ? `<div class="muted" style="font-size:.85rem;">${esc(x.addr)}</div>` : ''}</div>${telA(x)}</div>`;
   const draw = () => {
+    if (!curT) {
+      $('#zn-main').innerHTML = `
+        <div style="font-size:.9rem;color:#4a5568;margin-bottom:8px;">면을 고르면 그 면의 회장·사무장이 보여요.</div>
+        <div class="grid-2" style="margin-bottom:8px;">${STAFF_TOWNS.map(t => { const sm = smsStaff.find(x => x.role === '사무장' && x.town === t);
+          return `<button type="button" class="reason" data-spt="${esc(t)}" style="line-height:1.3;">${esc(t)}<br><small style="font-weight:normal;font-size:.78rem;">사무장 ${sm ? esc(sm.name || '') : '<span style="color:#c53030;">없음</span>'}</small></button>`; }).join('')}</div>
+        <button type="button" class="secondary full" id="sp-edit">✏️ 회장·사무장 명단 고치기 (엑셀도 가능)</button>`;
+      $('#zn-main').querySelectorAll('[data-spt]').forEach(b => b.onclick = () => { curT = b.dataset.spt; draw(); });
+      $('#sp-edit').onclick = () => openSmsStaffEdit(draw);
+      return;
+    }
+    const list = smsStaff.filter(x => x.role === '회장' || (x.role === '사무장' && x.town === curT));
     $('#zn-main').innerHTML = `
-      <div style="font-size:.9rem;color:#4a5568;margin-bottom:8px;">회장·사무장 명단이에요. 전화하거나 단체문자를 보낼 수 있어요.</div>
-      ${smsStaff.length ? smsStaff.map(x => `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:6px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:10px;">
-        <div style="flex:1;min-width:0;"><b>${esc(x.role)}</b> ${esc(x.name || '')}${x.town ? ` <span class="muted">(${esc(x.town)})</span>` : ''}
-          ${x.addr ? `<div class="muted" style="font-size:.85rem;">${esc(x.addr)}</div>` : ''}</div>
-        ${x.tel ? `<a href="tel:${x.tel.replace(/[^0-9]/g, '')}" class="tel-link" style="padding:4px 10px;white-space:nowrap;">📞 전화</a>` : '<span class="muted">번호 없음</span>'}</div>`).join('')
-        : '<div class="muted" style="margin:8px 0;">아직 명단이 없어요.</div>'}
-      <button type="button" class="full" id="sp-group" style="margin:8px 0 6px;" ${smsStaff.some(x => x.tel) ? '' : 'disabled'}>📩 단체문자 보내기</button>
+      <button type="button" class="secondary small" id="sp-back" style="width:auto;margin:0 0 8px;">◀ 면 목록</button>
+      <div style="font-weight:bold;margin-bottom:6px;">${esc(curT)} · 회장·사무장</div>
+      ${list.length ? list.map(rowH).join('') : '<div class="muted" style="margin:8px 0;">이 면의 사무장이 아직 없어요. 명단 고치기에서 넣어 주세요.</div>'}
+      <button type="button" class="full" id="sp-group" style="margin:8px 0 6px;" ${list.some(x => x.tel) ? '' : 'disabled'}>📩 ${esc(curT)} 회장·사무장 문자 보내기</button>
       <button type="button" class="secondary full" id="sp-edit">✏️ 회장·사무장 명단 고치기 (엑셀도 가능)</button>`;
-    $('#sp-group').onclick = () => smsBox({ title: '회장·사무장 단체문자', people: [], staff: smsStaff, free: true, text: '안녕하세요, 진안군 노인회입니다.\n\n\n진안군 노인회 드림', logType: '회장·사무장 단체 문자', logDetail: smsStaff.filter(x => x.tel).map(x => x.role + ' ' + x.name).join(', ') });
+    $('#sp-back').onclick = () => { curT = null; draw(); };
+    $('#sp-group').onclick = () => smsBox({ title: `${curT} 회장·사무장 문자`, people: [], staff: list, free: true, text: '안녕하세요, 진안군 노인회입니다.\n\n\n진안군 노인회 드림', logType: '회장·사무장 단체 문자', logDetail: `${curT} · ` + list.filter(x => x.tel).map(x => x.role + ' ' + x.name).join(', ') });
     $('#sp-edit').onclick = () => openSmsStaffEdit(draw);
   };
   draw();
