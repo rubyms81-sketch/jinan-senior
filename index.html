@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-175</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-176</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6978,8 +6978,7 @@ function openEduCheck(){
     const full = n > 0 && got === n; if (lastFull === false && full) playDingDong(); lastFull = full;
     dlg.innerHTML = `
       ${t ? `<div style="margin:0 0 4px;"><b style="font-size:1.05rem;">🎓 교육 출석 체크</b> <span style="font-size:1.5rem;font-weight:700;color:#c53030;">${got}</span> <span class="muted">/ ${n}명 도착</span> <span class="muted" style="font-size:.85rem;">· 🦺 착용 ${vOk} · 미착용 <b style="color:#975a16;">${vNo}</b></span>${full ? ' <b style="color:#2f855a;">✔ 완료되었습니다</b>' : ''}</div>` : '<div style="font-weight:bold;font-size:1.05rem;margin-bottom:4px;">🎓 교육 출석 체크</div>'}
-      <div style="margin:0 0 2px;">${days.map(([x, nm]) => `<button type="button" class="small ${x === d ? '' : 'secondary'}" data-day="${x}" style="width:auto;margin:0 4px 4px 0;padding:6px 10px;">${Number(x.slice(5, 7))}/${Number(x.slice(8, 10))} ${esc(nm)}</button>`).join('')}</div>
-      <div>${ts.map(x => `<button type="button" class="small ${x === t ? '' : 'secondary'}" data-town="${esc(x)}" style="width:auto;margin:0 4px 4px 0;padding:6px 10px;">${esc(x.replace(/면$/, ''))} (${all.filter(p => p.town === x).length})</button>`).join('')}</div>
+      <div style="display:flex;flex:none;align-items:center;gap:4px;overflow-x:auto;white-space:nowrap;margin:0 0 6px;padding:4px 2px 8px;-webkit-overflow-scrolling:touch;">${days.map(([x, nm]) => `<button type="button" class="small ${x === d ? '' : 'secondary'}" data-day="${x}" style="width:auto;flex:none;margin:0;padding:6px 10px;">${Number(x.slice(5, 7))}/${Number(x.slice(8, 10))} ${esc(nm.replace(/교육$/, ''))}</button>`).join('')}${ts.map(x => `<button type="button" class="small ${x === t ? '' : 'secondary'}" data-town="${esc(x)}" style="width:auto;flex:none;margin:0;padding:6px 10px;">${esc(x.replace(/[읍면]$/, ''))} (${all.filter(p => p.town === x).length})</button>`).join('')}</div>
       ${t ? `
       <div class="grid-2" style="margin:4px 0 2px;"><button type="button" class="${onlyAbsent ? 'secondary' : ''}" data-act="all" style="margin:0;padding:8px 4px;font-size:.95rem;">전체 ${n}명</button><button type="button" class="${onlyAbsent ? '' : 'secondary'}" data-act="absent" style="margin:0;padding:8px 4px;font-size:.95rem;">안 온 ${n - got}명</button></div>
       <div data-eclist style="flex:0 1 auto;min-height:120px;overflow:auto;-webkit-overflow-scrolling:touch;">${list.map(p => { const s = st(p); return `
