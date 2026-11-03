@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-181</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-182</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -1636,7 +1636,7 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
     for (let d = 1; d <= last; d++) {
       const k = ymd(y,m,d), w = new Date(y, m-1, d).getDay(), am = ed.get(k + '|09:00'), pm = ed.get(k + '|13:00'), en2 = am || pm;
       const hn = HOLIDAY_NAMES[k] ? HOLIDAY_NAMES[k].replace('대체공휴일','대체휴일').slice(0,4) : '';
-      const tag = k === endD ? '마감' : en2 ? en2.slice(0,4) : hn;
+      const tag = k === endD ? '마감' : en2 ? en2.replace(/교육$/, '').slice(0,4) : hn;
       if (am && pm) {   // (v181) 오전·오후 교육: 대각선 / 로 나눠 왼쪽(오전)=보라, 오른쪽(오후)=빨강
         h += `<button data-k="${k}" class="${(w===0 || w===6 || HOLIDAYS.has(k)) ? 'red' : ''} ${k === endD ? 'end' : ''}" style="background:linear-gradient(to bottom right,#805ad5 50%,#e53e3e 50%);color:#fff;position:relative;"><span style="position:absolute;left:3px;top:2px;font-size:.6rem;line-height:1.1;">${esc(am.replace(/교육$/, '').slice(0, 3))}</span>${d}<span style="position:absolute;right:3px;bottom:2px;font-size:.6rem;line-height:1.1;">${esc(pm.replace(/교육$/, '').slice(0, 3))}</span></button>`;
         continue;
