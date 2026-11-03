@@ -412,7 +412,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-156</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-157</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2045,7 +2045,9 @@ function renderCallAlert(){
   const kitList = kitNew().filter(p => kitMissing(p).length);
   if (kitList.length) {
     h += alertCard('kit', 'background:#fff8f0;border-color:#dd6b20;', `<div style="font-weight:bold;color:#c05621;">📦 조끼·명찰·활동일지 지급 대기 ${kitList.length}명</div>`, `
+    <div class="grid-2" style="margin:6px 0;"><button type="button" class="small secondary" style="margin:0;" onclick="kitAll(this)">☑ 전체 선택</button><button type="button" class="small" style="margin:0;" id="kit-bulk" onclick="kitBulk()">선택한 0명 한꺼번에 처리</button></div>
     ${kitList.map(p => `<div class="call-row">
+      <input type="checkbox" class="kit-pick" data-id="${p.id}" ${kitSel.has(p.id) ? 'checked' : ''} onchange="kitPick(${p.id}, this.checked)" style="width:22px;height:22px;margin:0 8px 0 0;flex:none;">
       <button class="who" onclick="openKit(${p.id})"><b>${nmH(p)}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
         <span style="font-size:.88rem;">${KIT_ITEMS.map(([k, l]) => `${l} ${kitLabel(p, k)}`).join(' · ')}</span></button>
       <button class="done-btn" onclick="openKit(${p.id})">체크</button></div>`).join('')}`);
@@ -2068,6 +2070,44 @@ const KIT_BY = { me: '나 보관', sajang: '사무장 보관', hoe: '회장 보�
 const kitNew = () => participants.filter(p => (p.linking || p.linkDone) && !stats(p).quitNow);
 const kitMissing = p => KIT_ITEMS.filter(([k]) => p.kit?.[k]?.st !== 'given');
 const kitLabel = (p, k) => { const x = p.kit?.[k]; if (!x || !x.st || x.st === 'none') return '✗ 못 받음'; if (x.st === 'given') return `✔ ${x.date ? mdw(x.date) : ''} 지급`; return `📦 ${KIT_BY[x.by] || ''}`; };
+// (v157) 지급 대기 칸 전체 선택 · 한꺼번에 처리
+const kitSel = new Set();
+const kitPick = (id, on) => { on ? kitSel.add(id) : kitSel.delete(id); const b = document.getElementById('kit-bulk'); if (b) b.textContent = `선택한 ${kitSel.size}명 한꺼번에 처리`; };
+function kitAll(btn){
+  const boxes = [...document.querySelectorAll('.kit-pick')];
+  const on = boxes.some(b => !b.checked);
+  boxes.forEach(b => { b.checked = on; kitPick(Number(b.dataset.id), on); });
+  btn.textContent = on ? '☐ 전체 해제' : '☑ 전체 선택';
+}
+function kitBulk(){
+  const ps = [...kitSel].map(id => participants.find(x => x.id === id)).filter(Boolean);
+  if (!ps.length) return notify('먼저 어르신을 골라 주세요.');
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📦 ${ps.length}명 한꺼번에 처리</div>
+    <div class="muted" style="font-size:.85rem;margin-bottom:6px;">아직 지급 안 된 조끼·명찰·활동일지에 적용합니다.</div>
+    <label>처리 내용</label><select id="kb-st" style="margin:0 0 8px;"><option value="sajang">사무장 보관 중</option><option value="hoe">회장 보관 중</option><option value="me">나 보관 중</option><option value="given">어르신께 지급 완료</option></select>
+    <label>지급한 날짜 (지급 완료일 때)</label><input type="date" id="kb-date" value="${today()}" style="margin:0 0 8px;">
+    <div class="grid-2" style="margin-top:8px;"><button class="secondary" id="kb-cancel">취소</button><button id="kb-ok">적용</button></div></div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('#kb-cancel').onclick = () => bg.remove();
+  bg.querySelector('#kb-ok').onclick = () => {
+    const st = bg.querySelector('#kb-st').value, dt = bg.querySelector('#kb-date').value || today();
+    bg.remove();
+    ps.forEach(p => {
+      p.kit ||= {}; const changes = [];
+      KIT_ITEMS.forEach(([k, l]) => {
+        if (p.kit[k]?.st === 'given') return;
+        const old = kitLabel(p, k);
+        p.kit[k] = st === 'given' ? { st: 'given', date: dt } : { st: 'held', by: st };
+        const nw = kitLabel(p, k); if (old !== nw) changes.push(`${l.slice(2)} ${old} → ${nw}`);
+      });
+      if (changes.length) logEvent('지급 체크', p, changes.join(' / ') + ' (여러 명 한꺼번에)');
+    });
+    kitSel.clear(); saveData(false); renderList(); renderCallAlert();
+    notify(`${ps.length}명 처리했어요.`);
+  };
+}
 function openKit(id){
   const p = participants.find(x => x.id === id); if (!p) return;
   const rows = KIT_ITEMS.map(([k, l]) => { const x = p.kit?.[k] || {}; const st = x.st === 'given' ? 'given' : x.st === 'held' ? 'held:' + (x.by || 'me') : 'none';
