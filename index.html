@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-182</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-183</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -1376,7 +1376,7 @@ let eduAll = (() => { try { return JSON.parse(load('jinan_edu')) || {}; } catch(
 let leaderPlan = (() => { try { return JSON.parse(load('jinan_leaders')) || {}; } catch(e) { return {}; } })();
 const isLeader = p => zones.some(z => z.leaderId === p.id);
 // 🕐 교육·행사 시간 (v180): 오전 9시 / 오후 1시, 기본 오전 9시
-const EDU_TIMES = { '09:00': '오전 9시', '13:00': '오후 1시' };
+const EDU_TIMES = { '09:00': '오전', '13:00': '오후' };
 const timeLbl = t => EDU_TIMES[t] || EDU_TIMES['09:00'];
 // 역량강화교육(역량활동 모임 날)은 공익 교육·근무일 10일에 안 셈 (일정표 역량강화도 같음)
 const notCounted = e => !!e.ext || /역량강화/.test(e.name || '');
