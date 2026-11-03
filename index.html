@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-160</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-161</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -566,6 +566,11 @@ body.ord-hide .ord-btn { display: none !important; }
           <button class="secondary full" onclick="showEduLack()" style="margin-top:8px;">불참 인원 보기</button>
           <button class="secondary full" onclick="exportEduLack()" style="margin:4px 0 0;">📥 교육 불참 인원 엑셀 받기</button>
           <button class="secondary full" onclick="openEduHours()">⚙️ 교육별 시간 정하기</button>
+        </details>
+        <details class="stat-box chg-box" id="newq-box">
+          <summary><span style="font-weight:bold;">🆕 신규·중도포기 기간 조회</span><span class="chg-arrow"></span></summary>
+          <div class="grid-2" style="margin-top:6px;"><div><label>시작일</label><input type="date" id="nq-from" style="margin:0;"></div><div><label>끝일</label><input type="date" id="nq-to" style="margin:0;"></div></div>
+          <div class="grid-2" style="margin-top:8px;"><button class="secondary" onclick="showNewQuit()">화면으로 보기</button><button onclick="exportNewQuit()">📥 엑셀 받기</button></div>
         </details>
         <details id="ex-box" class="stat-box chg-box">
           <summary><span style="font-weight:bold;" id="ex-title">🚫 내년도 참여 제외 대상</span><span class="chg-arrow"></span></summary>
@@ -7880,6 +7885,49 @@ function exportEduLack(){
   XLSX.writeFile(wb, `교육불참_${viewYear()}년_${today()}.xlsx`);
   logEvent('교육 불참 엑셀', null, `${viewYear()}년 ${rows.length}명`);
 }
+// (v161) 신규·중도포기 기간 조회: 신규 = 근무를 처음 시작한 날, 중도포기 = 중도포기 날 + 서류 받은 분만
+function nqRows(from, to){
+  const rows = [];
+  participants.forEach(p => {
+    const sd = p.startDay || (p.start ? (p.start.length === 7 ? p.start + '-01' : p.start) : '');
+    if (sd && sd >= from && sd <= to) rows.push({ kind: '신규 시작', date: sd, p });
+    const qd = quitDayOf(p);
+    if (qd && p.quitDocOk && qd >= from && qd <= to) rows.push({ kind: '중도포기(서류 받음)', date: qd, p });
+  });
+  return rows.sort((a, b) => a.date.localeCompare(b.date) || a.p.town.localeCompare(b.p.town));
+}
+function nqRange(){
+  const from = document.getElementById('nq-from').value, to = document.getElementById('nq-to').value;
+  if (!from || !to) { notify('시작일과 끝일을 모두 골라 주세요.'); return null; }
+  if (from > to) { notify('시작일이 끝일보다 늦어요. 다시 골라 주세요.'); return null; }
+  return { from, to };
+}
+function showNewQuit(){
+  const r = nqRange(); if (!r) return;
+  const rows = nqRows(r.from, r.to);
+  const nNew = rows.filter(x => x.kind === '신규 시작').length, nQ = rows.length - nNew;
+  const body = rows.length ? rows.map(x => `<div class="log" style="font-size:.92rem;line-height:1.6;margin-bottom:6px;"><b>${mdw(x.date)}</b> · ${x.kind === '신규 시작' ? '🆕 신규' : '🚪 중도포기'} · ${nmH(x.p)} <span class="muted">${esc(x.p.town)} · ${esc(seniorOf(x.p))}</span></div>`).join('')
+    : '<div class="muted">이 기간에 해당하는 분이 없어요.</div>';
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = `<div class="dlg" style="max-height:90vh;overflow:auto;">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">🆕 신규·중도포기 조회</div>
+    <div class="muted" style="font-size:.88rem;margin-bottom:8px;">${mdw(r.from)} ~ ${mdw(r.to)} · 신규 ${nNew}명 · 중도포기(서류 받음) ${nQ}명</div>
+    ${body}
+    <button class="secondary full" onclick="this.closest('.dlg-back').remove()" style="margin-top:8px;">닫기</button></div>`;
+  document.body.appendChild(bg);
+}
+function exportNewQuit(){
+  if (typeof XLSX === 'undefined') return notify('인터넷이 연결될 때 다시 눌러 주세요.');
+  const r = nqRange(); if (!r) return;
+  const rows = nqRows(r.from, r.to);
+  const out = rows.map(x => ({ '구분': x.kind, '날짜': x.date, '읍면': x.p.town, '경로당': seniorOf(x.p), '성명': x.p.name, '나이': x.p.age || '' }));
+  const wb = XLSX.utils.book_new();
+  const ws = out.length ? XLSX.utils.json_to_sheet(out) : XLSX.utils.aoa_to_sheet([['해당 인원이 없습니다.']]);
+  ws['!cols'] = [{wch:16},{wch:12},{wch:8},{wch:12},{wch:10},{wch:6}];
+  XLSX.utils.book_append_sheet(wb, ws, '신규·중도포기');
+  XLSX.writeFile(wb, `신규·중도포기_${r.from}_${r.to}.xlsx`);
+  logEvent('신규·중도포기 엑셀', null, `${r.from}~${r.to} · ${out.length}건`);
+}
 // ⚙️ 교육별 시간·종류 정하기 (이름에 맞는 시간이 모든 교육 날짜에 적용)
 function openEduHours(){
   const names = [...new Set([...EDU_NAMES, ...Object.keys(eduHours), ...participants.flatMap(p => (p.edu || []).map(e => e.name)), ...Object.values(eduAll).flat().map(e => e.name)])].filter(Boolean);
@@ -8064,7 +8112,7 @@ function newcomers(list, mk){
   return list.filter(p => (p.start === mk) || reg.has(p.town+'|'+p.name) || (p.linking && p.linking.since.startsWith(mk)));
 }
 // ---------- 📊 통계 박스 순서 바꾸기 (v111, ▲▼) ----------
-const ST_ITEMS = { 'st-monthly': '📋 월간 정리표', 'st-period': '📊 기간 통계', 'edu-box': '📚 교육 불참·시간', 'ex-box': '🚫 참여 제외 대상' };
+const ST_ITEMS = { 'st-monthly': '📋 월간 정리표', 'st-period': '📊 기간 통계', 'edu-box': '📚 교육 불참·시간', 'newq-box': '🆕 신규·중도포기 조회', 'ex-box': '🚫 참여 제외 대상' };
 const stBox = () => document.getElementById('st-box');
 const stList = () => [...stBox().children].filter(el => ST_ITEMS[el.id]);
 function stSaveOrder(){ store('jinan_st_order', JSON.stringify(stList().map(el => el.id))); }
@@ -8502,6 +8550,7 @@ function exportExcel(){
 eventLog.filter(h => h.type === '신규 등록' && (h.detail || '').startsWith('한 명씩 등록')).forEach(h => { const p = participants.find(x => x.name === h.name && x.town === h.town && !x.regDay); if (p && h.date) p.regDay = h.date.slice(0,10); });
 // (v87) 등록한 달을 근무 시작 달로 채우던 복구 코드는 뺌: 1월(처음부터)로 등록·수정한 분에게 매번 등록 달(예: 11월)이 다시 들어가는 문제가 있었음
 document.getElementById('st-from').value = '1'; document.getElementById('st-to').value = String(curMonth);
+document.getElementById('nq-from').value = monthKey() + '-01'; document.getElementById('nq-to').value = today();
 // 태어난 해를 적어 둔 분은 해가 바뀌면 나이도 저절로 바뀜
 // ---------- 🧩 화면 배치: 칸 제목을 꾹 눌러 옮기기·겹쳐서 묶기·이름 바꾸기 (이 휴대폰에만 저장, jinan_layout) ----------
 const MV_BASE = { chg: '🔄 근무일 변경', wd: '📅 활동일', zone: '🗺 구역', moim: '👥 모임 명단', edu: '🎓 교육 출석', count: '👥 인원 세기', search: '🔍 이름 찾기', board: '⚠️ 감점 현황', diary: '📝 활동일지', tools: '➕ 신규등록', stats: '📊 통계', ui: '🛠️ 설정', me: '👤 현장 점검자 정보', bk: '💾 백업' };
