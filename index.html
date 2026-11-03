@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-185</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-186</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -5267,8 +5267,12 @@ function openBulkGuide(){
     <label style="margin-top:12px;">👤 팀장 명단 (구역 자동 정리)</label>
     <table class="st-tbl" style="margin:0 0 6px;background:#fff;font-size:.8rem;"><tr>${LEADER_TPL[0].map(h => `<th>${h}</th>`).join('')}</tr><tr>${LEADER_TPL[1].map(c => `<td>${esc(c)}</td>`).join('')}</tr></table>
     <div class="grid-2"><button type="button" class="secondary" id="bk-ltpl" style="margin:0;">⬇️ 팀장 양식</button><button type="button" id="bk-lead" style="margin:0;background:#276749;">👤 팀장 명단 올리기</button></div>
+    <label style="margin-top:12px;">👔 회장·사무장 명단 (문자 받는 분)</label>
+    <div class="grid-2" style="margin:0 0 6px;"><button type="button" class="secondary" id="bk-stpl" style="margin:0;">⬇️ 회장·사무장 양식</button><button type="button" id="bk-staff" style="margin:0;background:#2b6cb0;">👔 회장·사무장 올리기</button></div>
     <button type="button" class="secondary full" id="bk-close" style="margin-top:10px;">닫기</button></div>`;
   document.body.appendChild(bg);
+  bg.querySelector('#bk-stpl').onclick = () => staffTemplate();
+  bg.querySelector('#bk-staff').onclick = () => { const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.xlsx,.xls,.csv'; fi.className = 'hidden'; document.body.appendChild(fi); fi.onchange = () => { staffImport(fi, () => fi.remove()); }; fi.click(); };
   bg.querySelector('#bk-ltpl').onclick = () => downloadLeaderTpl();
   bg.querySelector('#bk-lead').onclick = () => { bg.remove(); document.getElementById('lead-file').click(); };
   bg.querySelector('#bk-tpl').onclick = () => downloadTemplate();
@@ -8398,13 +8402,16 @@ function monthlyRows(mk){
   const mine = participants.filter(p => visibleTowns().includes(p.town));
   const ok = mine.filter(p => counted(p));
   const rows = [[`${mk.slice(0,4)}년 ${Number(mk.slice(5))}월 월간 정리표`], []];
+  const planD = monthDays(mk), planEnd = planD.length ? Number(planD[planD.length-1].slice(8,10)) : null;   // (v186) 이번 달 계획의 마지막 날
   visibleTowns().forEach(t => {
     const n = ok.filter(p => p.town === t).length;
+    // (v186) 특이한 분만: 근무일이 10일이 아니거나, 날짜 변경이 있거나, 끝나는 날이 계획과 다른 분 (10일이고 계획대로 끝난 분은 뺌)
+    const all = ok.filter(p => p.town === t).map(p => ({ p, paid: workDays(p, mk).length - unpaidIn(p, mk) }))
+      .filter(({ p, paid }) => paid !== 10 || changesIn(p, mk).length > 0 || (planEnd != null && lastDayIn(p, mk) !== planEnd))
+      .sort((a,b) => seniorOf(a.p).localeCompare(seniorOf(b.p)) || a.p.name.localeCompare(b.p.name));
+    if (!all.length) return;
     rows.push([`${t}(${n}명)`]);
     rows.push(['경로당','이름','총 근무','끝나는 날']);
-    // (v136) 이번 달 근무하는 모든 인원: 총 근무 일수 + 실제 끝난 날 (마감 전에 끝나도 그 날짜)
-    const all = ok.filter(p => p.town === t).map(p => ({ p, paid: workDays(p, mk).length - unpaidIn(p, mk) }))
-      .sort((a,b) => seniorOf(a.p).localeCompare(seniorOf(b.p)) || a.p.name.localeCompare(b.p.name));
     all.forEach(({ p, paid }) => { const ld = lastDayIn(p, mk);
       rows.push([seniorOf(p), p.name, `${paid}일`, ld ? `${ld}일` : '-']); });
     rows.push([]);
