@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-171</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-172</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6977,26 +6977,22 @@ function openEduCheck(){
     const list = inTown.filter(p => (!onlyAbsent || !st(p).arr) && (!q || p.name.includes(q)));
     const full = n > 0 && got === n; if (lastFull === false && full) playDingDong(); lastFull = full;
     dlg.innerHTML = `
-      <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">🎓 교육 출석 체크</div>
-      <label style="margin-top:0;">교육 날짜</label>
-      <div>${days.map(([x, nm]) => `<button type="button" class="small ${x === d ? '' : 'secondary'}" data-day="${x}" style="width:auto;margin:0 6px 6px 0;">${Number(x.slice(5, 7))}/${Number(x.slice(8, 10))} ${esc(nm)}</button>`).join('')}</div>
-      <label>읍·면</label>
-      <div>${ts.map(x => `<button type="button" class="small ${x === t ? '' : 'secondary'}" data-town="${esc(x)}" style="width:auto;margin:0 6px 6px 0;">${esc(x)} (${all.filter(p => p.town === x).length})</button>`).join('')}</div>
+      <div style="font-weight:bold;font-size:1.05rem;margin-bottom:4px;">🎓 교육 출석 체크</div>
+      <div style="margin:0 0 2px;">${days.map(([x, nm]) => `<button type="button" class="small ${x === d ? '' : 'secondary'}" data-day="${x}" style="width:auto;margin:0 4px 4px 0;padding:6px 10px;">${Number(x.slice(5, 7))}/${Number(x.slice(8, 10))} ${esc(nm)}</button>`).join('')}</div>
+      <div>${ts.map(x => `<button type="button" class="small ${x === t ? '' : 'secondary'}" data-town="${esc(x)}" style="width:auto;margin:0 4px 4px 0;padding:6px 10px;">${esc(x)} (${all.filter(p => p.town === x).length})</button>`).join('')}</div>
       ${t ? `
-      <div style="text-align:center;margin:8px 0 2px;"><span style="font-size:1.8rem;font-weight:700;color:#c53030;">${got}</span> <span class="muted">/ ${n}명 도착</span></div>
-      <div class="muted" style="text-align:center;font-size:.9rem;">🦺 조끼 착용 ${vOk} · 미착용 <b style="color:#975a16;">${vNo}</b></div>
-      ${full ? '<div style="text-align:center;font-weight:700;color:#2f855a;font-size:1.1rem;">✔ 완료되었습니다</div>' : ''}
-      <div class="grid-2" style="margin:8px 0 4px;"><button type="button" class="${onlyAbsent ? 'secondary' : ''}" data-act="all" style="margin:0;">전체 ${n}명</button><button type="button" class="${onlyAbsent ? '' : 'secondary'}" data-act="absent" style="margin:0;">안 온 사람만 ${n - got}명</button></div>
-      <input type="search" id="ec-q" placeholder="🔍 이름으로 찾기" value="${esc(q)}" autocomplete="off" style="margin:4px 0 8px;">
+      <div style="text-align:center;margin:4px 0 0;"><span style="font-size:1.5rem;font-weight:700;color:#c53030;">${got}</span> <span class="muted">/ ${n}명 도착</span> <span class="muted" style="font-size:.85rem;">· 🦺 착용 ${vOk} · 미착용 <b style="color:#975a16;">${vNo}</b></span>${full ? ' <b style="color:#2f855a;">✔ 완료되었습니다</b>' : ''}</div>
+      <div class="grid-2" style="margin:4px 0 2px;"><button type="button" class="${onlyAbsent ? 'secondary' : ''}" data-act="all" style="margin:0;padding:8px 4px;font-size:.95rem;">전체 ${n}명</button><button type="button" class="${onlyAbsent ? '' : 'secondary'}" data-act="absent" style="margin:0;padding:8px 4px;font-size:.95rem;">안 온 ${n - got}명</button></div>
+      <input type="search" id="ec-q" placeholder="🔍 이름으로 찾기" value="${esc(q)}" autocomplete="off" style="margin:2px 0 4px;">
       <div data-eclist style="flex:0 1 auto;min-height:120px;overflow:auto;-webkit-overflow-scrolling:touch;">${list.map(p => { const s = st(p); return `
-        <div style="display:flex;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px solid #edf2f7;${s.arr ? '' : 'background:#fff5f5;'}">
+        <div style="display:flex;align-items:center;gap:6px;padding:5px 4px;border-bottom:1px solid #edf2f7;${s.arr ? '' : 'background:#fff5f5;'}">
           <span style="flex:1;font-weight:600;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span>${p.phone && !s.arr ? ` <a class="tel-link" href="tel:${telOf(p)}" style="font-size:.85rem;font-weight:400;">📞</a>` : ''}${s.note ? `<br><span style="font-size:.8rem;color:#975a16;font-weight:400;">📝 ${esc(s.note)}</span>` : ''}</span>
           ${`<button type="button" class="small ${s.vest === false ? 'danger' : ''}" data-vest="${p.id}" style="width:auto;margin:0;padding:6px 8px;${s.vest === false ? '' : 'background:#fff;color:#2d3748;border:2px solid #cbd5e0;'}">🦺 조끼</button>`}
           <button type="button" class="small ${s.arr ? 'secondary' : ''}" data-arr="${p.id}" style="width:auto;margin:0;padding:6px 10px;">${s.arr ? `✔ 도착 ${esc(s.at || '')}` : '도착'}</button></div>`; }).join('') || '<div class="muted" style="padding:8px 0;">해당하는 사람이 없습니다.</div>'}</div>`
       : `<div class="muted" style="padding:8px 0;">${participants.length ? '이 날 교육을 받는 어르신이 없습니다.' : '이 기기에는 어르신 명단이 없습니다.<br>📂 엑셀로 한번에 등록에서 명단을 먼저 올려 주세요.<br><button type="button" class="small" data-act="bk" style="width:auto;margin-top:6px;">💾 백업 칸으로 가기</button>'}</div>`}
-      <button type="button" class="full secondary" data-act="stat" style="margin:10px 0 6px;">📊 면별 도착률 한눈에 보기</button>
-      <button type="button" class="full" data-act="save" style="margin:0 0 6px;">💾 저장 (안 온 분은 불참으로)</button>
-      <button type="button" class="full" data-act="sms" style="margin:0 0 6px;" ${n - got ? '' : 'disabled'}>📩 ${esc(t || '')} 안 온 ${n - got}명에게 문자</button>
+      <button type="button" class="full secondary" data-act="stat" style="margin:6px 0 4px;">📊 면별 도착률 한눈에 보기</button>
+      <button type="button" class="full" data-act="save" style="margin:0 0 4px;">💾 저장 (안 온 분은 불참으로)</button>
+      <button type="button" class="full" data-act="sms" style="margin:0 0 4px;" ${n - got ? '' : 'disabled'}>📩 ${esc(t || '')} 안 온 ${n - got}명에게 문자</button>
       <button type="button" class="full secondary" data-act="close">닫기</button>`;
     dlg.scrollTop = keepTop; const nl = dlg.querySelector('[data-eclist]'); if (nl) nl.scrollTop = keepList;
   };
