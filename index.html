@@ -412,7 +412,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-154</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-155</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -763,7 +763,7 @@ body.ord-hide .ord-btn { display: none !important; }
   </details>
 
   <details class="info" id="info-form">
-    <summary>✏️ 기본 정보 고치기</summary>
+    <summary>기본 정보 고치기 (소속 면·경로당·근무 시작·연계)</summary>
     <div class="grid-2" style="margin-top:10px;">
       <div><label>소속 면</label><select id="m-town"></select></div>
     </div>
@@ -788,11 +788,11 @@ body.ord-hide .ord-btn { display: none !important; }
     <label>우편번호</label><input type="text" inputmode="numeric" id="nm-zip" placeholder="예: 55500" autocomplete="off">
   </div>
   <div id="n-moim-box" class="hidden"><label>넣을 모임</label><select id="n-moim"></select><button type="button" class="small secondary" onclick="newMoimFromAdd()" style="width:auto;margin:0 0 8px;">＋ 새 모임 만들기</button><div class="muted" style="font-size:.85rem;margin-bottom:8px;">임원·여행 등 면·경로당이 없는 분입니다. 이름과 전화번호만 받고, 근무·감점·구역 인원에는 안 들어갑니다. 여러 명은 👥 모임 명단의 "엑셀로 한번에 넣기"를 쓰세요.</div></div>
+  <div class="n-geo"><label>나이 (주민번호 앞자리 6자리도 됨)</label><input type="text" inputmode="numeric" id="n-age" class="age-in" placeholder="예: 480315, 1948 또는 78"></div>
   <div class="n-geo"><label>소속 면</label><select id="n-town"></select></div>
   <div class="n-geo"><label>경로당 이름</label><div class="senior-combo"><input type="text" id="n-senior" class="senior-in" data-town="n-town" placeholder="예: 지사" autocomplete="off"><button type="button" class="combo-btn" data-for="n-senior" aria-label="경로당 목록">▼</button><div class="combo-list hidden"></div></div></div>
   <label>어르신 성명</label><input type="text" id="n-name" placeholder="예: 김진안">
   <div class="n-geo"><label>성별</label><div class="grid-2 sex-pick" data-for="n-sex" style="margin-bottom:10px;"><button type="button" class="reason" data-v="남">👨 남</button><button type="button" class="reason" data-v="여">👩 여</button></div><input type="hidden" id="n-sex"></div>
-  <div class="n-geo"><label>나이</label><input type="text" inputmode="numeric" id="n-age" class="age-in" placeholder="예: 1948 또는 78"></div>
   <label>연락처</label><input type="tel" id="n-phone" class="phone-in" inputmode="numeric" placeholder="010-0000-0000" autocomplete="off">
   <div class="n-geo"><label>주소</label><input type="text" id="n-address" class="addr-in" data-town="n-town" placeholder="진안군 동향면 OOO" autocomplete="off"></div>
   <div class="n-geo"><label>근무 시작 달 · 시작일</label><div class="grid-2"><select id="n-start" class="start-sel"></select><input type="date" id="n-startday" style="margin:0;"></div></div>
@@ -2927,7 +2927,6 @@ function openInfo(){
     <div id="if-calls" style="margin-bottom:10px;">${callsHtml}</div>
     <label>👪 가족·상황 (특이사항 기록)</label>
     <div id="if-notes" style="margin-bottom:10px;">${notesHtml}</div>
-    <label>✏️ 기본 정보 고치기</label>
     <div id="if-form-slot"></div>
     <button type="button" class="secondary full" id="if-hist" style="margin:10px 0;">📜 지난 행적 보기 (월별)</button>
     <div class="grid-2"><button class="secondary" id="if-close">닫기</button><button id="if-save">건강 정보 저장</button></div></div>`;
@@ -4719,6 +4718,14 @@ let nKind = 'senior';
 const finishAge = el => { const ag = parseAge(el.value); if (!ag.bad && ag.age) { el.dataset.birth = ag.birth || ''; el.value = ag.age; document.getElementById('nm-age-show').textContent = `✔ ${ag.age}세`; } else if (ag.bad) document.getElementById('nm-age-show').textContent = '⚠ 나이를 다시 확인해 주세요'; };
 document.addEventListener('keydown', e => { if (e.target.id === 'nm-age' && e.key === 'Enter') { e.preventDefault(); finishAge(e.target); } });
 document.addEventListener('change', e => { if (e.target.id === 'nm-age') finishAge(e.target); });
+// (v155) 나이 칸에 주민번호 앞자리(8자리 또는 6자리)를 다 치면 바로 "1948 (78세)"로 정리 (신규 등록은 "78세")
+document.addEventListener('input', e => {
+  const el = e.target; if (!(el.classList?.contains('age-in') || el.id === 'nm-age')) return;
+  const v = el.value.trim(); if (!/^(\d{8}|\d{6}(-\d)?)$/.test(v)) return;
+  const ag = parseAge(v); if (ag.bad || !ag.age) return;
+  if (el.id === 'nm-age') { finishAge(el); return; }
+  el.value = ag.birth ? ageShow(ag.age, ag.birth) : ag.age;
+});
 document.addEventListener('input', e => { if (e.target.id !== 'nm-age') return; e.target.dataset.birth = ''; const ag = parseAge(e.target.value); document.getElementById('nm-age-show').textContent = ag.bad ? '⚠ 나이를 다시 확인해 주세요' : (ag.age ? `→ ${ag.age}세 (자동 계산)` : ''); });
 // 신규 등록 창에서 새 모임 만들기 (👥 모임 명단과 같은 목록을 씀)
 async function newMoimFromAdd(){
@@ -4768,6 +4775,14 @@ const AGE_MIN = 50, AGE_MAX = 110;
 function parseAge(v){
   const t = String(v||'').trim(); if (!t) return { age: '', birth: null };
   const ok = a => a >= AGE_MIN && a <= AGE_MAX;
+  // (v155) 주민등록번호 앞자리 YYMMDD (480315 또는 480315-1): 1900년대 먼저, 안 맞으면 2000년대
+  const d6 = t.match(/^(\d{2})(\d{2})(\d{2})(-\d)?$/);
+  if (d6) {
+    const mo = Number(d6[2]), dy = Number(d6[3]); if (mo < 1 || mo > 12 || dy < 1 || dy > 31) return { age: '', birth: null, bad: true };
+    let y = 1900 + Number(d6[1]), a = thisYear() - y;
+    if (!ok(a)) { y = 2000 + Number(d6[1]); a = thisYear() - y; }
+    return ok(a) ? { age: String(a), birth: y } : { age: '', birth: null, bad: true };
+  }
   const m = t.match(/^(\d{4})/);
   if (m) { const y = Number(m[1]), a = thisYear() - y; return ok(a) ? { age: String(a), birth: y } : { age: '', birth: null, bad: true }; }
   const n = t.match(/^\d{1,3}/); if (!n) return { age: '', birth: null, bad: true };
