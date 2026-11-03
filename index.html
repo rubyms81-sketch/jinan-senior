@@ -158,6 +158,10 @@
   .mic-btn:disabled { background:#a0aec0; font-size:.92rem; }
   @keyframes micpulse { 0%,100% { box-shadow:0 0 0 0 rgba(229,62,62,.5); } 50% { box-shadow:0 0 0 10px rgba(229,62,62,0); } }
   td.if-ed { cursor:pointer; } .ed-pen { font-size:.8rem; opacity:.55; } .ed-pen-btn { background:none; border:none; padding:0 4px; margin:0; width:auto; font-size:.85rem; opacity:.6; color:inherit; }
+  details.days-acc > summary { list-style:none; cursor:pointer; text-align:center; background:#ebf4ff; color:#2b6cb0; border-radius:10px; padding:6px 10px; font-weight:bold; font-size:.92rem; margin:6px 0 2px; }
+  details.days-acc > summary::-webkit-details-marker { display:none; }
+  details.days-acc > summary::after { content:'▲ 날짜 칸 접기'; }
+  details.days-acc:not([open]) > summary::after { content:'▼ 날짜 칸 펼치기'; }
   .chg-box { margin-top:14px; border-top:1px solid #edf2f7; padding-top:10px; }
   /* 📜 지난 행적 창: 월 탭(가로 밀기) + 월별 내용 */
   .hist-tabs { display:flex; gap:6px; overflow-x:auto; padding:2px 0 8px; -webkit-overflow-scrolling:touch; }
@@ -412,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-158</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-159</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -684,6 +688,7 @@ body.ord-hide .ord-btn { display: none !important; }
   <div class="chg-box" id="sec-days"><div class="days-head"><h4 id="m-days-title">📅 이달 근무일</h4>
     <button type="button" class="small warning" onclick="addChange()" style="width:auto;margin:0 auto 0 0;padding:4px 10px;font-size:.85rem;">🔄 근무일 변경</button>
   </div>
+  <details class="days-acc" id="days-acc" open><summary></summary>
   <div class="date-row" style="display:flex;gap:6px;align-items:center;margin:0 0 8px;"><button type="button" class="date-btn" id="c-date-btn" onclick="pickCheckDate()" style="flex:1 1 auto;width:auto;min-width:0;margin:0;"></button><button type="button" class="small secondary" onclick="openNote()" style="flex:none;width:auto;margin:0;padding:8px 10px;">📝 특이사항</button></div>
   <div id="day-tabs" class="hist-tabs"></div>
   <div id="m-days" class="chips"></div>
@@ -691,6 +696,7 @@ body.ord-hide .ord-btn { display: none !important; }
   <div id="m-chg"></div></details>
   <button class="warning full hidden" id="btn-addchg" onclick="addChange()">🔄 근무일 변경 추가</button>
   <button class="secondary full hidden" id="btn-custom" onclick="addChange({ reason: '입원' })">🏥 입원 체크</button>
+  </details>
   </div>
   <div id="lead-board" class="hidden"></div>
   <div id="modal-notice"></div>
