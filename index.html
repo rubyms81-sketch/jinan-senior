@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-183</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-184</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6151,7 +6151,7 @@ function leaderMenu(p){
     openSmsApp([L.num], `[진안군노인회] ${L.name} 팀장님, ${p.name} 어르신(${seniorOf(p)}) 관련 연락드립니다.\n`); });
 }
 ['n-start','m-start'].forEach(id => document.getElementById(id).addEventListener('change', () => syncStartDay(id)));
-function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, selfOnly, onSendText, noPhoto, onSent }){
+function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, selfOnly, onSendText, noPhoto, onSent, staff }){
   return new Promise(resolve => {
     const recips = people.filter(p => telOf(p)).map(p => ({ key: 'p'+p.id, label: p._guard ? `${p.name} 경로당지킴이` : `${p.name} 어르신`, num: telOf(p), p }));
     const noTel = people.filter(p => !telOf(p));
@@ -6160,12 +6160,25 @@ function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, sel
     people.forEach(p => { const L = leaderOf(p); if (L && !seen.has(L.num) && !recips.some(r => r.num === L.num)) { seen.add(L.num); recips.push({ key: 'L'+L.num, label: `👤 팀장 ${L.name}`, num: L.num, leader: true }); } });
     if (leaderOnly) { recips.splice(0, recips.length, ...recips.filter(r => r.leader)); noTel.length = 0; }   // 팀장님께만 (어르신 본인은 받는 사람에서 뺌)
     if (selfOnly) { recips.splice(0, recips.length, ...recips.filter(r => !r.leader)); }   // 어르신 본인께만 (팀장은 뺌)
+    // (v184) 받는 분: 사업(경로당 종류)별로 묶고 같은 사업 안은 가나다순. 팀장은 맨 아래 따로
+    // (v184) 회장·사무장(고른 면의 사무장 + 회장)은 항상 맨 위에 체크되어 들어감 (연락처가 있는 분만)
+    (staff || []).forEach((st2, i) => { if (st2.tel && !recips.some(r => r.num === st2.tel)) recips.push({ key: 'S' + i, label: `👔 ${st2.role} ${st2.name}${st2.town ? ' (' + st2.town + ')' : ''}`, num: st2.tel, staff: true, role: st2.role }); });
+    const bizCatName = k => { const raw = String(k || '').trim(); const sv = (xCat[raw] && SITE_CATS.find(c => c.k === xCat[raw])) || SITE_CATS.find(c => c.k !== '경로당지킴이' && c.m.test(raw)) || SITE_CATS[SITE_CATS.length - 1]; return sv.k; };
+    const recCat = r => r.staff ? '회장·사무장' : r.leader ? '팀장' : bizCatName(seniorOf(r.p));
+    const recKey = r => { if (r.staff) return r.role === '회장' ? -2 : -1; if (r.leader) return 999; const sv = SITE_CATS.find(c => c.k === recCat(r)); return sv ? catPos(sv) : 500; };
+    recips.sort((a, b) => recKey(a) - recKey(b) || String(a.p?.name || a.label).localeCompare(String(b.p?.name || b.label), 'ko'));   // 회장·사무장 → 사업별(가나다) → 팀장
+    let recHtml = '', lastCat = null;
+    recips.forEach(r => {
+      const cn = recCat(r);
+      if (cn !== lastCat) { lastCat = cn; recHtml += `<div style="font-weight:bold;color:#2b6cb0;margin:8px 0 2px;">${r.leader ? '👤 팀장' : r.staff ? '👔 ' + esc(cn) : '▣ ' + esc(cn)}</div>`; }
+      recHtml += `<label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin:4px 0;"><input type="checkbox" data-k="${r.key}" checked style="width:22px;height:22px;margin:0;"> <span>${r.leader ? `<b style="color:#276749">${esc(r.label)}</b>` : `<b>${esc(r.label)}</b>`} <span class="muted">${esc(fmtPhone(r.num))}</span></span></label>`;
+    });
     const back = document.createElement('div'); back.className = 'dlg-back';
     back.innerHTML = `<div class="dlg">
       <div style="font-weight:bold;margin-bottom:6px;">📩 ${esc(title)}</div>
       ${recips.length > 1 ? `<label style="display:flex;align-items:center;gap:8px;font-weight:bold;margin:4px 0 6px;"><input type="checkbox" id="sb-all" checked style="width:22px;height:22px;margin:0;"> 전체 선택</label>` : ''}
       ${recips.length > 5 ? `<details style="margin-bottom:6px;"><summary style="cursor:pointer;font-weight:bold;">받는 분 ${recips.length}명 <span class="muted" style="font-weight:normal;font-size:.85rem;">(누르면 보기·빼기)</span></summary>` : ''}
-      <div style="margin-bottom:6px;">${recips.map(r => `<label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin:4px 0;"><input type="checkbox" data-k="${r.key}" checked style="width:22px;height:22px;margin:0;"> <span>${r.leader ? `<b style="color:#276749">${esc(r.label)}</b>` : `<b>${esc(r.label)}</b>`} <span class="muted">${esc(fmtPhone(r.num))}</span></span></label>`).join('')}
+      <div style="margin-bottom:6px;">${recHtml}
         ${noTel.length ? `<div class="muted" style="font-size:.85rem;">연락처 없음: ${noTel.map(p => esc(p.name)).join(', ')}</div>` : ''}
 </div>
       ${recips.length > 5 ? '</details>' : ''}
@@ -6211,7 +6224,7 @@ function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, sel
         if (logType) logEvent(logType, people.length === 1 ? people[0] : null, `${logDetail || ''} · 사진 포함 → ${rs.length}명`); if (onSent) onSent();
         return;
       }
-      if (logType) logEvent(logType, people.length === 1 ? people[0] : null, `${logDetail || ''} → ${rs.map(r => r.leader ? '팀장' : r.p.name).join(', ')}`); if (onSent) onSent();
+      if (logType) logEvent(logType, people.length === 1 ? people[0] : null, `${logDetail || ''} → ${rs.map(r => r.leader ? '팀장' : r.staff ? r.label : r.p.name).join(', ')}`); if (onSent) onSent();
       await copyText(ta.value); openSmsApp(rs.map(r => r.num), ta.value);
     };
     // 카톡: 휴대폰 공유 창 → 카카오톡 → 받는 사람(팀장 등) 고르기
@@ -6964,6 +6977,42 @@ const eduDayList = () => { const m = new Map(); const add = e => { if (!e?.date)
   Object.values(eduAll).forEach(arr => (arr || []).forEach(add)); Object.values(leaderPlan).forEach(v => (v?.edu || []).forEach(add));
   participants.forEach(p => { if (!p.quit) eduOf(p).forEach(add); }); return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([d, a]) => [d, [...a].sort((x, y) => x.t.localeCompare(y.t)).map(x => x.name).join(' / ')]); };   // (v181) 같은 날 두 교육은 "A / B"로
 const eduChkOf = (p, d) => (p.eduChk || {})[d] || null;
+// (v184) 👔 회장·사무장 연락처: 교육·문화활동·만족도 문자에 필수로 들어감 (회장=전체, 사무장=고른 면)
+const STAFF_TOWNS = ['진안읍','마령면','백운면','부귀면','성수면','용담면','안천면','정천면','주천면','동향면','상전면'];
+let smsStaff = (() => { try { const v = JSON.parse(load('jinan_smsstaff')); if (Array.isArray(v)) return v; } catch(e) {} return [{ role: '회장', name: '구동수', town: '', tel: '' }]; })();
+const saveSmsStaff = () => { try { store('jinan_smsstaff', JSON.stringify(smsStaff)); } catch(e) {} };
+const smsStaffFor = towns => smsStaff.filter(x => x.role === '회장' || (x.role === '사무장' && towns.includes(x.town)));
+function openSmsStaffEdit(){
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  const work = smsStaff.map(x => ({ ...x }));
+  const rowH = (x, i) => `<div style="display:grid;grid-template-columns:64px 1fr 96px 1fr 30px;gap:4px;align-items:center;margin:4px 0;">
+    <select data-f="role" data-i="${i}" style="margin:0;"><option ${x.role === '회장' ? 'selected' : ''}>회장</option><option ${x.role === '사무장' ? 'selected' : ''}>사무장</option></select>
+    <input data-f="name" data-i="${i}" value="${esc(x.name || '')}" placeholder="이름" style="margin:0;">
+    <select data-f="town" data-i="${i}" style="margin:0;"><option value="">전체</option>${STAFF_TOWNS.map(t => `<option ${x.town === t ? 'selected' : ''}>${t}</option>`).join('')}</select>
+    <input data-f="tel" data-i="${i}" value="${esc(x.tel || '')}" placeholder="010-0000-0000" inputmode="tel" style="margin:0;">
+    <button type="button" class="small secondary" data-del="${i}" style="margin:0;padding:4px 0;">✕</button></div>`;
+  const draw = () => {
+    bg.querySelector('#stf-rows').innerHTML = work.map(rowH).join('') || '<div class="muted">아직 없어요.</div>';
+    bg.querySelectorAll('[data-f]').forEach(el => el.onchange = () => { work[el.dataset.i][el.dataset.f] = el.value.trim(); if (el.dataset.f === 'role' && el.value === '회장') work[el.dataset.i].town = ''; draw(); });
+    bg.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { work.splice(Number(b.dataset.del), 1); draw(); });
+  };
+  bg.innerHTML = `<div class="dlg">
+    <div style="font-weight:bold;font-size:1.05rem;margin-bottom:6px;">👔 회장·사무장 연락처</div>
+    <div class="muted" style="font-size:.85rem;margin-bottom:4px;">회장은 전체, 사무장은 그 면을 고르면 들어가요. 연락처가 없는 분은 빠져요.</div>
+    <div id="stf-rows"></div>
+    <button type="button" class="secondary full" id="stf-add" style="margin:6px 0;">＋ 한 명 추가</button>
+    <div class="grid-2" style="margin-top:8px;"><button class="secondary" id="stf-cancel">취소</button><button id="stf-save">저장</button></div></div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('#stf-add').onclick = () => { work.push({ role: '사무장', name: '', town: '진안읍', tel: '' }); draw(); };
+  bg.querySelector('#stf-cancel').onclick = () => bg.remove();
+  bg.querySelector('#stf-save').onclick = () => {
+    const bad = work.find(x => x.tel && !/^[0-9-]{9,}$/.test(x.tel));
+    if (bad) return notify('전화번호 칸을 다시 확인해 주세요.');
+    smsStaff = work.filter(x => x.name || x.tel); saveSmsStaff(); logEvent('회장·사무장 연락처', null, `${smsStaff.map(x => x.role + ' ' + x.name + (x.town ? '(' + x.town + ')' : '')).join(', ') || '없음'}`); bg.remove();
+  };
+  draw();
+}
+const EDU_ABS_DEF = '안녕하세요, 진안군 노인회입니다.\n{날짜} {교육} 관련하여 연락드립니다. 확인 부탁드립니다.\n진안군 노인회 드림';   // (v184) 교육 불참 문자 기본 글 (자리표시 {날짜}·{교육})
 const eduTimeOf = day => { const ts = new Set(); for (const arr of Object.values(eduAll)) (arr || []).forEach(e => { if (e.date === day) ts.add(timeLbl(e.time)); }); return [...ts].join(' · ') || timeLbl(null); };   // (v180) 교육 날짜의 시간
 function openEduCheck(){
   const monthDays = eduDayList().filter(([x]) => x.slice(0, 7) === today().slice(0, 7));   // (v174) 이번 달 교육 날짜만
@@ -7007,7 +7056,7 @@ function openEduCheck(){
       : `<div class="muted" style="padding:8px 0;">${participants.length ? '이 날 교육을 받는 어르신이 없습니다.' : '이 기기에는 어르신 명단이 없습니다.<br>📂 엑셀로 한번에 등록에서 명단을 먼저 올려 주세요.<br><button type="button" class="small" data-act="bk" style="width:auto;margin-top:6px;">💾 백업 칸으로 가기</button>'}</div>`}
       <button type="button" class="full secondary" data-act="stat" style="margin:6px 0 4px;">📊 면별 도착률 한눈에 보기</button>
       <button type="button" class="full" data-act="save" style="margin:0 0 4px;">💾 저장 (안 온 분은 불참으로)</button>
-      <button type="button" class="full" data-act="sms" style="margin:0 0 4px;" ${n - got ? '' : 'disabled'}>📩 ${esc(t || '')} 안 온 ${n - got}명에게 문자</button>
+      <button type="button" class="full" data-act="sms" style="margin:0 0 4px;" ${n - got ? '' : 'disabled'}>📩 안 온 ${n - got}명에게 문자 (읍·면 여러 개 고르기)</button>
       <button type="button" class="full secondary" data-act="close">닫기</button>`;
     dlg.scrollTop = keepTop; const nl = dlg.querySelector('[data-eclist]'); if (nl) nl.scrollTop = keepList;
   };
@@ -7064,11 +7113,40 @@ function openEduCheck(){
     }
     if (act === 'close') return confirmClose();
     if (act === 'save') return save();
-    if (act === 'sms') {
-      const people2 = people(d).filter(p => p.town === t && !st(p).arr);
-      if (!people2.some(p => telOf(p))) return notify('안 온 분 중에 전화번호가 있는 분이 없어요.');
-      const en = days.find(x => x[0] === d)?.[1] || '교육';
-      smsBox({ title: `📩 ${dd(d)} ${en} 안 온 분께 문자`, people: people2, text: `안녕하세요, 진안군 노인회입니다.\n${dd(d)} ${en} 교육 관련하여 연락드립니다. 확인 부탁드립니다.\n진안군 노인회 드림`, logType: '교육 불참 문자', logDetail: `${dd(d)} ${en} · ${people2.map(p => p.name).join(', ')}` });
+    if (act === 'sms') {   // (v184) 읍·면 여러 개 고르기 → 고른 곳의 안 온 분께 한 통씩 (글은 한 번 고치면 다음에도 그대로)
+      const absent = people(d).filter(p => !st(p).arr);
+      const towns2 = [...new Set(absent.map(p => p.town))].sort((a, b) => a.localeCompare(b, 'ko'));
+      if (!absent.some(p => telOf(p))) return notify('안 온 분 중에 전화번호가 있는 분이 없어요.');
+      const pk = document.createElement('div'); pk.className = 'dlg-back';
+      pk.innerHTML = `<div class="dlg">
+        <div style="font-weight:bold;margin-bottom:6px;">📩 문자 보낼 읍·면 고르기</div>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:bold;margin:4px 0 8px;"><input type="checkbox" id="tp-all" style="width:22px;height:22px;margin:0;"> 전체 선택</label>
+        ${towns2.map(x => `<label style="display:flex;align-items:center;gap:8px;margin:4px 0;"><input type="checkbox" data-tp="${esc(x)}" ${x === t ? 'checked' : ''} style="width:22px;height:22px;margin:0;"> <b>${esc(x)}</b> <span class="muted">안 온 ${absent.filter(p => p.town === x && telOf(p)).length}명</span></label>`).join('')}
+        <div class="muted" style="font-size:.85rem;margin:6px 0;">👔 회장·사무장은 고른 면에 맞춰 자동으로 맨 위에 들어가요.</div>
+        <button type="button" class="secondary full" id="tp-staff" style="margin:0 0 8px;">👔 회장·사무장 연락처 고치기</button>
+        <div class="grid-2" style="margin-top:10px;"><button class="secondary" id="tp-cancel">취소</button><button id="tp-ok">다음</button></div></div>`;
+      document.body.appendChild(pk);
+      const boxes = () => [...pk.querySelectorAll('input[data-tp]')];
+      pk.querySelector('#tp-all').checked = boxes().every(b => b.checked);
+      pk.querySelector('#tp-all').onchange = e => boxes().forEach(b => b.checked = e.target.checked);
+      boxes().forEach(b => b.onchange = () => { pk.querySelector('#tp-all').checked = boxes().every(x => x.checked); });
+      pk.querySelector('#tp-cancel').onclick = () => pk.remove();
+      pk.querySelector('#tp-staff').onclick = () => openSmsStaffEdit();
+      pk.querySelector('#tp-ok').onclick = () => {
+        const picked = boxes().filter(b => b.checked).map(b => b.dataset.tp);
+        const people2 = absent.filter(p => picked.includes(p.town));
+        if (!picked.length) return notify('읍·면을 하나 이상 골라 주세요.');
+        if (!people2.some(p => telOf(p))) return notify('고른 곳에 전화번호가 있는 안 온 분이 없어요.');
+        pk.remove();
+        const en = (days.find(x => x[0] === d)?.[1] || '교육').split(' / ').map(x => x.trim()).join(' / ');
+        const dayTxt = `${Number(d.slice(5, 7))}월 ${Number(d.slice(8, 10))}일(${WEEK[new Date(d + 'T00:00:00').getDay()]})`;
+        const fill = tpl => tpl.split('{날짜}').join(dayTxt).split('{교육}').join(en);
+        smsBox({ title: `📩 ${dayTxt} ${en} 안 온 분께 문자 (${picked.join(', ')})`, people: people2, staff: smsStaffFor(picked), text: fill(smsTpl.eduAbs || EDU_ABS_DEF),
+          onSendText: v => {   // 고친 글은 자리표시로 저장 → 다음에도 그대로
+            const tpl = v.split(dayTxt).join('{날짜}').split(en).join('{교육}');
+            if (tpl !== (smsTpl.eduAbs || EDU_ABS_DEF)) { smsTpl.eduAbs = tpl; store('jinan_tpl', JSON.stringify(smsTpl)); logEvent('교육 불참 문자 글 저장', null, '다음에도 이 글로 보냄', d); } },
+          logType: '교육 불참 문자', logDetail: `${dayTxt} ${en} · ${picked.join(', ')} · ${people2.map(p => p.name).join(', ')}` });
+      };
     }
   });
   bg.addEventListener('click', e => { if (e.target === bg) confirmClose(); });
