@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-184</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-185</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6985,12 +6985,13 @@ const smsStaffFor = towns => smsStaff.filter(x => x.role === '회장' || (x.role
 function openSmsStaffEdit(){
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   const work = smsStaff.map(x => ({ ...x }));
-  const rowH = (x, i) => `<div style="display:grid;grid-template-columns:64px 1fr 96px 1fr 30px;gap:4px;align-items:center;margin:4px 0;">
+  const rowH = (x, i) => `<div style="margin:6px 0;border-bottom:1px dashed #cbd5e0;padding-bottom:6px;"><div style="display:grid;grid-template-columns:64px 1fr 96px 1fr 30px;gap:4px;align-items:center;margin:0;">
     <select data-f="role" data-i="${i}" style="margin:0;"><option ${x.role === '회장' ? 'selected' : ''}>회장</option><option ${x.role === '사무장' ? 'selected' : ''}>사무장</option></select>
     <input data-f="name" data-i="${i}" value="${esc(x.name || '')}" placeholder="이름" style="margin:0;">
     <select data-f="town" data-i="${i}" style="margin:0;"><option value="">전체</option>${STAFF_TOWNS.map(t => `<option ${x.town === t ? 'selected' : ''}>${t}</option>`).join('')}</select>
     <input data-f="tel" data-i="${i}" value="${esc(x.tel || '')}" placeholder="010-0000-0000" inputmode="tel" style="margin:0;">
-    <button type="button" class="small secondary" data-del="${i}" style="margin:0;padding:4px 0;">✕</button></div>`;
+    <button type="button" class="small secondary" data-del="${i}" style="margin:0;padding:4px 0;">✕</button></div>
+    <input data-f="addr" data-i="${i}" value="${esc(x.addr || '')}" placeholder="주소 (진안군 …)" style="margin:4px 0 0;"></div>`;
   const draw = () => {
     bg.querySelector('#stf-rows').innerHTML = work.map(rowH).join('') || '<div class="muted">아직 없어요.</div>';
     bg.querySelectorAll('[data-f]').forEach(el => el.onchange = () => { work[el.dataset.i][el.dataset.f] = el.value.trim(); if (el.dataset.f === 'role' && el.value === '회장') work[el.dataset.i].town = ''; draw(); });
@@ -6998,19 +6999,69 @@ function openSmsStaffEdit(){
   };
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.05rem;margin-bottom:6px;">👔 회장·사무장 연락처</div>
-    <div class="muted" style="font-size:.85rem;margin-bottom:4px;">회장은 전체, 사무장은 그 면을 고르면 들어가요. 연락처가 없는 분은 빠져요.</div>
+    <div class="muted" style="font-size:.85rem;margin-bottom:4px;">회장은 전체, 사무장은 그 면을 고르면 들어가요. 연락처가 없는 분은 빠져요.<br>엑셀로 한번에 넣을 수 있어요 (구분·이름·담당 면·전화번호·주소).</div>
     <div id="stf-rows"></div>
     <button type="button" class="secondary full" id="stf-add" style="margin:6px 0;">＋ 한 명 추가</button>
+    <div class="grid-2" style="margin:6px 0;"><button class="secondary" id="stf-xls">📂 엑셀로 한번에 넣기</button><button class="secondary" id="stf-tpl">📄 엑셀 양식 받기</button></div>
     <div class="grid-2" style="margin-top:8px;"><button class="secondary" id="stf-cancel">취소</button><button id="stf-save">저장</button></div></div>`;
   document.body.appendChild(bg);
-  bg.querySelector('#stf-add').onclick = () => { work.push({ role: '사무장', name: '', town: '진안읍', tel: '' }); draw(); };
+  bg.querySelector('#stf-add').onclick = () => { work.push({ role: '사무장', name: '', town: '진안읍', tel: '', addr: '' }); draw(); };
   bg.querySelector('#stf-cancel').onclick = () => bg.remove();
+  const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel'; fi.className = 'hidden'; bg.appendChild(fi);
+  fi.onchange = () => staffImport(fi, () => { bg.remove(); openSmsStaffEdit(); });
+  bg.querySelector('#stf-xls').onclick = () => fi.click();
+  bg.querySelector('#stf-tpl').onclick = () => staffTemplate();
   bg.querySelector('#stf-save').onclick = () => {
     const bad = work.find(x => x.tel && !/^[0-9-]{9,}$/.test(x.tel));
     if (bad) return notify('전화번호 칸을 다시 확인해 주세요.');
     smsStaff = work.filter(x => x.name || x.tel); saveSmsStaff(); logEvent('회장·사무장 연락처', null, `${smsStaff.map(x => x.role + ' ' + x.name + (x.town ? '(' + x.town + ')' : '')).join(', ') || '없음'}`); bg.remove();
   };
   draw();
+}
+function staffTemplate(){
+  if (typeof XLSX === 'undefined') return notify('엑셀 양식을 만드는 기능을 불러오지 못했습니다.\n인터넷 연결을 확인해 주세요.');
+  const ws = XLSX.utils.aoa_to_sheet([['구분', '이름', '담당 면', '전화번호', '주소'], ['회장', '예시 이름', '', '010-0000-0000', '진안군 OOO'], ['사무장', '예시 이름', '진안읍', '010-1234-5678', '진안군 OOO']]);
+  ws['!cols'] = [{ wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 30 }];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '회장·사무장'); XLSX.writeFile(wb, '회장_사무장_양식.xlsx');
+}
+// (v185) 엑셀 일괄 등록: 구분(회장/사무장)으로 짝 찾기 — 회장은 1명, 사무장은 같은 면 1명. 있으면 고치고 없으면 추가
+function staffImport(input, done){
+  const file = input.files && input.files[0]; if (!file) return;
+  if (typeof XLSX === 'undefined') { input.value = ''; return notify('엑셀을 읽는 기능을 불러오지 못했습니다.\n인터넷 연결을 확인해 주세요.'); }
+  const reader = new FileReader();
+  reader.onerror = () => notify('파일을 열 수 없습니다. 다시 시도해 주세요.');
+  reader.onload = e => {
+    input.value = '';
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+      const hi = rows.findIndex(r => r.some(c => /이름|성명/.test(String(c))));
+      if (hi < 0) return notify('"이름" 칸을 찾지 못했습니다.\n첫 줄에 이름(또는 성명) 제목이 있는지 확인해 주세요.');
+      const head = rows[hi].map(c => String(c).replace(/\s/g, ''));
+      const gi = head.findIndex(h => /구분|직책|직위|역할/.test(h)), ni = head.findIndex(h => /이름|성명/.test(h));
+      const ti = head.findIndex(h => /전화|연락|휴대|핸드폰/.test(h)), ai = head.findIndex(h => /주소/.test(h)), ti2 = head.findIndex(h => /담당|면/.test(h));
+      if (gi < 0) return notify('"구분" 칸을 찾지 못했습니다.\n회장 또는 사무장을 적는 제목(구분)을 넣어 주세요.');
+      let add = 0, upd = 0, bad = 0;
+      rows.slice(hi + 1).forEach(r => {
+        const nm = String(r[ni] || '').trim(), g = String(r[gi] || '').replace(/\s/g, '');
+        if (!nm && !String(r[ti] || '').trim()) return;
+        const role = /사무장/.test(g) ? '사무장' : /회장/.test(g) ? '회장' : '';
+        const town = role === '사무장' ? String((ti2 >= 0 ? r[ti2] : '') || '').trim() : '';
+        const raw = ti >= 0 ? String(r[ti] || '').trim() : '';
+        const tel = raw ? fmtPhone(raw) : '';
+        if (!role || (role === '사무장' && !STAFF_TOWNS.includes(town)) || !nm || (tel && !/^[0-9-]{9,}$/.test(tel))) { bad++; return; }
+        const addr = ai >= 0 ? String(r[ai] || '').trim() : '';
+        const hit = smsStaff.find(x => x.role === role && (role === '회장' || x.town === town));
+        if (hit) { hit.name = nm; if (tel) hit.tel = tel; if (addr) hit.addr = addr; if (role === '사무장') hit.town = town; upd++; }
+        else { smsStaff.push({ role, name: nm, town, tel, addr }); add++; }
+      });
+      if (!add && !upd) return notify('넣을 수 있는 분이 없습니다.\n구분(회장·사무장), 이름, 사무장은 담당 면을 확인해 주세요.');
+      saveSmsStaff(); logEvent('회장·사무장 연락처', null, `엑셀로 ${add}명 추가, ${upd}명 고침` + (bad ? ` (맞지 않은 ${bad}줄 건너뜀)` : ''));
+      notify(`추가 ${add}명, 고친 ${upd}명입니다.` + (bad ? `\n맞지 않은 ${bad}줄은 건너뛰었습니다.` : ''));
+      if (done) done();
+    } catch (err) { notify('엑셀 파일을 읽지 못했습니다. 양식을 확인해 주세요.'); }
+  };
+  reader.readAsArrayBuffer(file);
 }
 const EDU_ABS_DEF = '안녕하세요, 진안군 노인회입니다.\n{날짜} {교육} 관련하여 연락드립니다. 확인 부탁드립니다.\n진안군 노인회 드림';   // (v184) 교육 불참 문자 기본 글 (자리표시 {날짜}·{교육})
 const eduTimeOf = day => { const ts = new Set(); for (const arr of Object.values(eduAll)) (arr || []).forEach(e => { if (e.date === day) ts.add(timeLbl(e.time)); }); return [...ts].join(' · ') || timeLbl(null); };   // (v180) 교육 날짜의 시간
