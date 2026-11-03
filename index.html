@@ -412,7 +412,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-157</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-158</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -1570,9 +1570,9 @@ function renderWork(){
       const ds = personDays(x.p, mk), moved = new Set(x.cs.map(c => c.to)), un = unpaidDaysOf(x.p, mk);
       // 줄에는 이름·총 일수만, 자세한 날짜는 눌러서 펼쳐 보기
       // 이름을 누르면 점검 화면, 줄 나머지를 누르면 펼치기
-      return `<details class="pen-row warn" style="margin-top:4px;"><summary style="cursor:pointer;"><b onclick="event.preventDefault();event.stopPropagation();openModal(${x.p.id})" style="text-decoration:underline;color:#2b6cb0;">${nmH(x.p)}</b> <span class="muted">${esc(seniorOf(x.p))}</span> · <b>총 ${ds.length - un.size}일</b></summary>
+      return `<details class="pen-row warn" style="margin-top:4px;"><summary style="cursor:pointer;"><b onclick="event.preventDefault();event.stopPropagation();openModal(${x.p.id})" style="text-decoration:underline;color:#2b6cb0;">${nmH(x.p)}</b> <span class="muted">${esc(seniorOf(x.p))}</span> · <b>${[...x.cs].sort((a,b) => a.from.localeCompare(b.from)).map(c => `${Number(c.from.slice(8,10))} > ${c.to ? Number(c.to.slice(8,10)) : '빠짐'}${c.reason ? ` (${esc(c.reason)})` : ''}`).join(', ')}</b></summary>
         <div style="margin-top:6px;"><span style="font-size:.9rem;">${x.cs.sort((a,b) => a.from.localeCompare(b.from)).map(c => `${dd(c.from)} → <b style="color:${c.to ? 'var(--warning)' : 'var(--danger)'}">${c.to ? dd(c.to) : '빠짐'}</b>`).join(', ')}${[...new Set(x.cs.map(c => c.reason).filter(Boolean))].map(r => ` <span class="muted">(${esc(r)})</span>`).join('')}</span><br>
-        <span style="font-size:.85rem;">📅 ${ds.map(d => `<span style="${moved.has(d) ? 'color:var(--warning);font-weight:bold;' : un.has(d) ? 'color:var(--danger);text-decoration:line-through;' : ''}">${Number(d.slice(8,10))}</span>`).join(', ')}일</span></div></details>`;
+        <span style="font-size:.85rem;">총 ${ds.length - un.size}일 · 📅 ${ds.map(d => `<span style="${moved.has(d) ? 'color:var(--warning);font-weight:bold;' : un.has(d) ? 'color:var(--danger);text-decoration:line-through;' : ''}">${Number(d.slice(8,10))}</span>`).join(', ')}일</span></div></details>`;
     }).join('');
   }).join('') : (cus.length ? '' : '<div class="muted">변경한 어르신이 없습니다.</div>'));
 }
