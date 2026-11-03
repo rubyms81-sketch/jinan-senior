@@ -412,7 +412,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-155</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-156</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2041,6 +2041,15 @@ function renderCallAlert(){
         <span style="font-size:.9rem;">${esc(p.name)} 어르신 ${c.next}개월이 되었습니다. 약 타러 가실 때이니 안부 한번 물어봐 주세요.</span><br>${telBtn(p)}</button>
       <button class="done-btn" onclick="openCallMemo(${p.id},'due')">✔ 통화했어요</button></div>`; }).join('')}`);
   }
+  // (v156) 신규 어르신 조끼·명찰·활동일지 지급 대기 (사무장·회장 보관 여부 포함)
+  const kitList = kitNew().filter(p => kitMissing(p).length);
+  if (kitList.length) {
+    h += alertCard('kit', 'background:#fff8f0;border-color:#dd6b20;', `<div style="font-weight:bold;color:#c05621;">📦 조끼·명찰·활동일지 지급 대기 ${kitList.length}명</div>`, `
+    ${kitList.map(p => `<div class="call-row">
+      <button class="who" onclick="openKit(${p.id})"><b>${nmH(p)}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
+        <span style="font-size:.88rem;">${KIT_ITEMS.map(([k, l]) => `${l} ${kitLabel(p, k)}`).join(' · ')}</span></button>
+      <button class="done-btn" onclick="openKit(${p.id})">체크</button></div>`).join('')}`);
+  }
   if (all.length) {
     const next = all.filter(p => p.hospCall.due > td).sort((a,b) => a.hospCall.due.localeCompare(b.hospCall.due));
     h += alertCard('hosp', '', `<div style="font-weight:bold;color:#97266d;">${due.length ? `📞 오늘 안부 전화할 입원 어르신 ${due.length}명` : `🏥 입원 중인 어르신 ${all.length}명`}</div>`, `
@@ -2052,6 +2061,43 @@ function renderCallAlert(){
     ${next.length ? `<div class="muted" style="font-size:.85rem;margin-top:4px;">다음 안부 전화: ${next.map(p => `<a href="#" onclick="openModal(${p.id});return false;" style="color:inherit;">${nmH(p)} ${mdw(p.hospCall.due)}</a>`).join(', ')}</div>` : ''}`);
   }
   box.innerHTML = h; bindAlerts(box);
+}
+// (v156) 신규 지급 체크: 조끼·명찰·활동일지 — 아직 못 받음 / 나·사무장·회장 보관 중 / 어르신께 지급 완료
+const KIT_ITEMS = [['vest','🦺 조끼'],['badge','🪪 명찰'],['diary','📔 활동일지']];
+const KIT_BY = { me: '나 보관', sajang: '사무장 보관', hoe: '회장 보관' };
+const kitNew = () => participants.filter(p => (p.linking || p.linkDone) && !stats(p).quitNow);
+const kitMissing = p => KIT_ITEMS.filter(([k]) => p.kit?.[k]?.st !== 'given');
+const kitLabel = (p, k) => { const x = p.kit?.[k]; if (!x || !x.st || x.st === 'none') return '✗ 못 받음'; if (x.st === 'given') return `✔ ${x.date ? mdw(x.date) : ''} 지급`; return `📦 ${KIT_BY[x.by] || ''}`; };
+function openKit(id){
+  const p = participants.find(x => x.id === id); if (!p) return;
+  const rows = KIT_ITEMS.map(([k, l]) => { const x = p.kit?.[k] || {}; const st = x.st === 'given' ? 'given' : x.st === 'held' ? 'held:' + (x.by || 'me') : 'none';
+    return `<div style="border-bottom:1px solid #e2e8f0;padding:8px 0;"><b>${l}</b>
+      <select data-k="${k}" style="margin:4px 0;">${[['none','아직 못 받음'],['held:me','나 보관 중'],['held:sajang','사무장 보관 중'],['held:hoe','회장 보관 중'],['given','어르신께 지급 완료']].map(([v, t]) => `<option value="${v}" ${v === st ? 'selected' : ''}>${t}</option>`).join('')}</select>
+      <input type="date" data-d="${k}" value="${x.date || today()}" style="margin:4px 0 0;"></div>`; }).join('');
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = `<div class="dlg" style="max-height:92vh;overflow:auto;">
+    <div style="font-weight:bold;font-size:1.15rem;margin-bottom:6px;">📦 ${nmH(p)} 지급 체크</div>
+    <div class="muted" style="font-size:.85rem;margin-bottom:6px;">사무장·회장이 가져온 서류는 "보관 중"으로 고르고, 어르신께 주면 "지급 완료"로 바꿔 주세요.</div>
+    ${rows}
+    <div class="grid-2" style="margin-top:12px;"><button class="secondary" id="kt-cancel">취소</button><button id="kt-save">저장</button></div></div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('#kt-cancel').onclick = () => bg.remove();
+  bg.querySelector('#kt-save').onclick = () => {
+    const changes = [];
+    p.kit ||= {};
+    KIT_ITEMS.forEach(([k, l]) => {
+      const v = bg.querySelector(`select[data-k="${k}"]`).value, dt = bg.querySelector(`input[data-d="${k}"]`).value || today();
+      const old = kitLabel(p, k);
+      if (v === 'none') p.kit[k] = { st: 'none' };
+      else if (v === 'given') p.kit[k] = { st: 'given', date: dt };
+      else p.kit[k] = { st: 'held', by: v.split(':')[1] };
+      const nw = kitLabel(p, k);
+      if (old !== nw) changes.push(`${l.slice(2)} ${old} → ${nw}`);
+    });
+    if (changes.length) logEvent('지급 체크', p, changes.join(' / '));
+    bg.remove(); saveData(false); renderList();
+    if (!document.getElementById('modal').classList.contains('hidden') && current()?.id === id) renderModal();
+  };
 }
 // (v152) 통화 메모: 내용 · 병명(건강 정보) · 병원 · 약 주기 · 다음 안내 기간 (1~12개월, 기본 3개월 또는 약 주기)
 function openCallMemo(id, mode){
@@ -8384,6 +8430,11 @@ function exportExcel(){
     XLSX.utils.book_append_sheet(wb, qr.length ? XLSX.utils.json_to_sheet(qr) : XLSX.utils.aoa_to_sheet([['면별 배정 인원을 아직 넣지 않았습니다.']]), '면별 배정 인원'); }
   { const br = []; Object.entries(bizSnap).forEach(([k, v]) => (v.rows || []).forEach(r => br.push({ '사업': k, '올린 날': v.at, '읍면': r.town, '경로당': r.senior, '성명': r.name, '연락처': r.ph ? fmtPhone(r.ph) : '', '생년 앞 6자리': r.b6 || '', '주소': r.addr || '' })));
     XLSX.utils.book_append_sheet(wb, br.length ? XLSX.utils.json_to_sheet(br) : XLSX.utils.aoa_to_sheet([['사업별 명단을 아직 올리지 않았습니다.']]), '사업별 명단'); }
+  // (v156) 신규 지급 현황
+  const kRows = kitNew().flatMap(p => KIT_ITEMS.map(([k, l]) => { const x = p.kit?.[k] || {}; return { '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '항목':l.slice(2), '상태':kitLabel(p, k).replace(/^[✗✔📦] ?/, ''), '보관자':x.st === 'held' ? KIT_BY[x.by] : '', '지급일':x.st === 'given' ? (x.date || '') : '' }; }));
+  const wsK = kRows.length ? XLSX.utils.json_to_sheet(kRows) : XLSX.utils.aoa_to_sheet([['신규 인원이 없습니다.']]);
+  wsK['!cols'] = [{wch:8},{wch:12},{wch:10},{wch:10},{wch:14},{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, wsK, '지급·보관 현황');
   // (v152) 통화·건강 메모
   const cRows = participants.flatMap(p => (p.calls || []).map(c => ({ '읍면':p.town, '경로당':seniorOf(p), '성명':p.name, '통화일':c.date, '통화 내용':c.text || '', '병명':c.dx || '', '병원':c.hosp || '', '약 주기(개월)':c.cycle || '', '다음 안내(개월 뒤)':c.next, '안내 날짜':c.due })));
   const wsC = cRows.length ? XLSX.utils.json_to_sheet(cRows) : XLSX.utils.aoa_to_sheet([['통화 메모를 아직 쓰지 않았습니다.']]);
