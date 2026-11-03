@@ -412,7 +412,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-153</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-154</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -766,7 +766,6 @@ body.ord-hide .ord-btn { display: none !important; }
     <summary>✏️ 기본 정보 고치기</summary>
     <div class="grid-2" style="margin-top:10px;">
       <div><label>소속 면</label><select id="m-town"></select></div>
-      <div><label>성명</label><input type="text" id="m-name"></div>
     </div>
     <label>경로당 이름</label><div class="senior-combo"><input type="text" id="m-senior" class="senior-in" data-town="m-town" placeholder="예: 지사" autocomplete="off"><button type="button" class="combo-btn" data-for="m-senior" aria-label="경로당 목록">▼</button><div class="combo-list hidden"></div></div>
     <label>근무 시작 달 · 시작일</label><div class="grid-2"><select id="m-start" class="start-sel"></select><input type="date" id="m-startday" style="margin:0;"></div>
@@ -2907,6 +2906,7 @@ function openInfo(){
       <div class="grid-2"><button type="button" id="if-ph-cam" style="margin:0;">📸 사진 찍기</button><button type="button" class="warning" id="if-ph-file" style="margin:0;">🖼️ 사진 불러오기</button></div></div>`}
     <table class="info-tbl">
       <tr><th>경로당</th><td><b>${esc(p.town)} · ${esc(seniorOf(p))}</b>${z ? `<br><span class="muted">🗺 ${esc(z.name)}${L ? ` · 팀장 ${esc(L.name)}` : ''}</span>` : ''}</td></tr>
+      <tr><th>성명</th><td data-f="name"><b>${esc(p.name)}</b> <button type="button" class="ed-pen-btn" data-ed="name">✏️</button></td></tr>
       <tr><th>성별</th><td class="if-ed" data-f="sex">${p.sex ? esc(p.sex) : '-'} <span class="ed-pen">✏️</span></td></tr>
       <tr><th>생일</th><td class="if-ed" data-f="bday">${p.bday ? '🎂 ' + bdayText(p.bday) : '-'} <span class="ed-pen">✏️</span></td></tr>
       <tr><th>나이</th><td class="if-ed" data-f="age">${p.age ? esc(p.age)+'세' : '-'}${p.birth ? ` <span class="muted">(${p.birth}년생)</span>` : ''} <span class="ed-pen">✏️</span></td></tr>
@@ -2969,7 +2969,7 @@ function openInfo(){
   bg.querySelector('#if-map')?.addEventListener('click', () => openMap(p.address));
   const reInfo = () => { bg.remove(); openInfo(); };
   // ✏️ 정보 칸 바로 고치기: 성별·나이는 칸을 누르면, 연락처·주소는 ✏️를 누르면
-  const LBL = { sex: '성별', age: '나이', phone: '연락처', address: '주소', bday: '생일' };
+  const LBL = { name: '성명', sex: '성별', age: '나이', phone: '연락처', address: '주소', bday: '생일' };
   const putInfo = (f, nv, birth) => {
     const old = f === 'age' ? (p.age ? p.age + '세' : '') : f === 'bday' ? bdayText(p.bday) : (p[f] || ''), shown = f === 'age' ? (nv ? nv + '세' : '') : f === 'bday' ? bdayText(nv) : nv;
     if (old === shown && !(f === 'age' && (birth || null) !== (p.birth || null))) return reInfo();
@@ -2986,10 +2986,11 @@ function openInfo(){
       return;
     }
     const cur = f === 'age' ? ageShow(p.age, p.birth) : f === 'bday' ? bdayText(p.bday) : (p[f] || '');
-    td.innerHTML = `<div class="ed-box" style="display:flex;gap:6px;"><input type="${f === 'phone' ? 'tel' : 'text'}" ${f === 'address' ? '' : 'inputmode="numeric"'} class="${f === 'age' ? 'age-in' : f === 'phone' ? 'phone-in' : ''}" style="margin:0;" value="${esc(cur)}"><button type="button" class="small" style="margin:0;width:auto;white-space:nowrap;">저장</button></div>`;
+    td.innerHTML = `<div class="ed-box" style="display:flex;gap:6px;"><input type="${f === 'phone' ? 'tel' : 'text'}" ${f === 'address' || f === 'name' ? '' : 'inputmode="numeric"'} class="${f === 'age' ? 'age-in' : f === 'phone' ? 'phone-in' : ''}" style="margin:0;" value="${esc(cur)}"><button type="button" class="small" style="margin:0;width:auto;white-space:nowrap;">저장</button></div>`;
     const inp = td.querySelector('input'), go = () => {
       const v = inp.value.trim();
       if (f === 'age') { const ag = parseAge(v); if (ag.bad) return notify(AGE_BAD); return putInfo('age', ag.age, ag.birth); }
+      if (f === 'name') { if (!v) return notify('성명은 비워 둘 수 없습니다.'); return putInfo('name', v); }
       if (f === 'bday') { const b = parseBday(v); if (b.bad) return notify('생일을 다시 확인해 주세요.\n예: 3/15, 0315, 3월 15일'); return putInfo('bday', b.md); }
       putInfo(f, f === 'phone' ? fmtPhone(v) : v);
     };
@@ -6065,7 +6066,6 @@ function openModal(id){
   const p = participants.find(x => x.id===id); if(!p) return;
   document.getElementById('edit-id').value = p.id;
   document.getElementById('m-town').value = p.town;
-  document.getElementById('m-name').value = p.name;
   document.getElementById('m-link').checked = !!p.linking;
   document.getElementById('m-start').value = p.start && Number(p.start.slice(0,4)) === viewYear() ? String(Number(p.start.slice(5,7))) : '1';
   syncStartDay('m-start'); if (p.startDay && p.start && p.startDay.startsWith(p.start)) document.getElementById('m-startday').value = p.startDay;
@@ -7206,7 +7206,6 @@ async function deleteLog(logId){
 
 function saveInfo(){
   const p = current(); const g = id => document.getElementById(id).value.trim();
-  if (!g('m-name')) return notify('성명은 비워 둘 수 없습니다.');
   const ag = { age: p.age, birth: p.birth };   // 나이·성별·연락처·주소는 정보 표에서 고침
   if (startVal('m-start') && !startDayVal('m-start')) return notify('근무 시작 달을 골랐어요. 시작일(며칠부터)도 골라 주세요.');
   const lk = document.getElementById('m-link').checked;
@@ -7215,7 +7214,7 @@ function saveInfo(){
   const ns = startVal('m-start'), os = p.start && Number(p.start.slice(0,4)) === viewYear() ? p.start : '';
   const nsDay = startDayVal('m-start');
   if (ns !== os || (ns && nsDay !== (p.startDay || ''))) { logEvent('정보 수정', p, `근무 시작: ${os ? Number(os.slice(5))+'월' : '처음부터'} → ${ns ? Number(ns.slice(5))+'월 '+Number(nsDay.slice(8))+'일' : '처음부터'}`); if (ns) { p.start = ns; p.startDay = nsDay; } else { delete p.start; delete p.startDay; } }
-  const NEWV = { town:g('m-town'), name:g('m-name'), sex:p.sex, age:p.age, senior:normSenior(g('m-town'), g('m-senior')), phone:p.phone, address:p.address };
+  const NEWV = { town:g('m-town'), name:p.name, sex:p.sex, age:p.age, senior:normSenior(g('m-town'), g('m-senior')), phone:p.phone, address:p.address };
   const LB = { town:'읍면', name:'성명', sex:'성별', age:'나이', senior:'경로당', phone:'연락처', address:'주소' };
   const diff = Object.keys(NEWV).filter(k => String(p[k]||'') !== NEWV[k]).map(k => `${LB[k]}: ${p[k]||'(없음)'} → ${NEWV[k]||'(없음)'}`);
   if (diff.length) logEvent('정보 수정', p, diff.join(' / '));
