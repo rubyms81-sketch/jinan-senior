@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-164</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-165</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2752,7 +2752,7 @@ function openZone(id){
       const p = participants.find(x => x.id === z.leaderId);
       logEvent('구역 팀장 해제', p || null, z.name); delete z.leaderId; saveZones(); drawMain(); renderZones();
     });
-    $('#zn-leader').innerHTML = (() => { const L = participants.find(x => x.id === z.leaderId); return L ? `👤 팀장: <b>${esc(L.name)}</b> <span class="muted">(${esc(L.town)} · ${esc(seniorOf(L))})</span>` : ''; })();
+    $('#zn-leader').innerHTML = (() => { const L = participants.find(x => x.id === z.leaderId); return L ? `👤 팀장: <b>${esc(L.name)}</b> <span class="muted">(본인 경로당: ${esc(L.town)} · ${esc(seniorOf(L))})</span>` : ''; })();
     bg.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
       const [town, senior] = b.dataset.del.split('|');
       if (!await ask(`${town} ${senior} 경로당을 ${z.name}에서 뺄까요?`)) return;
