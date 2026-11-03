@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-196</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-197</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2466,9 +2466,12 @@ function zoneTownLines(z){
 }
 // 구역 안 경로당을 면별로: "동향면 10곳·15명" (면이 여럿이면 " / "로 이어 붙임)
 function zoneTownText(z){
+  // 면마다 한 줄: "동향면 17곳 · 28명", 게이트가 있으면 밑 줄 "게이트 1곳 · 1명"
   const by = {};
-  z.sites.forEach(x => { const t = (by[x.town] ||= { s: 0, g: 0, n: 0 }); x.senior.includes('게이트볼') ? t.g++ : t.s++; t.n += siteMembers(x.town, x.senior).filter(counted).length; });
-  return TOWNS.filter(t => by[t]).sort((a, b) => by[b].s - by[a].s).map(t => `<div>${t} ${by[t].s}곳${by[t].g ? `·게이트 ${by[t].g}곳` : ''}·${by[t].n}명</div>`).join('') || '<div>경로당 0곳</div>';
+  z.sites.forEach(x => { const t = (by[x.town] ||= { s: 0, g: 0, sp: 0, gp: 0 }); const n = siteMembers(x.town, x.senior).filter(counted).length;
+    if (x.senior.includes('게이트볼')) { t.g++; t.gp += n; } else { t.s++; t.sp += n; } });
+  return TOWNS.filter(t => by[t]).sort((a, b) => by[b].s - by[a].s).map(t => { const b = by[t];
+    return `<div>${t} ${b.s}곳 · ${b.sp}명</div>` + (b.g ? `<div style="padding-left:12px;">게이트 ${b.g}곳 · ${b.gp}명</div>` : ''); }).join('') || '<div>경로당 0곳</div>';
 }
 // 구역 수: 기본 4개, ＋/－로 1~6개
 const ZONE_MIN = 1, ZONE_MAX = Infinity;   // 구역은 계속 늘릴 수 있음
