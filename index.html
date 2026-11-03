@@ -416,7 +416,7 @@ body.ord-hide .ord-btn { display: none !important; }
 </head>
 <body>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-170</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.03-171</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -5518,7 +5518,8 @@ function bulkImport(input){
       const matched = new Set(), same = [], updated = [], unquit = [], fileTowns = new Set(), notFound = [];
       const bizRows = [];
       // (v170) 중도포기 후 다시 신청한 분: 같은 이름의 "중도포기" 줄(종료일 있음)과 그 뒤 "참여" 줄을 짝지음
-      const reEnters = [];
+      const reEnters = [], quitIn = [], quitDone = [];
+      const reNames = new Set();
       const rawCell = (r, f) => col[f] >= 0 ? String(r[col[f]] ?? '').trim() : '';
       const reent = new Map();
       grid.slice(hRow+1).forEach(r => {
@@ -5530,6 +5531,7 @@ function bulkImport(input){
           if (rawCell(r2, 'name') !== nm || !rawCell(r2, 'state').includes('참여')) return;
           const rs = parseStartDay(rawCell(r2, 'start'));
           if (!rs || rs <= qEnd) return;
+          reNames.add(nm);
           reent.set(nm + '|' + rs, { name: nm, origStart: qStart, quitDay: qEnd, why: rawCell(r, 'reason'), restart: rs, memo: '중도포기 후 재신청, 활동 중' });
         });
       });
@@ -5541,7 +5543,10 @@ function bulkImport(input){
         // (v170) 재신청 짝이 있는 분의 옛 "중도포기" 줄은 건너뜀 (재신청 기록으로 남김)
         if (state.includes('중도포기') && [...reent.values()].some(v => v.name === name)) return;
         const rk = reent.get(name + '|' + parseStartDay(get('start')));
-        if (state && !state.includes('참여')) { notActive.push(`${name} (${state})`); return; }
+        if (state && !state.includes('참여')) {
+          // (v171) 파일에서 중도포기로 나온 분: 앱 목록과 맞춰 중도포기로 바꿈 (뺄까요 목록에는 안 뜸)
+          if (state.includes('중도포기') && !reNames.has(name)) { quitIn.push({ name, end: parseStartDay(get('end')), why: get('reason'), ph: digits(get('phone')), address: get('address'), town: normTown(get('town')) || normTown(get('address')) }); return; }
+          notActive.push(`${name} (${state})`); return; }
         const bd = parseBday(get('bday')), bday = bd.md || '';
         const ag = parseAge(get('age') || (bd.year ? String(bd.year) : '')), age = ag.age, birth = ag.birth, sex = normSex(get('sex'));
         const phone = get('phone') ? fmtPhone(get('phone')) : '', address = get('address');
@@ -5579,6 +5584,15 @@ function bulkImport(input){
         if (isDup(added, name, senior, phone)) { dup.push(name); return; }
         const np = { id: Date.now() + (seq++), town, senior, name, ...(sex ? { sex } : {}), ...(bday ? { bday } : {}), age, ...(birth ? { birth } : {}), phone, address, ...(sdLater ? { start: sd.slice(0,7), startDay: sd } : {}), quit:false, logs:[] }; added.push(np); if (rk) reEnters.push([np, rk]);
       });
+      // (v171) 파일에서 중도포기로 나온 분을 앱 목록과 맞춤 → 중도포기로 바꿈 (추가 정보만 넣기에서는 안 바꿈)
+      if (bulkMode !== 'fill') quitIn.forEach(q => {
+        if (!q.end || reNames.has(q.name)) return;
+        let ex = participants.find(p => !matched.has(p.id) && p.name === q.name && ((q.ph && digits(p.phone) === q.ph) || (q.address && p.address === q.address)));
+        if (!ex) { const c = participants.filter(p => !matched.has(p.id) && p.name === q.name && (!q.town || p.town === q.town)); if (c.length === 1) ex = c[0]; }
+        if (!ex) return;
+        matched.add(ex.id);
+        if (!ex.quit) quitDone.push([ex, q]);
+      });
       // 새 명단에 없는 분 (파일에 들어 있는 면만 비교)
       // 사업별 파일은 다른 사업 분을 빼지 않음 (빠진 분은 🏷 사업 확인에서만 알려 줌)
       const gone = (bulkMode === 'fill' || pick) ? [] : participants.filter(p => fileTowns.has(p.town) && !matched.has(p.id));
@@ -5598,6 +5612,7 @@ function bulkImport(input){
       if (nGuess) msg += `\n\n📍 주소를 보고 경로당을 넣은 분: ${nGuess}명 (앱에 "추정"으로 표시)`;
       if (added.some(p => !p.senior)) msg += `\n※ 경로당을 찾지 못한 분: ${added.filter(p=>!p.senior).length}명`;
       if (unquit.length) msg += `\n\n🔁 다시 참여하시는 분(중도포기 풀림): ${list(unquit.map(p=>p.name))}`;
+      if (quitDone.length) msg += `\n\n🚪 파일에서 중도포기로 나온 분 ${quitDone.length}명: ${list(quitDone.map(([p]) => p.name))}\n(앱에서 중도포기로 바꿈, 날짜는 파일의 참여종료일)`;
       if (reEnters.length) msg += `\n\n🔁 중도포기 후 다시 신청한 분 ${reEnters.length}명: ${list(reEnters.map(([p]) => p.name))}\n(활동 중으로 바꾸고 재신청 기록을 남김. 그만둔 기간은 모자란 날로 셈)`;
       const exIn = [...same, ...updated.map(u => u[0])].filter(p => p.exclude && p.exclude.year >= new Date().getFullYear());
       if (exIn.length) msg += `\n\n🚫 참여 제외 대상으로 표시했는데 새 명단에 있는 분: ${list(exIn.map(p => `${p.name}(${p.exclude.reason||'제외'})`))}`;
@@ -5606,7 +5621,7 @@ function bulkImport(input){
       if (notActive.length) msg += `\n\n참여 중이 아니어서 건너뜀 ${notActive.length}명: ${list(notActive)}`;
       if (noTown.length) msg += `\n\n읍·면을 알 수 없어 건너뜀 ${noTown.length}명: ${list(noTown)}\n(위에서 담당 면을 고른 뒤 다시 넣으면 그 면으로 등록됩니다)`;
       if (bz) msg += bz.msg;
-      if (!added.length && !updated.length && !gone.length && !unquit.length && !reEnters.length) { if (bz) saveBizCheck(pick, bz); return notify(msg + '\n\n바뀐 내용이 없습니다.'); }
+      if (!added.length && !updated.length && !gone.length && !unquit.length && !reEnters.length && !quitDone.length) { if (bz) saveBizCheck(pick, bz); return notify(msg + '\n\n바뀐 내용이 없습니다.'); }
       if (!await ask(msg + '\n\n이대로 정리할까요?')) return;
       if (bz) saveBizCheck(pick, bz);
 
@@ -5616,6 +5631,10 @@ function bulkImport(input){
         logEvent('정보 수정', p, ch.map(([k, v, label]) => `${label}: ${p[k]||'(없음)'} → ${v}`).join(' / ') + (bulkMode === 'fill' ? ' (엑셀 추가 정보)' : ' (엑셀 명단)'));
         ch.forEach(([k, v]) => p[k] = v); if (ch.some(c => c[0]==='senior')) delete p.guess; });
       unquit.forEach(p => { p.quit = false; logEvent('중도포기 해제', p, '새 명단에 참여로 있음'); });
+      quitDone.forEach(([p, q]) => {
+        p.quit = true; p.quitYear = Number(q.end.slice(0, 4)); p.quitDay = q.end; p.quitWhy = q.why || '전산 명단 중도포기';
+        logEvent('중도포기', p, `${mdK(q.end)} 중도포기${q.why ? ' (' + q.why + ')' : ''} · 전산 명단 기준`, q.end);
+      });
       reEnters.forEach(([p, rk]) => {
         p.reenter = { quitDay: rk.quitDay, why: rk.why, restart: rk.restart, memo: rk.memo };
         p.quit = false;
