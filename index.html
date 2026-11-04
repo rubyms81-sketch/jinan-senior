@@ -664,7 +664,6 @@ body.ord-hide .ord-btn { display: none !important; }
     </details>
   </div>
   <div class="card" id="bk-card" data-mv="bk">
-    <div id="cloud-bar" style="font-size:.85rem;color:#2c5282;margin-bottom:8px;"></div>
     <details class="chg-box" id="bk-box" style="margin-top:0;border-top:none;padding-top:0;">
       <summary><h3>💾 백업</h3><span class="chg-arrow"></span></summary>
       <div id="stor-use" onclick="drawStorage()" style="font-size:.85rem;color:#4a5568;margin-top:8px;cursor:pointer;">📊 저장 공간 확인 (누르세요)</div>
@@ -677,6 +676,12 @@ body.ord-hide .ord-btn { display: none !important; }
           <button class="secondary full" id="bk-every-btn" onclick="setBkEvery()">🔔 백업 알림</button>
           <div id="bk-snap"></div>
       </div>
+    </details>
+  </div>
+  <div class="card" id="gg-card" data-mv="gg" style="display:none;">
+    <details class="chg-box" open style="margin-top:0;border-top:none;padding-top:0;">
+      <summary><div class="mv-t" style="flex:1;font-weight:bold;">☁️ 구글 연결</div><span class="chg-arrow"></span></summary>
+      <div id="cloud-bar" style="font-size:.85rem;color:#2c5282;margin-top:8px;"></div>
     </details>
   </div>
   </div>
@@ -931,6 +936,8 @@ function gateShow(on, msg){
 }
 function cloudBar(u){
   const b = document.getElementById('cloud-bar');
+  const gc = document.getElementById('gg-card');
+  if (gc) gc.style.display = u ? '' : 'none';
   if (!b) return;
   b.textContent = '';
   if (!u) return;
@@ -939,7 +946,7 @@ function cloudBar(u){
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.textContent = '로그아웃';
-  btn.style.cssText = 'margin-left:8px;padding:3px 10px;border-radius:6px;border:1px solid #a0aec0;background:#fff;font-size:.8rem;';
+  btn.style.cssText = 'display:block;margin:8px 0 0;padding:4px 12px;border-radius:6px;border:1px solid #a0aec0;background:#fff;font-size:.85rem;';
   btn.onclick = cloudLogout;
   b.appendChild(s); b.appendChild(btn);
 }
@@ -8991,9 +8998,9 @@ document.getElementById('st-from').value = '1'; document.getElementById('st-to')
 document.getElementById('nq-from').value = monthKey() + '-01'; document.getElementById('nq-to').value = today();
 // 태어난 해를 적어 둔 분은 해가 바뀌면 나이도 저절로 바뀜
 // ---------- 🧩 화면 배치: 칸 제목을 꾹 눌러 옮기기·겹쳐서 묶기·이름 바꾸기 (이 휴대폰에만 저장, jinan_layout) ----------
-const MV_BASE = { chg: '🔄 근무일 변경', wd: '📅 활동일', zone: '🗺 구역', moim: '👥 모임 명단', edu: '🎓 교육 출석', count: '👥 인원 세기', search: '🔍 이름 찾기', board: '⚠️ 감점 현황', diary: '📝 활동일지', tools: '➕ 신규등록', stats: '📊 통계', ui: '🛠️ 설정', me: '👤 현장 점검자 정보', bk: '💾 백업' };
+const MV_BASE = { chg: '🔄 근무일 변경', wd: '📅 활동일', zone: '🗺 구역', moim: '👥 모임 명단', edu: '🎓 교육 출석', count: '👥 인원 세기', search: '🔍 이름 찾기', board: '⚠️ 감점 현황', diary: '📝 활동일지', tools: '➕ 신규등록', stats: '📊 통계', ui: '🛠️ 설정', me: '👤 현장 점검자 정보', bk: '💾 백업', gg: '☁️ 구글 연결' };
 const MV_IDS = Object.keys(MV_BASE);
-const MV_DEF = { order: ['chg','wd','zone','search','diary','tools','g:edu','g:stat','g:set'], groups: { edu: { name: '교육 출석', items: ['count','edu','moim'] }, stat: { name: '통계', items: ['stats','board'] }, set: { name: '설정', items: ['ui','me','bk'] } }, names: {} };
+const MV_DEF = { order: ['chg','wd','zone','search','diary','tools','g:edu','g:stat','g:set'], groups: { edu: { name: '교육 출석', items: ['count','edu','moim'] }, stat: { name: '통계', items: ['stats','board'] }, set: { name: '설정', items: ['ui','me','bk','gg'] } }, names: {} };
 let mvL = (() => { try { return JSON.parse(localStorage.getItem('jinan_layout')) || null; } catch(e) { return null; } })();
 function mvFix(){
   // 잘못되거나 새로 생긴 칸도 빠짐없이
