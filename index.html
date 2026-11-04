@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-216</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-217</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -1613,9 +1613,19 @@ function eduStatus(p, y){
   const done = (p.eduDone || []).filter(d => d.date >= from && d.date <= to);
   done.forEach(d => { by[d.kind] = (by[d.kind] || 0) + d.h; total += d.h; });
   const missH = missed.reduce((n, e) => n + eduH(e), 0), missSafe = missed.reduce((n, e) => n + (eduCats(e).안전 || 0), 0);
-  const ok = by.안전 >= EDU_NEED.safe && total >= EDU_NEED.total;
-  return { by, safe: by.안전, total, list, missed, missH, missSafe, lackSafe: Math.max(0, EDU_NEED.safe - by.안전), lackTotal: Math.max(0, EDU_NEED.total - total), ok,
+  // (v217) 활동 교육(소양+직무) 6시간 이상 따로 확인. 중도포기로 참여 기간이 3개월 이하면 안전 6·활동 4시간으로 줄임(예외 기준)
+  const short = shortTermOf(p), act = (by.소양 || 0) + (by.직무 || 0), needAct = short ? 4 : 6;
+  const ok = short ? (by.안전 >= 6 && act >= 4) : (by.안전 >= EDU_NEED.safe && total >= EDU_NEED.total && act >= 6);
+  return { by, safe: by.안전, total, act, needAct, short, list, missed, missH, missSafe, lackSafe: Math.max(0, EDU_NEED.safe - by.안전), lackAct: Math.max(0, needAct - act), lackTotal: short ? 0 : Math.max(0, EDU_NEED.total - total), ok,
     flag: (missed.length > 0 || done.length > 0) && !ok };   // 표시는 교육에 빠진 분 + 이수 파일로 확인된 부족한 분 (보충해서 채우면 사라짐)
+}
+// (v217) 참여 기간 3개월 이하인 분(시작일부터 3개월 안에 중도포기) → 짧은 기준 적용
+function shortTermOf(p){
+  const st = p.startDay || (p.start ? p.start + '-01' : ''), qd = quitDayOf(p);
+  if (!st || !qd) return false;
+  const [y, m, d] = st.split('-').map(Number), lim = new Date(y, m - 1 + 3, d);
+  const limS = `${lim.getFullYear()}-${String(lim.getMonth() + 1).padStart(2, '0')}-${String(lim.getDate()).padStart(2, '0')}`;
+  return qd <= limS;
 }
 const eduTag = p => { if (p.linking || p.quit) return ''; const s = eduStatus(p); if (!s.flag || !s.missed.length) return '';
   return `<span class="tag-edu" title="교육 불참 ${s.missH}시간">📚불참${s.missSafe ? ` 안전${s.missSafe}h` : ` ${s.missH}h`}</span>`; };
@@ -8322,7 +8332,7 @@ function showEduLack(){
       return `<button type="button" class="pen-row" data-go="${i}" style="background:#fff;border-left-color:${COL[i % 6]};margin-top:4px;font-size:1.05rem;"><b>📍 ${esc(t.replace(/[읍면]$/, ''))} - ${rs.length}명</b> <span class="arrow">›</span></button>
       <div id="el-g${i}" class="sg-list hidden" style="margin:2px 0 8px 10px;">${rs.map((r, k) => `<button type="button" class="pen-row" data-id="${r.p.id}" style="background:#fff;border-left-color:${r.s.lackSafe ? 'var(--danger)' : '#3182ce'};margin-top:4px;">
         <b>${k + 1}. ${nmH(r.p)}</b> <span class="muted">🏠 ${esc(seniorOf(r.p))}</span><br>
-        <span style="font-size:.88rem;">${r.s.missed.length ? `불참 ${r.s.missed.map(e => `${Number(e.date.slice(5,7))}/${Number(e.date.slice(8,10))} ${esc(e.name)} ${eduH(e)}h`).join(', ')}<br>` : ''}<b style="color:${r.s.lackSafe ? 'var(--danger)' : 'inherit'}">안전 ${r.s.safe}/${EDU_NEED.safe}시간</b> · 전체 ${r.s.total}/${EDU_NEED.total}시간</span> <span class="arrow">›</span></button>`).join('')}</div>`; }).join('')
+        <span style="font-size:.88rem;">${r.s.missed.length ? `불참 ${r.s.missed.map(e => `${Number(e.date.slice(5,7))}/${Number(e.date.slice(8,10))} ${esc(e.name)} ${eduH(e)}h`).join(', ')}<br>` : ''}<b style="color:${r.s.lackSafe ? 'var(--danger)' : 'inherit'}">안전 ${r.s.safe}/${EDU_NEED.safe}시간</b> · 소양·직무 ${r.s.act}/${r.s.needAct}시간 · ${r.s.short ? '3개월 이하 기준' : `전체 ${r.s.total}/${EDU_NEED.total}시간`}</span> <span class="arrow">›</span></button>`).join('')}</div>`; }).join('')
       : '<div class="pen-none">교육에 빠진 어르신이 없어요.</div>'}
     <button class="secondary full" id="el-close" style="margin-top:10px;">닫기</button></div>`;
   document.body.appendChild(back);
@@ -8335,10 +8345,10 @@ function eduSheet(all){
   const rows = eduRows(all), y = viewYear();
   const ws = XLSX.utils.aoa_to_sheet([[`${y}년 교육 시간 (1월~${EDU_NEED.toMonth}월, 오늘까지) · 안전교육 ${EDU_NEED.safe}시간 이상 + 전체 ${EDU_NEED.total}시간 이상 · ${all ? '전체' : '불참'} ${rows.length}명`]]);
   const data = rows.map((r, i) => ({ '번호': i + 1, '읍면': r.p.town, '경로당': seniorOf(r.p), '성명': r.p.name, '나이': r.p.age || '', '안전교육(시간)': r.s.by.안전, '소양교육': r.s.by.소양, '직무교육': r.s.by.직무, '기타교육': r.s.by.기타,
-    '합계(시간)': r.s.total, '불참': r.s.missed.map(e => `${Number(e.date.slice(5,7))}/${Number(e.date.slice(8,10))} ${e.name} ${eduH(e)}h`).join(', '), '불참 시간': r.s.missH || '', '안전 부족': r.s.lackSafe || '', '전체 부족': r.s.lackTotal || '', '상태': r.s.ok ? '충족' : r.s.flag ? (r.s.lackSafe ? '불참 · 안전교육 부족' : '불참 · 전체 시간 부족') : '부족(교육 일정 남음)',
+    '합계(시간)': r.s.total, '불참': r.s.missed.map(e => `${Number(e.date.slice(5,7))}/${Number(e.date.slice(8,10))} ${e.name} ${eduH(e)}h`).join(', '), '불참 시간': r.s.missH || '', '안전 부족': r.s.lackSafe || '', '전체 부족': r.s.lackTotal || '', '활동 부족': r.s.lackAct || '', '상태': r.s.ok ? '충족' : r.s.flag ? (r.s.lackSafe ? '불참 · 안전교육 부족' : '불참 · 전체 시간 부족') : '부족(교육 일정 남음)',
     '받은 교육': r.s.list.map(e => `${Number(e.date.slice(5,7))}/${Number(e.date.slice(8,10))} ${e.name} ${eduH(e)}h`).join(', ') }));
   if (data.length) XLSX.utils.sheet_add_json(ws, data, { origin: 'A3' }); else XLSX.utils.sheet_add_aoa(ws, [['교육에 빠진 어르신이 없습니다.']], { origin: 'A3' });
-  ws['!cols'] = [6,8,12,9,6,10,8,8,8,9,30,8,8,8,16,60].map(w => ({ wch: w }));
+  ws['!cols'] = [6,8,12,9,6,10,8,8,8,9,30,8,8,8,8,16,60].map(w => ({ wch: w }));
   return { ws, rows };
 }
 function exportEduLack(){
