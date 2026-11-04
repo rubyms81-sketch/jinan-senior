@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-206</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-207</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2799,7 +2799,7 @@ function openZone(id){
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.15rem;margin-bottom:8px;" id="zn-title"></div>
     <input type="hidden" id="zn-phone">
-    <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px;"><button type="button" class="small" id="zn-call" style="width:auto;margin:0;white-space:nowrap;">📞 전화</button><button type="button" class="small" id="zn-lead-ed" style="width:auto;margin:0;white-space:nowrap;background:#276749;">👤 팀장 정보</button></div>
+    <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px;"><button type="button" class="small" id="zn-call" style="width:auto;margin:0;white-space:nowrap;">📞 전화</button><button type="button" class="small" id="zn-lead-ed" style="width:auto;margin:0;white-space:nowrap;background:#276749;">👤 팀장 정보</button><button type="button" class="small" id="zn-reset" style="width:auto;margin:0;white-space:nowrap;background:#718096;">↩ 리셋</button></div>
     <div id="zn-main">
       <div id="zn-visit-box" style="background:#fffaf0;border:1px solid #fbd38d;border-radius:10px;padding:8px 10px;margin-bottom:10px;">
         <div style="margin-bottom:6px;"><b>📋 점검 현황</b></div>
@@ -2817,7 +2817,6 @@ function openZone(id){
       </details>
       <button type="button" class="secondary full" id="zn-course" data-zk="course" style="margin:0 0 10px;">📥 모니터링 코스표 내려받기 (엑셀)</button>
       <div data-zk-end="1"></div>
-        <button type="button" class="secondary full" id="zn-reset" style="margin-top:8px;">↩ 이 구역 리셋 (경로당 배정·팀장 이름 지우기)</button>
         </div>
       </details>
     </div>
@@ -2827,7 +2826,7 @@ function openZone(id){
       <div id="zn-list"></div>
       <div class="grid-2" style="margin-top:8px;"><button type="button" class="secondary" id="zn-pick-back">◀ 돌아가기</button><button type="button" id="zn-pick-save">선택 저장</button></div>
     </div>
-    <button type="button" class="secondary full" id="zn-close" style="margin-top:8px;">닫기</button></div>`;
+    </div>`;
   document.body.appendChild(bg);
   const $ = q => bg.querySelector(q);
   if ($('#zn-name')) $('#zn-name').value = z.name; $('#zn-phone').value = z.phone || '';
@@ -3044,7 +3043,7 @@ function openZone(id){
   $('#zn-call').onclick = e => { const d = ($('#zn-phone').value || '').replace(/[^0-9]/g, ''); if (!d) { e.preventDefault(); notify('팀장 정보에서 전화번호를 먼저 넣어 주세요.'); return; } location.href = 'tel:' + d; };
   $('#zn-name')?.addEventListener('change', saveZoneInfo);
   $('#zn-name')?.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); e.target.blur(); } });
-  $('#zn-close').onclick = () => { saveZoneInfo(); bg.remove(); };
+  bg.addEventListener('click', e => { if (e.target === bg) saveZoneInfo(); });
   $('#zn-manage').open = !!openMem['zn-manage'];
   zmEdit = false; applyZMenu(); drawZMenuEdit();
   $('#zn-order-btn').onclick = () => zmToggle(z);
