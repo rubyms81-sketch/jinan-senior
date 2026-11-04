@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-201</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-202</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2597,7 +2597,7 @@ async function delNote(id){
 }
 // ---------- 🗺 구역 (팀장별 담당 경로당) ----------
 // zones = [{ id, name, sites:[{town, senior}] }]  — 구역 이름은 바꿀 수 있음(예: 김○○ 팀장)
-let zones = (() => { try { const v = JSON.parse(load('jinan_zones')); if (Array.isArray(v) && v.length) return v; } catch(e) {}
+let zones = (() => { try { const v = JSON.parse(load('jinan_zones')); if (Array.isArray(v) && v.length) return v.filter(z => !z.special); } catch(e) {}
   return [1,2,3,4].map(i => ({ id: i, name: `${i}구역`, sites: [] })); })();
 const saveZones = () => store('jinan_zones', JSON.stringify(zones));
 // 👤 팀장(시니어 안전 모니터링) 명단: 11개 읍·면 모두 (엑셀로 등록·수정) [{ id, town, name, phone, addr, car, carNo, sites:[{town, senior}] }]
@@ -2607,15 +2607,6 @@ const monitorOfSite = (town, senior) => monitors.find(m => m.sites?.some(x => x.
 const siteKey = (town, senior) => town + '|' + senior;
 const zoneOfSite = (town, senior) => zones.find(z => z.sites.some(x => x.town===town && x.senior===senior)) || null;
 const zoneOf = p => zoneOfSite(p.town, seniorOf(p));
-// (v188) 👔 특별 구역: 구역 목록에 한 줄로 넣고, 경로당은 사업(맥가이버·안전 모니터링)으로 자동으로 묶음 (경로당 칸은 비워 둠)
-const SPEC_CATS = ['시니어 맥가이버', '시니어 안전 모니터링'];
-const specKindOf = k => { const raw = String(k || '').trim(); const sv = (xCat[raw] && SITE_CATS.find(c => c.k === xCat[raw])) || SITE_CATS.find(c => c.k !== '경로당지킴이' && c.m.test(raw)) || SITE_CATS[SITE_CATS.length - 1]; return sv.k; };
-function ensureSpecZone(){
-  if (zones.some(z => z.special)) return;
-  const id = Math.max(0, ...zones.map(z => z.id)) + 1;
-  zones.push({ id, name: '👔 특별 구역', sites: [], special: true }); saveZones();
-  logEvent('구역 늘리기', null, '👔 특별 구역 추가 (회장·사무장·맥가이버·안전 모니터링)');
-}
 // 구역의 면: 고른 면(z.town) → 없으면 들어 있는 경로당의 면
 const zoneTown = z => z.town || z.sites[0]?.town || null;
 // 👤 팀장 고르기: 고른 면의 팀장만 보여 줌 (면 고르기는 따로 위에 둠)
@@ -2655,7 +2646,7 @@ async function zoneCount(d){
     zones.push(z); logEvent('구역 늘리기', null, `${z.name} 추가 (모두 ${zones.length}개)`);
   } else {
     if (zones.length <= ZONE_MIN) return notify(`구역은 ${ZONE_MIN}개보다 줄일 수 없어요.`);
-    const ix = zones.map(z => !z.special).lastIndexOf(true); if (ix < 0) return notify('지울 구역이 없어요.');
+    const ix = zones.length - 1; if (ix < 0) return notify('지울 구역이 없어요.');
     const z = zones[ix];
     if (!await ask(`맨 끝 "${z.name}"을(를) 없앨까요?${z.sites.length ? `\n들어 있던 경로당 ${z.sites.length}곳은 구역이 없어져요.\n(어르신 명단은 그대로예요)` : ''}`)) return;
     zones.splice(ix, 1); logEvent('구역 줄이기', null, `${z.name} 삭제${z.sites.length ? ` (경로당 ${z.sites.length}곳: ${z.sites.map(x => x.senior).join(', ')})` : ''} (모두 ${zones.length}개)`);
@@ -2682,7 +2673,6 @@ function townAllHtml(){
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 6px;">${c.ss.map(x => `<span style="padding:2px 7px;border-radius:10px;font-size:.78rem;background:${x.gate ? '#c6f6d5' : '#edf2f7'};color:${x.gate ? '#22543d' : '#2d3748'};">${esc(x.name)}${x.placed ? ` <b>${x.placed}</b>` : ''}${x.n && x.n !== x.placed ? ` <span style="color:#2b6cb0">(앱 ${x.n})</span>` : ''}</span>`).join('')}</div></details>`).join('');
 }
 function renderZones(){
-  ensureSpecZone();
   const box = document.getElementById('zone-btns'); if (!box) return;
   // 면별: 경로당 수 · 지킴이 / 게이트볼 = 전체 (예: 상전 20곳 79명/6명=85)
   const zs = document.getElementById('zone-sum');
@@ -2796,41 +2786,6 @@ async function pickMoimForZone(z, done){
     bg.remove(); done();
   });
 }
-// (v189) 👔 특별 구역 창: 회장·사무장 명단 + 전화 + 단체문자. 경로당 고르기·코스표·조끼·명찰 칸은 없음
-function openSpecialZone(z, bg){
-  const $ = q => bg.querySelector(q);
-  $('#zn-title').textContent = z.name;
-  $('#zn-lead-ed').remove(); $('#zn-pick').remove();
-  $('#zn-close').onclick = () => bg.remove();
-  let curT = null;   // 고른 면 (null이면 11개 읍·면 목록)
-  const telA = x => x.tel ? `<a href="tel:${x.tel.replace(/[^0-9]/g, '')}" class="tel-link" style="padding:4px 10px;white-space:nowrap;">📞 전화</a>` : '<span class="muted">번호 없음</span>';
-  const rowH = x => `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:6px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:10px;">
-    <div style="flex:1;min-width:0;"><b>${esc(x.role)}</b> ${esc(x.name || '')}${x.town ? ` <span class="muted">(${esc(x.town)})</span>` : ''}
-      ${x.addr ? `<div class="muted" style="font-size:.85rem;">${esc(x.addr)}</div>` : ''}</div>${telA(x)}</div>`;
-  const draw = () => {
-    if (!curT) {
-      $('#zn-main').innerHTML = `
-        <div style="font-size:.9rem;color:#4a5568;margin-bottom:8px;">면을 고르면 그 면의 회장·사무장이 보여요.</div>
-        <div class="grid-2" style="margin-bottom:8px;">${STAFF_TOWNS.map(t => { const sm = smsStaff.find(x => x.role === '사무장' && x.town === t);
-          return `<button type="button" class="reason" data-spt="${esc(t)}" style="line-height:1.3;">${esc(t)}<br><small style="font-weight:normal;font-size:.78rem;">사무장 ${sm ? esc(sm.name || '') : '<span style="color:#c53030;">없음</span>'}</small></button>`; }).join('')}</div>
-        <button type="button" class="secondary full" id="sp-edit">✏️ 회장·사무장 명단 고치기 (엑셀도 가능)</button>`;
-      $('#zn-main').querySelectorAll('[data-spt]').forEach(b => b.onclick = () => { curT = b.dataset.spt; draw(); });
-      $('#sp-edit').onclick = () => openSmsStaffEdit(draw);
-      return;
-    }
-    const list = smsStaff.filter(x => x.role === '회장' || (x.role === '사무장' && x.town === curT));
-    $('#zn-main').innerHTML = `
-      <button type="button" class="secondary small" id="sp-back" style="width:auto;margin:0 0 8px;">◀ 면 목록</button>
-      <div style="font-weight:bold;margin-bottom:6px;">${esc(curT)} · 회장·사무장</div>
-      ${list.length ? list.map(rowH).join('') : '<div class="muted" style="margin:8px 0;">이 면의 사무장이 아직 없어요. 명단 고치기에서 넣어 주세요.</div>'}
-      <button type="button" class="full" id="sp-group" style="margin:8px 0 6px;" ${list.some(x => x.tel) ? '' : 'disabled'}>📩 ${esc(curT)} 회장·사무장 문자 보내기</button>
-      <button type="button" class="secondary full" id="sp-edit">✏️ 회장·사무장 명단 고치기 (엑셀도 가능)</button>`;
-    $('#sp-back').onclick = () => { curT = null; draw(); };
-    $('#sp-group').onclick = () => smsBox({ title: `${curT} 회장·사무장 문자`, people: [], staff: list, free: true, text: '안녕하세요, 진안군 노인회입니다.\n\n\n진안군 노인회 드림', logType: '회장·사무장 단체 문자', logDetail: `${curT} · ` + list.filter(x => x.tel).map(x => x.role + ' ' + x.name).join(', ') });
-    $('#sp-edit').onclick = () => openSmsStaffEdit(draw);
-  };
-  draw();
-}
 function openZone(id){
   const z = zones.find(x => x.id === id); if (!z) return;
   const bg = document.createElement('div'); bg.className = 'dlg-back';
@@ -2844,12 +2799,10 @@ function openZone(id){
       </div>
       <div id="zn-moims" style="margin:0 0 8px;"></div>
       <details id="zn-manage" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
-        <summary class="zn-pull"><b>⚙️ 메뉴 꺼내기 ▼</b><small>오늘 도착·조끼·명찰 체크 · 오늘 조끼·명찰 리셋 · 경로당 고르기 · 담당 경로당 · 코스표 · 팀장 · 리셋</small><span class="chg-arrow"></span></summary>
+        <summary class="zn-pull"><b>⚙️ 메뉴 꺼내기 ▼</b><small>경로당 고르기 · 담당 경로당 · 코스표 · 팀장 · 리셋</small><span class="chg-arrow"></span></summary>
         <div style="padding-top:8px;">
       <div style="text-align:right;margin:0 0 6px;"><button type="button" class="secondary small ord-btn" id="zn-order-btn" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↕ 순서 바꾸기</button></div>
       <div id="zn-today" data-zk="today" style="text-align:center;font-size:1rem;margin:0 0 8px;"></div>
-      <button type="button" class="full" id="zn-att" data-zk="att" style="margin:0 0 8px;">🙋 오늘 도착·조끼·명찰 체크</button>
-      <div data-zk="vreset" style="text-align:center;margin:0 0 8px;"><button type="button" class="secondary small" id="zn-vreset" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↩ 오늘 조끼·명찰 리셋 (도착은 그대로)</button></div>
       <button type="button" class="warning full" id="zn-add" data-zk="add" style="margin-bottom:8px;">＋ 경로당 고르기</button>
       <details id="zn-sites-box" data-zk="sites" class="chg-box" style="margin-top:0;border-top:none;padding-top:0;">
         <summary><span id="zn-sites-title" style="font-weight:bold;">담당 경로당</span><span class="chg-arrow"></span></summary>
@@ -2876,7 +2829,6 @@ function openZone(id){
   document.body.appendChild(bg);
   const $ = q => bg.querySelector(q);
   if ($('#zn-name')) $('#zn-name').value = z.name; $('#zn-phone').value = z.phone || '';
-  if (z.special) return openSpecialZone(z, bg);   // (v189) 👔 특별 구역은 회장·사무장 명단만 보여 줌
   $('#zn-lead-ed').onclick = () => {
     const L = participants.find(x => x.id === z.leaderId), d2 = document.createElement('div'); d2.className = 'dlg-back';
     const zTown0 = zoneTown(z) || myTowns[0];
@@ -3091,15 +3043,7 @@ function openZone(id){
   $('#zn-name')?.addEventListener('change', saveZoneInfo);
   $('#zn-name')?.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); e.target.blur(); } });
   $('#zn-close').onclick = () => { saveZoneInfo(); bg.remove(); };
-  $('#zn-att').onclick = () => openZoneAtt(z);
   $('#zn-today').innerHTML = zoneTodayHtml(z);
-  // 오늘 조끼·명찰 기록만 지움 (도착 표시는 그대로). 묻지 않고 바로 되돌림
-  $('#zn-vreset').onclick = () => {
-    const d = today(); let n = 0;
-    zoneMembers(z).forEach(p => { const r = p.zAtt && p.zAtt[d]; if (r && (r.vest != null || r.badge != null)) { r.vest = null; r.badge = null; n++; } });
-    saveData(false); logEvent('구역 출석', null, `${z.name} · ${dd(d)} 조끼·명찰 리셋 (${n}명)`, d);
-    renderZones(); $('#zn-today').innerHTML = zoneTodayHtml(z);
-  };
   $('#zn-manage').open = !!openMem['zn-manage'];
   zmEdit = false; applyZMenu(); drawZMenuEdit();
   $('#zn-order-btn').onclick = () => zmToggle(z);
@@ -6085,9 +6029,7 @@ function smsGroups(){
   const live = p => !stats(p).dropped && seniorOf(p) !== '개별관리';   // 중도포기·개별관리 인원은 단체 문자에서 뺌
   const inZone = z => participants.filter(p => z.sites.some(x => x.town===p.town && x.senior===seniorOf(p)));
   // (v188) 👔 특별 구역: 시니어 맥가이버·시니어 안전 모니터링 경로당 분 + 연락처 있는 회장·사무장
-  const gs = zones.map(z => z.special
-    ? { key: 'z'+z.id, label: z.name, zone: true, ps: [...participants.filter(p => SPEC_CATS.includes(specKindOf(seniorOf(p))) && live(p) && !isGate(p)), ...smsStaff.filter(x => x.tel).map((x, i) => ({ id: 'stf' + i, name: x.name, phone: x.tel, town: '', senior: x.role }))] }
-    : { key: 'z'+z.id, label: z.name, zone: true, ps: inZone(z).filter(p => !isGate(p) && live(p)) });
+  const gs = zones.map(z => ({ key: 'z'+z.id, label: z.name, zone: true, ps: inZone(z).filter(p => !isGate(p) && live(p)) }));
   const gate = participants.filter(p => isGate(p) && live(p) && (myTowns.includes(p.town) || zoneOf(p)));
   gs.push({ key: '게이트볼', label: '게이트볼', ps: gate });
   const rest = participants.filter(p => myTowns.includes(p.town) && !isGate(p) && live(p) && !zoneOf(p));
@@ -6264,7 +6206,6 @@ function openSmsApp(nums, body){
 }
 const telOf = p => String(p.phone||'').replace(/[^0-9]/g,'');
 function openGroupSms(){
-  ensureSpecZone();
   const mk = monthKey(), days = monthDays(mk), groups = smsGroups();
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = `<div class="dlg">
@@ -7472,8 +7413,8 @@ function zoneAttStat(z, d){
 }
 // 구역 창 안: 오늘 도착·미착용 줄 (구역 칸에는 안 보임)
 // ⚙️ 메뉴 안 단추 순서 (이 휴대폰에만 저장, 2026-11-01). ▲▼로 바꿈
-const ZMENU_DEF = ['today','att','vreset','add','sites','course'];
-const ZMENU_TXT = {today:'오늘 도착 현황', att:'오늘 도착·조끼·명찰 체크', vreset:'오늘 조끼·명찰 리셋', add:'경로당 고르기', sites:'담당 경로당', course:'모니터링 코스표'};
+const ZMENU_DEF = ['today','add','sites','course'];
+const ZMENU_TXT = {today:'오늘 도착 현황', add:'경로당 고르기', sites:'담당 경로당', course:'모니터링 코스표'};
 let zmEdit = false, zmBefore = '';
 function zmenuOrder(){
   try { const a = JSON.parse(localStorage.getItem('jinan_zmenu') || 'null');
