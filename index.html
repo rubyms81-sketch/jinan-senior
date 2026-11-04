@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-213</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-214</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -593,6 +593,10 @@ body.ord-hide .ord-btn { display: none !important; }
       </div></details>
       <details class="chg-box set-grp" data-sg="catorder" style="margin:8px 0;"><summary><b>↕ 경로당 사업 순서</b><span class="chg-arrow"></span></summary><div style="margin-top:6px;">
         <button type="button" class="secondary full" onclick="openCatOrder()">↕ 경로당 사업 순서 정하기</button>
+      </div></details>
+      <details class="chg-box set-grp" data-sg="mytowns" style="margin:8px 0;"><summary><b>⭐ 내 담당 읍·면</b><span class="chg-arrow"></span></summary><div style="margin-top:6px;">
+        <div class="muted" id="mt-now" style="margin-bottom:6px;"></div>
+        <button type="button" class="secondary full" onclick="openMyTowns()">⭐ 내 담당 읍·면 정하기</button>
       </div></details>
       <details class="chg-box set-grp" data-sg="font" style="margin:8px 0;"><summary><b>🔤 글씨·화면 색깔</b><span class="chg-arrow"></span></summary><div style="margin-top:6px;">
         <label>화면 색깔</label>
@@ -4108,7 +4112,8 @@ function openMyTowns(){
   back.querySelector('#mt-save').onclick = () => {
     const v = [...back.querySelectorAll('input[value]:checked')].map(i => i.value);
     if (!v.length) return notify('담당 읍·면을 하나 이상 골라 주세요.');
-    myTowns = v; store('jinan_my_towns', JSON.stringify(v)); showOthers = false;
+    const prevT = myTowns.join(' · '); myTowns = v; store('jinan_my_towns', JSON.stringify(v)); showOthers = false; mtNowShow();
+    if (prevT !== v.join(' · ')) logEvent('내 담당 읍·면', null, `${prevT} → ${v.join(' · ')}`);
     if (!myTowns.includes(lastTown)) { lastTown = '전체'; document.getElementById('filter-town').value = '전체'; curSenior = null; }
     back.remove(); renderList();
   };
@@ -4793,7 +4798,9 @@ function exportDiaryHwpx(){
   };
 }
 function saveUI(what){ try { localStorage.setItem('jinan_ui', JSON.stringify(ui)); } catch(e) {} applyUI(); renderUI(); logEvent('화면 설정', null, what); }
+function mtNowShow(){ const el = document.getElementById('mt-now'); if (el) el.textContent = '지금: ' + myTowns.join(' · ') + ' (체크한 곳만 목록 맨 위에 보임)'; }
 function renderUI(){
+  mtNowShow();
   const s = document.getElementById('ui-size'); if (s) s.textContent = `${ui.size} 단계`;
   document.getElementById('ui-theme').innerHTML = [['blue','🔵 기본 (파랑)','#2b6cb0'],['warm','🟠 따뜻한 색','#c05621'],['dark','⚫ 어두운 색','#1a202c']].map(([k, n, c]) => `<button type="button" class="${ui.theme === k ? 'on' : ''}" onclick="ui.theme='${k}';saveUI('화면 색깔 ${n}')" style="border-bottom:5px solid ${c};">${n}</button>`).join('');
   document.getElementById('ui-weight').innerHTML = [['thin','얇게'],['normal','보통'],['bold','두껍게']].map(([k, n]) => `<button type="button" class="${ui.weight === k ? 'on' : ''}" onclick="ui.weight='${k}';saveUI('글씨 두께 ${n}')">${n}</button>`).join('');
@@ -7463,8 +7470,8 @@ try { if (localStorage.getItem('jinan_def148') !== '1') { ['jinan_layout','jinan
 // v151: 화면 칸 기본 순서 (구역·검색·활동일지·신규등록 → 교육 출석·통계·설정 묶음), 한 번만 저장된 칸 순서를 지움
 try { if (localStorage.getItem('jinan_def151') !== '1') { localStorage.removeItem('jinan_layout'); localStorage.setItem('jinan_def151', '1'); } } catch(e) {}
 // ⚙️ 설정 묶음 순서 + 면별 배정 인원 (2026-11-01)
-const SET_DEF = ['font','title','wx','quota','pts','lock','catorder','quitdays','reset'];
-const SET_TXT = {lock:'비밀번호 잠금', catorder:'경로당 사업 순서', font:'글씨', title:'맨 위 제목', wx:'날씨·알림·알람', quitdays:'중도포기 기준일수 조정', pts:'벌점 고치기', quota:'면별 배정 인원', reset:'기록 초기화'};
+const SET_DEF = ['font','title','wx','quota','pts','lock','catorder','mytowns','quitdays','reset'];
+const SET_TXT = {lock:'비밀번호 잠금', catorder:'경로당 사업 순서', mytowns:'내 담당 읍·면', font:'글씨', title:'맨 위 제목', wx:'날씨·알림·알람', quitdays:'중도포기 기준일수 조정', pts:'벌점 고치기', quota:'면별 배정 인원', reset:'기록 초기화'};
 let setEdit = false, setBefore = '';
 function setOrder(){
   try { const a = JSON.parse(localStorage.getItem('jinan_setorder') || 'null');
