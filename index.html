@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-220</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-221</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -8278,7 +8278,7 @@ function showShort(){
     const ids = cks().filter(c => c.checked).map(c => Number(c.dataset.ck)); if (!ids.length) return;
     const dl = document.createElement('div'); dl.className = 'dlg-back';
     dl.innerHTML = `<div class="dlg"><div style="font-weight:bold;margin-bottom:6px;">🗓 ${ids.length}명 근무 시작 날짜</div>
-      <div class="muted" style="font-size:.9rem;margin-bottom:6px;">실제로 근무를 시작한 날을 고르세요. 고른 ${ids.length}명 모두 같은 날짜로 바뀝니다.<br>1월 시작은 처음부터(시작일 없음)로 봅니다.</div>
+      <div class="muted" style="font-size:.9rem;margin-bottom:6px;">실제로 근무를 시작한 날을 고르세요. 고른 ${ids.length}명 모두 같은 날짜로 바뀝니다.<br>1월도 고른 날짜부터 셉니다.</div>
       <div id="ss-m" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;"></div><div id="ss-d" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px;"></div><div id="ss-picked" style="margin-top:8px;text-align:center;font-weight:bold;font-size:1.1rem;min-height:1.4em;"></div>
       <div class="grid-2" style="margin-top:10px;"><button class="secondary" id="ss-no">취소</button><button id="ss-ok">✔ 저장</button></div></div>`;
     document.body.appendChild(dl);
@@ -8296,13 +8296,12 @@ function showShort(){
     dl.querySelector('#ss-ok').onclick = () => {
       if (!ssM || !ssD) return notify('월과 날짜를 골라 주세요.'); const sd = `${YEAR}-${String(ssM).padStart(2, '0')}-${String(ssD).padStart(2, '0')}`;
       if (sd.slice(0, 4) !== String(YEAR)) return notify(`${YEAR}년 날짜를 골라 주세요.`);
-      const jan = Number(sd.slice(5, 7)) === 1;
       ids.forEach(id => { const p = participants.find(x => x.id === id); if (!p) return;
         const before = p.startDay || (p.start ? p.start.slice(0, 7) : '없음');
-        if (jan) { delete p.start; delete p.startDay; } else { p.start = sd.slice(0, 7); p.startDay = sd; }
-        logEvent('근무 시작 일괄 변경', p, `${before} → ${jan ? '처음부터(1월)' : sd} (미달 창에서 여러 명 한꺼번에)`, sd); });
+        p.start = sd.slice(0, 7); p.startDay = sd;
+        logEvent('근무 시작 일괄 변경', p, `${before} → ${sd} (미달 창에서 여러 명 한꺼번에)`, sd); });
       saveData(false); dl.remove(); back.remove(); showShort();
-      notify(`✔ ${ids.length}명의 근무 시작 날짜를 ${jan ? '1월(처음부터)' : sd} 로 넣었어요.`);
+      notify(`✔ ${ids.length}명의 근무 시작 날짜를 ${sd} 로 넣었어요.`);
     };
   };
 }
@@ -8445,7 +8444,7 @@ function eduRecs(p){
   const y = viewYear(), from = `${y}-01-01`, to = `${y}-${String(EDU_NEED.toMonth).padStart(2, '0')}-30`;
   let src;
   if ((p.eduDone || []).length) src = p.eduDone.filter(d => d.date >= from && d.date <= to).map(d => ({ date: d.date, kind: d.kind, h: d.h }));
-  else src = eduOf(p).filter(e => e.date >= from && e.date <= to && !eduAbsent(p, e.date) && eduInfo(e.name).c !== '행사' && !/역량강화/.test(e.name))
+  else src = eduOf(p).filter(e => e.date >= from && e.date <= to && e.date <= today() && !eduAbsent(p, e.date) && eduInfo(e.name).c !== '행사' && !/역량강화/.test(e.name))
     .flatMap(e => Object.entries(eduCats(e)).map(([kind, h]) => ({ date: e.date, kind, h })));
   const agg = {};
   src.forEach(x => { if (!(x.h > 0)) return; const m = Number(x.date.slice(5, 7)), k = m + '|' + x.kind;
@@ -8843,6 +8842,7 @@ function monthlyRows(mk){
   const mine = participants.filter(p => visibleTowns().includes(p.town));
   const ok = mine.filter(p => counted(p));
   const rows = [[`${mk.slice(0,4)}년 ${Number(mk.slice(5))}월 월간 정리표`], []];
+  const pr = (p, arr) => { arr.pid = p.id; return arr; };   // (v221) 누르면 그 어르신 창으로 가려고 사람 번호를 붙여 둠
   const planD = monthDays(mk), planEnd = planD.length ? Number(planD[planD.length-1].slice(8,10)) : null;   // (v186) 이번 달 계획의 마지막 날
   visibleTowns().forEach(t => {
     const n = ok.filter(p => p.town === t).length;
@@ -8854,7 +8854,7 @@ function monthlyRows(mk){
     rows.push([`${t}(${n}명)`]);
     rows.push(['경로당','이름','총 근무','끝나는 날']);
     all.forEach(({ p, paid }) => { const ld = lastDayIn(p, mk);
-      rows.push([seniorOf(p), p.name, `${paid}일`, ld ? `${ld}일` : '-']); });
+      rows.push(pr(p, [seniorOf(p), p.name, `${paid}일`, ld ? `${ld}일` : '-'])); });
     rows.push([]);
   });
   // 벌점은 올해 누계 (선택한 달까지). 맞은 날짜를 같이 적음 (v121)
@@ -8866,21 +8866,21 @@ function monthlyRows(mk){
   }).filter(x => x.ls.length).sort((a,b) => a.p.town.localeCompare(b.p.town) || a.p.name.localeCompare(b.p.name));
   rows.push(['벌점']);
   rows.push(['경로당','이름','벌점 누계','맞은 날짜','일당 미지급']);
-  pens.forEach(({ p, ls, pts, unpaid }) => rows.push([seniorOf(p), p.name, `-${pts}점`, ls.map(l => logPts(l) === 1 ? md(l.date) : `${md(l.date)}(-${logPts(l)}점)`).join(' · '), `${unpaid}일`]));
+  pens.forEach(({ p, ls, pts, unpaid }) => rows.push(pr(p, [seniorOf(p), p.name, `-${pts}점`, ls.map(l => logPts(l) === 1 ? md(l.date) : `${md(l.date)}(-${logPts(l)}점)`).join(' · '), `${unpaid}일`])));
   rows.push([]);
   const quits = mine.filter(p => (p.quit && (p.quitYear || 0) === Number(mk.slice(0,4))) || (!p.quit && stats(p).dropped));
   rows.push(['중도포기']);
   rows.push(['경로당','이름','날짜','사유']);
   if (!quits.length) rows.push(['중도포기 없음']);
   // (v213) 그만둔 날짜를 넣고, 장기요양 1~5등급 탈락은 빨간 글씨 (row.red)
-  quits.forEach(p => { const q = [seniorOf(p), p.name, p.quit && p.quitDay ? md(p.quitDay) : '-', p.quit ? (p.quitWhy || '-') : '벌점 -3점 누적'];
+  quits.forEach(p => { const q = pr(p, [seniorOf(p), p.name, p.quit && p.quitDay ? md(p.quitDay) : '-', p.quit ? (p.quitWhy || '-') : '벌점 -3점 누적']);
     if (p.quit && /장기요양/.test(p.quitWhy || '')) q.red = true;
     rows.push(q); });
   rows.push([]);
   const hosp = mine.filter(p => inHospNow(p));
   rows.push(['특이사항']);
   rows.push(['경로당','이름','내용']);
-  hosp.forEach(p => rows.push([seniorOf(p), p.name, '현재 입원 중']));
+  hosp.forEach(p => rows.push(pr(p, [seniorOf(p), p.name, '현재 입원 중'])));
   return rows;
 }
 // 카카오톡·문자로 보낼 글 (v113)
@@ -8907,7 +8907,10 @@ function monthlyHtml(mk){
     }
     const head = r[0] === '경로당';
     const RD = r.red ? 'color:#d00000;font-weight:bold;' : '';   // (v213) 장기요양 탈락 빨간 글씨
-    tbl += `<tr>${r.map(c => head ? `<th style="${TD}background:#f2f2f2;">${esc(String(c ?? ''))}</th>` : `<td style="${TD}${RD}">${esc(String(c ?? ''))}</td>`).join('')}</tr>`;
+    // (v221) 경로당·이름 칸은 누를 수 있게 (사람 번호가 있는 줄만)
+    tbl += `<tr>${r.map((c, i) => { const t = esc(String(c ?? '')); if (head) return `<th style="${TD}background:#f2f2f2;">${t}</th>`;
+      const link = i < 2 && r.pid && c && c !== '-' ? `<a href="#" data-pid="${r.pid}" class="mp-link" style="color:#2b6cb0;text-decoration:underline;">${t}</a>` : t;
+      return `<td style="${TD}${RD}">${link}</td>`; }).join('')}</tr>`;
   });
   flush();
   return h;
@@ -8938,6 +8941,9 @@ function monthlyPreview(){
     back.querySelector('#mp-prev').disabled = mo() <= MIN;
     back.querySelector('#mp-next').disabled = mo() >= MAX;
     back.querySelector('#mp-body').innerHTML = monthlyHtml(mk);
+    // (v221) 이름·경로당을 누르면 정리표를 닫고 그 어르신 정보 창 열기
+    back.querySelectorAll('#mp-body .mp-link').forEach(a => a.onclick = e => { e.preventDefault();
+      const q = participants.find(x => String(x.id) === a.dataset.pid); back.remove(); if (q) setTimeout(() => openModal(q.id), 0); });
   };
   back.querySelector('#mp-prev').onclick = () => go(-1);
   back.querySelector('#mp-next').onclick = () => go(1);
