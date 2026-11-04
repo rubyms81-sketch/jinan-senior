@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-233</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-234</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -4627,7 +4627,7 @@ const WX_KIND = {
   '강풍': { icon: '💨', ph: '바람이 많이 불어서', when: '바람이 세게 불 때는', ease: '바람이 잦아들면', tip: '간판이나 나뭇가지 근처는 피해 주세요.' }
 };
 const WX_ELDER = w => { const k = WX_KIND[w] || WX_KIND['비']; return `어르신, 안녕하세요. 진안군 노인회입니다.\n오늘은 ${k.ph} 안전 안내를 드립니다.\n· ${k.tip}\n· 출근·퇴근 시간에 ${k.when} 바로 나오지 마시고, ${k.ease} 천천히 안전하게 나오시길 바랍니다.\n· 이동이 어려우시면 팀장님께 따로 말씀해 주세요.\n\n진안군 노인회 드림`; };
-const WX_LEADER = w => { const k = WX_KIND[w] || WX_KIND['비']; return `팀장님, 안녕하세요. 진안군 노인회입니다.\n오늘은 ${k.ph} 담당 어르신들이 안전하게 잘 오셨는지 확인하고 챙겨 주시기 바랍니다.\n특이한 상황이나 이동이 어려우신 분이 있는지도 살펴봐 주시면 감사하겠습니다.\n\n진안군 노인회 드림`; };
+const WX_LEADER = w => { const k = WX_KIND[w] || WX_KIND['비']; return `팀장님, 안녕하세요. 진안군 노인회입니다.\n오늘은 ${k.ph} 담당 어르신들의 안전을 살펴봐 주시기를 부탁드립니다.\n출근하시는 어르신들이 잘 도착하셨는지 확인해 주시고, 이동이 어려우신 분이 계시면 알려 주시면 감사하겠습니다.\n특이 사항이 있으면 말씀 부탁드립니다.\n\n바쁘시겠지만 잘 챙겨 주셔서 고맙습니다.\n진안군 노인회 드림`; };
 const wxBtns = () => Object.keys(WX_KIND).map(k => `<button type="button" class="secondary small" data-wxk="${k}" style="width:auto;margin:0 6px 6px 0;">${WX_KIND[k].icon} ${k}</button>`).join('');
 function wxPop(manual){
   const kind = wxHeavyKind(), d = today();
@@ -6349,6 +6349,7 @@ function openGroupSms(){
       <div id="gs-img-box" class="hidden" style="text-align:center;margin-bottom:8px;">
         <img id="gs-img-view" style="max-width:100%;max-height:220px;border-radius:8px;border:1px solid #e2e8f0;">
         <div><button type="button" class="small secondary" id="gs-img-del">사진 빼기</button></div></div>
+      <button type="button" class="secondary full" id="gs-reset" style="margin:0 0 6px;">↺ 처음 글로 되돌리기 (직접 고친 내용 지움)</button>
       <div class="grid-2"><button class="warning" id="gs-copy">📋 문구 복사</button><button id="gs-open">💬 문자 앱 열기</button></div>
       <button class="secondary full" id="gs-nums">📋 받는 번호 복사</button>
       <div class="muted" id="gs-help" style="margin:4px 0 8px;font-size:.85rem;">휴대폰에 따라 <b>단체방(그룹 대화)</b>으로 갈 수 있어요. 문자 앱 설정에서 그룹 대화를 끄면 한 분씩 따로 갑니다. 문자 앱이 안 열리면 문구·번호를 복사해서 붙여넣으세요.</div>
@@ -6358,8 +6359,12 @@ function openGroupSms(){
   document.body.appendChild(bg);
   const ta = bg.querySelector('#gs-text'), help = bg.querySelector('#gs-help');
   let cur = null;
+  let edited = false;   // (v233) 사용자가 글을 직접 고쳤는지
+  ta.addEventListener('input', () => { edited = true; });
   let wxSel = null;   // (v232) 날씨 문자를 골랐을 때 그 날씨 키(비·눈·폭우·폭설·폭염·태풍·강풍)
-  const show = g => {
+  // (v233) 직접 고쳐 쓴 글(edited)은 어르신 그룹끼리 바꿔도 그대로 둠. "↺ 처음 글로"(force)로만 되돌림. 팀장님 글은 항상 새로 씀.
+  const show = (g, force) => {
+    const prevLeader = !!cur && cur.key === 'leaders';
     cur = g;
     // 월초에 보내는 문자라 모두 같은 활동일로 보냄
     const main = g.ps.filter(p => telOf(p)), noTel = g.ps.filter(p => !telOf(p));
@@ -6367,10 +6372,14 @@ function openGroupSms(){
     bg.querySelector('#gs-groups').classList.add('hidden'); bg.querySelector('#gs-body').classList.remove('hidden');
     bg.querySelector('#gs-who').innerHTML = `📩 ${esc(g.label)} · 받는 분 <span style="color:var(--primary)">${main.length}명</span>`
       + (noTel.length ? `<div class="muted" style="font-weight:normal;font-size:.85rem;">연락처 없는 분 ${noTel.length}명: ${noTel.map(p => nmH(p)).join(', ')}</div>` : '');
-    ta.value = workdayText(mk, days, g.whoText || (g.key === '게이트볼' ? '게이트볼장 관리도우미 어르신' : `${g.label} 경로당지킴이 어르신`), eduAll[mk] || []);
+    const keep = !force && edited && g.key !== 'leaders' && !prevLeader;
+    if (!keep) {
+      ta.value = workdayText(mk, days, g.whoText || (g.key === '게이트볼' ? '게이트볼장 관리도우미 어르신' : `${g.label} 경로당지킴이 어르신`), eduAll[mk] || []);
+      if (g.key === 'leaders' && leaderPlan[mk]) ta.value = leaderText();
+      if (wxSel) ta.value = g.key === 'leaders' ? WX_LEADER(wxSel) : WX_ELDER(wxSel);
+      edited = false;
+    }
     bg.querySelector('#gs-edu').classList.toggle('hidden', g.key !== 'leaders');
-    if (g.key === 'leaders' && leaderPlan[mk]) ta.value = leaderText();
-    if (wxSel) ta.value = g.key === 'leaders' ? WX_LEADER(wxSel) : WX_ELDER(wxSel);
     bg.querySelector('#gs-wxleader').classList.toggle('hidden', !wxSel || g.key === 'leaders');
   };
   // 팀장님 일정: 활동일 정하기와 같은 달력으로 근무일·교육(여러 개)을 고치면 문자에 바로 반영
@@ -6392,7 +6401,7 @@ function openGroupSms(){
   bg.querySelector('#gs-all').onchange = e => { grpBoxes().forEach(x => x.checked = e.target.checked); upd(); };
   // (v233) ☔ 날씨 버튼: 글만 고르고 바로 넘어가지 않음 (어르신을 자동으로 전부 고르지 않음). 보낼 곳은 직접 체크. 다시 누르면 해제.
   const wxNote = () => { bg.querySelector('#gs-wxnote').innerHTML = wxSel ? `☔ <b>${esc(wxSel)}</b> 날씨 글로 보냅니다. 보낼 곳을 체크한 뒤 "선택한 곳으로 문자 쓰기"를 누르세요. <span style="color:var(--primary);text-decoration:underline;cursor:pointer;" id="gs-wxoff">해제</span>` : ''; };
-  bg.querySelectorAll('[data-wxk]').forEach(b => b.onclick = () => { wxSel = wxSel === b.dataset.wxk ? null : b.dataset.wxk; bg.querySelectorAll('[data-wxk]').forEach(x => x.classList.toggle('on', x.dataset.wxk === wxSel)); wxNote(); });
+  bg.querySelectorAll('[data-wxk]').forEach(b => b.onclick = () => { wxSel = wxSel === b.dataset.wxk ? null : b.dataset.wxk; edited = false; bg.querySelectorAll('[data-wxk]').forEach(x => x.classList.toggle('on', x.dataset.wxk === wxSel)); wxNote(); });
   bg.querySelector('#gs-groups').addEventListener('click', e => { if (e.target.id === 'gs-wxoff') { wxSel = null; bg.querySelectorAll('[data-wxk]').forEach(x => x.classList.remove('on')); wxNote(); } });
   bg.querySelector('#gs-wxleader').onclick = () => { const ls = zoneLeaders(); if (!ls.length) return notify('팀장 연락처가 있는 구역이 없어요.'); show({ key: 'leaders', label: '구역장(팀장)', ps: ls, whoText: '구역장(팀장)님' }); };
   bg.querySelector('#gs-go').onclick = () => {
@@ -6405,6 +6414,7 @@ function openGroupSms(){
     const ls = zoneLeaders(); if (!ls.length) return notify('팀장 연락처가 있는 구역이 없어요.\n🗺 구역 창에서 팀장을 정하거나 팀장 연락처를 넣어 주세요.');
     show({ key: 'leaders', label: '구역장(팀장)', ps: ls, whoText: '구역장(팀장)님' });
   };
+  bg.querySelector('#gs-reset').onclick = () => { if (cur) show(cur, true); };
   bg.querySelector('#gs-back').onclick = () => { bg.querySelector('#gs-body').classList.add('hidden'); bg.querySelector('#gs-groups').classList.remove('hidden'); };
   bg.querySelector('#gs-copy').onclick = async () => { const ok = await copyText(ta.value);
     help.innerHTML = ok ? '<b style="color:var(--success)">✔ 문구를 복사했어요.</b> 문자 창에서 길게 눌러 "붙여넣기" 하세요.' : '복사가 안 되면 위 글을 길게 눌러 "전체 선택 → 복사" 하세요.'; };
@@ -6438,7 +6448,8 @@ function openGroupSms(){
       logEvent('활동일 문자', null, `${cur.label} ${cur.main.length}명 · 사진 포함 · ${curMonth}월 ${dayList(days)}`);
       return;
     }
-    logEvent('활동일 문자', null, `${cur.label} ${cur.main.length}명 · ${curMonth}월 ${dayList(days)}`);
+    if (wxSel) logEvent('날씨 문자', null, `${wxSel} 날씨 · ${cur.key === 'leaders' ? '팀장님' : '어르신'} ${cur.main.length}명 · ${cur.label}`);
+    else logEvent('활동일 문자', null, `${cur.label} ${cur.main.length}명 · ${curMonth}월 ${dayList(days)}`);
     await copyText(ta.value); openSmsApp(nums, ta.value);
   };
   bg.querySelector('#gs-close').onclick = () => { if (imgView.src) URL.revokeObjectURL(imgView.src); bg.remove(); };
