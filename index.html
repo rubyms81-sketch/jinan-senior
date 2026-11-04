@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-218</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-219</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -640,6 +640,13 @@ body.ord-hide .ord-btn { display: none !important; }
         <label>⏰ 점검 결과 알람 시간</label>
         <input type="time" id="ui-alarmat" style="margin:5px 0 12px;">
       </div></details>
+      <details class="chg-box set-grp" data-sg="xlpw" style="margin:8px 0;"><summary><b>🔐 엑셀 비밀번호</b><span class="chg-arrow"></span></summary><div style="margin-top:6px;">
+        <div class="muted" id="xlpw-now" style="margin-bottom:6px;"></div>
+        <button type="button" class="secondary full" id="xlpw-tog" onclick="xlpwToggle()" style="margin:0 0 8px;">켜기</button>
+        <input type="password" id="xlpw-in" placeholder="엑셀 비밀번호 (예: 123456)" autocomplete="off" style="margin:0 0 6px;">
+        <div class="grid-2" style="margin:0;"><button type="button" onclick="xlpwSave()" style="margin:0;">✔ 비밀번호 저장</button><button type="button" class="secondary" onclick="xlpwClear()" style="margin:0;">🗑 지우기</button></div>
+        <div class="muted" style="font-size:.85rem;margin-top:6px;">이 휴대폰에만 저장돼요. 켜 두면 암호 걸린 엑셀을 올릴 때 비밀번호 창이 뜨지 않아요.</div>
+      </div></details>
       <details class="chg-box set-grp" data-sg="quitdays" style="margin:8px 0;"><summary><b>⏳ 중도포기 기준일수 조정</b><span class="chg-arrow"></span></summary><div style="margin-top:6px;">
         <div class="ui-opts" style="grid-template-columns:52px 1fr 52px;align-items:center;margin:5px 0 12px;"><button type="button" onclick="quitDaysSet(-1)">－</button><b id="ui-qdays" style="text-align:center;">45일</b><button type="button" onclick="quitDaysSet(1)">＋</button></div>
       </div></details>
@@ -842,7 +849,7 @@ const FB_CONFIG = {
   appId: "1:976802627283:web:eb623f93cb4568773c9e26"
 };
 // 이 휴대폰에만 두는 설정(클라우드에 올리지 않음)
-const CLOUD_DEVICE_ONLY = ['jinan_lock','jinan_edu_draft','jinan_weather','jinan_def148','jinan_def151','jinan_open','jinan_ck_open','jinan_photos'];
+const CLOUD_DEVICE_ONLY = ['jinan_xlpw','jinan_lock','jinan_edu_draft','jinan_weather','jinan_def148','jinan_def151','jinan_open','jinan_ck_open','jinan_photos'];
 const CLOUD_DEVICE_PREFIX = ['jinan_rptalarm_','jinan_daypop'];
 const CLOUD_CH = 200000; // 문서 하나에 넣을 글자 수 (Firestore 문서 1MB 제한 대비)
 let fbAuth = null, fbDb = null, fbUser = null, cloudBusy = false;
@@ -4814,7 +4821,7 @@ function exportDiaryHwpx(){
 function saveUI(what){ try { localStorage.setItem('jinan_ui', JSON.stringify(ui)); } catch(e) {} applyUI(); renderUI(); logEvent('화면 설정', null, what); }
 function mtNowShow(){ const el = document.getElementById('mt-now'); if (el) el.textContent = '지금: ' + myTowns.join(' · ') + ' (체크한 곳만 목록 맨 위에 보임)'; }
 function renderUI(){
-  mtNowShow();
+  mtNowShow(); xlpwShow();
   const s = document.getElementById('ui-size'); if (s) s.textContent = `${ui.size} 단계`;
   document.getElementById('ui-theme').innerHTML = [['blue','🔵 기본 (파랑)','#2b6cb0'],['warm','🟠 따뜻한 색','#c05621'],['dark','⚫ 어두운 색','#1a202c']].map(([k, n, c]) => `<button type="button" class="${ui.theme === k ? 'on' : ''}" onclick="ui.theme='${k}';saveUI('화면 색깔 ${n}')" style="border-bottom:5px solid ${c};">${n}</button>`).join('');
   document.getElementById('ui-weight').innerHTML = [['thin','얇게'],['normal','보통'],['bold','두껍게']].map(([k, n]) => `<button type="button" class="${ui.weight === k ? 'on' : ''}" onclick="ui.weight='${k}';saveUI('글씨 두께 ${n}')">${n}</button>`).join('');
@@ -7490,8 +7497,8 @@ try { if (localStorage.getItem('jinan_def148') !== '1') { ['jinan_layout','jinan
 // v151: 화면 칸 기본 순서 (구역·검색·활동일지·신규등록 → 교육 출석·통계·설정 묶음), 한 번만 저장된 칸 순서를 지움
 try { if (localStorage.getItem('jinan_def151') !== '1') { localStorage.removeItem('jinan_layout'); localStorage.setItem('jinan_def151', '1'); } } catch(e) {}
 // ⚙️ 설정 묶음 순서 + 면별 배정 인원 (2026-11-01)
-const SET_DEF = ['font','title','wx','quota','pts','lock','catorder','mytowns','quitdays','reset'];
-const SET_TXT = {lock:'비밀번호 잠금', catorder:'경로당 사업 순서', mytowns:'내 담당 읍·면', font:'글씨', title:'맨 위 제목', wx:'날씨·알림·알람', quitdays:'중도포기 기준일수 조정', pts:'벌점 고치기', quota:'면별 배정 인원', reset:'기록 초기화'};
+const SET_DEF = ['font','title','wx','quota','pts','lock','catorder','mytowns','xlpw','quitdays','reset'];
+const SET_TXT = {lock:'비밀번호 잠금', catorder:'경로당 사업 순서', mytowns:'내 담당 읍·면', xlpw:'엑셀 비밀번호', font:'글씨', title:'맨 위 제목', wx:'날씨·알림·알람', quitdays:'중도포기 기준일수 조정', pts:'벌점 고치기', quota:'면별 배정 인원', reset:'기록 초기화'};
 let setEdit = false, setBefore = '';
 function setOrder(){
   try { const a = JSON.parse(localStorage.getItem('jinan_setorder') || 'null');
@@ -8381,6 +8388,29 @@ function askExcelPassword(fileName){
     setTimeout(() => pw.focus(), 50);
   });
 }
+// 🔐 엑셀 비밀번호 기억하기 (설정 ▸ 🔐 엑셀 비밀번호). 이 휴대폰에만 저장, 클라우드에는 올리지 않음(CLOUD_DEVICE_ONLY)
+let xlPw = (() => { try { return JSON.parse(load('jinan_xlpw')) || {}; } catch(e) { return {}; } })();
+function xlpwShow(){
+  const now = document.getElementById('xlpw-now'), tg = document.getElementById('xlpw-tog'); if (!now || !tg) return;
+  const on = !!(xlPw.on && xlPw.pw);
+  now.textContent = xlPw.pw ? (on ? '지금: 켜짐 (저장된 비밀번호로 자동으로 풀어요)' : '지금: 꺼짐 (저장만 되어 있어요)') : '지금: 저장된 비밀번호 없음 (올릴 때마다 물어봐요)';
+  tg.textContent = on ? '끄기' : '켜기';
+}
+function xlpwToggle(){
+  if (!xlPw.pw) return notify('먼저 아래 칸에 비밀번호를 넣고 저장해 주세요.');
+  xlPw.on = !xlPw.on; store('jinan_xlpw', JSON.stringify(xlPw));
+  logEvent('엑셀 비밀번호', null, xlPw.on ? '기억하기 켬' : '기억하기 끔'); xlpwShow();
+}
+function xlpwSave(){
+  const inp = document.getElementById('xlpw-in'), v = (inp.value || '').trim();
+  if (!v) return notify('비밀번호를 넣어 주세요.');
+  xlPw = { on: true, pw: v }; store('jinan_xlpw', JSON.stringify(xlPw)); inp.value = '';
+  logEvent('엑셀 비밀번호', null, '비밀번호 저장 (이 휴대폰에만, 기억하기 켬)'); xlpwShow();
+  notify('저장했어요. 다음부터 암호 걸린 엑셀을 자동으로 풀어요.');
+}
+function xlpwClear(){
+  xlPw = {}; store('jinan_xlpw', '{}'); logEvent('엑셀 비밀번호', null, '저장된 비밀번호 지움'); xlpwShow(); notify('저장된 엑셀 비밀번호를 지웠어요.');
+}
 // 엑셀 읽기 공통 입구: 파일을 읽은 뒤 암호가 걸렸으면 비밀번호를 묻고 풀어서 기존 reader.onload에 넘김
 function excelRead(reader, file){
   const fr = new FileReader();
@@ -8391,12 +8421,16 @@ function excelRead(reader, file){
     if (!isOle) return reader.onload({ target: { result: raw } });
     try { await loadOfficeCrypto(); } catch (e) { return notify('암호를 풀 기능을 불러오지 못했습니다.\n인터넷 연결을 확인해 주세요.'); }
     if (!officeCrypto.isEncrypted(bytes)) return reader.onload({ target: { result: raw } });
+    const give = out => reader.onload({ target: { result: out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength) } });
+    // 기억하기를 켠 경우 저장된 비밀번호로 먼저 풀어 봄 (맞지 않으면 아래에서 직접 묻기)
+    if (xlPw.on && xlPw.pw) {
+      try { return give(await officeCrypto.decrypt(bytes, { password: xlPw.pw })); }
+      catch (e) { notify('저장된 엑셀 비밀번호가 맞지 않아요. 설정 ▸ 🔐 엑셀 비밀번호에서 고쳐 주세요.'); }
+    }
     const pw = await askExcelPassword(file.name);
     if (pw === null) return notify('비밀번호 입력을 취소했어요.');
-    try {
-      const out = await officeCrypto.decrypt(bytes, { password: pw });
-      reader.onload({ target: { result: out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength) } });
-    } catch (e) {
+    try { give(await officeCrypto.decrypt(bytes, { password: pw })); }
+    catch (e) {
       notify(/incorrect/i.test(String(e.message)) ? '비밀번호가 맞지 않아요. 다시 확인해 주세요.' : '파일을 풀지 못했어요. 파일이 맞는지 확인해 주세요.');
     }
   };
