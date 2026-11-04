@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-235</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-236</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2307,6 +2307,15 @@ function renderCallAlert(){
         <span style="font-size:.88rem;">${KIT_ITEMS.map(([k, l]) => `${l} ${kitLabel(p, k)}`).join(' · ')}</span></button>
       <button class="done-btn" onclick="openKit(${p.id})">체크</button></div>`).join('')}`);
   }
+  // 🚪 입원 기간이 중도포기 기준(기본 45일)에 가까운 어르신 (남은 5일 이하 또는 넘음)
+  const hospNear = participants.filter(p => p.hospCall && inHospNow(p) && p.hospCall.since && daysBetween(p.hospCall.since, td) + 1 >= qDays() - 5)
+    .sort((a, b) => a.hospCall.since.localeCompare(b.hospCall.since) || a.name.localeCompare(b.name));
+  if (hospNear.length) {
+    h += alertCard('hospquit', 'background:#fff5f5;border-color:var(--danger);', `<div style="font-weight:bold;color:var(--danger);">🚪 중도포기 기준에 가까운 입원 어르신 ${hospNear.length}명</div>`, `
+    ${hospNear.map(p => { const n = daysBetween(p.hospCall.since, td) + 1, lim = qDays(), left = lim - n; return `<div class="call-row">
+      <button class="who" onclick="openModal(${p.id})"><b>${nmH(p)}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
+        <span style="font-size:.9rem;">입원 ${mdK(p.hospCall.since)}부터 · <b>${n}일째</b> · ${left < 0 ? `<b style="color:var(--danger)">기준 ${lim}일 넘음</b>` : `기준 ${lim}일까지 <b style="color:var(--danger)">${left}일 남음</b>`}</span></button></div>`; }).join('')}`);
+  }
   if (all.length) {
     const next = all.filter(p => p.hospCall.due > td).sort((a,b) => a.hospCall.due.localeCompare(b.hospCall.due));
     h += alertCard('hosp', '', `<div style="font-weight:bold;color:#97266d;">${due.length ? `📞 오늘 안부 전화할 입원 어르신 ${due.length}명` : `🏥 입원 중인 어르신 ${all.length}명`}</div>`, `
@@ -3694,7 +3703,7 @@ function addChange(pre){
     <button type="button" class="secondary full hidden" id="cg-back" style="margin:-4px 0 10px;">← 뒤로 (근무일 변경)</button>
     <div id="cg-hbox" class="hidden" style="margin:-4px 0 12px;">
       <label>입원 사유</label><input type="text" id="cg-hmemo" placeholder="예: 다리 골절, ○○병원" autocomplete="off" style="margin:0 0 6px;">
-      <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin:0;"><input type="checkbox" id="cg-hnow" style="width:22px;height:22px;margin:0;"> 🏥 지금 입원 중</label></div>
+      <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin:0;"><input type="checkbox" id="cg-hnow" style="width:22px;height:22px;margin:0;"> 🏥 지금 입원 중</label><div id="cg-hcount" style="margin-top:6px;"></div></div>
     <div id="cg-ebox" class="hidden" style="margin:-4px 0 12px;">
       <div id="cg-enames" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;"></div>
       <div style="display:flex;gap:4px;"><input type="text" id="cg-enew" placeholder="새 이름" autocomplete="off" style="margin:0;"><button type="button" class="small" id="cg-eadd" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button></div></div>
@@ -3706,7 +3715,15 @@ function addChange(pre){
     const c = back.querySelector('#cg-pedit'); if (c) c.onclick = () => { back.remove(); pauseEditDate(p.id); }; }
   document.body.appendChild(back);
   const $ = q => back.querySelector(q);
-  $('#cg-hmemo').value = cuH?.memo || ''; $('#cg-hnow').checked = !!cuH?.inHosp;
+  $('#cg-hmemo').value = cuH?.memo || ''; $('#cg-hnow').checked = !!cuH?.inHosp || !!p.hospCall;
+  // 🏥 지금 입원 중: 입원 시작일 ~ 오늘 날짜를 자동으로 채움 (이번 달 칸 안에서, 앞날짜는 안 채움)
+  const hospRangeNow = from => { const yy = Number(mk.slice(0,4)), mm = Number(mk.slice(5,7)), n = new Date(yy, mm, 0).getDate(), out = []; for (let d = 1; d <= n; d++) { const k = ymd(yy, mm, d); if (k >= from && k <= td) out.push(k); } return out; };
+  const hospStartNow = () => p.hospCall?.since || [...hospSel].sort()[0] || '';
+  const hospFill = () => { const from = hospStartNow() || td; hospRangeNow(from).forEach(k => hospSel.add(k)); };
+  const hospUnfill = () => { const from = hospStartNow(); if (from) [...hospSel].forEach(k => { if (k >= from && k <= td) hospSel.delete(k); }); };
+  const hospCountHtml = () => { const from = hospStartNow(); if (!$('#cg-hnow').checked || !from) return ''; const n = daysBetween(from, td) + 1, lim = qDays(), left = lim - n;
+    return `<div class="notice" style="margin:0;font-size:.92rem;background:#fff5f7;border-color:#fbb6ce;">🏥 입원 시작 ${mdK(from)} · 오늘까지 <b>${n}일</b> · 중도포기 기준 ${lim}일 중 ${n}일${left < 0 ? ' <b style="color:var(--danger)">기준 넘음</b>' : left <= 5 ? ` <b style="color:var(--danger)">${left}일 남음</b>` : ''}</div>`; };
+  $('#cg-hnow').onchange = () => { if ($('#cg-hnow').checked) hospFill(); else hospUnfill(); drawCal(); };
   const drawENames = () => { const names = [...new Set([...EDU_NAMES, ...eduSel.values(), ...(eduName ? [eduName] : [])])];
     $('#cg-enames').innerHTML = names.map(n => `<button type="button" class="small ${n === eduName ? '' : 'secondary'}" data-en="${esc(n)}" style="width:auto;margin:0;${n === eduName ? 'background:#805ad5;' : ''}">🎓 ${esc(n)}</button>`).join('');
     back.querySelectorAll('[data-en]').forEach(b => b.onclick = () => { eduName = b.dataset.en; drawENames(); }); };
@@ -3721,7 +3738,8 @@ function addChange(pre){
     $('#cg-hbox').classList.toggle('hidden', !isHosp()); $('#cg-ebox').classList.toggle('hidden', !isEdu()); $('#cg-back').classList.toggle('hidden', !isHosp() && !isEdu());
     if (isHosp()) {
       $('#cg-picked').innerHTML = `<b style="color:#97266d">🛏️ 입원한 날 ${hospSel.size}일</b>${hospSel.size ? ` · ${[...hospSel].sort().map(d => Number(d.slice(8,10))).join(', ')}일` : ''}`;
-      $('#cg-list').innerHTML = ''; $('#cg-all-wrap')?.classList.add('hidden'); $('#cg-qwhy-box').classList.add('hidden'); return;
+      $('#cg-list').innerHTML = ''; $('#cg-all-wrap')?.classList.add('hidden'); $('#cg-qwhy-box').classList.add('hidden');
+      $('#cg-hcount').innerHTML = hospCountHtml(); return;
     }
     if (isEdu()) {
       const by = {}; [...eduSel].sort().forEach(([d, n]) => (by[n] ||= []).push(d));
@@ -3787,7 +3805,9 @@ function addChange(pre){
     if (on) b.classList.add('on');
     const was = modeKey();
     $('#cg-type').value = on ? b.dataset.v : '';
-    if (was !== modeKey()) { pairs = []; from = null; quitFrom = null; startFrom = null; drawCal(); }
+    if (was !== modeKey()) { pairs = []; from = null; quitFrom = null; startFrom = null; }
+    if (isHosp() && $('#cg-hnow').checked) hospFill();
+    drawCal();
   });
   if (pre.reason) $(`#cg-types button[data-v="${pre.reason}"]`)?.click();
   if (pre.all && $('#cg-all')) $('#cg-all').checked = true;
@@ -3803,6 +3823,8 @@ function addChange(pre){
       const hd = [...hospSel].sort(), memo = $('#cg-hmemo').value.trim(), now = $('#cg-hnow').checked;
       const reg = isLeader(p) && leaderPlan[mk]?.days?.length ? leaderPlan[mk].days : monthDays(mk);
       const base = cuH ? [...new Set([...cuH.days, ...(cuH.hosp || []).filter(d => reg.includes(d))])] : reg;
+      const wasIn = p.hospCall, wasSince = wasIn?.since, wasN = wasSince ? daysBetween(wasSince, td) + 1 : 0;
+      if (wasIn && !now) logEvent('입원 끝', p, `${mdK(wasSince)}부터 ${wasN}일 입원 기록 · 지금 입원 풀림`, td);
       if (!hd.length && !now) { if (cuH) { delete p.custom[mk]; logEvent('입원 지움', p, `${curMonth}월`); } if (p.hospCall) delete p.hospCall; }
       else {
         (p.custom ||= {})[mk] = { days: base.filter(d => !hospSel.has(d)).sort(), reason: '입원·치료', memo, back: '', hosp: hd, inHosp: now, date: today() };
