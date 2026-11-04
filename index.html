@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-210</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-211</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6999,7 +6999,7 @@ function openCatOrder(){
       <button type="button" class="full secondary" data-act="reset" style="margin:10px 0 6px;">↩ 처음 순서로</button>
       <button type="button" class="full" data-act="close">닫기</button>`;
   };
-  const apply = () => { saveCatOrder(); logEvent('설정', null, '경로당 사업 순서: ' + catOrder.join(' → ')); try { renderList(); renderZones(); } catch(e) {} draw(); };
+  const apply = () => keepY(() => { saveCatOrder(); logEvent('설정', null, '경로당 사업 순서: ' + catOrder.join(' → ')); try { renderList(); renderZones(); } catch(e) {} draw(); });
   dlg.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.up) { const i = +b.dataset.up; [catOrder[i - 1], catOrder[i]] = [catOrder[i], catOrder[i - 1]]; return apply(); }
@@ -7441,7 +7441,10 @@ function drawZMenuEdit(){
     el.parentNode.insertBefore(row, el);
   });
 }
-function zmMove(k, dir){
+// (v211) 순서 단추를 누른 뒤에도 보고 있던 화면 위치를 그대로 (위로 튀지 않게)
+function keepY(fn){ const y = window.scrollY; try { fn(); } finally { window.scrollTo(0, y); } }
+function zmMove(k, dir){ keepY(() => zmMoveDo(k, dir)); }
+function zmMoveDo(k, dir){
   const a = zmenuOrder(); const i = a.indexOf(k), j = i + dir;
   if (j < 0 || j >= a.length) return;
   [a[i], a[j]] = [a[j], a[i]]; zmenuSave(a); applyZMenu(); drawZMenuEdit();
@@ -7490,7 +7493,8 @@ function drawSetEdit(){
     el.parentNode.insertBefore(row, el);
   });
 }
-function setMove(k, dir){
+function setMove(k, dir){ keepY(() => setMoveDo(k, dir)); }
+function setMoveDo(k, dir){
   const a = setOrder(); const i = a.indexOf(k), j = i + dir;
   if (j < 0 || j >= a.length) return;
   [a[i], a[j]] = [a[j], a[i]]; setOrderSave(a); applySetOrder(); drawSetEdit();
@@ -8593,7 +8597,8 @@ function stDrawMv(show = stEditing){
     el.parentNode.insertBefore(bar, el);
   });
 }
-function stMove(id, dir){
+function stMove(id, dir){ keepY(() => stMoveDo(id, dir)); }
+function stMoveDo(id, dir){
   const list = stList(), i = list.findIndex(el => el.id === id), j = i + dir;
   if (i < 0 || j < 0 || j >= list.length) return;
   [list[i], list[j]] = [list[j], list[i]];
