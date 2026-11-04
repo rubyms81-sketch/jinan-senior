@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-230</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.04-231</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -538,7 +538,7 @@ body.ord-hide .ord-btn { display: none !important; }
       <div style="margin-top:8px;">
         <div class="grid-2">
           <button onclick="openAdd()">+ 참여자 신규 등록</button>
-          <button type="button" class="filebtn" onclick="openBulkGuide()" style="margin:0;">📂 엑셀로 한번에 등록</button>
+          <button type="button" class="filebtn" onclick="openBulkGuide()" style="margin:0;">📂 엑셀로 한번에 등록</button><button type="button" class="filebtn" onclick="bdayBulk()" style="margin:0;">🎂 생일 한번에 입력</button>
         </div>
         <button type="button" class="secondary full" onclick="openAddrGuide()" style="margin-top:8px;">🗺️ 경로당 주소 엑셀로 넣기</button>
         <button class="warning full hidden" id="btn-guess" onclick="openGuessFix()"></button>
@@ -2282,6 +2282,7 @@ function renderCallAlert(){
           <span style="font-size:.85rem;">${x.kind==='변경' ? `원래 ${dd(x.from)} → <b style="color:var(--warning)">오늘</b>` : '<b style="color:var(--warning)">보충 근무</b>'}${x.reason?` · ${esc(x.reason)}`:''}</span><br>${telBtn(x.p)}</button>
         ${done ? '<span class="muted" style="white-space:nowrap;">✔ 통화함</span>' : `<button class="done-btn" onclick="openCallMemo(${x.p.id},'call')">✔ 통화했어요</button>`}</div>`; }).join('')}
       ${chg.length ? `<button type="button" class="small full" onclick="dayWorkPop(true)" style="margin:6px 0 2px;background:#2b6cb0;">📩 오늘 근무 안내 문자 보내기</button>` : ''}
+      ${wxHeavyKind() ? `<button type="button" class="small full" onclick="wxPop(true)" style="margin:6px 0 2px;background:#2f855a;">☔ 오늘 ${wxHeavyKind() === 'snow' ? '눈' : '비'} 안내 문자 보내기</button>` : ''}
       ${tmr.length ? `<div class="muted" style="font-size:.85rem;margin-top:4px;">내일 바뀐 날짜로 근무:${tmr.map(x => `<a href="#" onclick="openModal(${x.p.id});return false;" style="color:inherit;">${nmH(x.p)}</a>`).join(', ')}</div>` : ''}`);
   }
   h += rptDayHtml();
@@ -3238,7 +3239,7 @@ function openInfo(){
       <tr><th>경로당</th><td><b>${esc(p.town)} · ${esc(seniorOf(p))}</b>${z ? `<br><span class="muted">🗺 ${esc(z.name)}${L ? ` · 팀장 ${esc(L.name)}` : ''}</span>` : ''}</td></tr>
       <tr><th>성명</th><td data-f="name"><b>${esc(p.name)}</b> <button type="button" class="ed-pen-btn" data-ed="name">✏️</button></td></tr>
       <tr><th>성별</th><td class="if-ed" data-f="sex">${p.sex ? esc(p.sex) : '-'} <span class="ed-pen">✏️</span></td></tr>
-      <tr><th>생일</th><td class="if-ed" data-f="bday">${p.bday ? '🎂 ' + bdayText(p.bday) : '-'} <span class="ed-pen">✏️</span></td></tr>
+      <tr><th>생일</th><td class="if-ed" data-f="bday">${p.bday ? '🎂 ' + bdayText(p.bday) : '-'} <span class="ed-pen">✏️</span>${!p.bday && p.b6 ? ` <button type="button" class="small" onclick="event.stopPropagation();fillBdayB6(${p.id})" style="width:auto;margin:0 0 0 6px;padding:4px 8px;">🪪 앞 6자리로 채우기</button>` : ''}</td></tr>
       <tr><th>나이</th><td class="if-ed" data-f="age">${p.age ? esc(p.age)+'세' : '-'}${p.birth ? ` <span class="muted">(${p.birth}년생)</span>` : ''} <span class="ed-pen">✏️</span></td></tr>
       <tr><th>연락처</th><td data-f="phone">${p.phone ? telBtn(p) : '-'} <button type="button" class="ed-pen-btn" data-ed="phone">✏️</button></td></tr>
       <tr><th>주소</th><td data-f="address">${p.address ? `<span class="map-link" id="if-map">🗺️ ${esc(p.address)}</span>` : '-'} <button type="button" class="ed-pen-btn" data-ed="address">✏️</button></td></tr>
@@ -4578,6 +4579,81 @@ function dayWorkText(tpl, p, d){
   if (t.includes(line)) t = t.replace(line, c && c.from ? `· 원래 ${mdKo(c.from)} → 바뀐 날 ${mdKo(d)}(오늘)` : `· 바뀐 날 ${mdKo(d)}(오늘)`);
   return t.replace(/\{원래날짜\}/g, c && c.from ? mdKo(c.from) : '').replace(/\{바뀐날짜\}/g, mdKo(d))
     .replace(/\{이름\}/g, p.name).replace(/\{담당자\}/g, '진안군 노인회');
+}
+// (v231) 🎂 생일 채우기: 주민등록번호 앞 6자리(p.b6)가 저장된 분은 버튼 한 번으로 생일(MM-DD)을 채움
+function fillBdayB6(id){
+  const p = participants.find(x => x.id === id); if (!p) return;
+  const r = parseBday(p.b6); if (!r.md) return notify('앞 6자리를 읽을 수 없어요. 생일 칸에서 직접 넣어 주세요.');
+  logEvent('정보 수정', p, `생일: (없음) → ${bdayText(r.md)} (주민번호 앞 6자리)`);
+  p.bday = r.md; saveData(false); openModal(id); renderList();
+}
+// (v231) 🎂 생일 한번에 입력: 생일이 빈 분을 모아 앞 6자리(480315) 또는 3/15를 한꺼번에 넣음. 앞 6자리가 저장된 분은 비워도 자동
+function bdayBulk(){
+  const list = participants.filter(p => counted(p) && !p.quit && !p.bday).sort((a, b) => TOWNS.indexOf(a.town) - TOWNS.indexOf(b.town) || a.name.localeCompare(b.name, 'ko'));
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = `<div class="dlg" style="max-height:88vh;overflow:auto;">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">🎂 생일 한번에 입력 · ${list.length}명</div>
+    <div class="muted" style="font-size:.85rem;margin-bottom:6px;">주민등록번호 앞 6자리(예: 480315)를 넣으면 생일이 채워져요. 🪪 저장된 분은 비워 두셔도 자동으로 채워요.</div>
+    ${list.length ? list.map(p => `<div style="display:flex;align-items:center;gap:6px;margin:6px 0;"><span style="flex:1;min-width:0;"><b>${nmH(p)}</b> <span class="muted" style="font-size:.85rem;">${esc(p.town)} ${esc(seniorOf(p))}${p.b6 ? ' · 🪪 저장됨' : ''}</span></span><input data-bd="${p.id}" inputmode="numeric" maxlength="8" placeholder="${p.b6 ? '' : '480315'}" style="width:110px;margin:0;"></div>`).join('') : '<div class="pen-none">생일이 빈 분이 없어요.</div>'}
+    <div class="grid-2" style="margin-top:8px;"><button class="secondary" id="bd-close">닫기</button><button id="bd-go" style="background:#2b6cb0;">✔ 저장</button></div></div>`;
+  document.body.appendChild(bg);
+  const close = () => bg.remove();
+  bg.querySelector('#bd-close').onclick = close;
+  bg.onclick = e => { if (e.target === bg) close(); };
+  bg.querySelector('#bd-go').onclick = () => {
+    let n = 0; const bad = [];
+    list.forEach(p => {
+      const v = (bg.querySelector(`input[data-bd="${p.id}"]`).value || '').replace(/\s/g, '');
+      if (!v) { const r = parseBday(p.b6); if (r.md) { p.bday = r.md; n++; } return; }
+      const r = parseBday(v); if (!r.md) return bad.push(p.name);
+      if (/^\d{6}$/.test(v)) p.b6 = v;   // 앞 6자리만 저장 (뒷자리는 저장 안 함)
+      p.bday = r.md; n++;
+    });
+    if (bad.length) return notify(`생일을 읽을 수 없는 분이 있어요: ${bad.join(', ')}\n앞 6자리(480315) 또는 3/15 형식으로 다시 넣어 주세요.`);
+    if (!n) return notify('넣은 생일이 없어요.');
+    logEvent('생일 한번에 입력', null, `${n}명`);
+    saveData(false); renderList(); close(); notify(`생일 ${n}명을 채웠어요.`);
+  };
+}
+// (v231) ☔ 비·눈 오는 날 안내: 날씨가 비·눈이면 하루 한 번 팝업. 어르신께는 안전 안내, 팀장님께는 확인 부탁을 따로 보냄
+function wxHeavyKind(){ try { const c = JSON.parse(load('jinan_weather')); return c && (c.kind === 'rain' || c.kind === 'snow') ? c.kind : ''; } catch (e) { return ''; } }
+const WX_GA = w => w === '눈' ? '눈이' : '비가';   // 주어 모양 (비가 / 눈이)
+const WX_ELDER = w => `어르신, 안녕하세요. 진안군 노인회입니다.\n오늘은 ${WX_GA(w)} 많이 와서 안전 안내를 드립니다.\n· 미끄럽지 않은 신발을 꼭 준비해 주세요.\n· 출근·퇴근 시간에 ${WX_GA(w)} 많이 오면 바로 나오지 마시고, ${WX_GA(w)} 잦아들면 천천히 안전하게 나오시길 바랍니다.\n· ${WX_GA(w)} 너무 많이 와서 이동이 어려우시면 팀장님께 따로 말씀해 주세요.\n\n진안군 노인회 드림`;
+const WX_LEADER = w => `팀장님, 안녕하세요. 진안군 노인회입니다.\n오늘은 ${WX_GA(w)} 많이 와서 담당 어르신들이 안전하게 잘 오셨는지 확인하고 챙겨 주시기 바랍니다.\n특이한 상황이나 이동이 어려우신 분이 있는지도 살펴봐 주시면 감사하겠습니다.\n\n진안군 노인회 드림`;
+function wxPop(manual){
+  const kind = wxHeavyKind(), d = today();
+  if (!manual) { if (!kind) return; if (load('jinan_wxpop') === d) return; }
+  const w = kind === 'snow' ? '눈' : '비';
+  // (v231) 실제 활동하는 날(근무일·교육 날)에만: 오늘 근무하거나 교육 있는 담당 면 어르신
+  const mk = d.slice(0, 7), actOn = p => counted(p) && !p.quit && (workDays(p, mk).includes(d) || eduOf(p, mk).some(e => e.date === d));
+  const list = participants.filter(p => myTowns.includes(p.town) && actOn(p) && seniorOf(p) !== '개별관리');
+  if (!list.length) { if (manual) notify('오늘 근무나 교육이 있는 어르신이 없어요.'); return; }
+  if (!manual) store('jinan_wxpop', d);
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg" style="max-height:88vh;overflow:auto;">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">☔ 오늘 ${WX_GA(w)} 많이 와요</div>
+    <div class="muted" style="font-size:.85rem;margin-bottom:6px;">오늘 근무일·교육 날인 어르신께는 안전 안내, 팀장님께는 확인 부탁을 따로 보냅니다. 받을 어르신을 고르세요.</div>
+    <div style="font-size:.85rem;margin-bottom:4px;">🧓 오늘 활동하는 어르신 ${list.length}명 (동향·상전)</div>
+    <div style="max-height:36vh;overflow:auto;border:1px solid #e2e8f0;border-radius:8px;padding:6px;">${list.map(p => `<label style="display:flex;gap:8px;align-items:center;font-weight:normal;margin:4px 0;"><input type="checkbox" data-wx="${p.id}" ${telOf(p) ? 'checked' : 'disabled'} style="width:20px;height:20px;margin:0;flex:none;"><span>${nmH(p)} <span class="muted" style="font-size:.85rem;">${esc(p.town)} ${esc(seniorOf(p))}${telOf(p) ? '' : ' · 📞 없음'}</span></span></label>`).join('')}</div>
+    <div style="font-size:.85rem;margin-top:8px;">🧓 어르신께 보낼 글</div>
+    <div style="white-space:pre-line;font-size:.9rem;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;margin:4px 0;">${esc(WX_ELDER(w))}</div>
+    <div style="font-size:.85rem;margin-top:6px;">👔 팀장님께 보낼 글</div>
+    <div style="white-space:pre-line;font-size:.9rem;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;margin:4px 0 8px;">${esc(WX_LEADER(w))}</div>
+    <div class="grid-2"><button class="secondary" id="wx-close">나중에</button><button id="wx-elder" style="background:#2b6cb0;">🧓 어르신께</button></div>
+    <button id="wx-leader" style="margin-top:6px;background:#2f855a;">👔 팀장님께 보내기</button></div>`;
+  document.body.appendChild(back);
+  const close = () => back.remove();
+  const picked = () => list.filter(p => back.querySelector(`input[data-wx="${p.id}"]`)?.checked);
+  back.querySelector('#wx-close').onclick = close;
+  back.onclick = e => { if (e.target === back) close(); };
+  back.querySelector('#wx-elder').onclick = async () => {
+    const ps = picked(); if (!ps.length) return notify('받을 어르신을 골라 주세요.');
+    close(); await smsBox({ title: `${w}이 많이 와요 → 어르신께 문자`, people: ps, selfOnly: true, text: WX_ELDER(w), logType: '날씨 안내 문자', logDetail: `${d} ${w}` });
+  };
+  back.querySelector('#wx-leader').onclick = async () => {
+    const ps = picked(); if (!ps.length) return notify('받을 어르신을 골라 주세요.');
+    close(); await smsBox({ title: `${w}이 많이 와요 → 팀장님께 문자`, people: ps, leaderOnly: true, text: WX_LEADER(w), logType: '날씨 팀장 문자', logDetail: `${d} ${w}` });
+  };
 }
 function dayWorkPop(manual){
   const d = today(), all = chgOn(d).map(x => x.p).filter((p, i, a) => a.indexOf(p) === i);
@@ -7880,7 +7956,7 @@ async function loadWeather(){
   const force = new URLSearchParams(location.search).get('weather');
   if (force) { scWind = force === 'wind'; return showWeather(force === 'wind' ? 'sun' : force, null); }
   let had = false;
-  try { const c = JSON.parse(load('jinan_weather')); if (c) { scWind = !!c.windy; showWeather(c.kind, c.temp); had = true; } } catch(e) {}
+  try { const c = JSON.parse(load('jinan_weather')); if (c) { scWind = !!c.windy; showWeather(c.kind, c.temp); had = true; setTimeout(() => wxPop(false), 2000); } } catch(e) {}   // (v231) 마지막 날씨로도 비·눈 팝업
   if (!had) showWeather('', null);   // 날씨를 아직 못 받아도 그림(마이산·하늘)은 바로 보이게
   try {
     const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${WX_LAT}&longitude=${WX_LON}&current=temperature_2m,weather_code,wind_speed_10m&timezone=Asia%2FSeoul`);
@@ -7889,6 +7965,7 @@ async function loadWeather(){
     scWind = (j.current.wind_speed_10m || 0) >= 25;   // 바람 센 날(시속 25km 넘음): 소나무가 크게 흔들림
     store('jinan_weather', JSON.stringify({kind, temp, windy: scWind, at: Date.now()}));
     showWeather(kind, temp);
+    setTimeout(() => wxPop(false), 2000);   // (v231) 비·눈 오는 날 하루 한 번 안내 팝업
   } catch(e) { /* 인터넷이 없으면 마지막 날씨 그대로 */ }
 }
 setInterval(loadWeather, 30*60*1000);   // 30분마다 새로
