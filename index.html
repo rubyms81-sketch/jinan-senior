@@ -3875,7 +3875,7 @@ function addChange(pre){
       const tag = ee ? ee.slice(0, 4) : onK ? (prevOn ? '입원중' : '입원') : hospOutDay(p, k) ? '퇴원' : isStart() && k === startFrom ? '시작' : isStart() && startFrom && k < startFrom && rawDays.includes(k) ? '빠짐' : isQuit() && quitFrom && k === quitFrom ? '포기' : isQuit() && quitFrom && k > quitFrom && isWork ? '빠짐' : fromSet.has(k) ? `→${dd(fromSet.get(k)).replace(/\(.*/, '')}` : k === from ? '원래' : isTo ? '바꿈' : isH ? '입원' : k === end ? '마감' : '';
       const red = w === 0 || w === 6 || HOLIDAYS.has(k);   // 토·일·공휴일(빨간 날)로는 못 옮김
       const qd = quitDayOf(p), gone = qd && k >= qd;   // 이미 중도포기한 날 이후는 못 넣음
-      const off = isHosp() || isEdu() ? false : isStart() ? (after || red) : isQuit() ? (after || (red && !isWork)) : ((past || after || gone || (red && !isWork)) && !isFrom && !isTo);
+      /* 중도포기: 마감일 뒤 날짜도 고를 수 있음 (v268) */ const off = isHosp() || isEdu() ? false : isStart() ? (after || red) : isQuit() ? (red && !isWork) : ((past || after || gone || (red && !isWork)) && !isFrom && !isTo);
       h += `<button data-k="${k}" class="${cls}" ${off ? 'disabled' : ''}>${d}${tag ? `<small>${tag}</small>` : ''}</button>`;
     }
     $('#cg-cal').innerHTML = h;
