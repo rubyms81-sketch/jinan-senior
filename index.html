@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-265</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-266</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -7252,13 +7252,16 @@ async function ltcCheck(pid){
   if (!await showDialog('장기요양 등급 판정을 받으셨나요?', true, ['1~5등급 있음', '아니요'])) return;
   const ok = await showDialog(`⚠️ 장기요양 1~5등급 판정자는 탈락 처리해야 합니다.\n업무시스템 "사업별 참여자 관리"에서 참여상태를 "탈락"으로 고친 후 저장하세요.\n\n${p.name} 어르신을 탈락 처리할까요?`, true, ['확인', '취소']);
   if (!ok) return;
-  p.quit = true; p.quitYear = Number(today().slice(0,4)); p.quitDay = today(); p.quitWhy = '장기요양 1~5등급 탈락'; p.ltc = today();
-  logEvent('장기요양 탈락', p, `${mdK(today())} 탈락 · 장기요양 1~5등급 판정 (사업별 참여자 관리에서 참여상태 "탈락"으로 고치기)`, today());
+  // 📅 탈락 날짜: 기본은 오늘, 근무일과 상관없이 아무 날이나 고를 수 있음 (사용자 요청, 2026-11-05)
+  const d = await new Promise(res => openDatePicker(today(), res, '📅 탈락 날짜를 고르세요 (근무일과 상관없음)'));
+  if (d > today()) return notify('오늘 뒤 날짜는 넣을 수 없어요.');
+  p.quit = true; p.quitYear = Number(d.slice(0,4)); p.quitDay = d; p.quitWhy = '장기요양 1~5등급 탈락'; p.ltc = d;
+  logEvent('장기요양 탈락', p, `${mdK(d)} 탈락 · 장기요양 1~5등급 판정 (사업별 참여자 관리에서 참여상태 "탈락"으로 고치기)`, d);
   saveData(false); renderList(); renderNewAlert(); if (current()?.id === p.id) renderModal();
   // 사유(장기요양 1~5등급)와 함께 본인께 · 담당 팀장께 각각 문자 (사용자 요청, 2026-11-01)
   if (await showDialog(`${p.name} 어르신께 중도포기 안내 문자(사유: 장기요양 1~5등급)를 보낼까요?\n받는 분: 본인, 그다음 담당 팀장님`, true, ['문자 보내기', '나중에'])) {
-    await smsBox({ title: '본인께 중도포기 안내 문자', people: [p], selfOnly: true, text: quitText(p).replace(/\n※[^\n]*/, ''), logType: '중도포기 문자', logDetail: `${mdK(today())}부터 · 장기요양 1~5등급` });
-    await smsBox({ title: '팀장님께 중도포기 보고 문자', people: [p], leaderOnly: true, text: ltcLeaderText(p), logType: '중도포기 문자', logDetail: `${mdK(today())}부터 · 장기요양 1~5등급` });
+    await smsBox({ title: '본인께 중도포기 안내 문자', people: [p], selfOnly: true, text: quitText(p).replace(/\n※[^\n]*/, ''), logType: '중도포기 문자', logDetail: `${mdK(d)}부터 · 장기요양 1~5등급` });
+    await smsBox({ title: '팀장님께 중도포기 보고 문자', people: [p], leaderOnly: true, text: ltcLeaderText(p), logType: '중도포기 문자', logDetail: `${mdK(d)}부터 · 장기요양 1~5등급` });
   }
 }
 // 장기요양 탈락 때 팀장님께 드리는 문자 (사용자 승인 문안, 2026-11-01)
