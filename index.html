@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-267</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-268</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3562,7 +3562,7 @@ function setCheckDate(k){
 }
 function pickCheckDate(){ openDatePicker(document.getElementById('c-date').value || today(), setCheckDate); }
 // 달력 띄우기: 고른 날짜를 onPick(날짜)으로 돌려줌
-function openDatePicker(sel, onPick, title){
+function openDatePicker(sel, onPick, title, free){   // free: 마감일 뒤 날짜도 고를 수 있음 (중도포기·장기요양, v268)
   const p = current();
   let y = Number(sel.slice(0,4)), m = Number(sel.slice(5,7));
   const back = document.createElement('div'); back.className = 'dlg-back';
@@ -3581,7 +3581,7 @@ function openDatePicker(sel, onPick, title){
       const k = ymd(y,m,d), w = new Date(y, m-1, d).getDay(), i = dayInfo(p, k);
       const cls = [i.hosp?'hosp':i.moved?'mv':(i.work?'wk':''), i.end?'on end':'', (i.work && k<td)?'pastd':'', (w===0||HOLIDAYS.has(k))?'red':'', k===sel?'sel':''].join(' ');
       const tag = i.hosp ? (i.hospIn ? '입원중' : '입원') : i.out ? '퇴원' : i.end ? '마감' : k===td ? '오늘' : i.moved ? '변경' : '';
-      h += `<button data-k="${k}" class="${cls}" ${i.after?'disabled':''}>${d}${tag?`<small>${tag}</small>`:''}</button>`;
+      h += `<button data-k="${k}" class="${cls}" ${i.after && !free ?'disabled':''}>${d}${tag?`<small>${tag}</small>`:''}</button>`;
     }
     back.querySelector('#pc-cal').innerHTML = h;
     back.querySelectorAll('#pc-cal button:not(:disabled)').forEach(b => b.onclick = () => { back.remove(); onPick(b.dataset.k); });
@@ -3931,7 +3931,7 @@ function addChange(pre){
     openDatePicker(startSel, k => {
       if (k.slice(0,7) !== mk) return notify(`그만두는 날은 ${Number(mk.slice(5,7))}월 안에서 고르세요.`);
       quitFrom = k; drawCal();
-    }, '🚪 그만두는 날을 고르세요');
+    }, '🚪 그만두는 날을 고르세요', true);
   };
   // 다른 달로 넘어가도 고른 날짜는 그대로 (저장할 때 각 날짜의 달에 맞게 확인)
   const goMonth = n => {
@@ -7250,7 +7250,7 @@ async function ltcCheck(pid){
   const ok = await showDialog(`⚠️ 장기요양 1~5등급 판정자는 탈락 처리해야 합니다.\n업무시스템 "사업별 참여자 관리"에서 참여상태를 "탈락"으로 고친 후 저장하세요.\n\n${p.name} 어르신을 탈락 처리할까요?`, true, ['확인', '취소']);
   if (!ok) return;
   // 📅 탈락 날짜: 기본은 오늘, 근무일과 상관없이 아무 날이나 고를 수 있음 (사용자 요청, 2026-11-05)
-  const d = await new Promise(res => openDatePicker(today(), res, '📅 탈락 날짜를 고르세요 (근무일과 상관없음)'));
+  const d = await new Promise(res => openDatePicker(today(), res, '📅 탈락 날짜를 고르세요 (근무일과 상관없음)', true));
   if (d > today()) return notify('오늘 뒤 날짜는 넣을 수 없어요.');
   p.quit = true; p.quitYear = Number(d.slice(0,4)); p.quitDay = d; p.quitWhy = '장기요양 1~5등급 탈락'; p.ltc = d;
   logEvent('장기요양 탈락', p, `${mdK(d)} 탈락 · 장기요양 1~5등급 판정 (사업별 참여자 관리에서 참여상태 "탈락"으로 고치기)`, d);
