@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-238</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-239</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -1318,7 +1318,7 @@ function renderLeadBoard(){
   box.innerHTML = `<div style="background:#ebf8ff;border:2px solid #2b6cb0;border-radius:14px;padding:14px;margin-bottom:10px;">
     <div style="font-size:20px;font-weight:700;">📞 팀장님 보고 · ${esc(p.name)}</div>
     <div style="font-size:19px;margin-top:8px;">현재까지 <b style="font-size:26px;color:#2b6cb0;">${worked}일</b> 근무 중</div>
-    ${inHospNow(p) ? '<div style="font-size:19px;color:#c53030;font-weight:700;margin-top:6px;">🏥 현재 입원 중</div>' : ''}
+    ${inHospNow(p) ? `<div style="font-size:19px;color:#c53030;font-weight:700;margin-top:6px;">🏥 현재 입원 중${hospDaysOf(p) ? ` · ${hospDaysOf(p)}일째` : ''}</div>` : ''}
     <div style="font-size:16px;font-weight:700;margin-top:10px;">📝 이번 달 특이사항</div>
     ${notes.length ? notes.map(n => `<div style="font-size:16px;margin-top:4px;line-height:1.5;">· ${Number(n.date.slice(5,7))}/${Number(n.date.slice(8,10))} ${esc(n.text)}</div>`).join('') : '<div class="muted" style="font-size:15px;margin-top:4px;">없음</div>'}
     <div id="lead-note-box"><div onclick="leadNoteOpen()" style="border:1px dashed #2b6cb0;border-radius:8px;padding:8px;margin-top:8px;color:#2b6cb0;font-size:15px;background:#fff;">눌러서 특이사항 적기</div></div></div>`;
@@ -1488,7 +1488,7 @@ function personRow(p, showSite){
   const checked = p.logs.some(l => l.date===t);
   return `<button class="site" onclick="openModal(${p.id})">
     <div><strong>${nmH(p)}</strong> ${ageSex(p)?`<span class="muted">(${esc(ageSex(p))})</span>`:''} ${checked?'<span class="done">✔ 오늘 점검</span>':''}<br>
-      ${showSite?`<span class="muted">🏠 ${esc(p.town)} · ${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</span><br>`:''}${inHospNow(p) && s.status==='정상' ? '' : badgeOf(s)}${inHospNow(p)?' <span class="badge bg-hosp">🏥 입원 중</span>':''}${p.linking?' <span class="badge bg-warning">🔗 연계 중</span>':''}</div>
+      ${showSite?`<span class="muted">🏠 ${esc(p.town)} · ${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</span><br>`:''}${inHospNow(p) && s.status==='정상' ? '' : badgeOf(s)}${inHospNow(p)?' '+inHospBadge(p):''}${p.linking?' <span class="badge bg-warning">🔗 연계 중</span>':''}</div>
     <span class="arrow">›</span></button>`;
 }
 
@@ -2102,6 +2102,9 @@ function rangeText(days){
 }
 const hospOf = (p, mk) => customOf(p, mk)?.hosp || [];
 const inHospNow = p => !!p.hospCall || !!customOf(p, today().slice(0,7))?.inHosp;
+// 🏥 입원 몇일째: 입원 시작일(지금 입원 중이면 p.hospCall.since, 없으면 이번 달 입원 첫 날)부터 오늘까지
+const hospDaysOf = p => { const s0 = p.hospCall?.since || [...(customOf(p, today().slice(0,7))?.hosp || [])].sort()[0]; return s0 && s0 <= today() ? daysBetween(s0, today()) + 1 : 0; };
+const inHospBadge = p => `<span class="badge bg-hosp">🏥 입원 중</span>` + (hospDaysOf(p) ? ` <span style="color:#c53030;font-weight:700;">${hospDaysOf(p)}일째</span>` : '');
 // ---------- 📞 입원 어르신 안부 전화 (일주일마다 알림) ----------
 // p.hospCall = { since:입원일, last:마지막 통화일, due:다음 전화할 날 }
 const CALL_EVERY = 7;
@@ -2918,7 +2921,7 @@ function openZone(id){
       return `<details class="zs-site"><summary><span><span class="muted">${esc(x.town)}</span> <b>${crown(x.town, x.senior)}${esc(x.senior)}</b></span><span class="muted">${ms.filter(p => !stats(p).dropped).length}명 ▾</span></summary>
         <button type="button" class="small full" data-gosite="${esc(siteKey(x.town, x.senior))}" style="margin:6px 0 4px;">▶ 이 경로당 점검하기</button>
         <div class="zs-people">${ms.length ? ms.map(p => { const st = stats(p); return `<div class="zs-person">
-          <b>${nmH(p)}</b> ${ageSex(p)?`<span class="muted">(${esc(ageSex(p))})</span>`:''} ${st.dropped?`<span class="badge bg-danger">${esc(st.status)}</span>`:(inHospNow(p) && st.status==='정상' ? '' : badgeOf(st))}${inHospNow(p)?' <span class="badge bg-hosp">🏥 입원 중</span>':''}
+          <b>${nmH(p)}</b> ${ageSex(p)?`<span class="muted">(${esc(ageSex(p))})</span>`:''} ${st.dropped?`<span class="badge bg-danger">${esc(st.status)}</span>`:(inHospNow(p) && st.status==='정상' ? '' : badgeOf(st))}${inHospNow(p)?' '+inHospBadge(p):''}
           <br>${telBtn(p)}${p.address?`<br><span class="muted" style="font-size:.85rem;">🏠 ${esc(p.address)}</span>`:''}
           <br><button type="button" class="small secondary" data-open="${p.id}">점검 화면 열기 ›</button>
           ${z.leaderId === p.id ? '<span class="badge" style="background:#276749;">👤 팀장</span> <button type="button" class="small secondary" data-unlead="1">팀장 해제</button>' : `<button type="button" class="small" data-lead="${p.id}" style="background:#276749;">👤 팀장으로 정하기</button>`}</div>`; }).join('') : '<div class="muted">어르신이 없습니다.</div>'}
@@ -3252,7 +3255,7 @@ function openInfo(){
       <tr><th>나이</th><td class="if-ed" data-f="age">${p.age ? esc(p.age)+'세' : '-'}${p.birth ? ` <span class="muted">(${p.birth}년생)</span>` : ''} <span class="ed-pen">✏️</span></td></tr>
       <tr><th>연락처</th><td data-f="phone">${p.phone ? telBtn(p) : '-'} <button type="button" class="ed-pen-btn" data-ed="phone">✏️</button></td></tr>
       <tr><th>주소</th><td data-f="address">${p.address ? `<span class="map-link" id="if-map">🗺️ ${esc(p.address)}</span>` : '-'} <button type="button" class="ed-pen-btn" data-ed="address">✏️</button></td></tr>
-      <tr><th>상태</th><td>${inHospNow(p) && st.status === '정상' ? '' : esc(st.status)}${st.penalty ? ` <b style="color:var(--danger)" class="pen-link" id="if-pen">(${st.penalty}점) 이유 보기 ›</b>` : ''}${inHospNow(p) ? ' <span class="badge bg-hosp">🏥 입원 중</span>' : ''}${startTag(p) ? ` <span class="muted">· ${Number(p.start.slice(5))}월부터 근무</span>` : ''}</td></tr>
+      <tr><th>상태</th><td>${inHospNow(p) && st.status === '정상' ? '' : esc(st.status)}${st.penalty ? ` <b style="color:var(--danger)" class="pen-link" id="if-pen">(${st.penalty}점) 이유 보기 ›</b>` : ''}${inHospNow(p) ? ' '+inHospBadge(p) : ''}${startTag(p) ? ` <span class="muted">· ${Number(p.start.slice(5))}월부터 근무</span>` : ''}</td></tr>
       <tr><th>성실도</th><td>${sinc}</td></tr>
     </table>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><label style="margin:0;">🩺 아픈 곳</label><button type="button" class="small secondary" id="if-toggle" style="margin:0;width:auto;"></button></div>
