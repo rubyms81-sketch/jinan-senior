@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-266</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-267</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -848,7 +848,7 @@ const FB_CONFIG = {
   appId: "1:976802627283:web:eb623f93cb4568773c9e26"
 };
 // 이 휴대폰에만 두는 설정(클라우드에 올리지 않음)
-const CLOUD_DEVICE_ONLY = ['jinan_xlpw','jinan_lock','jinan_edu_draft','jinan_weather','jinan_def148','jinan_def151','jinan_open','jinan_ck_open','jinan_photos'];
+const CLOUD_DEVICE_ONLY = ['jinan_xlpw','jinan_lock','jinan_edu_draft','jinan_weather','jinan_def148','jinan_def151','jinan_photos'];
 const CLOUD_DEVICE_PREFIX = ['jinan_rptalarm_','jinan_daypop'];
 const CLOUD_CH = 200000; // 문서 하나에 넣을 글자 수 (Firestore 문서 1MB 제한 대비)
 let fbAuth = null, fbDb = null, fbUser = null, cloudBusy = false;
@@ -2004,8 +2004,6 @@ function renderPersonDays(p){
   document.getElementById('btn-custom').textContent = cu ? '🏥 입원 체크 고치기' : '🏥 입원 체크';
   const nMv = chg.length + (cu ? 1 : 0) + (p.hospCall ? 1 : 0);
   document.getElementById('sec-moved').classList.toggle('hidden', !nMv);
-  // 다른 어르신으로 바뀌면 "이동한 날짜" 칸은 접힌 채로 시작
-  { const sm = document.getElementById('sec-moved'); if (sm.dataset.pid !== String(p.id)) { sm.open = false; sm.dataset.pid = String(p.id); } }
   document.getElementById('m-chg-title').innerHTML = `🔄 이동한 날짜 ${chg.length}건${cu ? (cu.inHosp ? ' · 🏥 입원' : ' · 🩹 보충') : ''}`;
 }
 
@@ -4688,10 +4686,10 @@ async function lkBulkDone(){
 }
 // 🎉 환영 문자: 축하 + 활동일(달력) + 주의사항. 글은 한 번 고치면 다음에도 그대로 씀 (jinan_tpl.welcome)
 // 점검 항목 접기·펴기: 한 번 정하면 다른 어르신을 열어도 그대로 (이 휴대폰에만 저장)
-let ckOpen = (() => { try { return load('jinan_ck_open') === '1'; } catch(e) { return false; } })();
+let ckOpen = (() => { try { return JSON.parse(load('jinan_open') || '{}').ck === true; } catch(e) { return false; } })();
 function drawCkToggle(){ const b = document.getElementById('ck-toggle'), body = document.getElementById('ck-body'); if (!b || !body) return;
   body.style.display = ckOpen ? '' : 'none'; b.textContent = ckOpen ? '접기 ▲' : '펼치기 ▼'; }
-function ckToggle(){ ckOpen = !ckOpen; try { store('jinan_ck_open', ckOpen ? '1' : '0'); } catch(e) {} drawCkToggle(); }
+function ckToggle(){ ckOpen = !ckOpen; try { openMem.ck = ckOpen; saveOpenMem(); } catch(e) {} drawCkToggle(); }
 const WELCOME_DEF = `[진안군노인회] 노인일자리 참여 안내
 
 {이름} 어르신, 노인일자리 참여를 진심으로 축하드립니다!
@@ -6795,7 +6793,6 @@ function current(){ const id = Number(document.getElementById('edit-id').value);
 function openModal(id){
   restoreInfoForm();
   dayTabMk = null;   // 점검 화면을 열 때는 이번 달로
-  document.querySelectorAll('.m-sec').forEach(d => d.open = false);   // 목록은 접힌 채로 시작
   const p = participants.find(x => x.id===id); if(!p) return;
   document.getElementById('edit-id').value = p.id;
   document.getElementById('m-town').value = p.town;
@@ -7943,15 +7940,18 @@ function openZoneAtt(z){
   bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
   draw();
 }
-// ---------- 접기 칸 열림·닫힘 기억: 펼쳐 둔 칸은 앱을 껐다 켜도 그대로 (이 휴대폰에만, jinan_open) ----------
+// ---------- 접기 칸 열림·닫힘 기억: 펼쳐 둔 칸은 앱을 껐다 켜도 그대로, 모든 휴대폰이 같은 상태로 봄 (클라우드 공유, jinan_open). 기본은 닫힘 ----------
 let openMem = (() => { try { return JSON.parse(load('jinan_open')) || {}; } catch(e) { return {}; } })();
 const saveOpenMem = () => { try { store('jinan_open', JSON.stringify(openMem)); } catch(e) {} };
 // 키 = 칸 이름(data-mv 또는 id) + 그 칸 안에서 몇 번째 접기 칸인지
 const cardKey = d => { const card = d.parentElement?.closest('[data-mv],[id]'); if (!card || d.parentElement !== card) return ''; const i = [...card.children].filter(c => c.tagName === 'DETAILS').indexOf(d); return (card.dataset.mv || card.id) + '#' + i; };
-function applyOpenMem(){ document.querySelectorAll('.card > details').forEach(d => { const k = cardKey(d); if (k && k in openMem) d.open = !!openMem[k]; }); }
+function applyOpenMem(){
+  document.querySelectorAll('.card > details').forEach(d => { const k = cardKey(d); if (k && k in openMem) d.open = !!openMem[k]; });
+  document.querySelectorAll('#modal details[id]').forEach(d => { const k = 'm#' + d.id; if (k in openMem) d.open = !!openMem[k]; });
+}
 document.addEventListener('toggle', e => {
   const d = e.target; if (!d || d.tagName !== 'DETAILS') return;
-  const k = d.id === 'zn-manage' ? 'zn-manage' : cardKey(d); if (!k) return;
+  const k = d.id === 'zn-manage' ? 'zn-manage' : (d.closest('#modal') && d.id ? 'm#' + d.id : cardKey(d)); if (!k) return;
   openMem[k] = d.open; saveOpenMem();
 }, true);
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyOpenMem); else applyOpenMem();
