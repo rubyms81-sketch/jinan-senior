@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-241</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-242</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3706,8 +3706,8 @@ function addChange(pre){
     <button type="button" class="secondary full hidden" id="cg-back" style="margin:-4px 0 10px;">← 뒤로 (근무일 변경)</button>
     <div id="cg-hbox" class="hidden" style="margin:-4px 0 12px;">
       <label>입원 사유</label><input type="text" id="cg-hmemo" placeholder="예: 다리 골절, ○○병원" autocomplete="off" style="margin:0 0 6px;">
-      <div class="grid-2" style="margin:0 0 8px;"><div><label style="margin:0;">입원 시작일</label><input type="date" id="cg-hsince" style="margin:0;"></div><div id="cg-hendbox" class="hidden"><label style="margin:0;">퇴원일 (확인서 날짜)</label><input type="date" id="cg-hend" style="margin:0;"></div></div>
-      <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin:0;"><input type="checkbox" id="cg-hnow" style="width:22px;height:22px;margin:0;"> 🏥 지금 입원 중</label><div id="cg-hcount" style="margin-top:6px;"></div></div>
+      <div class="grid-2" style="margin:0 0 8px;"><div><label style="margin:0;">입원 시작일</label><input type="date" id="cg-hsince" style="margin:0;"></div><div><label style="margin:0;">퇴원일 (비우면 지금 입원 중)</label><input type="date" id="cg-hend" style="margin:0;"></div></div>
+      <div id="cg-hcount" style="margin-top:6px;"></div></div>
     <div id="cg-ebox" class="hidden" style="margin:-4px 0 12px;">
       <div id="cg-enames" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;"></div>
       <div style="display:flex;gap:4px;"><input type="text" id="cg-enew" placeholder="새 이름" autocomplete="off" style="margin:0;"><button type="button" class="small" id="cg-eadd" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button></div></div>
@@ -3719,23 +3719,21 @@ function addChange(pre){
     const c = back.querySelector('#cg-pedit'); if (c) c.onclick = () => { back.remove(); pauseEditDate(p.id); }; }
   document.body.appendChild(back);
   const $ = q => back.querySelector(q);
-  $('#cg-hmemo').value = cuH?.memo || ''; $('#cg-hnow').checked = !!cuH?.inHosp || !!p.hospCall;
-  // 🏥 입원 기간: 시작일~퇴원일(지금 입원 중이면 오늘) 사이의 날짜를 이번 달 칸에 채움. 입원 기록은 퇴원해도 남김
+  $('#cg-hmemo').value = cuH?.memo || '';
+  // 🏥 입원 기간: 시작일~퇴원일 사이를 이번 달 칸에 채움. 퇴원일을 비우면 지금 입원 중(시작일~오늘). 입원 기록은 퇴원해도 남김
   const wasInNow = !!p.hospCall || !!cuH?.inHosp, lastStay = p.hospStay || null;
   $('#cg-hsince').value = p.hospCall?.since || [...hospSel].sort()[0] || '';
-  $('#cg-hend').value = lastStay?.end || td;
+  $('#cg-hend').value = wasInNow ? '' : (lastStay?.end || '');
   const hospRangeIn = (from, to) => { const yy = Number(mk.slice(0,4)), mm = Number(mk.slice(5,7)), n = new Date(yy, mm, 0).getDate(), out = []; for (let d = 1; d <= n; d++) { const k = ymd(yy, mm, d); if (k >= from && k <= to) out.push(k); } return out; };
+  const hospNowVal = () => !$('#cg-hend').value;   // 퇴원일이 비어 있으면 지금 입원 중
   const hospSinceVal = () => $('#cg-hsince').value || p.hospCall?.since || [...hospSel].sort()[0] || td;
-  const hospEndVal = () => $('#cg-hnow').checked ? td : ($('#cg-hend').value || td);
-  const hospApply = () => { const s0 = hospSinceVal(), e0 = hospEndVal();
+  const hospEndVal = () => hospNowVal() ? td : $('#cg-hend').value;
+  const hospApply = () => { if (!$('#cg-hsince').value && !p.hospCall && !hospSel.size) return; const s0 = hospSinceVal(), e0 = hospEndVal();
     [...hospSel].forEach(k => { if (k < s0 || k > e0) hospSel.delete(k); }); hospRangeIn(s0, e0).forEach(k => hospSel.add(k)); };
-  const hospCountHtml = () => { const now = $('#cg-hnow').checked; if (!now && !wasInNow && !lastStay) return '';
+  const hospCountHtml = () => { const now = hospNowVal(); if (!hospSel.size && !wasInNow && !lastStay) return '';
     const s0 = hospSinceVal(), e0 = hospEndVal(), n = daysBetween(s0, e0) + 1, lim = qDays(), left = lim - n;
     if (n <= 0) return `<div class="notice" style="margin:0;font-size:.92rem;">⚠️ 시작일과 퇴원일을 다시 확인해 주세요.</div>`;
     return `<div class="notice" style="margin:0;font-size:.92rem;background:#fff5f7;border-color:#fbb6ce;">🏥 ${now ? `입원 ${mdK(s0)} ~ 오늘` : `입원 ${mdK(s0)} ~ ${mdK(e0)} 퇴원`} · 입원 <b>${n}일</b> · 중도포기 기준 ${lim}일 중 ${n}일${left < 0 ? ' <b style="color:var(--danger)">기준 넘음</b>' : (now && left <= 5) ? ` <b style="color:var(--danger)">${left}일 남음</b>` : ''}</div>`; };
-  const hendToggle = () => { const now = $('#cg-hnow').checked; $('#cg-hendbox').classList.toggle('hidden', now || !(wasInNow || lastStay)); };
-  hendToggle();
-  $('#cg-hnow').onchange = () => { if ($('#cg-hnow').checked) $('#cg-hsince').value ||= ([...hospSel].sort()[0] || td); else if (!$('#cg-hend').value) $('#cg-hend').value = td; hendToggle(); hospApply(); drawCal(); };
   $('#cg-hsince').onchange = () => { hospApply(); drawCal(); };
   $('#cg-hend').onchange = () => { hospApply(); drawCal(); };
   const drawENames = () => { const names = [...new Set([...EDU_NAMES, ...eduSel.values(), ...(eduName ? [eduName] : [])])];
@@ -3820,7 +3818,7 @@ function addChange(pre){
     const was = modeKey();
     $('#cg-type').value = on ? b.dataset.v : '';
     if (was !== modeKey()) { pairs = []; from = null; quitFrom = null; startFrom = null; }
-    if (isHosp() && $('#cg-hnow').checked) hospApply();
+    if (isHosp()) hospApply();
     drawCal();
   });
   if (pre.reason) $(`#cg-types button[data-v="${pre.reason}"]`)?.click();
@@ -3834,7 +3832,7 @@ function addChange(pre){
   $('#cg-save').onclick = async () => {
     const reason = $('#cg-type').value; const memo = ($('#cg-memo')?.value || '').trim();
     if (isHosp()) {   // 🛏️ 입원 체크: 입원한 날은 근무일에서 빠짐
-      const hd = [...hospSel].sort(), memo = $('#cg-hmemo').value.trim(), now = $('#cg-hnow').checked;
+      const hd = [...hospSel].sort(), memo = $('#cg-hmemo').value.trim(), now = hospNowVal();
       const sVal = hospSinceVal(), eVal = now ? '' : hospEndVal();
       if (sVal > td) return notify('입원 시작일이 오늘보다 뒤예요.');
       if (!now && eVal < sVal) return notify('퇴원일이 입원 시작일보다 앞이에요.');
@@ -3850,7 +3848,7 @@ function addChange(pre){
         if (now) {
           if (p.hospCall) p.hospCall.since = sVal;
           else p.hospCall = { since: sVal, last: today(), due: addDays(today(), CALL_EVERY) };
-        } else if (wasInNow || lastStay) {
+        } else {
           p.hospStay = { since: sVal, end: eVal };   // 퇴원해도 입원 기록은 남김 (빠진 날·45일 셈)
           delete p.hospCall;
         }
