@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-259</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-260</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3553,7 +3553,7 @@ function dayInfo(p, k){
   const mk = k.slice(0,7), days = p ? personDays(p, mk) : monthDays(mk), end = endDay(mk);
   const moved = p ? new Set(changesIn(p, mk).map(c => c.to)) : new Set();
   if (p && customOf(p, mk)) { const reg = monthDays(mk); days.forEach(d => { if (!reg.includes(d)) moved.add(d); }); }
-  return { work: days.includes(k), moved: moved.has(k), end: k===end, after: end && k > end, hosp: !!p && hospOf(p, mk).includes(k) };
+  return { work: days.includes(k), moved: moved.has(k), end: k===end, after: end && k > end, hosp: !!p && hospOf(p, mk).includes(k), hospIn: !!p && hospIsIn(p, addDays(k, -1)), out: !!p && hospOutDay(p, k) };
 }
 function setCheckDate(k){
   document.getElementById('c-date').value = k;
@@ -3582,7 +3582,7 @@ function openDatePicker(sel, onPick, title){
     for (let d = 1; d <= last; d++) {
       const k = ymd(y,m,d), w = new Date(y, m-1, d).getDay(), i = dayInfo(p, k);
       const cls = [i.hosp?'hosp':i.moved?'mv':(i.work?'wk':''), i.end?'on end':'', (i.work && k<td)?'pastd':'', (w===0||HOLIDAYS.has(k))?'red':'', k===sel?'sel':''].join(' ');
-      const tag = i.hosp ? '입원' : i.end ? '마감' : k===td ? '오늘' : i.moved ? '변경' : '';
+      const tag = i.hosp ? (i.hospIn ? '입원중' : '입원') : i.out ? '퇴원' : i.end ? '마감' : k===td ? '오늘' : i.moved ? '변경' : '';
       h += `<button data-k="${k}" class="${cls}" ${i.after?'disabled':''}>${d}${tag?`<small>${tag}</small>`:''}</button>`;
     }
     back.querySelector('#pc-cal').innerHTML = h;
@@ -3809,7 +3809,7 @@ function addChange(pre){
         const memo = $('#cg-hmemo')?.value.trim() || customOf(p, p.hospCall.since.slice(0, 7))?.memo || '';
         const since = p.hospCall.since;
         hospEndApply(p, end, memo); back.remove(); renderModal(); renderList();
-        notify(`🏥 ${mdK(end)} 퇴원으로 저장했어요.`);
+        smsBox({ title: '🎉 퇴원 축하 문자', people: [p], selfOnly: true, text: hospDoneText(p), logType: '퇴원 축하 문자', logDetail: `${mdK(end)} 퇴원` });
       });
       return;
     }
@@ -6774,6 +6774,10 @@ function leaderLine(p, what){
   return `\n※ ${L ? `${L.name} 팀장님(${fmtPhone(L.num)})` : '팀장님'}께도 꼭 연락하셔서 ${what} 알려 주세요.`;
 }
 // 중도포기 안내 문자 (본인 + 팀장)
+// 🎉 퇴원 축하 문자 (어르신께): 확인서 준비, 팀장님께 연락, 앞으로 활동 상의
+function hospDoneText(p) {
+  return `[진안군노인회] 퇴원 축하 안내\n\n${p.name} 어르신,\n퇴원을 진심으로 축하드립니다. 건강을 되찾으셔서 정말 다행입니다.\n\n입·퇴원 확인서를 준비해 주시기 바랍니다.\n팀장님께도 연락 부탁드리며, 앞으로 활동을 어떻게 하실지 상의해 주시길 바랍니다.\n궁금하신 점이 있으시면 언제든지 연락 주세요.\n\n진안군 노인회 드림`;
+}
 function quitText(p){
   const d = p.quitDay;
   return `[진안군노인회] 중도포기 안내\n\n${p.name} 어르신,\n${d ? `${d.slice(0,4)}년 ${Number(d.slice(5,7))}월 ${Number(d.slice(8,10))}일부터 ` : ''}노인일자리 활동을 그만두시는 것(중도포기)으로 처리되었습니다.\n(사유: ${p.quitWhy || '본인 사정'})\n\n그동안 수고 많으셨습니다.${leaderLine(p, '중도포기 사실을')}\n궁금한 점은 담당자에게 연락 주세요.\n감사합니다.`;
