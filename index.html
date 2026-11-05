@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-253</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-254</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2126,7 +2126,7 @@ function syncHospCalls() {
 function hospEndAsk(since, onOk) {
   const bg = document.createElement('div'); bg.className = 'dlg-back';
   bg.innerHTML = `<div class="dlg" style="text-align:left;"><div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">🏥 오늘 퇴원하시나요?</div>
-    <div class="muted" style="margin-bottom:8px;">퇴원하는 날까지 입원으로 셉니다. 오늘이면 그대로 확인, 다른 날이면 날짜를 고친 뒤 확인하세요.</div>
+    <div class="muted" style="margin-bottom:8px;">퇴원한 날을 고르세요. 그 날부터는 입원에서 빠집니다. 오늘이면 그대로 확인, 다른 날이면 날짜를 고치세요.</div>
     <input type="date" id="he-d" value="${today()}" min="${since}" max="${today()}" style="margin-bottom:10px;">
     <div style="display:flex;gap:8px;"><button type="button" class="secondary" id="he-no" style="flex:1;">취소</button><button type="button" id="he-ok" style="flex:1;">✔ 확인 (퇴원)</button></div></div>`;
   document.body.appendChild(bg);
@@ -2139,26 +2139,29 @@ function hospEndAsk(since, onOk) {
   };
 }
 // 퇴원 적용: 퇴원 날 뒤의 입원 날은 빼고, 입원 기록(기간·병명)을 특이사항에 남김
-function hospEndApply(p, end, memo) {
-  const since = p.hospCall?.since || end;
+function hospEndApply(p, E, memo) {
+  const since = p.hospCall?.since || E, last = addDays(E, -1);   // 퇴원하는 날(E)은 입원에서 뺌, 마지막 입원 날은 전날
   Object.keys(p.custom || {}).sort().forEach(mk2 => {
     const cu = p.custom[mk2]; if (!cu?.hosp?.length) return;
-    const gone = cu.hosp.filter(d => d > end); if (!gone.length) return;
-    const keep = cu.hosp.filter(d => d <= end);
+    const gone = cu.hosp.filter(d => d >= E); if (!gone.length) return;
+    const keep = cu.hosp.filter(d => d < E);
     cu.days = [...new Set([...cu.days, ...gone])].sort(); cu.hosp = keep; cu.inHosp = false;
     if (!keep.length) delete p.custom[mk2];
   });
   Object.values(p.custom || {}).forEach(cu => { if (cu?.hosp?.length) cu.inHosp = false; });
-  p.hospStay = { since, end }; delete p.hospCall;
-  const n = daysBetween(since, end) + 1;
-  logEvent('입원 끝', p, `${mdK(since)} ~ ${mdK(end)} 퇴원 · 입원 ${n}일`, end);
-  (p.notes ||= []).push({ id: Date.now(), date: end, cat: '건강·입원', text: `입원 ${mdK(since)}~${mdK(end)} (${n}일)${memo ? ` · ${memo}` : ''}` });
+  delete p.hospCall;
+  if (last >= since) {
+    const n = daysBetween(since, last) + 1;
+    p.hospStay = { since, end: last };
+    logEvent('입원 끝', p, `${mdK(since)} ~ ${mdK(last)} 입원 · ${mdK(E)} 퇴원 · ${n}일`, E);
+    (p.notes ||= []).push({ id: Date.now(), date: E, cat: '건강·입원', text: `입원 ${mdK(since)}~${mdK(last)} (${n}일)${memo ? ` · ${memo}` : ''}` });
+  } else delete p.hospStay;
   saveData(false);
 }
 const hospIsIn = (p, k) => ((p.custom || {})[k.slice(0, 7)]?.hosp || []).includes(k);
 // 🏥 지금 입원 중인 시작일: 오늘에서 거슬러 올라가 입원 날이 이어진 첫 날 (달이 바뀌어도 이어짐)
 const hospRunStart = p => { const t = today(); if (!hospIsIn(p, t)) return null; let d = t; while (hospIsIn(p, addDays(d, -1))) d = addDays(d, -1); return d; };
-const hospEndDay = (p, k) => hospIsIn(p, k) && !hospIsIn(p, addDays(k, 1)) && !(p.hospCall && k >= today());
+const hospOutDay = (p, k) => !hospIsIn(p, k) && hospIsIn(p, addDays(k, -1)) && !(p.hospCall && addDays(k, -1) >= today());   // 퇴원한 날 (입원 다음 날)
 // 🏥 입원 몇일째: 입원 시작일(지금 입원 중이면 p.hospCall.since, 없으면 이번 달 입원 첫 날)부터 오늘까지
 const hospDaysOf = p => { const s0 = p.hospCall?.since || hospRunStart(p); return s0 && s0 <= today() ? daysBetween(s0, today()) + 1 : 0; };
 const inHospBadge = p => `<span class="badge bg-hosp">🏥 입원 중</span>` + (hospDaysOf(p) ? ` <span style="color:#c53030;font-weight:700;">${hospDaysOf(p)}일째</span>` : '');
@@ -3787,7 +3790,7 @@ function addChange(pre){
   const hospSorted = () => [...hospSel].sort();
   // 오늘 입원 날이 있거나, 이전 달 입원이 이번 달 마지막 날까지 이어지면 지금 입원 중
   // 지난 달 입원이 그 달 마지막 날까지 이어지고 다음 달에 입원 기록이 없으면 오늘까지 이어진 것으로 봄(기본)
-  const hospNowVal = () => hospSel.has(td) || (mk < todayMk && hospSorted().slice(-1)[0] === hospMonthEnd && !(customOf(p, shiftMk(mk, 1))?.hosp?.length));
+  const hospNowVal = () => hospSel.has(td) || (mk < todayMk && hospSorted().slice(-1)[0] === hospMonthEnd && !(customOf(p, shiftMk(mk, 1))?.hosp?.length) && !(p.hospStay?.end && p.hospStay.end >= hospSorted()[0]));
   const hospSinceVal = () => p.hospCall?.since || hospRunStart(p) || hospSorted()[0] || td;
   const hospEndVal = () => hospNowVal() ? td : (hospSorted().slice(-1)[0] || td);
   const hospCountHtml = () => { const now = hospNowVal(); if (!hospSel.size && !wasInNow && !lastStay) return '';
@@ -3806,7 +3809,7 @@ function addChange(pre){
         const memo = $('#cg-hmemo')?.value.trim() || customOf(p, p.hospCall.since.slice(0, 7))?.memo || '';
         const since = p.hospCall.since;
         hospEndApply(p, end, memo); back.remove(); renderModal(); renderList();
-        notify(`🏥 ${mdK(since)} ~ ${mdK(end)} 퇴원으로 저장했어요.`);
+        notify(`🏥 ${mdK(end)} 퇴원으로 저장했어요.`);
       });
       return;
     }
@@ -3862,7 +3865,7 @@ function addChange(pre){
       const isFrom = k === from || fromSet.has(k) || (isQuit() && quitFrom && k >= quitFrom && isWork) || (isStart() && startFrom && k < startFrom && rawDays.includes(k)), isTo = toSet.has(k) || (isStart() && k === startFrom);
       const hh = isHosp() ? hospSel.has(k) : isH, ee = isEdu() && eduSel.get(k);
       const cls = [ee ? 'edu' : hh && isHosp() ? 'hosp' : isFrom ? 'from' : isTo ? 'pick' : (isWork ? 'work' : hh ? 'hosp' : ''), (w===0 || w===6 || HOLIDAYS.has(k)) ? 'red' : ''].join(' ');
-      const tag = ee ? ee.slice(0, 4) : isHosp() && hh && hospEndDay(p, k) ? '퇴원' : isHosp() && hh ? '입원' : !isHosp() && isH && hospEndDay(p, k) ? '퇴원' : !isHosp() && isH ? '입원' : isStart() && k === startFrom ? '시작' : isStart() && startFrom && k < startFrom && rawDays.includes(k) ? '빠짐' : isQuit() && quitFrom && k === quitFrom ? '포기' : isQuit() && quitFrom && k > quitFrom && isWork ? '빠짐' : fromSet.has(k) ? `→${dd(fromSet.get(k)).replace(/\(.*/, '')}` : k === from ? '원래' : isTo ? '바꿈' : isH ? '입원' : k === end ? '마감' : '';
+      const tag = ee ? ee.slice(0, 4) : isHosp() && hh ? '입원' : isHosp() && hospOutDay(p, k) ? '퇴원' : !isHosp() && isH ? '입원' : !isHosp() && hospOutDay(p, k) ? '퇴원' : isStart() && k === startFrom ? '시작' : isStart() && startFrom && k < startFrom && rawDays.includes(k) ? '빠짐' : isQuit() && quitFrom && k === quitFrom ? '포기' : isQuit() && quitFrom && k > quitFrom && isWork ? '빠짐' : fromSet.has(k) ? `→${dd(fromSet.get(k)).replace(/\(.*/, '')}` : k === from ? '원래' : isTo ? '바꿈' : isH ? '입원' : k === end ? '마감' : '';
       const red = w === 0 || w === 6 || HOLIDAYS.has(k);   // 토·일·공휴일(빨간 날)로는 못 옮김
       const qd = quitDayOf(p), gone = qd && k >= qd;   // 이미 중도포기한 날 이후는 못 넣음
       const off = isHosp() || isEdu() ? false : isStart() ? (after || red) : isQuit() ? (after || (red && !isWork)) : ((past || after || gone || (red && !isWork)) && !isFrom && !isTo);
