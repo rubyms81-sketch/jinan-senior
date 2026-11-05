@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-243</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-244</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -1184,7 +1184,7 @@ const nm = p => (p.name || '') + (p.age ? `(${p.age})` : '') + (isNew(p) ? '(신
 // 화면용 이름: (신규)는 노란 칸, 이번 달 벌점은 빨간 (-1점) — 한 달 동안 이름 옆에
 function nmH(p){
   const pts = (p.logs || []).filter(l => l.date.startsWith(monthKey())).reduce((n, l) => n + logPts(l), 0);
-  return esc((p.name || '') + (p.age ? `(${p.age})` : '')) + (isNew(p) ? '<span class="tag-new">신규</span>' : '') + (pts ? `<span class="tag-pen">-${pts}점</span>` : '') + (docWait(p) ? '<span class="tag-doc" title="비대면 교육 서류 확인 전">!</span>' : '') + eduTag(p);
+  return esc((p.name || '') + (p.age ? `(${p.age})` : '')) + (isNew(p) ? '<span class="tag-new">신규</span>' : '') + (pts ? `<span class="tag-pen">-${pts}점</span>` : '') + (docWait(p) ? '<span class="tag-doc" title="비대면 교육 서류 확인 전">!</span>' : '') + eduTag(p) + (inHospNow(p) ? ' ' + inHospBadge(p) : '');
 }
 // 그달 일당 미지급(벌점으로 근무 인정 안 되는) 날짜
 function unpaidDaysOf(p, mk){
@@ -1488,7 +1488,7 @@ function personRow(p, showSite){
   const checked = p.logs.some(l => l.date===t);
   return `<button class="site" onclick="openModal(${p.id})">
     <div><strong>${nmH(p)}</strong> ${ageSex(p)?`<span class="muted">(${esc(ageSex(p))})</span>`:''} ${checked?'<span class="done">✔ 오늘 점검</span>':''}<br>
-      ${showSite?`<span class="muted">🏠 ${esc(p.town)} · ${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</span><br>`:''}${inHospNow(p) && s.status==='정상' ? '' : badgeOf(s)}${inHospNow(p)?' '+inHospBadge(p):''}${p.linking?' <span class="badge bg-warning">🔗 연계 중</span>':''}</div>
+      ${showSite?`<span class="muted">🏠 ${esc(p.town)} · ${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</span><br>`:''}${inHospNow(p) && s.status==='정상' ? '' : badgeOf(s)}${p.linking?' <span class="badge bg-warning">🔗 연계 중</span>':''}</div>
     <span class="arrow">›</span></button>`;
 }
 
@@ -2921,7 +2921,7 @@ function openZone(id){
       return `<details class="zs-site"><summary><span><span class="muted">${esc(x.town)}</span> <b>${crown(x.town, x.senior)}${esc(x.senior)}</b></span><span class="muted">${ms.filter(p => !stats(p).dropped).length}명 ▾</span></summary>
         <button type="button" class="small full" data-gosite="${esc(siteKey(x.town, x.senior))}" style="margin:6px 0 4px;">▶ 이 경로당 점검하기</button>
         <div class="zs-people">${ms.length ? ms.map(p => { const st = stats(p); return `<div class="zs-person">
-          <b>${nmH(p)}</b> ${ageSex(p)?`<span class="muted">(${esc(ageSex(p))})</span>`:''} ${st.dropped?`<span class="badge bg-danger">${esc(st.status)}</span>`:(inHospNow(p) && st.status==='정상' ? '' : badgeOf(st))}${inHospNow(p)?' '+inHospBadge(p):''}
+          <b>${nmH(p)}</b> ${ageSex(p)?`<span class="muted">(${esc(ageSex(p))})</span>`:''} ${st.dropped?`<span class="badge bg-danger">${esc(st.status)}</span>`:(inHospNow(p) && st.status==='정상' ? '' : badgeOf(st))}
           <br>${telBtn(p)}${p.address?`<br><span class="muted" style="font-size:.85rem;">🏠 ${esc(p.address)}</span>`:''}
           <br><button type="button" class="small secondary" data-open="${p.id}">점검 화면 열기 ›</button>
           ${z.leaderId === p.id ? '<span class="badge" style="background:#276749;">👤 팀장</span> <button type="button" class="small secondary" data-unlead="1">팀장 해제</button>' : `<button type="button" class="small" data-lead="${p.id}" style="background:#276749;">👤 팀장으로 정하기</button>`}</div>`; }).join('') : '<div class="muted">어르신이 없습니다.</div>'}
@@ -5156,7 +5156,7 @@ function renderList(){
     if (s.dropped) tag = ` - ${s.status}`;
     else if (s.status!=='정상') tag = s.pts ? ` - ${s.penalty}점` : '';
     const chk = p.logs.some(l => l.date===t) ? ' ✔오늘 점검' : '';
-    return `<option value="${p.id}">${nmH(p)}${ageSex(p)?` (${esc(ageSex(p))})`:''}${p.guess?' 📍추정':''}${inHospNow(p)?` 🏥입원중${hospDaysOf(p) ? ` · ${hospDaysOf(p)}일째` : ''}`:''}${p.linking?' 🔗연계중':''}${tag}${chk}</option>`;
+    return `<option value="${p.id}">${nmH(p)}${ageSex(p)?` (${esc(ageSex(p))})`:''}${p.guess?' 📍추정':''}${p.linking?' 🔗연계중':''}${tag}${chk}</option>`;
   }).join('');
   pSel.value = '';
   document.getElementById('btn-open-site').innerHTML = members.length ? `▶ ${esc(curSenior)} 점검 화면 열기 <span style="font-weight:normal;font-size:.88rem;">(${members.filter(p => !stats(p).dropped).map(p => esc(p.name) + (p.logs.some(l => l.date===t) ? ' ✔' : '')).join(', ') || members.length + '명'})</span>` : '';
@@ -7496,7 +7496,7 @@ function openEduCheck(){
       <div class="grid-2" style="margin:4px 0 2px;"><button type="button" class="${onlyAbsent ? 'secondary' : ''}" data-act="all" style="margin:0;padding:8px 4px;font-size:.95rem;">전체 ${n}명</button><button type="button" class="${onlyAbsent ? '' : 'secondary'}" data-act="absent" style="margin:0;padding:8px 4px;font-size:.95rem;">안 온 ${n - got}명</button></div>
       <div data-eclist style="flex:0 1 auto;min-height:120px;overflow:auto;-webkit-overflow-scrolling:touch;">${list.map(p => { const s = st(p); return `
         <div style="display:flex;align-items:center;gap:6px;padding:5px 4px;border-bottom:1px solid #edf2f7;${s.arr ? '' : 'background:#fff5f5;'}">
-          <span style="flex:1;font-weight:600;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span>${p.phone && !s.arr ? ` <a class="tel-link" href="tel:${telOf(p)}" style="font-size:.85rem;font-weight:400;">📞</a>` : ''}${s.note ? `<br><span style="font-size:.8rem;color:#975a16;font-weight:400;">📝 ${esc(s.note)}</span>` : ''}</span>
+          <span style="flex:1;font-weight:600;">${esc(p.name)}${inHospNow(p) ? ' ' + inHospBadge(p) : ''} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span>${p.phone && !s.arr ? ` <a class="tel-link" href="tel:${telOf(p)}" style="font-size:.85rem;font-weight:400;">📞</a>` : ''}${s.note ? `<br><span style="font-size:.8rem;color:#975a16;font-weight:400;">📝 ${esc(s.note)}</span>` : ''}</span>
           <button type="button" class="small ${s.arr ? 'secondary' : ''}" data-arr="${p.id}" style="width:auto;margin:0;padding:6px 10px;">${s.arr ? `✔ 도착 ${esc(s.at || '')}` : '도착'}</button></div>`; }).join('') || '<div class="muted" style="padding:8px 0;">해당하는 사람이 없습니다.</div>'}</div>`
       : `<div class="muted" style="padding:8px 0;">${participants.length ? '이 날 교육을 받는 어르신이 없습니다.' : '이 기기에는 어르신 명단이 없습니다.<br>📂 엑셀로 한번에 등록에서 명단을 먼저 올려 주세요.<br><button type="button" class="small" data-act="bk" style="width:auto;margin-top:6px;">💾 백업 칸으로 가기</button>'}</div>`}
       <button type="button" class="full secondary" data-act="stat" style="margin:6px 0 4px;">📊 면별 도착률 한눈에 보기</button>
@@ -7789,7 +7789,7 @@ function openZoneAtt(z){
       <input type="search" id="za-q" placeholder="🔍 이름으로 찾기" value="${esc(q)}" autocomplete="off" style="margin:4px 0 8px;">
       <div>${list.map(p => { const r = attOf(p, d) || {}; return `
         <div style="padding:8px 4px;border-bottom:1px solid #edf2f7;${r.arr ? '' : 'background:#fff5f5;'}">
-          <div style="display:flex;align-items:center;gap:6px;"><span style="flex:1;font-weight:600;">${esc(p.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span></span>
+          <div style="display:flex;align-items:center;gap:6px;"><span style="flex:1;font-weight:600;">${esc(p.name)}${inHospNow(p) ? ' ' + inHospBadge(p) : ''} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span></span>
           <button type="button" class="small ${r.arr ? 'secondary' : ''}" data-arr="${p.id}" style="width:auto;margin:0;padding:6px 10px;">${r.arr ? '✔ 도착' : '도착'}</button></div>
           ${`<div style="display:flex;gap:6px;margin-top:4px;"><button type="button" class="small ${r.vest === false ? 'danger' : ''}" data-vest="${p.id}" style="width:auto;margin:0;padding:4px 8px;font-size:.85rem;${r.vest === false ? '' : 'background:#fff;color:#2d3748;border:2px solid #cbd5e0;'}">🦺 조끼</button><button type="button" class="small ${r.badge === false ? 'danger' : ''}" data-badge="${p.id}" style="width:auto;margin:0;padding:4px 8px;font-size:.85rem;${r.badge === false ? '' : 'background:#fff;color:#2d3748;border:2px solid #cbd5e0;'}">🪪 명찰</button></div>`}
         </div>`; }).join('') || '<div class="muted" style="padding:8px 0;">해당하는 사람이 없습니다.</div>'}</div>
