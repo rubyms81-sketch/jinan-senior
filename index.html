@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-252</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-253</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2156,9 +2156,11 @@ function hospEndApply(p, end, memo) {
   saveData(false);
 }
 const hospIsIn = (p, k) => ((p.custom || {})[k.slice(0, 7)]?.hosp || []).includes(k);
+// 🏥 지금 입원 중인 시작일: 오늘에서 거슬러 올라가 입원 날이 이어진 첫 날 (달이 바뀌어도 이어짐)
+const hospRunStart = p => { const t = today(); if (!hospIsIn(p, t)) return null; let d = t; while (hospIsIn(p, addDays(d, -1))) d = addDays(d, -1); return d; };
 const hospEndDay = (p, k) => hospIsIn(p, k) && !hospIsIn(p, addDays(k, 1)) && !(p.hospCall && k >= today());
 // 🏥 입원 몇일째: 입원 시작일(지금 입원 중이면 p.hospCall.since, 없으면 이번 달 입원 첫 날)부터 오늘까지
-const hospDaysOf = p => { const s0 = p.hospCall?.since || [...(customOf(p, today().slice(0,7))?.hosp || [])].sort()[0]; return s0 && s0 <= today() ? daysBetween(s0, today()) + 1 : 0; };
+const hospDaysOf = p => { const s0 = p.hospCall?.since || hospRunStart(p); return s0 && s0 <= today() ? daysBetween(s0, today()) + 1 : 0; };
 const inHospBadge = p => `<span class="badge bg-hosp">🏥 입원 중</span>` + (hospDaysOf(p) ? ` <span style="color:#c53030;font-weight:700;">${hospDaysOf(p)}일째</span>` : '');
 // ---------- 📞 입원 어르신 안부 전화 (일주일마다 알림) ----------
 // p.hospCall = { since:입원일, last:마지막 통화일, due:다음 전화할 날 }
@@ -3786,7 +3788,7 @@ function addChange(pre){
   // 오늘 입원 날이 있거나, 이전 달 입원이 이번 달 마지막 날까지 이어지면 지금 입원 중
   // 지난 달 입원이 그 달 마지막 날까지 이어지고 다음 달에 입원 기록이 없으면 오늘까지 이어진 것으로 봄(기본)
   const hospNowVal = () => hospSel.has(td) || (mk < todayMk && hospSorted().slice(-1)[0] === hospMonthEnd && !(customOf(p, shiftMk(mk, 1))?.hosp?.length));
-  const hospSinceVal = () => hospSorted()[0] || p.hospCall?.since || td;
+  const hospSinceVal = () => p.hospCall?.since || hospRunStart(p) || hospSorted()[0] || td;
   const hospEndVal = () => hospNowVal() ? td : (hospSorted().slice(-1)[0] || td);
   const hospCountHtml = () => { const now = hospNowVal(); if (!hospSel.size && !wasInNow && !lastStay) return '';
     const s0 = hospSinceVal(), e0 = hospEndVal(), n = daysBetween(s0, e0) + 1, lim = qDays(), left = lim - n;
@@ -3799,7 +3801,7 @@ function addChange(pre){
   $('#cg-back').onclick = () => back.querySelector('#cg-types button.on')?.click();
   $('#cg-hnow').onclick = () => {
     if (hospNowVal()) {   // 입원 중: 퇴원 확인 창 (날짜 고치기 가능)
-      if (!p.hospCall) p.hospCall = { since: hospSorted()[0] || td, last: td, due: addDays(td, CALL_EVERY) };
+      if (!p.hospCall) p.hospCall = { since: hospSinceVal(), last: td, due: addDays(td, CALL_EVERY) };
       hospEndAsk(p.hospCall.since, end => {
         const memo = $('#cg-hmemo')?.value.trim() || customOf(p, p.hospCall.since.slice(0, 7))?.memo || '';
         const since = p.hospCall.since;
