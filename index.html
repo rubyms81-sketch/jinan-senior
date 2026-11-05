@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-255</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-256</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3759,9 +3759,9 @@ function addChange(pre){
       <button type="button" class="reason" data-v="병원 진료">🏥 병원 진료</button><button type="button" class="reason" data-v="개인 사정">🙋 개인 사정</button>
       <button type="button" class="reason" data-v="해외여행" style="color:#2b6cb0;">🛫 해외여행</button><button type="button" class="reason" data-v="입원" style="color:#97266d;">🛏️ 입원 체크</button><button type="button" class="reason" data-v="교육" style="color:#553c9a;">🎓 교육·행사</button>
       ${newbie ? `<button type="button" class="reason" data-v="시작일" style="grid-column:1/-1;color:#975a16;background:#fefcbf;">🆕 근무 시작 날짜${p.startDay ? ` (지금 ${dd(p.startDay)})` : ''}</button>` : ''}
+      <button type="button" class="full hidden" id="cg-hnow" style="grid-column:1/-1;margin:0;"></button>
       <button type="button" class="reason" data-v="중도포기" style="grid-column:1/-1;color:var(--danger);">🚪 중도포기</button>
     </div>
-    <button type="button" class="full hidden" id="cg-hnow" style="margin:-4px 0 12px;"></button>
     <div id="cg-qwhy-box" class="hidden" style="margin:-4px 0 12px;">
       <label>중도포기 사유</label>
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">${['건강 문제','개인 사정','이사','가족 돌봄','다른 일자리'].map(w => `<button type="button" class="small secondary" data-qwhy="${w}" style="width:auto;margin:0;">${w}</button>`).join('')}</div>
@@ -3803,7 +3803,7 @@ function addChange(pre){
   const addEName = () => { const v = $('#cg-enew').value.trim(); if (!v) return; eduName = v; $('#cg-enew').value = ''; drawENames(); };
   $('#cg-back').onclick = () => back.querySelector('#cg-types button.on')?.click();
   $('#cg-hnow').onclick = () => {
-    if (hospNowVal()) {   // 입원 중: 퇴원 확인 창 (날짜 고치기 가능)
+    if (hospNowVal() || p.hospCall) {   // 입원 중: 퇴원 확인 창 (날짜 고치기 가능)
       if (!p.hospCall) p.hospCall = { since: hospSinceVal(), last: td, due: addDays(td, CALL_EVERY) };
       hospEndAsk(p.hospCall.since, end => {
         const memo = $('#cg-hmemo')?.value.trim() || customOf(p, p.hospCall.since.slice(0, 7))?.memo || '';
@@ -3823,15 +3823,15 @@ function addChange(pre){
     back.querySelectorAll('[data-qwhy]').forEach(x => { x.classList.toggle('secondary', x !== b); x.style.background = x === b ? 'var(--danger)' : ''; }); });
   const y = Number(mk.slice(0,4)), m = Number(mk.slice(5,7)), lastD = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
   const showList = () => {
-    $('#cg-hnow').classList.toggle('hidden', !(isHosp() && mk === todayMk));   // 입원 사유 바로 밑, 입원 체크일 때 오늘 달에서만
+    const inStayMonth = !!p.hospCall && mk >= p.hospCall.since.slice(0, 7) && mk <= todayMk.slice(0, 7);   // 입원 중이면 달이 바뀌어도 퇴원버튼 유지
+    $('#cg-hnow').classList.toggle('hidden', !(isHosp() && (hospNowVal() || inStayMonth || mk === todayMk)));
     $('#cg-hbox').classList.toggle('hidden', !isHosp()); $('#cg-ebox').classList.toggle('hidden', !isEdu()); $('#cg-back').classList.toggle('hidden', !isHosp() && !isEdu());
     if (isHosp()) {
       $('#cg-picked').innerHTML = `<b style="color:#97266d">🛏️ 입원한 날 ${hospSel.size}일</b>${hospSel.size ? ` · ${[...hospSel].sort().map(d => Number(d.slice(8,10))).join(', ')}일` : ''}`;
       $('#cg-list').innerHTML = ''; $('#cg-all-wrap')?.classList.add('hidden'); $('#cg-qwhy-box').classList.add('hidden');
       $('#cg-hcount').innerHTML = hospCountHtml();
-      const hn = $('#cg-hnow'), nowNow = hospNowVal();   // 오늘 달에서만 버튼 보임
-      const s1 = p.hospCall?.since || hospSinceVal();
-      hn.textContent = nowNow ? `🚪 퇴원버튼 (현재 ${daysBetween(s1, td) + 1}일째 입원 중)` : '🏥 입원 중 (선택한 날부터 오늘까지)';
+      const hn = $('#cg-hnow'), nowNow = hospNowVal() || inStayMonth, s1 = p.hospCall?.since || hospSinceVal();
+      hn.textContent = nowNow ? `🚪 퇴원버튼 (총 ${daysBetween(s1, td) + 1}일 입원 중)` : '🏥 입원 중 (선택한 날부터 오늘까지)';
       hn.style.background = nowNow ? '#c53030' : ''; hn.style.color = nowNow ? '#fff' : '';
       return;
     }
@@ -3908,9 +3908,9 @@ function addChange(pre){
   if (pre.from && canFrom(pre.from)) { if (pre.to && !redDay(pre.to) && !days.includes(pre.to) && pre.to >= td && !(end && pre.to > end)) pairs.push({ from: pre.from, to: pre.to }); else from = pre.from; }
   else if (pre.from && pre.from < td) setTimeout(() => notify(`${dd(pre.from)}은 지난 날짜라서 바꿀 수 없어요.`), 50);
   drawCal();
-  back.querySelectorAll('#cg-types button').forEach(b => b.onclick = () => {
+  back.querySelectorAll('#cg-types button.reason').forEach(b => b.onclick = () => {
     const on = !b.classList.contains('on');
-    back.querySelectorAll('#cg-types button').forEach(x => x.classList.remove('on'));
+    back.querySelectorAll('#cg-types button.reason').forEach(x => x.classList.remove('on'));
     if (on) b.classList.add('on');
     const was = modeKey();
     $('#cg-type').value = on ? b.dataset.v : '';
