@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-247</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-248</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3792,7 +3792,10 @@ function addChange(pre){
     back.querySelectorAll('#cg-cal button:not(:disabled)').forEach(b => b.onclick = () => {
       const k = b.dataset.k, pi = pairs.findIndex(x => x.from === k || (x.to && x.to === k));
       if (isHosp()) {
-        if (hospSel.has(k)) { hospSel.delete(k); return drawCal(); }
+        if (hospSel.has(k)) {   // 시작일(가장 앞 입원 날)을 다시 누르면 입원 날을 모두 해제
+          if (k === hospSorted()[0]) { hospSel.clear(); hospCarry.length = 0; } else hospSel.delete(k);
+          return drawCal();
+        }
         if (k > td) return notify('입원은 오늘까지만 넣을 수 있어요.');
         const first0 = hospSorted()[0];
         if (!first0) hospRangeIn(k, td).forEach(d => hospSel.add(d));                       // 처음 누른 날 ~ 오늘 자동
@@ -3857,6 +3860,14 @@ function addChange(pre){
       const sVal = hospSinceVal(), eVal = now ? '' : hospEndVal();
       if (sVal > td) return notify('입원 시작일이 오늘보다 뒤예요.');
       if (!now && eVal < sVal) return notify('퇴원일이 입원 시작일보다 앞이에요.');
+      if (!hd.length) {   // 입원 날을 모두 뺌: 이어진 다음 달 자동 입원도 함께 지움
+        let nm = shiftMk(mk, 1);
+        while (nm <= todayMk && p.custom?.[nm]?.hosp?.length) { delete p.custom[nm]; logEvent('입원 자동 이어짐 취소', p, `${Number(nm.slice(5, 7))}월 입원 해제`, nm + '-01'); nm = shiftMk(nm, 1); }
+        if (cuH) { delete p.custom[mk]; logEvent('입원 지움', p, `${curMonth}월`); }
+        delete p.hospCall; delete p.hospStay;
+        saveData(false); back.remove(); renderModal(); renderList();
+        return notify('입원 표시를 모두 지웠어요.');
+      }
       const reg = isLeader(p) && leaderPlan[mk]?.days?.length ? leaderPlan[mk].days : monthDays(mk);
       const base = cuH ? [...new Set([...cuH.days, ...(cuH.hosp || []).filter(d => reg.includes(d))])] : reg;
       const oldSince = p.hospCall?.since, oldHd = cuH?.hosp || [];
