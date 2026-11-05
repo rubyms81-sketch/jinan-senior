@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-263</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-264</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -538,7 +538,7 @@ body.ord-hide .ord-btn { display: none !important; }
       <div style="margin-top:8px;">
         <div class="grid-2">
           <button onclick="openAdd()">+ 참여자 신규 등록</button>
-          <button type="button" class="filebtn" onclick="openBulkGuide()" style="margin:0;">📂 엑셀로 한번에 등록</button><button type="button" class="filebtn" onclick="bdayBulk()" style="margin:0;">🎂 생일 한번에 입력</button>
+          <button type="button" class="filebtn" onclick="openBulkGuide()" style="margin:0;">📂 엑셀로 한번에 등록</button>
         </div>
         <button type="button" class="secondary full" onclick="openAddrGuide()" style="margin-top:8px;">🗺️ 경로당 주소 엑셀로 넣기</button>
         <button class="warning full hidden" id="btn-guess" onclick="openGuessFix()"></button>
@@ -4772,34 +4772,6 @@ function fillBdayB6(id){
   const r = parseBday(p.b6); if (!r.md) return notify('앞 6자리를 읽을 수 없어요. 생일 칸에서 직접 넣어 주세요.');
   logEvent('정보 수정', p, `생일: (없음) → ${bdayText(r.md)} (주민번호 앞 6자리)`);
   p.bday = r.md; saveData(false); openModal(id); renderList();
-}
-// (v231) 🎂 생일 한번에 입력: 생일이 빈 분을 모아 앞 6자리(480315) 또는 3/15를 한꺼번에 넣음. 앞 6자리가 저장된 분은 비워도 자동
-function bdayBulk(){
-  const list = participants.filter(p => counted(p) && !p.quit && !p.bday).sort((a, b) => TOWNS.indexOf(a.town) - TOWNS.indexOf(b.town) || a.name.localeCompare(b.name, 'ko'));
-  const bg = document.createElement('div'); bg.className = 'dlg-back';
-  bg.innerHTML = `<div class="dlg" style="max-height:88vh;overflow:auto;">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">🎂 생일 한번에 입력 · ${list.length}명</div>
-    <div class="muted" style="font-size:.85rem;margin-bottom:6px;">주민등록번호 앞 6자리(예: 480315)를 넣으면 생일이 채워져요. 🪪 저장된 분은 비워 두셔도 자동으로 채워요.</div>
-    ${list.length ? list.map(p => `<div style="display:flex;align-items:center;gap:6px;margin:6px 0;"><span style="flex:1;min-width:0;"><b>${nmH(p)}</b> <span class="muted" style="font-size:.85rem;">${esc(p.town)} ${esc(seniorOf(p))}${p.b6 ? ' · 🪪 저장됨' : ''}</span></span><input data-bd="${p.id}" inputmode="numeric" maxlength="8" placeholder="${p.b6 ? '' : '480315'}" style="width:110px;margin:0;"></div>`).join('') : '<div class="pen-none">생일이 빈 분이 없어요.</div>'}
-    <div class="grid-2" style="margin-top:8px;"><button class="secondary" id="bd-close">닫기</button><button id="bd-go" style="background:#2b6cb0;">✔ 저장</button></div></div>`;
-  document.body.appendChild(bg);
-  const close = () => bg.remove();
-  bg.querySelector('#bd-close').onclick = close;
-  bg.onclick = e => { if (e.target === bg) close(); };
-  bg.querySelector('#bd-go').onclick = () => {
-    let n = 0; const bad = [];
-    list.forEach(p => {
-      const v = (bg.querySelector(`input[data-bd="${p.id}"]`).value || '').replace(/\s/g, '');
-      if (!v) { const r = parseBday(p.b6); if (r.md) { p.bday = r.md; n++; } return; }
-      const r = parseBday(v); if (!r.md) return bad.push(p.name);
-      if (/^\d{6}$/.test(v)) p.b6 = v;   // 앞 6자리만 저장 (뒷자리는 저장 안 함)
-      p.bday = r.md; n++;
-    });
-    if (bad.length) return notify(`생일을 읽을 수 없는 분이 있어요: ${bad.join(', ')}\n앞 6자리(480315) 또는 3/15 형식으로 다시 넣어 주세요.`);
-    if (!n) return notify('넣은 생일이 없어요.');
-    logEvent('생일 한번에 입력', null, `${n}명`);
-    saveData(false); renderList(); close(); notify(`생일 ${n}명을 채웠어요.`);
-  };
 }
 // (v231) ☔ 비·눈 오는 날 안내: 날씨가 비·눈이면 하루 한 번 팝업. 어르신께는 안전 안내, 팀장님께는 확인 부탁을 따로 보냄
 function wxHeavyKind(){ try { const c = JSON.parse(load('jinan_weather')); return c && (c.kind === 'rain' || c.kind === 'snow') ? c.kind : ''; } catch (e) { return ''; } }
