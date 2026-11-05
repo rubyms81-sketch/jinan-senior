@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-269</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.05-270</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3281,11 +3281,16 @@ function restoreInfoForm(){
   if (ph && ph.parentNode) ph.parentNode.insertBefore(el, ph);
   el.open = false;
 }
-function closeInfo(){ restoreInfoForm(); if (infoBg) infoBg.remove(); infoBg = null; }
+let infoHist = false;   // (v270) 교육 출석 창에서 이름을 눌러 들어온 경우: 뒤로 가기(← 교육 출석으로 / 휴대폰 뒤로)가 교육 출석으로 돌아감
+function closeInfoNow(){ infoHist = false; restoreInfoForm(); if (infoBg) infoBg.remove(); infoBg = null; }
+function closeInfo(){ if (infoHist) { history.back(); return; } closeInfoNow(); }
+window.addEventListener('popstate', () => { if (infoHist) closeInfoNow(); });
 const calcDue = (d, n) => { const [y, m, dd0] = d.split('-').map(Number), t = new Date(y, m - 1 + n, dd0); return ymd(t.getFullYear(), t.getMonth() + 1, t.getDate()); };
-function openInfo(){
+function openInfo(pid, fromEdu){
   restoreInfoForm();
+  if (pid != null) document.getElementById('edit-id').value = pid;   // (v270) 교육 출석 창에서 이름을 누르면 그 분 정보
   const p = current(); if (!p) return;
+  if (fromEdu && !infoHist) { infoHist = true; history.pushState({ jinanInfo: 1 }, ''); }
   const h = p.health || {}, sel = new Set(h.conds || []);
   const callsHtml = (p.calls || []).slice().reverse().map(c => `<div class="log" style="font-size:.9rem;line-height:1.6;margin-bottom:6px;">📞 ${mdw(c.date)} · ${esc(c.text || '(내용 없음)')}${c.dx ? `<br>🩺 병명: ${esc(c.dx)}` : ''}${c.hosp ? ` · 🏥 ${esc(c.hosp)}` : ''}${c.cycle ? ` · 💊 ${c.cycle}개월마다 약` : ''}<br><span class="muted">다음 안내 ${mdw(c.due)} (${c.next}개월 뒤)</span></div>`).join('') || '<div class="muted" style="margin-bottom:8px;">통화 메모가 없어요.</div>';
   const notesHtml = (p.notes || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map(n => { const ic = (NOTE_CATS.find(c => c[0] === n.cat) || [])[1] || '📌'; return `<div class="log" style="font-size:.9rem;line-height:1.6;margin-bottom:6px;">${ic} ${/^\d{4}-/.test(String(n.date)) ? mdw(n.date) : esc(n.date || '')} <span class="muted">[${esc(n.cat || '기타')}]</span> ${esc(n.text || '')}</div>`; }).join('') || '<div class="muted" style="margin-bottom:8px;">특이사항 기록이 없어요. (점검 화면 📝 특이사항에서 적어요)</div>';
@@ -3330,7 +3335,7 @@ function openInfo(){
     <div id="if-notes" style="margin-bottom:10px;">${notesHtml}</div>
     <div id="if-form-slot"></div>
     <button type="button" class="secondary full" id="if-hist" style="margin:10px 0;">📜 지난 행적 보기 (월별)</button>
-    <div class="grid-2"><button class="secondary" id="if-close">닫기</button><button id="if-save">건강 정보 저장</button></div></div>`;
+    <div class="grid-2"><button class="secondary" id="if-close">${infoHist ? '← 교육 출석으로' : '닫기'}</button><button id="if-save">건강 정보 저장</button></div></div>`;
   document.body.appendChild(bg);
   const $ = q => bg.querySelector(q);
   // 기본 정보 고치기 칸을 정보 창 안으로 옮김 (닫을 때 점검 화면으로 되돌림)
@@ -7624,7 +7629,7 @@ function openEduCheck(){
       <div class="grid-2" style="margin:4px 0 2px;"><button type="button" class="${onlyAbsent ? 'secondary' : ''}" data-act="all" style="margin:0;padding:8px 4px;font-size:.95rem;">전체 ${n}명</button><button type="button" class="${onlyAbsent ? '' : 'secondary'}" data-act="absent" style="margin:0;padding:8px 4px;font-size:.95rem;">안 온 ${n - got}명</button></div>
       <div data-eclist style="flex:0 1 auto;min-height:120px;overflow:auto;-webkit-overflow-scrolling:touch;">${list.map(p => { const s = st(p); return `
         <div style="display:flex;align-items:center;gap:6px;padding:5px 4px;border-bottom:1px solid #edf2f7;${s.arr ? '' : 'background:#fff5f5;'}">
-          <span style="flex:1;font-weight:600;">${esc(p.name)}${inHospNow(p) ? ' ' + inHospBadge(p) : ''} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span>${p.phone && !s.arr ? ` <a class="tel-link" href="tel:${telOf(p)}" style="font-size:.85rem;font-weight:400;">📞</a>` : ''}${s.note ? `<br><span style="font-size:.8rem;color:#975a16;font-weight:400;">📝 ${esc(s.note)}</span>` : ''}</span>
+          <span data-info="${p.id}" style="flex:1;font-weight:600;cursor:pointer;">${esc(p.name)}${inHospNow(p) ? ' ' + inHospBadge(p) : ''} <span class="muted" style="font-size:.8rem;font-weight:400;">${esc(seniorOf(p))}</span>${p.phone && !s.arr ? ` <a class="tel-link" href="tel:${telOf(p)}" style="font-size:.85rem;font-weight:400;">📞</a>` : ''}${s.note ? `<br><span style="font-size:.8rem;color:#975a16;font-weight:400;">📝 ${esc(s.note)}</span>` : ''}</span>
           <button type="button" class="small ${s.arr ? 'secondary' : ''}" data-arr="${p.id}" style="width:auto;margin:0;padding:6px 10px;">${s.arr ? `✔ 도착 ${esc(s.at || '')}` : '도착'}</button></div>`; }).join('') || '<div class="muted" style="padding:8px 0;">해당하는 사람이 없습니다.</div>'}</div>`
       : `<div class="muted" style="padding:8px 0;">${participants.length ? '이 날 교육을 받는 어르신이 없습니다.' : '이 기기에는 어르신 명단이 없습니다.<br>📂 엑셀로 한번에 등록에서 명단을 먼저 올려 주세요.<br><button type="button" class="small" data-act="bk" style="width:auto;margin-top:6px;">💾 백업 칸으로 가기</button>'}</div>`}
       <button type="button" class="full secondary" data-act="stat" style="margin:6px 0 4px;">📊 면별 도착률 한눈에 보기</button>
@@ -7663,6 +7668,7 @@ function openEduCheck(){
   dlg.addEventListener('click', async e => {
     const dayB = e.target.closest('[data-day]'); if (dayB) { d = dayB.dataset.day; t = null; q = ''; onlyAbsent = false; return draw(); }
     const townB = e.target.closest('[data-town]'); if (townB) { t = townB.dataset.town; q = ''; onlyAbsent = false; return draw(); }
+    const infoB = e.target.closest('[data-info]'); if (infoB && !e.target.closest('a')) return openInfo(infoB.dataset.info, true);   // (v270) 이름 누르면 정보 창 (체크 상태는 이 창에 그대로 남음)
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.note) { const p0 = findP(b.dataset.note), k = d + '|' + p0.id; const r = await askInput(`${p0.name} 님 연락 결과\n(예: 부재중, 다음에 온다고 함)`, dv[k]?.note || ''); if (r === null || r === undefined) return; dv[k].note = String(r).trim(); touched.add(d); dirty = true; saveDraft(); return draw(); }
     if (b.dataset.arr) { const s = dv[d + '|' + b.dataset.arr]; s.arr = !s.arr; s.at = s.arr ? moimTime() : ''; touched.add(d); dirty = true; saveDraft(); return draw(); }
