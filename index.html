@@ -3727,7 +3727,8 @@ function addChange(pre){
   const hospRangeIn = (from, to) => { const yy = Number(mk.slice(0,4)), mm = Number(mk.slice(5,7)), n = new Date(yy, mm, 0).getDate(), out = []; for (let d = 1; d <= n; d++) { const k = ymd(yy, mm, d); if (k >= from && k <= to) out.push(k); } return out; };
   const hospSorted = () => [...hospSel].sort();
   // 오늘 입원 날이 있거나, 이전 달 입원이 이번 달 마지막 날까지 이어지면 지금 입원 중
-  const hospNowVal = () => hospSel.has(td) || (!!wasInNow && mk < todayMk && hospSorted().slice(-1)[0] === hospMonthEnd);
+  // 지난 달 입원이 그 달 마지막 날까지 이어지고 다음 달에 입원 기록이 없으면 오늘까지 이어진 것으로 봄(기본)
+  const hospNowVal = () => hospSel.has(td) || (mk < todayMk && hospSorted().slice(-1)[0] === hospMonthEnd && !(customOf(p, shiftMk(mk, 1))?.hosp?.length));
   const hospSinceVal = () => hospSorted()[0] || p.hospCall?.since || td;
   const hospEndVal = () => hospNowVal() ? td : (hospSorted().slice(-1)[0] || td);
   const hospCountHtml = () => { const now = hospNowVal(); if (!hospSel.size && !wasInNow && !lastStay) return '';
@@ -3859,7 +3860,22 @@ function addChange(pre){
           p.hospStay = { since: sVal, end: eVal };   // 퇴원해도 입원 기록은 남김 (빠진 날·45일 셈)
           delete p.hospCall;
         }
-        if (hd.join() !== oldHd.join()) logEvent('입원 날짜 수정', p, `${oldHd.length}일 → ${hd.length}일${hd.length ? ` (${rangeText(hd)})` : ''}`, hd[0] || today());
+        // 지금 입원 중(지난 달에서 시작): 다음 달부터 오늘(또는 달 끝)까지 자동으로 입원 채움. 이미 입원 기록이 있는 달은 그대로 둠
+      if (now && mk < todayMk) {
+        let nm = shiftMk(mk, 1);
+        while (nm <= todayMk) {
+          const cuN = customOf(p, nm);
+          if (cuN?.hosp?.length) break;
+          const yy = Number(nm.slice(0,4)), mm = Number(nm.slice(5,7)), lastN = new Date(yy, mm, 0).getDate();
+          const last = nm === todayMk ? td : ymd(yy, mm, lastN), hN = [];
+          for (let d = 1; d <= lastN; d++) { const k = ymd(yy, mm, d); if (k <= last) hN.push(k); }
+          const baseN = cuN ? [...cuN.days, ...hN] : monthDays(nm);
+          (p.custom ||= {})[nm] = { days: [...new Set(baseN)].filter(d => !hN.includes(d)).sort(), reason: '입원·치료', memo, back: '', hosp: hN, inHosp: nm === todayMk, date: today() };
+          logEvent('입원 자동 이어짐', p, `${mdK(hN[0])} ~ ${mdK(last)} 입원 (자동)`, hN[0]);
+          nm = shiftMk(nm, 1);
+        }
+      }
+      if (hd.join() !== oldHd.join()) logEvent('입원 날짜 수정', p, `${oldHd.length}일 → ${hd.length}일${hd.length ? ` (${rangeText(hd)})` : ''}`, hd[0] || today());
         logEvent(now ? '입원 표시' : '입원 수정', p, [memo ? `"${memo}"` : '', hd.length ? `입원 ${rangeText(hd)}` : '', now ? '입원 중' : (eVal ? `퇴원 ${mdK(eVal)}` : '')].filter(Boolean).join(' · '), hd[0] || today());
       }
       saveData(false); back.remove(); renderModal(); renderList();
