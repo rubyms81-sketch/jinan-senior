@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.06-292</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.06-293</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2290,9 +2290,10 @@ function renderNewAlert(){
     pz.map(p => `<button type="button" class="small" onclick="pauseReport(${p.id})" style="width:auto;margin:4px 4px 0 0;background:#742a2a;white-space:nowrap;">${dName(p)} · ${leftTxt(pauseLeft(p))}</button>`).join('')) : '')
     + (pp.length ? alertCard('paper', 'background:#fffaf0;border-color:#dd6b20;padding:4px 10px;', `<b style="color:#c05621;">📄 중도포기서 확인 필요 ${pp.length}명</b>`,
     pp.map(p => `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-top:1px dashed #fbd38d;font-size:.9rem;"><span style="flex:1;color:#7b341e;">${dName(p)} <span class="muted" style="font-size:.82rem;">중도포기 ${mdK(p.quitPaper.day)}</span></span><button type="button" class="small" onclick="quitPaperOk(${p.id})" style="width:auto;margin:0;padding:6px 10px;background:#38a169;white-space:nowrap;">✔ 서류 받음</button></div>`).join('')) : '');
-  const lt = sortPs(participants.filter(p => p.ltc && p.quit && visibleTowns().includes(p.town)));
+  // 🏥 장기요양 탈락: ✔ 확인을 누르기 전까지만 게시판에 뜸 (사용자 요청, 2026-11-06). 기록은 그대로 남음
+  const lt = sortPs(participants.filter(p => p.ltc && p.quit && !p.ltcOk && visibleTowns().includes(p.town)));
   const ltHtml = lt.length ? alertCard('ltc', 'background:#fff5f5;border-color:#c53030;padding:4px 10px;', `<b style="color:#c53030;font-size:1.2rem;">🏥 장기요양 탈락 ${lt.length}명</b>`,
-    `<div style="font-size:.9rem;">${lt.map(p => `<a href="#" data-open="${p.id}" style="color:#2d3748;white-space:nowrap;">${dName(p)}<span class="muted" style="font-size:.82rem;">(${esc(seniorOf(p))} · 탈락 ${mdK(p.ltc)}${quitDayOf(p) && quitDayOf(p) !== p.ltc ? ` · 중도포기 ${mdK(quitDayOf(p))}` : ''})</span></a>`).join(', ')}</div>`) : '';
+    lt.map(p => `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-top:1px dashed #feb2b2;font-size:.9rem;"><a href="#" data-open="${p.id}" style="flex:1;color:#2d3748;white-space:nowrap;">${dName(p)}<span class="muted" style="font-size:.82rem;">(${esc(seniorOf(p))} · 탈락 ${mdK(p.ltc)}${quitDayOf(p) && quitDayOf(p) !== p.ltc ? ` · 중도포기 ${mdK(quitDayOf(p))}` : ''})</span></a><button type="button" class="small" onclick="ltcAck(${p.id})" style="width:auto;margin:0;padding:4px 10px;background:#38a169;white-space:nowrap;">✔ 확인</button></div>`).join('')) : '';
   // 📄 중도포기 서류 미확인 (서류 확인 전): 올해 중도포기자
   const qdl = participants.filter(p => p.quit && quitDayOf(p) && !p.quitDocOk && visibleTowns().includes(p.town));
   const qdHtml = qdl.length ? alertCard('qdoc', 'background:#fff5f5;border-color:#c53030;padding:4px 10px;', `<b style="color:#9b2c2c;">📄 중도포기 서류 미확인 ${qdl.length}명</b>`,
@@ -7314,6 +7315,13 @@ async function quitPaperOk(pid){
 }
 // 🏥 장기요양 등급: 1~5등급 판정자는 탈락 처리
 // (v277) 늦게 등록한 기록 확인: 게시판 칸에서 ✔ 확인을 누르면 사라짐 (변경 이력에 남김)
+// ✔ 확인: 게시판 탈락 칸에서만 빠짐 (탈락 기록·점검 화면은 그대로)
+function ltcAck(pid){
+  const p = participants.find(x => x.id === pid); if (!p || !p.ltc) return;
+  p.ltcOk = today();
+  logEvent('장기요양 탈락 확인', p, `${mdK(p.ltc)} 탈락 (게시판 확인)`, p.ltc);
+  saveData(false); renderNewAlert();
+}
 function lateAck(pid, k){
   const p = participants.find(x => x.id === pid); if (!p || !p[k]) return;
   p[k].ok = true;
@@ -7325,7 +7333,7 @@ function lateAck(pid, k){
 async function ltcUndo(pid){
   const p = participants.find(x => x.id === pid); if (!p || !p.ltc) return;
   if (!await ask(`${p.name} 어르신 장기요양 탈락을 해제할까요?\n(중도포기 기록은 그대로 둡니다)`)) return;
-  const was = p.ltc; delete p.ltc; delete p.lateL;
+  const was = p.ltc; delete p.ltc; delete p.lateL; delete p.ltcOk;
   logEvent('장기요양 탈락 해제', p, `${dd(was)} 탈락 → 해제`, was);
   saveData(false); renderModal(); renderList();
 }
@@ -7339,7 +7347,7 @@ async function ltcCheck(pid){
   if (d > today()) return notify('오늘 뒤 날짜는 넣을 수 없어요.');
   // (v277) 탈락과 중도포기는 따로: 이미 중도포기 날짜가 있으면 그대로 두고 탈락일만 따로 저장
   if (!p.quit) { p.quit = true; p.quitYear = Number(d.slice(0,4)); p.quitDay = d; p.quitWhy = '장기요양 1~5등급 탈락'; }
-  p.ltc = d;
+  p.ltc = d; delete p.ltcOk;
   if (d < monthKey()+'-01') p.lateL = { day: d, ok: false }; else delete p.lateL;
   logEvent('장기요양 탈락', p, `${mdK(d)} 탈락 · 장기요양 1~5등급 판정 (사업별 참여자 관리에서 참여상태 "탈락"으로 고치기)`, d);
   saveData(false); renderList(); renderNewAlert(); if (current()?.id === p.id) renderModal();
