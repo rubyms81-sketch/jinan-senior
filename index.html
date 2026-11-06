@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.06-280</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.06-281</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3810,9 +3810,11 @@ function addChange(pre){
       <label>입원 사유</label><input type="text" id="cg-hmemo" placeholder="예: 다리 골절, ○○병원" autocomplete="off" style="margin:0 0 6px;">
             <div id="cg-hcount" style="margin-top:6px;"></div></div>
     <div id="cg-ebox" class="hidden" style="margin:-4px 0 12px;">
+      <button type="button" id="cg-etog" class="small secondary" style="width:100%;margin:0 0 6px;">🎓 교육·행사 이름 ▲ 접기</button>
+      <div id="cg-ebody">
       <div id="cg-enames" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;"></div>
       <div style="display:flex;gap:4px;"><input type="text" id="cg-enew" placeholder="새 이름" autocomplete="off" style="margin:0;"><button type="button" class="small" id="cg-eadd" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button></div>
-      <div style="display:flex;gap:4px;margin-top:6px;"><input type="text" id="cg-ememo" placeholder="내용 (예: 전염병 예방)" autocomplete="off" style="margin:0;flex:2;"><select id="cg-ecat" style="margin:0;flex:1;"><option value="">이름 기준</option><option value="안전">안전</option><option value="소양">소양·직무</option><option value="기타">기타</option></select><input type="number" id="cg-eh" min="0" step="0.5" placeholder="시간" style="margin:0;flex:1;"></div></div>
+      <div style="display:flex;gap:4px;margin-top:6px;"><input type="text" id="cg-ememo" placeholder="내용 (예: 전염병 예방)" autocomplete="off" style="margin:0;flex:2;"><select id="cg-ecat" style="margin:0;flex:1;"><option value="">이름 기준</option><option value="안전">안전</option><option value="소양">소양·직무</option><option value="기타">기타</option></select><select id="cg-eh" style="margin:0;flex:1;"><option value="">기본 시간</option><option value="1">1시간</option><option value="2">2시간</option><option value="3">3시간</option></select></div></div></div>
     <label>메모 (선택)</label><input type="text" id="cg-memo" placeholder="예: 병원 예약 때문에 / 가족 행사" autocomplete="off" style="margin:0 0 10px;">
     ${mates.length ? `<label id="cg-all-wrap" style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-bottom:12px;"><input type="checkbox" id="cg-all" style="width:22px;height:22px;margin:0;"> 같은 경로당(${esc(seniorOf(p))}) ${mates.length}명도 똑같이 변경</label>` : ''}
     <div class="grid-2"><button class="secondary" id="cg-cancel">취소</button><button id="cg-save">저장</button></div></div>`;
@@ -3866,6 +3868,8 @@ function addChange(pre){
   };
   $('#cg-eadd').onclick = addEName; $('#cg-enew').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addEName(); } });
   drawENames();
+  const eTog = () => { const hid = $('#cg-ebody').classList.toggle('hidden'); $('#cg-etog').textContent = `🎓 교육·행사 이름 ${hid ? '▼ 펼치기' : '▲ 접기'}`; };
+  $('#cg-etog').onclick = eTog;
   $('#cg-ememo').value = eduMemo; $('#cg-ememo').addEventListener('input', e => { eduMemo = e.target.value; });
   { const m0 = eduMeta.get(ownEdu[0]?.date); if (m0?.cat) $('#cg-ecat').value = m0.cat; if (m0?.h != null) $('#cg-eh').value = m0.h; }
   back.querySelectorAll('[data-qwhy]').forEach(b => b.onclick = () => { $('#cg-qwhy').value = b.dataset.qwhy;
@@ -3877,7 +3881,7 @@ function addChange(pre){
     hnBtn.classList.toggle('hidden', !(inStayMonth || (isHosp() && hospNowVal())));
     hnBtn.textContent = '🚪 퇴원';
     hnBtn.style.background = '#c53030'; hnBtn.style.color = '#fff';
-    $('#cg-hbox').classList.toggle('hidden', !isHosp()); $('#cg-ebox').classList.toggle('hidden', !isEdu()); $('#cg-back').classList.toggle('hidden', !isHosp() && !isEdu());
+    $('#cg-hbox').classList.toggle('hidden', !isHosp()); $('#cg-ebox').classList.toggle('hidden', !isEdu()); if (isEdu()) { $('#cg-ebody').classList.remove('hidden'); $('#cg-etog').textContent = '🎓 교육·행사 이름 ▲ 접기'; } $('#cg-back').classList.toggle('hidden', !isHosp() && !isEdu());
     if (isHosp()) {
       $('#cg-picked').innerHTML = `<b style="color:#97266d">🛏️ 입원한 날 ${hospSel.size}일</b>${hospSel.size ? ` · ${[...hospSel].sort().map(d => Number(d.slice(8,10))).join(', ')}일` : ''}`;
       $('#cg-list').innerHTML = ''; $('#cg-all-wrap')?.classList.add('hidden'); $('#cg-qwhy-box').classList.add('hidden');
