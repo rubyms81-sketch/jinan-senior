@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.06-279</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.06-280</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -1616,7 +1616,7 @@ function eduInfo(name){
 const eduAbsent = (p, d) => (p.eduAbsent || []).includes(d);
 const eduH = e => e.hs ? Object.values(e.hs).reduce((n, h) => n + (Number(h) || 0), 0) : e.h != null ? Number(e.h) : eduInfo(e.name).h;
 // 교육 한 건의 종류별 시간 (비대면 의무교육은 안전·소양·직무로 나눠 넣음: e.hs)
-const eduCats = e => e.hs ? Object.fromEntries(Object.entries(e.hs).filter(([, h]) => Number(h) > 0).map(([c, h]) => [c, Number(h)])) : { [eduInfo(e.name).c]: eduH(e) };
+const eduCats = e => e.hs ? Object.fromEntries(Object.entries(e.hs).filter(([, h]) => Number(h) > 0).map(([c, h]) => [c, Number(h)])) : { [e.cat || eduInfo(e.name).c]: eduH(e) };
 const docWait = p => !!(p.docNeed && !p.docOk && !p.quit);   // 비대면 교육 서류(조끼·서명) 확인 전
 function eduStatus(p, y){
   y = y || viewYear(); const t = today(), from = `${y}-01-01`, to = `${y}-${String(EDU_NEED.toMonth).padStart(2,'0')}-30`;
@@ -3765,7 +3765,13 @@ function addChange(pre){
   const hospCarry = pre.hosp || [];   // 달을 넘겨도 저장 안 한 입원 날은 그대로
   let hospSel = new Set([...hospD, ...hospCarry.filter(d => d.startsWith(mk))]);
   const ownEdu = (p.edu || []).filter(e => e.date.startsWith(mk));
-  let eduSel = new Map(ownEdu.map(e => [e.date, e.name])), eduName = ownEdu[0]?.name || '';
+  let eduSel = new Map(ownEdu.map(e => [e.date, e.name])), eduName = (ownEdu[0]?.name || '').replace(/ \(.*\)$/, '');
+  // (v280) 교육 내용(예: 전염병 예방)은 이름 뒤 괄호로 붙임 → "의무교육 (전염병 예방)". 종류·시간은 날짜마다 따로 저장(eduMeta)
+  let eduMemo = ((ownEdu[0]?.name || '').match(/ \((.*)\)$/) || [])[1] || '';
+  let eduMeta = new Map(ownEdu.filter(e => e.cat || e.h != null).map(e => [e.date, { ...(e.cat ? { cat: e.cat } : {}), ...(e.h != null ? { h: e.h } : {}) }]));
+  const eduFull = () => eduMemo.trim() ? `${eduName} (${eduMemo.trim()})` : eduName;
+  const eduMetaNow = () => { const cat = $('#cg-ecat')?.value || '', hv = $('#cg-eh')?.value ?? ''; if (!eduMemo.trim() && !cat && hv === '') return null;
+    return { cat: cat || eduInfo(eduName).c, h: hv !== '' ? Number(hv) : eduInfo(eduName).h }; };
   const isHosp = () => back.querySelector('#cg-type')?.value === '입원';
   const isEdu = () => back.querySelector('#cg-type')?.value === '교육';
   const modeKey = () => [isQuit(), isStart(), isHosp(), isEdu()].join('|');
@@ -3805,7 +3811,8 @@ function addChange(pre){
             <div id="cg-hcount" style="margin-top:6px;"></div></div>
     <div id="cg-ebox" class="hidden" style="margin:-4px 0 12px;">
       <div id="cg-enames" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;"></div>
-      <div style="display:flex;gap:4px;"><input type="text" id="cg-enew" placeholder="새 이름" autocomplete="off" style="margin:0;"><button type="button" class="small" id="cg-eadd" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button></div></div>
+      <div style="display:flex;gap:4px;"><input type="text" id="cg-enew" placeholder="새 이름" autocomplete="off" style="margin:0;"><button type="button" class="small" id="cg-eadd" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button></div>
+      <div style="display:flex;gap:4px;margin-top:6px;"><input type="text" id="cg-ememo" placeholder="내용 (예: 전염병 예방)" autocomplete="off" style="margin:0;flex:2;"><select id="cg-ecat" style="margin:0;flex:1;"><option value="">이름 기준</option><option value="안전">안전</option><option value="소양">소양·직무</option><option value="기타">기타</option></select><input type="number" id="cg-eh" min="0" step="0.5" placeholder="시간" style="margin:0;flex:1;"></div></div>
     <label>메모 (선택)</label><input type="text" id="cg-memo" placeholder="예: 병원 예약 때문에 / 가족 행사" autocomplete="off" style="margin:0 0 10px;">
     ${mates.length ? `<label id="cg-all-wrap" style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-bottom:12px;"><input type="checkbox" id="cg-all" style="width:22px;height:22px;margin:0;"> 같은 경로당(${esc(seniorOf(p))}) ${mates.length}명도 똑같이 변경</label>` : ''}
     <div class="grid-2"><button class="secondary" id="cg-cancel">취소</button><button id="cg-save">저장</button></div></div>`;
@@ -3830,7 +3837,7 @@ function addChange(pre){
     const s0 = hospSinceVal(), e0 = hospEndVal(), n = daysBetween(s0, e0) + 1, lim = qDays(), left = lim - n;
     if (n <= 0) return '';
     return `<div class="notice" style="margin:0;font-size:.92rem;background:#fff5f7;border-color:#fbb6ce;">🏥 ${now ? `입원 ${mdK(s0)} ~ 오늘` : `입원 ${mdK(s0)} ~ ${mdK(e0)} 퇴원`} · 입원 <b>${n}일</b> · 중도포기 기준 ${lim}일 중 ${n}일${left < 0 ? ' <b style="color:var(--danger)">기준 넘음</b>' : (now && left <= 5) ? ` <b style="color:var(--danger)">${left}일 남음</b>` : ''}</div>`; };
-  const drawENames = () => { const names = eduNamesShown([...new Set([...EDU_NAMES, ...eduSel.values(), ...(eduName ? [eduName] : [])])]);
+  const drawENames = () => { const names = eduNamesShown([...new Set([...EDU_NAMES, ...[...eduSel.values()].map(v => v.replace(/ \(.*\)$/, '')), ...(eduName ? [eduName] : [])])]);
     $('#cg-enames').innerHTML = names.map(n => `<button type="button" class="small ${n === eduName ? '' : 'secondary'}" data-en="${esc(n)}" style="width:auto;margin:0;${n === eduName ? 'background:#805ad5;' : ''}">🎓 ${esc(n)} <span data-hide="${esc(n)}" style="margin-left:4px;padding:0 4px;opacity:.85;">✕</span></button>`).join('')
       + (eduHide.length ? `<button type="button" class="small secondary" id="cg-eshow" style="width:auto;margin:0;">↩ 숨긴 교육 ${eduHide.length}개 다시 보이기</button>` : '');
     back.querySelectorAll('[data-hide]').forEach(x => x.onclick = e => { e.stopPropagation(); eduHideName(x.dataset.hide); drawENames(); });
@@ -3859,6 +3866,8 @@ function addChange(pre){
   };
   $('#cg-eadd').onclick = addEName; $('#cg-enew').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); addEName(); } });
   drawENames();
+  $('#cg-ememo').value = eduMemo; $('#cg-ememo').addEventListener('input', e => { eduMemo = e.target.value; });
+  { const m0 = eduMeta.get(ownEdu[0]?.date); if (m0?.cat) $('#cg-ecat').value = m0.cat; if (m0?.h != null) $('#cg-eh').value = m0.h; }
   back.querySelectorAll('[data-qwhy]').forEach(b => b.onclick = () => { $('#cg-qwhy').value = b.dataset.qwhy;
     back.querySelectorAll('[data-qwhy]').forEach(x => { x.classList.toggle('secondary', x !== b); x.style.background = x === b ? 'var(--danger)' : ''; }); });
   const y = Number(mk.slice(0,4)), m = Number(mk.slice(5,7)), lastD = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
@@ -3931,7 +3940,7 @@ function addChange(pre){
         else hospSel.add(k);
         return drawCal();
       }
-      if (isEdu()) { if (eduSel.get(k) === eduName) eduSel.delete(k); else { if (!eduName) return notify('교육·행사 이름을 먼저 골라 주세요.'); eduSel.set(k, eduName); } return drawCal(); }
+      if (isEdu()) { if (eduSel.get(k) === eduFull()) { eduSel.delete(k); eduMeta.delete(k); } else { if (!eduName) return notify('교육·행사 이름을 먼저 골라 주세요.'); eduSel.set(k, eduFull()); const m = eduMetaNow(); if (m) eduMeta.set(k, m); else eduMeta.delete(k); } return drawCal(); }
       if (isQuit()) { quitFrom = quitFrom === k ? null : k; return drawCal(); }
       if (isStart()) { startFrom = startFrom === k ? null : k; return drawCal(); }
       if (pi >= 0) { pairs.splice(pi, 1); return drawCal(); }          // 이미 고른 날을 다시 누르면 빼기
@@ -4047,7 +4056,7 @@ function addChange(pre){
       return notify(hd.length || now || wasInNow ? `🛏️ 입원을 저장했어요.${hd.length ? `\n입원한 날 ${hd.length}일은 근무일에서 빠져요.` : ''}` : '입원 표시를 지웠어요.');
     }
     if (isEdu()) {   // 🎓 교육·행사: 일한 날로 인정
-      const targets = [p, ...(($('#cg-all')?.checked) ? mates : [])], list = [...eduSel].sort().map(([date, name]) => ({ date, name }));
+      const targets = [p, ...(($('#cg-all')?.checked) ? mates : [])], list = [...eduSel].sort().map(([date, name]) => ({ date, name, ...(eduMeta.get(date) || {}) }));
       const removed = ownEdu.filter(e => eduSel.get(e.date) !== e.name);
       p.edu = (p.edu || []).filter(e => !e.date.startsWith(mk));
       removed.forEach(e => logEvent('교육 날짜 삭제', p, `${dd(e.date)} ${e.name}`, e.date));
