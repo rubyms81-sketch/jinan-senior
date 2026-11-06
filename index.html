@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.06-271</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.06-272</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6857,10 +6857,11 @@ function renderModal(){
       ${s.quitNow ? `<button type="button" class="small secondary" onclick="toggleQuit()" style="width:auto;margin:8px auto 0;padding:4px 14px;">↩ 중도포기 해제</button>` : ''}
       ${s.quitNow && qd ? `<div style="margin-top:6px;"><button type="button" class="small" onclick="quitDocAsk(${p.id})" style="width:auto;margin:0;padding:4px 14px;background:${p.quitDocOk ? '#38a169' : '#c53030'};">📄 중도포기 서류 ${p.quitDocOk ? '✔ 확인 ' + md(p.quitDocOk) : '확인'}</button>${p.quitDocPhoto ? ` <button type="button" class="small secondary" onclick="quitDocView(${p.id})" style="width:auto;margin:0;padding:4px 10px;">📷 사진 보기</button>` : ''}</div>` : ''}</div>` + n; }
   if (eduHasRec(p) && !p.linking && !s.dropped) { const rc = eduRecs(p), es = eduStatus(p);   // (v228) 자세히 보기 칸: 과정별 날짜·이름·시간
+    const mc = eduMissed(p), missHtml = mc.length ? `<div style="color:#c53030;font-weight:700;margin-top:4px;">❗ 못 받은 교육 ${mc.length}건: ${missTxt(mc)}</div>` : '';
     const detList = (p.eduDone || []).length ? [...p.eduDone].sort((x, y) => x.date < y.date ? -1 : 1).map(d => `${d.date.slice(0, 4)}.${Number(d.date.slice(5, 7))}/${Number(d.date.slice(8, 10))} ${esc(d.name)} · ${esc(d.kind)} ${d.h}시간`) : rc.map(r => `${r.m}월 ${esc(r.kind)}교육 ${r.h}시간`);
     const det = detList.length ? `<details style="margin-top:4px;"><summary style="cursor:pointer;color:#2b6cb0;font-size:.9rem;">자세히 보기</summary><div style="font-size:.88rem;margin-top:4px;line-height:1.7;">${detList.join('<br>')}</div></details>` : '';   // (v226) 받은 교육 + 부족 + 불참을 두 줄로
     const lk = [es.lackSafe && `<b style="color:var(--danger)">안전 ${es.lackSafe}시간</b>`, es.lackAct && `<b style="color:var(--danger)">소양·직무 ${es.lackAct}시간</b>`].filter(Boolean);
-    n = `<div class="notice" style="background:#f7fafc;border-color:#cbd5e0;"><div>📚 <span style="color:#718096;">받은 교육</span> &nbsp; ${es.total > 0 ? `<b style="font-size:1.05rem;color:#1a365d;">총 ${Number(es.total.toFixed(1))}시간</b> <span class="muted" style="font-size:.85rem;">(안전 ${Number((es.by.안전 || 0).toFixed(1))} · 소양·직무 ${Number(es.act.toFixed(1))})</span>` : '없음'}</div>${det}${lk.length ? `<div>부족 &nbsp; ${lk.join(' · ')}</div>` : ''}${es.missed.length ? `<div class="muted" style="font-size:.88rem;margin-top:4px;">🚫 불참 표시: ${es.missed.map(e => `${Number(e.date.slice(5,7))}월 ${dd(e.date)} ${esc(e.name)}`).join(', ')}</div>` : ''}</div>` + n; }
+    n = `<div class="notice" style="background:#f7fafc;border-color:#cbd5e0;"><div>📚 <span style="color:#718096;">받은 교육</span> &nbsp; ${es.total > 0 ? `<b style="font-size:1.05rem;color:#1a365d;">총 ${Number(es.total.toFixed(1))}시간</b> <span class="muted" style="font-size:.85rem;">(안전 ${Number((es.by.안전 || 0).toFixed(1))} · 소양·직무 ${Number(es.act.toFixed(1))})</span>` : '없음'}</div>${det}${missHtml}${lk.length ? `<div>부족 &nbsp; ${lk.join(' · ')}</div>` : ''}${es.missed.length ? `<div class="muted" style="font-size:.88rem;margin-top:4px;">🚫 불참 표시: ${es.missed.map(e => `${Number(e.date.slice(5,7))}월 ${dd(e.date)} ${esc(e.name)}`).join(', ')}</div>` : ''}</div>` + n; }
   if (fixList(p).length) n = fixList(p).map(x => `<div class="notice" style="background:#fffaf0;border-color:#f6ad55;display:flex;align-items:center;gap:8px;"><b style="flex:1;color:#c05621;">🔧 ${esc(x.n)} <span class="muted" style="font-weight:normal;font-size:.85rem;">${md(x.date)}</span></b><button type="button" class="small" onclick="fixDone(${p.id}, '${x.id}')" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">✔ 교체함</button></div>`).join('') + n;
   if (docWait(p) && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;"><span class="tag-doc" style="font-size:1rem;">!</span><b style="flex:1;color:#22543d;">비대면 교육 서류</b><button type="button" class="small" onclick="docConfirm(${p.id})" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">📄 서류 확인</button></div>` + n;
   if (p.docNeed && p.docOk && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="color:#22543d;">📄 ${esc(p.name)} · 비대면 서류 확인 완료</b>${p.docPhoto ? ` <span>📷 사진 있음</span> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docPhotoView(${p.id})">보기</button>` : ` ${p.docNoNeed ? '<span style="color:#22543d;">📷 사진 필요 없음 (처리됨)</span>' : `<b style="color:#c05621;">📷 사진 없음</b> <button type="button" class="small" style="width:auto;margin:0;" onclick="docPhotoAdd(${p.id})">사진 넣기</button> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docNoNeed(${p.id})">사진 필요 없음</button>`}`}</div>` + n;
@@ -8653,9 +8654,10 @@ function eduSheet(all){
   const ws = XLSX.utils.aoa_to_sheet([[`${y}년 교육 시간 (1월~${EDU_NEED.toMonth}월, 오늘까지) · 안전교육 ${EDU_NEED.safe}시간 이상 + 전체 ${EDU_NEED.total}시간 이상 · ${all ? '전체' : '불참'} ${rows.length}명`]]);
   const data = rows.map((r, i) => ({ '번호': i + 1, '읍면': r.p.town, '경로당': seniorOf(r.p), '성명': r.p.name, '나이': r.p.age || '', '안전교육(시간)': r.s.by.안전, '소양교육': r.s.by.소양, '직무교육': r.s.by.직무, '기타교육': r.s.by.기타,
     '합계(시간)': r.s.total, '불참': r.s.missed.map(e => `${Number(e.date.slice(5,7))}/${Number(e.date.slice(8,10))} ${e.name} ${eduH(e)}h`).join(', '), '불참 시간': r.s.missH || '', '안전 부족': r.s.lackSafe || '', '전체 부족': r.s.lackTotal || '', '활동 부족': r.s.lackAct || '', '상태': r.s.ok ? '충족' : r.s.flag ? (r.s.lackSafe ? '불참 · 안전교육 부족' : '불참 · 전체 시간 부족') : '부족(교육 일정 남음)',
+    '못 받은 교육': eduMissed(r.p).map(c => `${Number(c.date.slice(5, 7))}월 ${c.name} ${c.h}시간`).join(', '),
     '받은 교육': eduRecs(r.p).map(x => `${x.m}월 ${x.kind}교육 ${x.h}시간`).join(', ') }));
   if (data.length) XLSX.utils.sheet_add_json(ws, data, { origin: 'A3' }); else XLSX.utils.sheet_add_aoa(ws, [['교육에 빠진 어르신이 없습니다.']], { origin: 'A3' });
-  ws['!cols'] = [6,8,12,9,6,10,8,8,8,9,30,8,8,8,8,16,60].map(w => ({ wch: w }));
+  ws['!cols'] = [6,8,12,9,6,10,8,8,8,9,30,8,8,8,8,16,30,60].map(w => ({ wch: w }));
   return { ws, rows };
 }
 function exportEduLack(){
@@ -8737,7 +8739,7 @@ function excelRead(reader, file){
   fr.readAsArrayBuffer(file);
 }
 // (v218) 📚 교육 부족 인원 (📊 통계 안): ⭐ 내 담당 먼저, 면별 칩(부족 인원 수), 종류별 거르기, 사람마다 받은 교육을 달별로
-let eduScope = 'mine', eduKindSel = 'all', eduMore = false;
+let eduScope = 'mine', eduKindSel = 'all', eduMore = false, eduOnlyMissed = false;
 // 받은 교육을 달·종류별로 합침. 이수 파일이 있으면 그것, 없으면 활동일에 적은 교육 날
 function eduRecs(p){
   const y = viewYear(), from = `${y}-01-01`, to = `${y}-${String(EDU_NEED.toMonth).padStart(2, '0')}-30`;
@@ -8751,6 +8753,15 @@ function eduRecs(p){
   return Object.values(agg).sort((a, b) => a.m - b.m || a.kind.localeCompare(b.kind, 'ko'));
 }
 const eduHasRec = p => (p.eduDone || []).length > 0 || eduOf(p).length > 0;
+// (v272) 이수 엑셀에 있던 교육 과정 전체(날짜·과정)를 기억하고, 받은 기록에 없는 과정을 '못 받은 교육'으로 셈
+function eduRoster(){ try { return JSON.parse(localStorage.getItem('jinan_eduroster') || '[]'); } catch (e) { return []; } }
+function eduMissed(p){
+  if (!(p.eduDone || []).length) return [];
+  const y = viewYear(), from = `${y}-01-01`, to = `${y}-${String(EDU_NEED.toMonth).padStart(2, '0')}-30`, t = today();
+  const got = new Set((p.eduDone || []).map(d => d.date + '|' + d.name));
+  return eduRoster().filter(c => c.date >= from && c.date <= to && c.date <= t && !got.has(c.date + '|' + c.name));
+}
+const missTxt = mc => mc.map(c => `${Number(c.date.slice(5, 7))}월 ${esc(c.name)} ${c.h}시간`).join(' · ');
 function eduScopeTowns(){ return eduScope === 'all' ? TOWNS.slice() : eduScope === 'mine' ? myTowns.slice() : [eduScope]; }
 // (v230) 📥 전체 부족 엑셀: 11개 면 전체에서 교육 시간이 모자란 분 전부를 한 시트로 받음(면 칸으로 구분)
 function exportEduShort(){
@@ -8780,19 +8791,22 @@ function drawEduStat(){
   const need = rowsAll.filter(r => !r.s.ok);
   const rows = need.filter(r => eduKindSel === 'all' || (eduKindSel === 'safe' ? r.s.lackSafe > 0 : r.s.lackAct > 0))
     .sort((a, b) => b.s.lackSafe - a.s.lackSafe || b.s.lackAct - a.s.lackAct || a.s.total - b.s.total || a.p.name.localeCompare(b.p.name, 'ko'));
+  const missedAll = rowsAll.filter(r => eduMissed(r.p).length);
+  const rowsNeed = rows;
+  const rowsShow = eduOnlyMissed ? missedAll.slice().sort((a, b) => a.p.name.localeCompare(b.p.name, 'ko')) : rowsNeed;
   const noRec = participants.filter(p => towns.includes(p.town) && counted(p) && !p.quit && !eduHasRec(p)).length;
   const title = eduScope === 'all' ? '전체' : eduScope === 'mine' ? '⭐ 내 담당' : eduScope.replace(/[읍면]$/, '');
   box.innerHTML = `
     <div style="font-weight:bold;margin-bottom:4px;">${title} · 부족 ${need.length}명
       <span class="muted" style="font-weight:normal;font-size:.85rem;">(안전 ${rowsAll.filter(r => r.s.lackSafe > 0).length} · 활동 ${rowsAll.filter(r => r.s.lackAct > 0).length} · 전체 ${rowsAll.filter(r => r.s.lackTotal > 0).length})</span></div>
     <div style="display:flex;flex-wrap:wrap;margin-bottom:2px;">${chip('mine', '⭐ 내 담당', [].concat(...myTowns.map(per)))}${myTowns.map(t => chip(t, t.replace(/[읍면]$/, ''), per(t))).join('')}${eduMore ? TOWNS.filter(t => !myTowns.includes(t)).map(t => chip(t, t.replace(/[읍면]$/, ''), per(t))).join('') : ''}</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"><button type="button" class="secondary" data-ex="1" style="width:auto;margin:0;padding:5px 10px;font-size:.88rem;">📥 전체 부족 엑셀</button><button type="button" class="${eduMore ? '' : 'secondary'}" data-em="1" style="width:auto;margin:0;padding:5px 10px;font-size:.88rem;">${eduMore ? '다른 면 접기' : '다른 면도 보기'}</button></div>
-    ${rows.length ? rows.map(({ p, s }) => { const recs = eduRecs(p);
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"><button type="button" class="${eduOnlyMissed ? '' : 'secondary'}" data-eo="1" style="width:auto;margin:0;padding:5px 10px;font-size:.88rem;">${eduOnlyMissed ? '✔ ' : ''}못 받은 사람만 (${missedAll.length})</button><button type="button" class="secondary" data-ex="1" style="width:auto;margin:0;padding:5px 10px;font-size:.88rem;">📥 전체 부족 엑셀</button><button type="button" class="${eduMore ? '' : 'secondary'}" data-em="1" style="width:auto;margin:0;padding:5px 10px;font-size:.88rem;">${eduMore ? '다른 면 접기' : '다른 면도 보기'}</button></div>
+    ${rowsShow.length ? rowsShow.map(({ p, s }) => { const recs = eduRecs(p), mcs = eduMissed(p);
         const mv = l => l > 0 ? `<b style="color:var(--danger)">${l}시간 모자람</b>` : '<b style="color:#2f855a">✔</b>';   // (v224) 목록: 모자란 시간만 (소양·직무 합침)
         return `<button type="button" class="pen-row" data-id="${p.id}" style="background:#fff;border-left-color:${s.lackSafe ? 'var(--danger)' : '#3182ce'};margin-top:4px;">
           <b>${nmH(p)}</b> <span class="muted">🏠 ${esc(seniorOf(p))}</span><br>
-          <span style="font-size:.95rem;line-height:1.6;"><span style="white-space:nowrap;">안전 ${mv(s.lackSafe)}</span> · <span style="white-space:nowrap;">소양·직무 ${mv(s.lackAct)}</span>${s.short ? '' : `<br><span style="white-space:nowrap;">총 ${mv(s.lackTotal)}</span>`}</span> <span class="arrow">›</span></button>`; }).join('')
-      : `<div class="pen-none">${need.length ? '이 조건에 맞는 분이 없어요.' : '부족한 분이 없어요.'}</div>`}
+          <span style="font-size:.95rem;line-height:1.6;"><span style="white-space:nowrap;">안전 ${mv(s.lackSafe)}</span> · <span style="white-space:nowrap;">소양·직무 ${mv(s.lackAct)}</span>${s.short ? '' : `<br><span style="white-space:nowrap;">총 ${mv(s.lackTotal)}</span>`}</span> ${mcs.length ? `<br><span style="color:#c53030;font-weight:700;font-size:.92rem;">❗ 못 받은 교육 ${mcs.length}건: ${missTxt(mcs)}</span>` : ''}<span class="arrow">›</span></button>`; }).join('')
+      : `<div class="pen-none">${eduOnlyMissed ? '못 받은 교육이 있는 분이 없어요.' : need.length ? '이 조건에 맞는 분이 없어요.' : '부족한 분이 없어요.'}</div>`}
     ${noRec ? `<div class="muted" style="font-size:.85rem;margin-top:6px;">기록이 없는 분 ${noRec}명은 이수 파일을 올리면 여기에 나와요.</div>` : ''}`;
   box.onclick = e => {
     const c = e.target.closest('button'); if (!c) return;
@@ -8800,6 +8814,7 @@ function drawEduStat(){
     if (c.dataset.ex) return exportEduShort();
     if (c.dataset.es) eduScope = c.dataset.es;
     else if (c.dataset.em) eduMore = !eduMore;
+    else if (c.dataset.eo) eduOnlyMissed = !eduOnlyMissed;
     else if (c.dataset.ek) eduKindSel = c.dataset.ek;
     else return;
     drawEduStat();
@@ -8825,7 +8840,7 @@ function eduImportFile(input){
     try {
       const wb = XLSX.read(bytes, { type: 'array' });
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
-      const got = new Map(); let lines = 0;
+      const got = new Map(), courses = new Map(); let lines = 0;
       rows.forEach(r => {
         const cells = r.map(c => String(c).trim()).filter(c => c !== '');
         const idI = cells.findIndex(c => /^\d{6}/.test(c) && c.includes('*'));
@@ -8840,6 +8855,7 @@ function eduImportFile(input){
         const key = name + '|' + b6;
         if (!got.has(key)) got.set(key, { name, b6, list: [] });
         got.get(key).list.push({ date, name: course, kind: eduKindOf(kindCell), h });
+        courses.set(date + '|' + course, { date, name: course, kind: eduKindOf(kindCell), h });
       });
       if (!lines) return notify('교육 기록 줄을 찾지 못했어요.\n주민번호 앞 6자리가 있는 이수 명단 파일인지 확인해 주세요.');
       let okN = 0, noneN = 0, unsureN = 0, hourN = 0;
@@ -8851,6 +8867,9 @@ function eduImportFile(input){
         if (!target.b6) target.b6 = g.b6;
         target.eduDone = g.list; okN++; hourN += g.list.reduce((n, x) => n + x.h, 0);
       });
+      const roster = eduRoster(), seenC = new Set(roster.map(c => c.date + '|' + c.name));
+      courses.forEach((c, k) => { if (!seenC.has(k)) { seenC.add(k); roster.push(c); } });
+      try { localStorage.setItem('jinan_eduroster', JSON.stringify(roster)); } catch (e) {}
       saveData(false); if (document.getElementById('edu-box')?.open) drawEduStat();
       logEvent('교육 이수 엑셀', null, `${okN}명 반영 · 명단에 없음 ${noneN}명 · 확인 필요 ${unsureN}명 (${lines}줄)`, today());
       renderList();
