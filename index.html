@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.06-278</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.06-279</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -1599,6 +1599,11 @@ const EDU_NEED = { safe: 6, total: 12, toMonth: 11 };
 const EDU_CATS = ['안전', '소양', '직무', '기타', '행사'];
 const EDU_DEF = { '안전교육': { h: 3, c: '안전' }, '의무교육': { h: 3, c: '안전' }, '소양교육': { h: 2, c: '소양' }, '직무교육': { h: 2, c: '직무' }, '역량강화교육': { h: 2, c: '기타' }, '문화활동': { h: 0, c: '행사' }, '추가 교육': { h: 0, c: '기타' } };   // (v278) 시간은 ⚙️ 교육별 시간 정하기에서 정함
 let eduHours = (() => { try { return JSON.parse(load('jinan_eduhours')) || {}; } catch(e) { return {}; } })();   // 교육 이름 → { h 시간, c 종류 } (고칠 수 있음)
+// (v279) 교육 이름 버튼 숨기기(✕): 숨긴 이름은 교육 고르기 단추에서 빠짐. 기록은 그대로. 다시 보이기로 되돌림
+let eduHide = (() => { try { return JSON.parse(load('jinan_eduhide')) || []; } catch(e) { return []; } })();
+const eduNamesShown = list => list.filter(n => !eduHide.includes(n));
+function eduHideName(n){ if (!eduHide.includes(n)) eduHide.push(n); store('jinan_eduhide', JSON.stringify(eduHide)); logEvent('교육 이름 숨김', null, `${n} 버튼 숨김 (기록은 그대로)`, today()); }
+function eduShowAll(){ const was = eduHide.slice(); eduHide = []; store('jinan_eduhide', JSON.stringify(eduHide)); logEvent('교육 이름 다시 보임', null, `${was.join(', ')} 다시 보임`, today()); }
 function eduInfo(name){
   const n = String(name || ''), T = { ...EDU_DEF, ...eduHours };
   if (T[n]) return T[n];
@@ -1650,7 +1655,7 @@ function pickEdu({ title, mk, sub, onSave }){
     <div class="muted" style="font-size:.88rem;margin-bottom:6px;">${sub || '교육 날을 누르세요 (여러 날 가능). 교육 날은 <b>일한 날로 인정</b>되어 그날 일당에 들어가요.'}</div>
     <div class="cal" id="ed-cal"></div>
     <label>교육 이름</label>
-    <div class="grid-2" id="ed-names" style="margin-bottom:6px;">${EDU_NAMES.map(n => `<button type="button" class="reason" data-v="${n}">${n}</button>`).join('')}</div>
+    <div class="grid-2" id="ed-names" style="margin-bottom:6px;">${eduNamesShown(EDU_NAMES).map(n => `<button type="button" class="reason" data-v="${n}">${n}</button>`).join('')}</div>
     <input type="text" id="ed-name" placeholder="직접 적기 (예: 노인일자리 소양교육, 오후 2시 노인회관)" autocomplete="off">
     <div class="grid-2"><button class="secondary" id="ed-cancel">취소</button><button id="ed-save">저장</button></div></div>`;
   document.body.appendChild(back);
@@ -1832,7 +1837,7 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
   const $ = q => back.querySelector(q);
   const PRESET = EDU_NAMES;
   const draw = () => {
-    const names = [...new Set([...PRESET, ...ed.values(), ...(curEdu ? [curEdu] : [])])];
+    const names = eduNamesShown([...new Set([...PRESET, ...ed.values(), ...(curEdu ? [curEdu] : [])])]);
     $('#sc-edu-names').innerHTML = `<button type="button" class="small ${curEdu ? 'secondary' : ''}" data-n="" style="width:auto;margin:0;${curEdu ? '' : 'background:#2b6cb0;'}">📅 근무일</button>` + names.map(n => `<button type="button" class="small ${n === curEdu ? '' : 'secondary'}" data-n="${esc(n)}" style="width:auto;margin:0;${n === curEdu ? 'background:#805ad5;' : ''}">🎓 ${esc(n)}</button>`).join('');
     back.querySelectorAll('#sc-edu-names button').forEach(b => b.onclick = () => { curEdu = b.dataset.n; draw(); });
     // (v180) 교육을 고른 때만 오전 9시 / 오후 1시 단추. 누르면 그 교육 날짜 전부의 시간이 바뀜
@@ -3825,8 +3830,11 @@ function addChange(pre){
     const s0 = hospSinceVal(), e0 = hospEndVal(), n = daysBetween(s0, e0) + 1, lim = qDays(), left = lim - n;
     if (n <= 0) return '';
     return `<div class="notice" style="margin:0;font-size:.92rem;background:#fff5f7;border-color:#fbb6ce;">🏥 ${now ? `입원 ${mdK(s0)} ~ 오늘` : `입원 ${mdK(s0)} ~ ${mdK(e0)} 퇴원`} · 입원 <b>${n}일</b> · 중도포기 기준 ${lim}일 중 ${n}일${left < 0 ? ' <b style="color:var(--danger)">기준 넘음</b>' : (now && left <= 5) ? ` <b style="color:var(--danger)">${left}일 남음</b>` : ''}</div>`; };
-  const drawENames = () => { const names = [...new Set([...EDU_NAMES, ...eduSel.values(), ...(eduName ? [eduName] : [])])];
-    $('#cg-enames').innerHTML = names.map(n => `<button type="button" class="small ${n === eduName ? '' : 'secondary'}" data-en="${esc(n)}" style="width:auto;margin:0;${n === eduName ? 'background:#805ad5;' : ''}">🎓 ${esc(n)}</button>`).join('');
+  const drawENames = () => { const names = eduNamesShown([...new Set([...EDU_NAMES, ...eduSel.values(), ...(eduName ? [eduName] : [])])]);
+    $('#cg-enames').innerHTML = names.map(n => `<button type="button" class="small ${n === eduName ? '' : 'secondary'}" data-en="${esc(n)}" style="width:auto;margin:0;${n === eduName ? 'background:#805ad5;' : ''}">🎓 ${esc(n)} <span data-hide="${esc(n)}" style="margin-left:4px;padding:0 4px;opacity:.85;">✕</span></button>`).join('')
+      + (eduHide.length ? `<button type="button" class="small secondary" id="cg-eshow" style="width:auto;margin:0;">↩ 숨긴 교육 ${eduHide.length}개 다시 보이기</button>` : '');
+    back.querySelectorAll('[data-hide]').forEach(x => x.onclick = e => { e.stopPropagation(); eduHideName(x.dataset.hide); drawENames(); });
+    back.querySelector('#cg-eshow')?.addEventListener('click', () => { eduShowAll(); drawENames(); });
     back.querySelectorAll('[data-en]').forEach(b => b.onclick = () => { eduName = b.dataset.en; drawENames(); }); };
   const addEName = () => { const v = $('#cg-enew').value.trim(); if (!v) return; eduName = v; $('#cg-enew').value = ''; drawENames(); };
   $('#cg-back').onclick = () => back.querySelector('#cg-types button.on')?.click();
