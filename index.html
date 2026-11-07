@@ -423,7 +423,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.08-311</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.08-312</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3838,6 +3838,8 @@ function openQuickChange(){
 function addChange(pre){
   syncHospCalls();
   const p = current(); if (!p) return;
+  // 저장한 뒤 알림 창을 닫으면 근무일 변경 창을 다시 열어 고친 결과를 볼 수 있게 함 (사용자 요청, 2026-11-08)
+  const savedNotify = m => notify(m).then(() => addChange({}));
   pre = pre || {};
   const mk = pre.mk || monthKey(), days = personDays(p, mk), cuH = customOf(p, mk), hospD = new Set(cuH?.hosp || []), inH = !!(cuH && (cuH.inHosp || inHospNow(p)));
   const mates = participants.filter(x => x.id!==p.id && x.town===p.town && seniorOf(x)===seniorOf(p) && !stats(x).dropped);
@@ -3933,10 +3935,10 @@ function addChange(pre){
         const since = p.hospCall.since;
         delete p.hospPlan;
         hospEndApply(p, end, memo); p.hospBack = { since, end, sent: false }; saveData(false); back.remove(); renderModal(); renderList();
-        notify(`퇴원 처리했어요. 축하 문자는 근무를 다시 정하고 첫 근무일에 앱을 열면 띄워 드릴게요.`);
+        savedNotify(`퇴원 처리했어요. 축하 문자는 근무를 다시 정하고 첫 근무일에 앱을 열면 띄워 드릴게요.`);
       }, end => {
         p.hospPlan = end; logEvent('퇴원 예정일', p, `${mdK(end)} 퇴원 예정 (그날까지 입원 중)`, td); saveData(false); back.remove(); renderModal(); renderList();
-        notify(`${mdK(end)} 퇴원 예정으로 저장했어요.`);
+        savedNotify(`${mdK(end)} 퇴원 예정으로 저장했어요.`);
       }, p.hospPlan || null, () => { const old = p.hospPlan; delete p.hospPlan; logEvent('퇴원 예정일 지움', p, `${mdK(old)} 퇴원 예정 취소`, td); saveData(false); back.remove(); renderModal(); renderList(); });
       return;
     }
@@ -4098,7 +4100,7 @@ function addChange(pre){
         if (cuH) { delete p.custom[mk]; logEvent('입원 지움', p, `${curMonth}월`); }
         delete p.hospCall; delete p.hospStay;
         saveData(false); back.remove(); renderModal(); renderList();
-        return notify('입원 표시를 모두 지웠어요.');
+        return savedNotify('입원 표시를 모두 지웠어요.');
       }
       const reg = isLeader(p) && leaderPlan[mk]?.days?.length ? leaderPlan[mk].days : monthDays(mk);
       const base = cuH ? [...new Set([...cuH.days, ...(cuH.hosp || []).filter(d => reg.includes(d))])] : reg;
@@ -4136,7 +4138,7 @@ function addChange(pre){
         logEvent(now ? '입원 표시' : '입원 수정', p, [memo ? `"${memo}"` : '', hd.length ? `입원 ${rangeText(hd)}` : '', now ? '입원 중' : (eVal ? `퇴원 ${mdK(eVal)}` : '')].filter(Boolean).join(' · '), hd[0] || today());
       }
       saveData(false); back.remove(); renderModal(); renderList();
-      return notify(hd.length || now || wasInNow ? `🛏️ 입원을 저장했어요.${hd.length ? `\n입원한 날 ${hd.length}일은 근무일에서 빠져요.` : ''}` : '입원 표시를 지웠어요.');
+      return savedNotify(hd.length || now || wasInNow ? `🛏️ 입원을 저장했어요.${hd.length ? `\n입원한 날 ${hd.length}일은 근무일에서 빠져요.` : ''}` : '입원 표시를 지웠어요.');
     }
     if (isEdu()) {   // 🎓 교육·행사: 일한 날로 인정
       const targets = [p, ...(($('#cg-all')?.checked) ? mates : [])], list = [...eduSel].sort().map(([date, name]) => ({ date, name, ...(eduMeta.get(date) || {}) }));
@@ -4146,7 +4148,7 @@ function addChange(pre){
       targets.forEach(x => list.forEach(e => { if (x !== p && eduOn(x, e.date)) return; (x.edu ||= []).push({ id: Date.now() + Math.random(), ...e });
         if (x !== p || !ownEdu.some(o => o.date === e.date && o.name === e.name)) logEvent('교육 날짜', x, `${dd(e.date)} ${e.name} (일한 날로 인정)`, e.date); }));
       saveData(false); back.remove(); renderModal(); renderList();
-      return notify(list.length ? `🎓 교육·행사 날짜를 저장했어요.${targets.length > 1 ? ` (${targets.length}명)` : ''}\n${list.map(e => `${dd(e.date)} ${e.name}`).join('\n')}` : '교육·행사 날짜를 지웠어요.');
+      return savedNotify(list.length ? `🎓 교육·행사 날짜를 저장했어요.${targets.length > 1 ? ` (${targets.length}명)` : ''}\n${list.map(e => `${dd(e.date)} ${e.name}`).join('\n')}` : '교육·행사 날짜를 지웠어요.');
     }
     if (isStart()) {
       if (!startFrom) return notify('근무 시작하는 날을 달력에서 눌러 주세요.');
@@ -4154,7 +4156,7 @@ function addChange(pre){
       p.startDay = startFrom; p.start = startFrom.slice(0,7);
       logEvent('근무 시작일', p, `${old ? dd(old) + ' → ' : ''}${Number(startFrom.slice(5,7))}월 ${dd(startFrom)}부터${drop.length ? ` · 그 전 근무일 ${drop.length}일 빠짐 (${drop.map(dd).join(', ')})` : ''}`, startFrom);
       saveData(false); back.remove(); renderModal(); renderList();
-      return notify(`${p.name} 어르신 근무 시작일을 ${dd(startFrom)}로 정했어요.\n이 달 근무 ${personDays(p, mk).length}일`);
+      return savedNotify(`${p.name} 어르신 근무 시작일을 ${dd(startFrom)}로 정했어요.\n이 달 근무 ${personDays(p, mk).length}일`);
     }
     if (isQuit()) {
       if (!quitFrom) return notify('그만두는 날을 달력에서 눌러 주세요.');
