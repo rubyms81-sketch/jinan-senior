@@ -9905,54 +9905,100 @@ setTimeout(() => {
 
 try { syncHospCalls(); } catch(e) {}
 
-// (v296) 점검 화면 칸 위아래 옮기기: 칸 제목을 0.5초 길게 누르면 ⬆위로 · ⬇아래로 메뉴. 순서는 jinan_mod_order에 저장 (클라우드 동기화)
+// (v296) 점검 화면 칸 옮기기: 칸 제목을 0.5초 길게 누르면 메뉴 (위·아래, 다른 칸과 묶기, 묶음 풀기). 순서·묶음은 jinan_mod_order에 저장 (클라우드 동기화)
 const MOD_SECS = ['check-section', 'sec-edu', 'sec-notes', 'sec-logs', 'ex-panel', 'info-form'];
 const MOD_LBL = { 'check-section': '점검 항목', 'sec-edu': '받은 교육', 'sec-notes': '특이사항', 'sec-logs': '점검 기록·벌점', 'ex-panel': '참여 제외', 'info-form': '기본 정보' };
-function modOrder(){ try { const a = JSON.parse(load('jinan_mod_order')); if (Array.isArray(a)) return [...a.filter(k => MOD_SECS.includes(k)), ...MOD_SECS.filter(k => !a.includes(k))]; } catch(e) {} return [...MOD_SECS]; }
+const mkId = () => Math.random().toString(36).slice(2, 9);
+function modState(){
+  let a = null; try { a = JSON.parse(load('jinan_mod_order')); } catch(e) {}
+  if (!Array.isArray(a)) a = [];
+  const known = new Set(MOD_SECS), seen = new Set(), out = [];
+  a.forEach(x => {
+    if (typeof x === 'string') { if (known.has(x) && !seen.has(x)) { seen.add(x); out.push(x); } }
+    else if (x && Array.isArray(x.k)) { const ks = x.k.filter(k => known.has(k) && !seen.has(k)); ks.forEach(k => seen.add(k)); if (ks.length) out.push({ gid: String(x.gid || mkId()), g: String(x.g || '📁 묶음'), k: ks }); }
+  });
+  MOD_SECS.forEach(k => { if (!seen.has(k)) { seen.add(k); out.push(k); } });
+  return out;
+}
+const modLabel = x => typeof x === 'string' ? (MOD_LBL[x] || x) : x.g;
+function modCommit(st, what){ try { store('jinan_mod_order', JSON.stringify(st)); } catch(e) {} modOrderApply(); if (what) logEvent('화면 배치', null, what); }
+function bindLong(sum, fn){
+  let t = null, fired = false, sx = 0, sy = 0;
+  sum.style.webkitUserSelect = 'none'; sum.style.userSelect = 'none'; sum.style.webkitTouchCallout = 'none'; sum.style.touchAction = 'pan-y';
+  sum.addEventListener('pointerdown', e => { fired = false; sx = e.clientX; sy = e.clientY; clearTimeout(t); t = setTimeout(() => { fired = true; if (navigator.vibrate) navigator.vibrate(20); fn(); }, 500); });
+  sum.addEventListener('pointermove', e => { if (Math.abs(e.clientX - sx) > 14 || Math.abs(e.clientY - sy) > 14) clearTimeout(t); });   // 14px 넘게 움직일 때만 취소
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => sum.addEventListener(ev, () => clearTimeout(t)));
+  sum.addEventListener('click', e => { if (fired) { e.preventDefault(); e.stopPropagation(); fired = false; } }, true);
+  sum.addEventListener('contextmenu', e => e.preventDefault());
+}
 function modOrderApply(){
   const first = document.getElementById(MOD_SECS[0]); if (!first) return;
-  const par = first.parentNode; const last = document.getElementById(MOD_SECS[MOD_SECS.length - 1]);
-  const anchor = last ? last.nextSibling : null;
-  modOrder().forEach(id => { const el = document.getElementById(id); if (el && el.parentNode === par) par.insertBefore(el, anchor); });
-}
-function modMove(id, d){
-  const order = modOrder(), i = order.indexOf(id), j = i + d;
-  if (i < 0 || j < 0 || j >= order.length) return;
-  [order[i], order[j]] = [order[j], order[i]];
-  try { store('jinan_mod_order', JSON.stringify(order)); } catch(e) {}
-  modOrderApply();
-  logEvent('화면 배치', null, `점검 화면 칸 순서: ${order.map(k => MOD_LBL[k]).join(' → ')}`);
-}
-function modMenu(id){
-  const order = modOrder(), i = order.indexOf(id);
-  const bg = document.createElement('div'); bg.className = 'dlg-back';
-  bg.innerHTML = `<div class="dlg" style="text-align:center;"><div style="font-weight:bold;margin-bottom:10px;">↕ ${MOD_LBL[id]} 칸 위치</div>
-    <div style="display:grid;gap:8px;">
-      <button type="button" id="mo-up" ${i <= 0 ? 'disabled' : ''}>⬆ 위로</button>
-      <button type="button" id="mo-down" ${i >= order.length - 1 ? 'disabled' : ''}>⬇ 아래로</button>
-      <button type="button" class="secondary" id="mo-no">닫기</button></div></div>`;
-  document.body.appendChild(bg);
-  bg.querySelector('#mo-no').onclick = () => bg.remove();
-  bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
-  bg.querySelector('#mo-up').onclick = () => { bg.remove(); modMove(id, -1); };
-  bg.querySelector('#mo-down').onclick = () => { bg.remove(); modMove(id, 1); };
-}
-function modInit(){
-  MOD_SECS.forEach(id => {
-    const el = document.getElementById(id); if (!el) return;
-    const sum = id === 'check-section' ? document.getElementById('ck-head') : (el.querySelector(':scope > summary') || el); if (!sum || sum._modBound) return;   // 점검 항목은 제목 줄(ck-head)만 길게 눌러 옮김
-    sum._modBound = true;
-    let t = null, fired = false, sx = 0, sy = 0;
-    const stop = () => clearTimeout(t);
-    sum.style.webkitUserSelect = 'none'; sum.style.userSelect = 'none'; sum.style.webkitTouchCallout = 'none'; sum.style.touchAction = 'pan-y';
-    sum.addEventListener('pointerdown', e => { fired = false; sx = e.clientX; sy = e.clientY; clearTimeout(t); t = setTimeout(() => { fired = true; if (navigator.vibrate) navigator.vibrate(20); modMenu(id); }, 500); });
-    sum.addEventListener('pointermove', e => { if (Math.abs(e.clientX - sx) > 14 || Math.abs(e.clientY - sy) > 14) stop(); });   // 손가락이 조금 떨려도 취소되지 않게 (14px 넘게 움직이면 취소)
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => sum.addEventListener(ev, stop));
-    sum.addEventListener('click', e => { if (fired) { e.preventDefault(); e.stopPropagation(); fired = false; } }, true);
-    sum.addEventListener('contextmenu', e => e.preventDefault());
+  const par = (first.closest('.mod-grp') || first).parentNode;   // 묶음 안에 있어도 바깥 부모 기준
+  // 1) 묶음을 풀어 칸들을 원래 자리로
+  document.querySelectorAll('.mod-grp').forEach(g => { const inn = g.querySelector('.grp-in'); if (inn) while (inn.firstChild) par.insertBefore(inn.firstChild, g); g.remove(); });
+  // 2) 순서대로 다시 놓기
+  const last = document.getElementById(MOD_SECS[MOD_SECS.length - 1]); const anchor = last ? last.nextSibling : null;
+  modState().forEach(it => {
+    if (typeof it === 'string') { const el = document.getElementById(it); if (el) par.insertBefore(el, anchor); return; }
+    const g = document.createElement('details'); g.id = 'mg-' + it.gid; g.className = 'chg-box m-sec mod-grp'; g.open = true; g.style.cssText = 'margin-top:0;border-top:none;padding-top:0;';
+    g.innerHTML = `<summary><h3>${esc(it.g)}</h3><span class="chg-arrow"></span></summary><div class="grp-in" style="display:grid;gap:8px;padding-left:6px;border-left:3px solid #90cdf4;margin-top:6px;"></div>`;
+    par.insertBefore(g, anchor);
+    const inn = g.querySelector('.grp-in');
+    it.k.forEach(k => { const el = document.getElementById(k); if (el) inn.appendChild(el); });
+    bindLong(g.querySelector(':scope > summary'), () => modMenu('G:' + it.gid));
   });
-  modOrderApply();
+  // 3) 칸 제목 길게 누르기 연결 (처음 한 번)
+  MOD_SECS.forEach(id => { const el = document.getElementById(id); if (!el) return; const sum = id === 'check-section' ? document.getElementById('ck-head') : (el.querySelector(':scope > summary') || el); if (sum && !sum._modBound) { sum._modBound = true; bindLong(sum, () => modMenu(id)); } });
 }
+function modDlg(title, buttons){
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = `<div class="dlg" style="text-align:center;"><div style="font-weight:bold;margin-bottom:10px;">${esc(title)}</div><div style="display:grid;gap:8px;">${buttons.map((b, i) => `<button type="button" data-mb="${i}" class="${b.sec ? 'secondary' : ''}" ${b.dis ? 'disabled' : ''}>${b.t}</button>`).join('')}<button type="button" class="secondary" data-mb="close">닫기</button></div></div>`;
+  document.body.appendChild(bg);
+  bg.addEventListener('click', e => { if (e.target === bg) { bg.remove(); return; } const b = e.target.closest('[data-mb]'); if (!b) return; if (b.dataset.mb === 'close') { bg.remove(); return; } const fn = buttons[Number(b.dataset.mb)].fn; bg.remove(); fn(); });
+}
+function modSwapTop(i, d){ const st = modState(), j = i + d; if (i < 0 || j < 0 || j >= st.length) return; [st[i], st[j]] = [st[j], st[i]]; modCommit(st, `점검 화면 칸 순서: ${st.map(modLabel).join(' → ')}`); }
+function modSwapIn(gi, mi, d){ const st = modState(), g = st[gi], j = mi + d; if (j < 0 || j >= g.k.length) return; [g.k[mi], g.k[j]] = [g.k[j], g.k[mi]]; modCommit(st, `점검 화면 묶음 순서: ${g.g} · ${g.k.map(modLabel).join(' → ')}`); }
+function modRename(gid){ const st = modState(), g = st.find(x => typeof x !== 'string' && x.gid === gid); if (!g) return; const v = (prompt('묶음 이름', g.g) || '').trim(); if (!v) return; const old = g.g; g.g = v; modCommit(st, `점검 화면 묶음 이름: ${old} → ${v}`); }
+function modUngroup(gi){ const st = modState(), g = st[gi]; if (!g || typeof g === 'string') return; st.splice(gi, 1, ...g.k); modCommit(st, `점검 화면 묶음 풀기: ${g.g}`); }
+function modLeave(mg, mi){ const st = modState(), g = st[mg]; const [id] = g.k.splice(mi, 1); if (!g.k.length) st.splice(mg, 1, id); else st.splice(mg + 1, 0, id); modCommit(st, `점검 화면 묶음에서 뺌: ${MOD_LBL[id] || id}`); }
+function modJoin(a, b){
+  const st = modState(), me = st[a], tg = st[b]; if (typeof me !== 'string' || !tg) return;
+  if (typeof tg === 'string') { st[b] = { gid: mkId(), g: '📁 묶음', k: [tg, me] }; st.splice(a, 1); }
+  else { tg.k.push(me); st.splice(a, 1); }
+  modCommit(st, `점검 화면 칸 묶기: ${MOD_LBL[me] || me} → ${typeof tg === 'string' ? (MOD_LBL[tg] || tg) : tg.g}`);
+}
+function modPick(gi){
+  const st = modState(), me = st[gi];
+  const opts = st.map((x, i) => ({ x, i })).filter(o => o.i !== gi).map(o => ({ t: (typeof o.x === 'string' ? '' : '📁 ') + modLabel(o.x), fn: () => modJoin(gi, o.i) }));
+  modDlg(`${modLabel(me)} 칸을 어디와 묶을까요?`, opts.concat([{ t: '취소', sec: true, fn: () => {} }]));
+}
+function modMenu(key){
+  const st = modState();
+  let gi = -1, mg = -1, mi = -1;
+  if (key.startsWith('G:')) gi = st.findIndex(x => typeof x !== 'string' && x.gid === key.slice(2));
+  else {
+    gi = st.findIndex(x => x === key);
+    if (gi < 0) st.forEach((x, i) => { if (typeof x !== 'string' && x.k.includes(key)) { mg = i; mi = x.k.indexOf(key); } });
+  }
+  if (gi < 0 && mg < 0) return;
+  const btns = [];
+  if (key.startsWith('G:')) {
+    const g = st[gi];
+    btns.push({ t: '⬆ 위로', dis: gi <= 0, fn: () => modSwapTop(gi, -1) }, { t: '⬇ 아래로', dis: gi >= st.length - 1, fn: () => modSwapTop(gi, 1) });
+    btns.push({ t: '✏️ 묶음 이름 바꾸기', fn: () => modRename(g.gid) }, { t: '🗑 묶음 풀기', sec: true, fn: () => modUngroup(gi) });
+    modDlg(`📁 ${g.g}`, btns);
+  } else if (mg >= 0) {
+    const g = st[mg];
+    btns.push({ t: '⬆ 위로', dis: mi <= 0, fn: () => modSwapIn(mg, mi, -1) }, { t: '⬇ 아래로', dis: mi >= g.k.length - 1, fn: () => modSwapIn(mg, mi, 1) });
+    btns.push({ t: '📤 묶음에서 빼기', sec: true, fn: () => modLeave(mg, mi) });
+    modDlg(`↕ ${MOD_LBL[key] || key} (묶음 안)`, btns);
+  } else {
+    btns.push({ t: '⬆ 위로', dis: gi <= 0, fn: () => modSwapTop(gi, -1) }, { t: '⬇ 아래로', dis: gi >= st.length - 1, fn: () => modSwapTop(gi, 1) });
+    btns.push({ t: '📁 다른 칸과 묶기', fn: () => modPick(gi) });
+    modDlg(`↕ ${MOD_LBL[key] || key} 칸`, btns);
+  }
+}
+function modInit(){ modOrderApply(); }
 if (document.readyState !== 'loading') modInit(); else document.addEventListener('DOMContentLoaded', modInit);
 </script>
 </body>
