@@ -729,7 +729,7 @@ body.ord-hide .ord-btn { display: none !important; }
 
   <div id="check-section">
     <input type="hidden" id="c-date">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 6px;"><b>📋 점검 항목</b><button type="button" id="ck-toggle" class="small" onclick="ckToggle()" style="width:auto;margin:0;"></button></div>
+    <div id="ck-head" onclick="ckToggle()" style="display:flex;justify-content:space-between;align-items:center;margin:0 0 6px;padding:4px 0;cursor:pointer;"><h3 style="margin:0;">📋 점검 항목</h3><span class="chg-arrow" id="ck-arrow"></span></div>
     <div id="ck-body">
     <div class="base-it" data-k="leave"><label>근무지 이탈 (벌점)</label>
     <input type="hidden" id="c-leave">
@@ -4738,8 +4738,8 @@ async function lkBulkDone(){
 // 🎉 환영 문자: 축하 + 활동일(달력) + 주의사항. 글은 한 번 고치면 다음에도 그대로 씀 (jinan_tpl.welcome)
 // 점검 항목 접기·펴기: 한 번 정하면 다른 어르신을 열어도 그대로 (이 휴대폰에만 저장)
 let ckOpen = (() => { try { return JSON.parse(load('jinan_open') || '{}').ck === true; } catch(e) { return false; } })();
-function drawCkToggle(){ const b = document.getElementById('ck-toggle'), body = document.getElementById('ck-body'); if (!b || !body) return;
-  body.style.display = ckOpen ? '' : 'none'; b.textContent = ckOpen ? '접기 ▲' : '펼치기 ▼'; }
+function drawCkToggle(){ const a = document.getElementById('ck-arrow'), body = document.getElementById('ck-body'); if (!body) return;   // (v296) 제목을 누르면 펼치고 접음 (특이사항과 같은 방식)
+  body.style.display = ckOpen ? '' : 'none'; if (a) a.style.transform = ckOpen ? 'rotate(180deg)' : ''; }
 function ckToggle(){ ckOpen = !ckOpen; try { openMem.ck = ckOpen; saveOpenMem(); } catch(e) {} drawCkToggle(); }
 const WELCOME_DEF = `[진안군노인회] 노인일자리 참여 안내
 
