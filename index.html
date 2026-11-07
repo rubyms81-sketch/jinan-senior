@@ -9942,10 +9942,12 @@ function modInit(){
     const el = document.getElementById(id); if (!el) return;
     const sum = id === 'check-section' ? document.getElementById('ck-head') : (el.querySelector(':scope > summary') || el); if (!sum || sum._modBound) return;   // 점검 항목은 제목 줄(ck-head)만 길게 눌러 옮김
     sum._modBound = true;
-    let t = null, fired = false;
+    let t = null, fired = false, sx = 0, sy = 0;
     const stop = () => clearTimeout(t);
-    sum.addEventListener('pointerdown', () => { fired = false; clearTimeout(t); t = setTimeout(() => { fired = true; modMenu(id); }, 500); });
-    ['pointerup', 'pointerleave', 'pointercancel', 'pointermove'].forEach(ev => sum.addEventListener(ev, stop));
+    sum.style.webkitUserSelect = 'none'; sum.style.userSelect = 'none'; sum.style.webkitTouchCallout = 'none'; sum.style.touchAction = 'pan-y';
+    sum.addEventListener('pointerdown', e => { fired = false; sx = e.clientX; sy = e.clientY; clearTimeout(t); t = setTimeout(() => { fired = true; if (navigator.vibrate) navigator.vibrate(20); modMenu(id); }, 500); });
+    sum.addEventListener('pointermove', e => { if (Math.abs(e.clientX - sx) > 14 || Math.abs(e.clientY - sy) > 14) stop(); });   // 손가락이 조금 떨려도 취소되지 않게 (14px 넘게 움직이면 취소)
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => sum.addEventListener(ev, stop));
     sum.addEventListener('click', e => { if (fired) { e.preventDefault(); e.stopPropagation(); fired = false; } }, true);
     sum.addEventListener('contextmenu', e => e.preventDefault());
   });
