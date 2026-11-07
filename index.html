@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.07-300</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.07-301</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2133,18 +2133,24 @@ function syncHospCalls() {
   if (changed) saveData(false);
 }
 // 🏥 퇴원 확인: 퇴원하는 날을 고름 (오늘이면 그대로 확인, 다른 날이면 날짜 고치기)
-function hospEndAsk(since, onOk) {
+function hospEndAsk(since, onOk, onPlan, defVal, onClear) {
   const bg = document.createElement('div'); bg.className = 'dlg-back';
-  bg.innerHTML = `<div class="dlg" style="text-align:left;"><div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">🚪 퇴원한 날짜</div>
-    <div class="muted" style="margin-bottom:8px;">퇴원한 날을 고르세요. 그 날부터는 입원에서 빠집니다. 오늘이면 그대로 확인, 다른 날이면 날짜를 고치세요.</div>
-    <input type="date" id="he-d" value="${today()}" min="${since}" max="${today()}" style="margin-bottom:10px;">
-    <div style="display:flex;gap:8px;"><button type="button" class="secondary" id="he-no" style="flex:1;">취소</button><button type="button" id="he-ok" style="flex:1;">✔ 확인 (퇴원)</button></div></div>`;
+  bg.innerHTML = `<div class="dlg" style="text-align:left;"><div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">🚪 퇴원 날짜</div>
+    <div class="muted" style="margin-bottom:8px;">퇴원한 날(또는 퇴원 예정일)을 고르세요. 오늘 이전이면 바로 퇴원 처리, 오늘 이후면 퇴원 예정일로 저장하고 그날까지 입원 중으로 둡니다.</div>
+    <input type="date" id="he-d" value="${defVal || today()}" min="${since}" style="margin-bottom:10px;">
+    <div style="display:flex;gap:8px;"><button type="button" class="secondary" id="he-no" style="flex:1;">취소</button><button type="button" id="he-ok" style="flex:1;">✔ 확인 (퇴원)</button></div>
+    ${onClear ? '<button type="button" class="secondary full" id="he-clear" style="margin-top:8px;">✖ 퇴원 예정일 지우기</button>' : ''}</div>`;
   document.body.appendChild(bg);
+  const inp = bg.querySelector('#he-d'), okb = bg.querySelector('#he-ok');
+  const lbl = () => { okb.textContent = inp.value > today() ? '📅 퇴원 예정일로 저장' : '✔ 확인 (퇴원)'; };
+  inp.addEventListener('input', lbl); lbl();
   bg.querySelector('#he-no').onclick = () => bg.remove();
+  bg.querySelector('#he-clear')?.addEventListener('click', () => { bg.remove(); onClear(); });
   bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
-  bg.querySelector('#he-ok').onclick = () => {
-    const end = bg.querySelector('#he-d').value;
-    if (!end || end < since || end > today()) return notify('퇴원 날짜를 입원 시작일과 오늘 사이로 골라 주세요.');
+  okb.onclick = () => {
+    const end = inp.value;
+    if (!end || end < since) return notify('퇴원 날짜는 입원 시작일 이후로 골라 주세요.');
+    if (end > today()) { if (!onPlan) return notify('오늘 이후 날짜는 퇴원 예정일로만 저장할 수 있어요.'); bg.remove(); return onPlan(end); }
     bg.remove(); onOk(end);
   };
 }
@@ -2167,6 +2173,36 @@ function hospEndApply(p, E, memo) {
     (p.notes ||= []).push({ id: Date.now(), date: E, cat: '건강·입원', text: `입원 ${mdK(since)}~${mdK(last)} (${n}일)${memo ? ` · ${memo}` : ''}` });
   } else delete p.hospStay;
   saveData(false);
+}
+// 🎉 퇴원 축하 문자: 퇴원 확정 뒤, 근무일을 다시 정해 첫 근무일이 된 날 앱을 열면 띄움 (사용자 요청, 2026-11-07)
+async function hospBackSend(p){
+  const b = p.hospBack;
+  await smsBox({ title: '🎉 퇴원 축하 문자', people: [p], selfOnly: true, text: hospDoneText(p), logType: '퇴원 축하 문자', logDetail: `${mdK(b.end)} 퇴원` });
+  await smsBox({ title: '팀장님께 퇴원 보고 문자', people: [p], leaderOnly: true, text: hospLeaderText(p, b.since, b.end), logType: '퇴원 축하 문자', logDetail: `${mdK(b.end)} 퇴원 · 팀장님 보고` });
+}
+// 앱을 열 때: (1) 퇴원 예정일이 지났으면 "퇴원하셨나요?" (2) 첫 근무일이 되었으면 축하 문자
+async function hospStartupCheck(){
+  const t = today();
+  for (const p of [...participants]) {
+    if (!(p.hospPlan && p.hospPlan <= t && p.hospCall) || p.hospPlanAsk === t) continue;
+    const plan = p.hospPlan, since = p.hospCall.since;
+    const yes = await showDialog(`🚪 ${p.name} 어르신\n퇴원 예정일(${mdK(plan)})이 지났습니다.\n퇴원하셨나요?`, true, ['예, 퇴원했어요', '아직이에요']);
+    if (yes) {
+      const memo = customOf(p, since.slice(0, 7))?.memo || '';
+      delete p.hospPlan; hospEndApply(p, plan, memo);
+      p.hospBack = { since, end: plan, sent: false };
+      logEvent('퇴원 확인', p, `${mdK(plan)} 퇴원 확인 (예정일 지남)`, plan); saveData(false);
+    } else { p.hospPlanAsk = t; saveData(false); }
+  }
+  for (const p of [...participants]) {
+    const b = p.hospBack; if (!b || p.linking) continue;
+    let first = null;
+    for (let mk = b.end.slice(0, 7); mk <= t.slice(0, 7) && !first; ) {
+      first = workDays(p, mk).filter(d => d >= b.end).sort()[0] || null;
+      const y = +mk.slice(0, 4), m = +mk.slice(5, 7); mk = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+    }
+    if (first && first <= t) { await hospBackSend(p); delete p.hospBack; saveData(false); }
+  }
 }
 const hospIsIn = (p, k) => ((p.custom || {})[k.slice(0, 7)]?.hosp || []).includes(k);
 // 🏥 지금 입원 중인 시작일: 오늘에서 거슬러 올라가 입원 날이 이어진 첫 날 (달이 바뀌어도 이어짐)
@@ -3839,7 +3875,7 @@ function addChange(pre){
   const hospCountHtml = () => { const now = hospNowVal(); if (!hospSel.size && !wasInNow && !lastStay) return '';
     const s0 = hospSinceVal(), e0 = hospEndVal(), n = daysBetween(s0, e0) + 1, lim = qDays(), left = lim - n;
     if (n <= 0) return '';
-    return `<div class="notice" style="margin:0;font-size:.92rem;background:#fff5f7;border-color:#fbb6ce;">🏥 ${now ? `입원 ${mdK(s0)} ~ 오늘` : `입원 ${mdK(s0)} ~ ${mdK(e0)} 퇴원`} · 입원 <b>${n}일</b> · 중도포기 기준 ${lim}일 중 ${n}일${left < 0 ? ' <b style="color:var(--danger)">기준 넘음</b>' : (now && left <= 5) ? ` <b style="color:var(--danger)">${left}일 남음</b>` : ''}</div>`; };
+    return `<div class="notice" style="margin:0;font-size:.92rem;background:#fff5f7;border-color:#fbb6ce;">🏥 ${now ? `입원 ${mdK(s0)} ~ 오늘${p.hospPlan ? ` · 🚪 퇴원 예정 ${mdK(p.hospPlan)}` : ''}` : `입원 ${mdK(s0)} ~ ${mdK(e0)} 퇴원`} · 입원 <b>${n}일</b> · 중도포기 기준 ${lim}일 중 ${n}일${left < 0 ? ' <b style="color:var(--danger)">기준 넘음</b>' : (now && left <= 5) ? ` <b style="color:var(--danger)">${left}일 남음</b>` : ''}</div>`; };
   const drawENames = () => { const names = eduNamesShown([...new Set([...EDU_NAMES, ...[...eduSel.values()].map(v => v.replace(/ \(.*\)$/, '')), ...(eduName ? [eduName] : [])])]);
     $('#cg-enames').innerHTML = names.map(n => `<button type="button" class="small ${n === eduName ? '' : 'secondary'}" data-en="${esc(n)}" style="width:auto;margin:0;${n === eduName ? 'background:#805ad5;' : ''}">🎓 ${esc(n)} <span data-hide="${esc(n)}" style="margin-left:4px;padding:0 4px;opacity:.85;">✕</span></button>`).join('')
       + (eduHide.length ? `<button type="button" class="small secondary" id="cg-eshow" style="width:auto;margin:0;">↩ 숨긴 교육 ${eduHide.length}개 다시 보이기</button>` : '');
@@ -3853,13 +3889,13 @@ function addChange(pre){
       hospEndAsk(p.hospCall.since, end => {
         const memo = $('#cg-hmemo')?.value.trim() || customOf(p, p.hospCall.since.slice(0, 7))?.memo || '';
         const since = p.hospCall.since;
-        hospEndApply(p, end, memo); back.remove(); renderModal(); renderList();
-        // 본인께 축하 문자 → 이어서 담당 팀장님께 퇴원 보고 문자 (사용자 요청, 2026-11-05)
-        (async () => {
-          await smsBox({ title: '🎉 퇴원 축하 문자', people: [p], selfOnly: true, text: hospDoneText(p), logType: '퇴원 축하 문자', logDetail: `${mdK(end)} 퇴원` });
-          await smsBox({ title: '팀장님께 퇴원 보고 문자', people: [p], leaderOnly: true, text: hospLeaderText(p, since, end), logType: '퇴원 축하 문자', logDetail: `${mdK(end)} 퇴원 · 팀장님 보고` });
-        })();
-      });
+        delete p.hospPlan;
+        hospEndApply(p, end, memo); p.hospBack = { since, end, sent: false }; saveData(false); back.remove(); renderModal(); renderList();
+        notify(`퇴원 처리했어요. 축하 문자는 근무를 다시 정하고 첫 근무일에 앱을 열면 띄워 드릴게요.`);
+      }, end => {
+        p.hospPlan = end; logEvent('퇴원 예정일', p, `${mdK(end)} 퇴원 예정 (그날까지 입원 중)`, td); saveData(false); back.remove(); renderModal(); renderList();
+        notify(`${mdK(end)} 퇴원 예정으로 저장했어요.`);
+      }, p.hospPlan || null, () => { const old = p.hospPlan; delete p.hospPlan; logEvent('퇴원 예정일 지움', p, `${mdK(old)} 퇴원 예정 취소`, td); saveData(false); back.remove(); renderModal(); renderList(); });
       return;
     }
     const from = hospSorted()[0] || td;   // 입원 시작: 선택한 날(없으면 오늘)부터 오늘까지
@@ -9904,6 +9940,7 @@ setTimeout(() => {
 })();
 
 try { syncHospCalls(); } catch(e) {}
+setTimeout(() => { hospStartupCheck().catch(() => {}); }, 2600);
 
 // (v296) 점검 화면 칸 옮기기: 칸 제목을 0.5초 누른 뒤 끌어서 놓기 (위·아래 자리, 가운데에 놓으면 묶음). 그냥 누르고 떼면 메뉴(위·아래, 묶음 풀기 등).
 // 순서·묶음은 jinan_mod_order에 저장 (클라우드 동기화)
