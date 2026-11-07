@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.07-295</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.07-296</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -9902,6 +9902,54 @@ setTimeout(() => {
 })();
 
 try { syncHospCalls(); } catch(e) {}
+
+// (v296) 점검 화면 칸 위아래 옮기기: 칸 제목을 0.5초 길게 누르면 ⬆위로 · ⬇아래로 메뉴. 순서는 jinan_mod_order에 저장 (클라우드 동기화)
+const MOD_SECS = ['sec-notes', 'sec-logs', 'ex-panel', 'info-form'];
+const MOD_LBL = { 'sec-notes': '특이사항', 'sec-logs': '점검 기록·벌점', 'ex-panel': '참여 제외', 'info-form': '기본 정보' };
+function modOrder(){ try { const a = JSON.parse(load('jinan_mod_order')); if (Array.isArray(a)) return [...a.filter(k => MOD_SECS.includes(k)), ...MOD_SECS.filter(k => !a.includes(k))]; } catch(e) {} return [...MOD_SECS]; }
+function modOrderApply(){
+  const first = document.getElementById(MOD_SECS[0]); if (!first) return;
+  const par = first.parentNode; const last = document.getElementById(MOD_SECS[MOD_SECS.length - 1]);
+  const anchor = last ? last.nextSibling : null;
+  modOrder().forEach(id => { const el = document.getElementById(id); if (el && el.parentNode === par) par.insertBefore(el, anchor); });
+}
+function modMove(id, d){
+  const order = modOrder(), i = order.indexOf(id), j = i + d;
+  if (i < 0 || j < 0 || j >= order.length) return;
+  [order[i], order[j]] = [order[j], order[i]];
+  try { store('jinan_mod_order', JSON.stringify(order)); } catch(e) {}
+  modOrderApply();
+  logEvent('화면 배치', null, `점검 화면 칸 순서: ${order.map(k => MOD_LBL[k]).join(' → ')}`);
+}
+function modMenu(id){
+  const order = modOrder(), i = order.indexOf(id);
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = `<div class="dlg" style="text-align:center;"><div style="font-weight:bold;margin-bottom:10px;">↕ ${MOD_LBL[id]} 칸 위치</div>
+    <div style="display:grid;gap:8px;">
+      <button type="button" id="mo-up" ${i <= 0 ? 'disabled' : ''}>⬆ 위로</button>
+      <button type="button" id="mo-down" ${i >= order.length - 1 ? 'disabled' : ''}>⬇ 아래로</button>
+      <button type="button" class="secondary" id="mo-no">닫기</button></div></div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('#mo-no').onclick = () => bg.remove();
+  bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+  bg.querySelector('#mo-up').onclick = () => { bg.remove(); modMove(id, -1); };
+  bg.querySelector('#mo-down').onclick = () => { bg.remove(); modMove(id, 1); };
+}
+function modInit(){
+  MOD_SECS.forEach(id => {
+    const el = document.getElementById(id); if (!el) return;
+    const sum = el.querySelector(':scope > summary'); if (!sum || sum._modBound) return;
+    sum._modBound = true;
+    let t = null, fired = false;
+    const stop = () => clearTimeout(t);
+    sum.addEventListener('pointerdown', () => { fired = false; clearTimeout(t); t = setTimeout(() => { fired = true; modMenu(id); }, 500); });
+    ['pointerup', 'pointerleave', 'pointercancel', 'pointermove'].forEach(ev => sum.addEventListener(ev, stop));
+    sum.addEventListener('click', e => { if (fired) { e.preventDefault(); e.stopPropagation(); fired = false; } }, true);
+    sum.addEventListener('contextmenu', e => e.preventDefault());
+  });
+  modOrderApply();
+}
+if (document.readyState !== 'loading') modInit(); else document.addEventListener('DOMContentLoaded', modInit);
 </script>
 </body>
 </html>
