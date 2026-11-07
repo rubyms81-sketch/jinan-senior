@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.06-293</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.07-294</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -848,7 +848,7 @@ const FB_CONFIG = {
   appId: "1:976802627283:web:eb623f93cb4568773c9e26"
 };
 // 이 휴대폰에만 두는 설정(클라우드에 올리지 않음)
-const CLOUD_DEVICE_ONLY = ['jinan_xlpw','jinan_lock','jinan_edu_draft','jinan_weather','jinan_def148','jinan_def151','jinan_photos'];
+const CLOUD_DEVICE_ONLY = ['jinan_xlpw','jinan_lock','jinan_edu_draft','jinan_weather','jinan_def148','jinan_def151','jinan_photos','jinan_size_dev'];   // jinan_size_dev: 글씨 크기(기기별)
 const CLOUD_DEVICE_PREFIX = ['jinan_rptalarm_','jinan_daypop'];
 const CLOUD_CH = 200000; // 문서 하나에 넣을 글자 수 (Firestore 문서 1MB 제한 대비)
 let fbAuth = null, fbDb = null, fbUser = null, cloudBusy = false;
@@ -1036,6 +1036,7 @@ function applyHeader(){
   t.style.color = c; t.style.fontFamily = ui.hdFont ? `'${ui.hdFont}', sans-serif` : '';
   const ff = ui.hdFont === 'Nanum Pen Script' ? 1.45 : ui.hdFont === 'Black Han Sans' || ui.hdFont === 'Do Hyeon' || ui.hdFont === 'Jua' ? 1.12 : 1;
   t.style.fontSize = (ff * (HD_SIZES[(ui.hdSize || 3) - 1] || 1)).toFixed(3) + 'em';   // 제목 크기 1~5 (기본 3)
+  { const hdEl = document.querySelector('header'); if (hdEl) hdEl.style.fontSize = '16.1px'; }   // (v294) 제목 기준 글씨(처음 크기 1.15rem = 16.1px)를 고정 → 본문 글씨 크기를 바꿔도 제목은 그대로
   // 제목 위치: 위·가운데·아래
   const hd = document.querySelector('header'), pos = ui.hdPos || 'top';
   if (hd) Object.assign(hd.style, { display: 'flex', flexDirection: 'column', justifyContent: { top: 'flex-start', mid: 'center', bot: 'flex-end' }[pos] || 'flex-start' });
@@ -1054,7 +1055,7 @@ const UI_FONTS = [
   { k: 'Gowun Dodum', name: '고운돋움', css: 'Gowun+Dodum' },
   { k: 'Noto Sans KR', name: '본고딕 (노토)', css: 'Noto+Sans+KR:wght@300;400;600;800' },
 ];
-let ui = (() => { try { return Object.assign({ size: 3, sizeV: 2, weight: 'normal', font: '', wx: true, wxfx: true, sound: true, alarmAt: '11:50', quitDays: 45, theme: 'blue', hdText: '', hdColor: '#ffffff', hdFont: '', hdStyle: 'shadow' }, JSON.parse(load('jinan_ui')) || {}); } catch(e) { return { size: 5, weight: 'normal', font: '', wx: true, wxfx: true, theme: 'blue' }; } })();
+let ui = (() => { try { const u = Object.assign({ size: 3, sizeV: 2, weight: 'normal', font: '', wx: true, wxfx: true, sound: true, alarmAt: '11:50', quitDays: 45, theme: 'blue', hdText: '', hdColor: '#ffffff', hdFont: '', hdStyle: 'shadow' }, JSON.parse(load('jinan_ui')) || {}); const dz = Number(localStorage.getItem('jinan_size_dev')); if (dz >= 1 && dz <= 10) u.size = dz; return u; } catch(e) { return { size: 5, weight: 'normal', font: '', wx: true, wxfx: true, theme: 'blue' }; } })();
 function applyUI(){
   const h = document.documentElement;
   if (ui.sizeV !== 2) { ui.size = 3; ui.sizeV = 2; }   // 예전 저장값 정리 (처음엔 3단계 = 14px)
@@ -1781,10 +1782,10 @@ function renderWork(){
   const cusHTML = cus.length ? `<div class="cus-box"><div style="font-weight:bold;margin-bottom:4px;">🩹 보충 근무 · 🏥 입원 ${cus.length}명</div>` + cus.map(p => {
     const cu = customOf(p, mk), reg = monthDays(mk);
     return `<button class="pen-row warn" onclick="openModal(${p.id})" ${cu.inHosp?'style="border-left-color:#d53f8c"':''}><span class="muted">🏠 ${town==='전체'?esc(p.town)+' · ':''}${esc(seniorOf(p))}</span><br>
-      <b>${nmH(p)}</b> ${cu.inHosp?`<span class="badge bg-hosp">🏥 입원 중${hospDaysOf(p) ? ` · ${hospDaysOf(p)}일째` : ''}</span> `:''}${cu.reason?`<span class="muted">${esc(cu.reason)}</span>`:''}${cu.back?` <span class="muted">· ${dd(cu.back)} 복귀</span>`:''}
+      <b>${nmH(p)}</b> ${cu.inHosp?`<span class="badge bg-hosp">🏥 입원 중${hospDaysOf(p) ? ` · ${hospDaysOf(p)}일째` : ''}</span> `:''}${cu.reason && !cu.inHosp ?`<span class="muted">${esc(cu.reason)}</span>`:''}${cu.back?` <span class="muted">· ${dd(cu.back)} 복귀</span>`:''}
       ${cu.memo ? `<br><span style="font-size:.9rem;">📝 ${esc(cu.memo)}</span>` : ''}
       ${cu.hosp?.length ? `<br><span style="font-size:.9rem;color:#97266d;">🏥 입원 ${rangeText(cu.hosp)}</span>` : ''}<br>
-      <span style="font-size:.9rem;">근무 ${cu.days.length ? '' : '없음'}${cu.days.map(d => reg.includes(d) ? Number(d.slice(8,10)) : `<b style="color:var(--warning)">${Number(d.slice(8,10))}</b>`).join(', ')}일</span></button>`;
+      ${cu.inHosp ? '' : `<span style="font-size:.9rem;">근무 ${cu.days.length ? '' : '없음'}${cu.days.map(d => reg.includes(d) ? Number(d.slice(8,10)) : `<b style="color:var(--warning)">${Number(d.slice(8,10))}</b>`).join(', ')}일</span>`}</button>`;
   }).join('') + '<div class="muted" style="font-size:.8rem;">주황 숫자 = 원래 근무일이 아닌 보충한 날</div></div>' : '';
   // 면끼리 묶고, 어르신마다 바뀐 날짜 + 지금 근무일 + 총 근무 횟수
   const byPerson = new Map();
@@ -1971,7 +1972,7 @@ function renderOtherDays(p, mk){
     return e ? `<span class="chip edu">🎓 ${dd(d)} ${esc(e.name)}</span>`
       : `<span class="chip wd ${moved.has(d) ? 'moved' : ''} ${d < today() ? 'past' : ''}">${dd(d)}${moved.has(d) ? ' 변경' : ''}</span>`; }).join('')
     + chg.filter(c => !days.includes(c.from)).map(c => `<span class="chip off">${dd(c.from)}</span>`).join('')
-    + (cu ? `<div class="muted" style="width:100%;margin-top:6px;">${cu.inHosp ? '🏥 입원 중' : '🩹 보충 근무'}${cu.reason ? ` · ${esc(cu.reason)}` : ''}${cu.hosp?.length ? ` · 🏥 입원 ${rangeText([...cu.hosp])}` : ''}</div>` : '');
+    + (cu ? `<div class="muted" style="width:100%;margin-top:6px;">${cu.inHosp ? '🏥 입원 중' : '🩹 보충 근무'}${cu.reason && !cu.inHosp ? ` · ${esc(cu.reason)}` : ''}${cu.hosp?.length ? ` · 🏥 입원 ${rangeText([...cu.hosp])}` : ''}</div>` : '');
   drawDayTabs();
 }
 function renderPersonDays(p){
@@ -1980,10 +1981,10 @@ function renderPersonDays(p){
   const mk = monthKey(), days = personDays(p, mk), chg = changesIn(p, mk), cu = customOf(p, mk), reg = monthDays(mk);
   const moved = new Set(chg.map(c => c.to));
   const hosp = new Set(cu?.hosp || []);
-  document.getElementById('m-days-title').innerHTML = `📅 ${curMonth}월 근무일 (${days.length}일)${cu ? (cu.inHosp ? ` <span class="badge bg-hosp" style="vertical-align:2px;">🏥 입원 중${hospDaysOf(p) ? ` · ${hospDaysOf(p)}일째` : ''}</span>` : ' <span class="badge bg-warning" style="vertical-align:2px;">🩹 보충 근무</span>') : ''}`;
+  document.getElementById('m-days-title').innerHTML = `📅 ${curMonth}월 근무일 (${days.length}일)${cu ? (cu.inHosp ? '' : ' <span class="badge bg-warning" style="vertical-align:2px;">🩹 보충 근무</span>') : ''}`;
   if (cu) {
     // 보충 근무: 원래 근무일 중 쉰 날(줄 긋기) + 실제 근무일(보충한 날은 주황)
-    const all = [...new Set([...days, ...reg, ...hosp])].sort();
+    const all = cu.inHosp ? [...hosp].sort() : [...new Set([...days, ...reg, ...hosp])].sort();   // 입원 중이면 입원 날만 (근무일·보충 날짜 숨김)
     document.getElementById('m-days').innerHTML = all.map(d => hosp.has(d) ? `<span class="chip hosp">${dd(d)} ${hospIsIn(p, addDays(d, -1)) ? '입원중' : '입원'}</span>` : hospOutDay(p, d) ? `<span class="chip hosp">${dd(d)} 퇴원</span>` : days.includes(d)
       ? `<span class="chip wd ${(!reg.includes(d) || moved.has(d))?'moved':''} ${d < today()?'past':''}" data-d="${d}">${dd(d)}${moved.has(d)?' 변경':!reg.includes(d)?' 보충':''}</span>`
       : `<span class="chip off">${dd(d)} 쉼</span>`).join('');
@@ -4538,7 +4539,8 @@ function renderLinking(){
   const card = document.getElementById('link-card'); if (!card) return;
   // 연계가 끝나도 한 달 동안은 이 칸에 남김 (✔ 연계 끝)
   const recent = p => p.linkDone && p.linkDone.day > addDays(today(), -31);
-  const ps = participants.filter(p => p.linking || recent(p)).sort((a,b) => !!a.linkDone - !!b.linkDone || (a.linking || a.linkDone).since.localeCompare((b.linking || b.linkDone).since) || a.name.localeCompare(b.name));
+  const oldLink = p => p.linking && p.linking.since < today().slice(0,8) + '01';   // 이번 달 이전에 들어온 연계 중 → ✔ 확인 가능
+  const ps = participants.filter(p => (p.linking && p.linkAck !== p.linking.since) || recent(p)).sort((a,b) => !!a.linkDone - !!b.linkDone || (a.linking || a.linkDone).since.localeCompare((b.linking || b.linkDone).since) || a.name.localeCompare(b.name));
   card.classList.toggle('hidden', !ps.length);
   if (!ps.length) return;
   const nOn = ps.filter(p => p.linking).length;
@@ -4553,7 +4555,7 @@ function renderLinking(){
     ${p.linking ? `<input type="checkbox" style="width:auto;margin:0 6px 0 0;align-self:center;" ${lkSel.has(p.id) ? 'checked' : ''} onchange="lkPick(${p.id}, this.checked)">` : ''}
     <button class="who" onclick="openModal(${p.id})"><b>${nmH(p)}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span><br>
       <span class="muted" style="font-size:.85rem;">${mdw(L.since)} 등록 · ${p.linking ? `연계 ${n}일째` : `${mdw(p.linkDone.day)} 연계 끝`}</span><br>${telBtn(p)}</button>
-    ${p.linking ? `<button class="small danger" onclick="linkDone(${p.id})" style="width:auto;margin:0;padding:8px 12px;white-space:nowrap;" title="연계 끝">✕ 연계 끝</button>`
+    ${p.linking ? `${oldLink(p) ? `<button class="small secondary" onclick="linkAckOld(${p.id})" style="width:auto;margin:0 4px 0 0;padding:8px 10px;white-space:nowrap;" title="게시판에서 숨김">✔ 확인</button>` : ''}<button class="small danger" onclick="linkDone(${p.id})" style="width:auto;margin:0;padding:8px 12px;white-space:nowrap;" title="연계 끝">✕ 연계 끝</button>`
       : `<span class="badge" style="background:#c6f6d5;color:#22543d;align-self:center;white-space:nowrap;">✔ 연계 끝</span>`}</div>`; }).join('');
 }
 // 🎓 비대면 의무교육: 안전·소양·직무 시간 정하기 → { 안전, 소양, 직무 } (취소면 null)
@@ -4715,6 +4717,7 @@ async function linkDone(id){
 }
 // 🔗 여러 명 한꺼번에 연계 끝: 체크박스로 고른 분만 (선택은 화면에만, 저장 안 함)
 let lkSel = new Set();
+function linkAckOld(id){ const p = participants.find(x => x.id === id); if (!p?.linking) return; p.linkAck = p.linking.since; logEvent('연계 확인 (게시판에서 숨김)', p, `${mdw(p.linking.since)} 등록 · 연계 중 (확인)`, today()); saveData(false); renderLinking(); }
 function lkPick(id, on){ on ? lkSel.add(id) : lkSel.delete(id); renderLinking(); }
 function lkAll(on){ const ids = participants.filter(p => p.linking).map(p => p.id); lkSel = on ? new Set(ids) : new Set(); renderLinking(); }
 async function lkBulkDone(){
@@ -5120,7 +5123,7 @@ function exportDiaryHwpx(){
     } catch(e) { btn.disabled = false; btn.textContent = '📥 내려받기'; notify('한글 파일을 만들지 못했어요.\n인터넷 연결을 확인한 뒤 다시 해 주세요.'); }
   };
 }
-function saveUI(what){ try { localStorage.setItem('jinan_ui', JSON.stringify(ui)); } catch(e) {} applyUI(); renderUI(); logEvent('화면 설정', null, what); }
+function saveUI(what){ try { localStorage.setItem('jinan_ui', JSON.stringify(ui)); localStorage.setItem('jinan_size_dev', String(ui.size)); } catch(e) {} applyUI(); renderUI(); logEvent('화면 설정', null, what); }
 function mtNowShow(){ const el = document.getElementById('mt-now'); if (el) el.textContent = '지금: ' + myTowns.join(' · ') + ' (체크한 곳만 목록 맨 위에 보임)'; }
 function renderUI(){
   mtNowShow(); xlpwShow();
