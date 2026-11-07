@@ -9906,8 +9906,8 @@ setTimeout(() => {
 try { syncHospCalls(); } catch(e) {}
 
 // (v296) 점검 화면 칸 위아래 옮기기: 칸 제목을 0.5초 길게 누르면 ⬆위로 · ⬇아래로 메뉴. 순서는 jinan_mod_order에 저장 (클라우드 동기화)
-const MOD_SECS = ['sec-edu', 'sec-notes', 'sec-logs', 'ex-panel', 'info-form'];
-const MOD_LBL = { 'sec-edu': '받은 교육', 'sec-notes': '특이사항', 'sec-logs': '점검 기록·벌점', 'ex-panel': '참여 제외', 'info-form': '기본 정보' };
+const MOD_SECS = ['check-section', 'sec-edu', 'sec-notes', 'sec-logs', 'ex-panel', 'info-form'];
+const MOD_LBL = { 'check-section': '점검 항목', 'sec-edu': '받은 교육', 'sec-notes': '특이사항', 'sec-logs': '점검 기록·벌점', 'ex-panel': '참여 제외', 'info-form': '기본 정보' };
 function modOrder(){ try { const a = JSON.parse(load('jinan_mod_order')); if (Array.isArray(a)) return [...a.filter(k => MOD_SECS.includes(k)), ...MOD_SECS.filter(k => !a.includes(k))]; } catch(e) {} return [...MOD_SECS]; }
 function modOrderApply(){
   const first = document.getElementById(MOD_SECS[0]); if (!first) return;
@@ -9940,7 +9940,7 @@ function modMenu(id){
 function modInit(){
   MOD_SECS.forEach(id => {
     const el = document.getElementById(id); if (!el) return;
-    const sum = el.querySelector(':scope > summary') || el; if (sum._modBound) return;
+    const sum = id === 'check-section' ? document.getElementById('ck-head') : (el.querySelector(':scope > summary') || el); if (!sum || sum._modBound) return;   // 점검 항목은 제목 줄(ck-head)만 길게 눌러 옮김
     sum._modBound = true;
     let t = null, fired = false;
     const stop = () => clearTimeout(t);
