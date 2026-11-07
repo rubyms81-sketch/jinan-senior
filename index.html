@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.07-296</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.07-297</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -9905,7 +9905,8 @@ setTimeout(() => {
 
 try { syncHospCalls(); } catch(e) {}
 
-// (v296) 점검 화면 칸 옮기기: 칸 제목을 0.5초 길게 누르면 메뉴 (위·아래, 다른 칸과 묶기, 묶음 풀기). 순서·묶음은 jinan_mod_order에 저장 (클라우드 동기화)
+// (v296) 점검 화면 칸 옮기기: 칸 제목을 0.5초 누른 뒤 끌어서 놓기 (위·아래 자리, 가운데에 놓으면 묶음). 그냥 누르고 떼면 메뉴(위·아래, 묶음 풀기 등).
+// 순서·묶음은 jinan_mod_order에 저장 (클라우드 동기화)
 const MOD_SECS = ['check-section', 'sec-edu', 'sec-notes', 'sec-logs', 'ex-panel', 'info-form'];
 const MOD_LBL = { 'check-section': '점검 항목', 'sec-edu': '받은 교육', 'sec-notes': '특이사항', 'sec-logs': '점검 기록·벌점', 'ex-panel': '참여 제외', 'info-form': '기본 정보' };
 const mkId = () => Math.random().toString(36).slice(2, 9);
@@ -9922,14 +9923,106 @@ function modState(){
 }
 const modLabel = x => typeof x === 'string' ? (MOD_LBL[x] || x) : x.g;
 function modCommit(st, what){ try { store('jinan_mod_order', JSON.stringify(st)); } catch(e) {} modOrderApply(); if (what) logEvent('화면 배치', null, what); }
-function bindLong(sum, fn){
-  let t = null, fired = false, sx = 0, sy = 0;
-  sum.style.webkitUserSelect = 'none'; sum.style.userSelect = 'none'; sum.style.webkitTouchCallout = 'none'; sum.style.touchAction = 'pan-y';
-  sum.addEventListener('pointerdown', e => { fired = false; sx = e.clientX; sy = e.clientY; clearTimeout(t); t = setTimeout(() => { fired = true; if (navigator.vibrate) navigator.vibrate(20); fn(); }, 500); });
-  sum.addEventListener('pointermove', e => { if (Math.abs(e.clientX - sx) > 14 || Math.abs(e.clientY - sy) > 14) clearTimeout(t); });   // 14px 넘게 움직일 때만 취소
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => sum.addEventListener(ev, () => clearTimeout(t)));
-  sum.addEventListener('click', e => { if (fired) { e.preventDefault(); e.stopPropagation(); fired = false; } }, true);
+let MD = null, suppressClick = false;   // 끌기 상태
+document.addEventListener('touchmove', e => { if (MD && MD.active) e.preventDefault(); }, { passive: false });
+document.addEventListener('click', e => { if (suppressClick) { e.preventDefault(); e.stopPropagation(); } }, true);
+function bindLong(sum, key){
+  sum.style.webkitUserSelect = 'none'; sum.style.userSelect = 'none'; sum.style.webkitTouchCallout = 'none'; sum.style.touchAction = 'none';
   sum.addEventListener('contextmenu', e => e.preventDefault());
+  sum.addEventListener('pointerdown', e => {
+    if (MD || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    const x0 = e.clientX, y0 = e.clientY; let t = null;
+    const cleanup = () => { clearTimeout(t); document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up); };
+    const mv = ev => { if (MD) return; if (Math.abs(ev.clientX - x0) > 14 || Math.abs(ev.clientY - y0) > 14) cleanup(); };   // 0.5초 전에 많이 움직이면 그냥 스크롤로 봄
+    const up = () => { if (MD) return; cleanup(); };
+    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+    t = setTimeout(() => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up); modDragBegin(key, x0, y0); }, 500);
+  });
+}
+function modDragBegin(key, x0, y0){
+  if (navigator.vibrate) navigator.vibrate(20);
+  suppressClick = true;
+  const srcRoot = key.startsWith('G:') ? document.getElementById('mg-' + key.slice(2)) : document.getElementById(key);
+  if (!srcRoot) { suppressClick = false; return; }
+  MD = { key, x0, y0, active: false, ghost: null, tgt: null, zone: null, outlined: null, srcRoot };
+  const mv = e => {
+    if (!MD) return;
+    if (!MD.active) { if (Math.abs(e.clientX - x0) > 8 || Math.abs(e.clientY - y0) > 8) { MD.active = true; mdGhost(); } else return; }
+    mdMove(e);
+  };
+  const up = () => {
+    if (!MD) return; const d = MD; MD = null; cleanup();
+    if (!d.active) { setTimeout(() => { suppressClick = false; }, 300); modMenu(d.key); return; }   // 끌지 않고 떼면 메뉴
+    mdClear(d);
+    if (d.tgt && d.zone) modDoDrop(d.key, d.tgt, d.zone);
+    setTimeout(() => { suppressClick = false; }, 300);
+  };
+  const cancel = () => { if (!MD) return; const d = MD; MD = null; cleanup(); mdClear(d); setTimeout(() => { suppressClick = false; }, 300); };
+  const cleanup = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', cancel); };
+  document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', cancel);
+  MD._mv = mv;
+}
+function mdLabelOf(key){
+  if (!key.startsWith('G:')) return MOD_LBL[key] || key;
+  const g = modState().find(x => typeof x !== 'string' && x.gid === key.slice(2)); return g ? g.g : '📁 묶음';
+}
+function mdGhost(){
+  const g = document.createElement('div'); g.textContent = '↕ ' + mdLabelOf(MD.key);
+  g.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;background:#fff;border:2px solid #2b6cb0;border-radius:10px;padding:6px 12px;font-weight:bold;color:#2c5282;box-shadow:0 6px 16px rgba(0,0,0,.25);opacity:.93;';
+  document.body.appendChild(g); MD.ghost = g;
+}
+function mdHeader(root, key){
+  if (key === 'check-section') return document.getElementById('ck-head');
+  if (key === 'sec-edu') return root.firstElementChild || null;
+  return root.querySelector(':scope > summary') || null;
+}
+function mdMove(e){
+  if (MD.ghost) { MD.ghost.style.left = (e.clientX - 40) + 'px'; MD.ghost.style.top = (e.clientY - 20) + 'px'; }
+  const els = document.elementsFromPoint(e.clientX, e.clientY);
+  let root = null;
+  for (const el of els) { const r = el.closest ? el.closest('[data-mkey]') : null; if (r && r !== MD.srcRoot && !MD.srcRoot.contains(r)) { root = r; break; } }
+  mdClearHint();
+  MD.tgt = null; MD.zone = null;
+  if (!root) return;
+  const hdr = mdHeader(root, root.dataset.mkey); if (!hdr) return;
+  const hr = hdr.getBoundingClientRect();
+  let zone = e.clientY < hr.top ? 'before' : (e.clientY > hr.bottom ? 'after' : 'into');
+  if (zone === 'into' && MD.key.startsWith('G:')) zone = e.clientY < (hr.top + hr.bottom) / 2 ? 'before' : 'after';   // 묶음은 다른 칸 안에 넣지 않고 위·아래로만
+  MD.tgt = root.dataset.mkey; MD.zone = zone;
+  if (zone === 'into') { hdr.style.outline = '3px dashed #2b6cb0'; MD.outlined = hdr; }
+  else { const bar = document.createElement('div'); bar.id = 'mod-hint'; bar.style.cssText = `position:fixed;z-index:9998;pointer-events:none;height:4px;border-radius:2px;background:#2b6cb0;left:${hr.left}px;width:${hr.width}px;top:${zone === 'before' ? hr.top - 3 : hr.bottom - 1}px;`; document.body.appendChild(bar); }
+}
+function mdClearHint(){ const b = document.getElementById('mod-hint'); if (b) b.remove(); if (MD && MD.outlined) { MD.outlined.style.outline = ''; MD.outlined = null; } }
+function mdClear(d){ if (d.ghost) d.ghost.remove(); const b = document.getElementById('mod-hint'); if (b) b.remove(); if (d.outlined) d.outlined.style.outline = ''; }
+function modDoDrop(srcKey, tgtKey, zone){
+  if (srcKey === tgtKey) return;
+  const st = modState(), srcIsGroup = srcKey.startsWith('G:');
+  let item = null;
+  if (srcIsGroup) { const gi = st.findIndex(x => typeof x !== 'string' && 'G:' + x.gid === srcKey); if (gi < 0) return; item = st.splice(gi, 1)[0]; }
+  else {
+    const ti = st.findIndex(x => x === srcKey);
+    if (ti >= 0) { st.splice(ti, 1); item = srcKey; }
+    else { for (let i = 0; i < st.length && !item; i++) { const x = st[i]; if (typeof x !== 'string' && x.k.includes(srcKey)) { x.k = x.k.filter(k => k !== srcKey); item = srcKey; if (!x.k.length) st.splice(i, 1); } } }
+    if (!item) return;
+  }
+  const before = zone === 'before';
+  if (tgtKey.startsWith('G:')) {
+    const gi = st.findIndex(x => typeof x !== 'string' && 'G:' + x.gid === tgtKey);
+    if (gi < 0) st.push(item);
+    else if (zone === 'into' && !srcIsGroup) st[gi].k.push(item);
+    else st.splice(before ? gi : gi + 1, 0, item);
+  } else {
+    const ti = st.findIndex(x => x === tgtKey);
+    if (ti >= 0) {
+      if (zone === 'into' && !srcIsGroup) st[ti] = { gid: mkId(), g: '📁 묶음', k: [tgtKey, item] };
+      else st.splice(before ? ti : ti + 1, 0, item);
+    } else {
+      let placed = false;
+      for (let i = 0; i < st.length && !placed; i++) { const x = st[i]; if (typeof x !== 'string' && x.k.includes(tgtKey)) { const mi = x.k.indexOf(tgtKey); if (srcIsGroup) st.splice(before ? i : i + 1, 0, item); else x.k.splice(before ? mi : mi + 1, 0, item); placed = true; } }
+      if (!placed) st.push(item);
+    }
+  }
+  modCommit(st, `점검 화면 칸 위치 바꿈: ${st.map(modLabel).join(' → ')}`);
 }
 function modOrderApply(){
   const first = document.getElementById(MOD_SECS[0]); if (!first) return;
@@ -9937,18 +10030,19 @@ function modOrderApply(){
   // 1) 묶음을 풀어 칸들을 원래 자리로
   document.querySelectorAll('.mod-grp').forEach(g => { const inn = g.querySelector('.grp-in'); if (inn) while (inn.firstChild) par.insertBefore(inn.firstChild, g); g.remove(); });
   // 2) 순서대로 다시 놓기
-  const last = document.getElementById(MOD_SECS[MOD_SECS.length - 1]); const anchor = last ? last.nextSibling : null;
+  const last = document.getElementById(MOD_SECS[MOD_SECS.length - 1]); const anchor = document.createComment('mod-end'); par.insertBefore(anchor, last && last.parentNode === par ? last.nextSibling : null);   // 자리표시(칸을 옮겨도 안 움직임)
   modState().forEach(it => {
     if (typeof it === 'string') { const el = document.getElementById(it); if (el) par.insertBefore(el, anchor); return; }
-    const g = document.createElement('details'); g.id = 'mg-' + it.gid; g.className = 'chg-box m-sec mod-grp'; g.open = true; g.style.cssText = 'margin-top:0;border-top:none;padding-top:0;';
+    const g = document.createElement('details'); g.id = 'mg-' + it.gid; g.className = 'chg-box m-sec mod-grp'; g.dataset.mkey = 'G:' + it.gid; g.open = true; g.style.cssText = 'margin-top:0;border-top:none;padding-top:0;';
     g.innerHTML = `<summary><h3>${esc(it.g)}</h3><span class="chg-arrow"></span></summary><div class="grp-in" style="display:grid;gap:8px;padding-left:6px;border-left:3px solid #90cdf4;margin-top:6px;"></div>`;
     par.insertBefore(g, anchor);
     const inn = g.querySelector('.grp-in');
     it.k.forEach(k => { const el = document.getElementById(k); if (el) inn.appendChild(el); });
-    bindLong(g.querySelector(':scope > summary'), () => modMenu('G:' + it.gid));
+    bindLong(g.querySelector(':scope > summary'), 'G:' + it.gid);
   });
-  // 3) 칸 제목 길게 누르기 연결 (처음 한 번)
-  MOD_SECS.forEach(id => { const el = document.getElementById(id); if (!el) return; const sum = id === 'check-section' ? document.getElementById('ck-head') : (el.querySelector(':scope > summary') || el); if (sum && !sum._modBound) { sum._modBound = true; bindLong(sum, () => modMenu(id)); } });
+  anchor.remove();
+  // 3) 칸마다 표시 이름과 누르기 연결 (처음 한 번)
+  MOD_SECS.forEach(id => { const el = document.getElementById(id); if (!el) return; el.dataset.mkey = id; const sum = id === 'check-section' ? document.getElementById('ck-head') : (id === 'sec-edu' ? el.firstElementChild : (el.querySelector(':scope > summary') || el)); if (sum && !sum._modBound) { sum._modBound = true; bindLong(sum, id); } });
 }
 function modDlg(title, buttons){
   const bg = document.createElement('div'); bg.className = 'dlg-back';
@@ -9961,17 +10055,6 @@ function modSwapIn(gi, mi, d){ const st = modState(), g = st[gi], j = mi + d; if
 function modRename(gid){ const st = modState(), g = st.find(x => typeof x !== 'string' && x.gid === gid); if (!g) return; const v = (prompt('묶음 이름', g.g) || '').trim(); if (!v) return; const old = g.g; g.g = v; modCommit(st, `점검 화면 묶음 이름: ${old} → ${v}`); }
 function modUngroup(gi){ const st = modState(), g = st[gi]; if (!g || typeof g === 'string') return; st.splice(gi, 1, ...g.k); modCommit(st, `점검 화면 묶음 풀기: ${g.g}`); }
 function modLeave(mg, mi){ const st = modState(), g = st[mg]; const [id] = g.k.splice(mi, 1); if (!g.k.length) st.splice(mg, 1, id); else st.splice(mg + 1, 0, id); modCommit(st, `점검 화면 묶음에서 뺌: ${MOD_LBL[id] || id}`); }
-function modJoin(a, b){
-  const st = modState(), me = st[a], tg = st[b]; if (typeof me !== 'string' || !tg) return;
-  if (typeof tg === 'string') { st[b] = { gid: mkId(), g: '📁 묶음', k: [tg, me] }; st.splice(a, 1); }
-  else { tg.k.push(me); st.splice(a, 1); }
-  modCommit(st, `점검 화면 칸 묶기: ${MOD_LBL[me] || me} → ${typeof tg === 'string' ? (MOD_LBL[tg] || tg) : tg.g}`);
-}
-function modPick(gi){
-  const st = modState(), me = st[gi];
-  const opts = st.map((x, i) => ({ x, i })).filter(o => o.i !== gi).map(o => ({ t: (typeof o.x === 'string' ? '' : '📁 ') + modLabel(o.x), fn: () => modJoin(gi, o.i) }));
-  modDlg(`${modLabel(me)} 칸을 어디와 묶을까요?`, opts.concat([{ t: '취소', sec: true, fn: () => {} }]));
-}
 function modMenu(key){
   const st = modState();
   let gi = -1, mg = -1, mi = -1;
@@ -9994,7 +10077,6 @@ function modMenu(key){
     modDlg(`↕ ${MOD_LBL[key] || key} (묶음 안)`, btns);
   } else {
     btns.push({ t: '⬆ 위로', dis: gi <= 0, fn: () => modSwapTop(gi, -1) }, { t: '⬇ 아래로', dis: gi >= st.length - 1, fn: () => modSwapTop(gi, 1) });
-    btns.push({ t: '📁 다른 칸과 묶기', fn: () => modPick(gi) });
     modDlg(`↕ ${MOD_LBL[key] || key} 칸`, btns);
   }
 }
