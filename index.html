@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.08-303</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.08-304</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3352,14 +3352,53 @@ function restoreInfoForm(){
 }
 let infoHist = false;   // (v270) 교육 출석 창에서 이름을 눌러 들어온 경우: 뒤로 가기(← 교육 출석으로 / 휴대폰 뒤로)가 교육 출석으로 돌아감
 function closeInfoNow(){ infoHist = false; restoreInfoForm(); if (infoBg) infoBg.remove(); infoBg = null; }
-function closeInfo(){ if (infoHist) { history.back(); return; } closeInfoNow(); }
-window.addEventListener('popstate', () => { if (infoHist) closeInfoNow(); });
+function closeInfo(){ closeInfoNow(); }   // 뒤로 가기(휴대폰 "<")는 아래 bkStack이 맡음
+// 🔙 휴대폰 "<"(뒤로 가기): 열려 있는 창을 한 겹씩 닫음 (창이 하나도 없으면 평소처럼)
+// 열린 창(.dlg-back, 점검 화면 #modal, 활동일 수정 #add-modal)을 bkStack에 쌓고, 창마다 기록(history) 한 칸을 맞춤
+const bkStack = [];          // {el, close}
+let bkHist = 0, bkSkip = 0, bkQueued = false;
+function bkSync(){
+  if (bkQueued) return; bkQueued = true;
+  setTimeout(() => {
+    bkQueued = false;
+    while (bkHist < bkStack.length) { history.pushState({ jinanBk: ++bkHist }, ''); }
+    while (bkHist > bkStack.length) { bkHist--; bkSkip++; history.back(); }
+  }, 0);
+}
+function bkCloseDlg(el){
+  const cancel = el.querySelector('.dlg button[data-v="0"]') || [...el.querySelectorAll('.dlg button')].reverse().find(b => /^(취소|닫기|나중에|◀ 돌아가기)$/.test(b.textContent.trim()));
+  if (cancel) cancel.click(); else el.remove();
+}
+window.addEventListener('popstate', () => {
+  if (bkSkip > 0) { bkSkip--; return; }          // 우리가 기록을 맞추려고 한 뒤로 가기
+  if (bkHist === 0) { bkSync(); return; }        // 쌓인 창이 없으면 그냥 둠
+  bkHist--;
+  const top = bkStack.pop();
+  if (top) { try { top.close(); } catch(e) {} }
+  bkSync();
+});
+new MutationObserver(muts => {
+  muts.forEach(m => {
+    m.addedNodes.forEach(n => { if (n.nodeType === 1 && n.classList?.contains('dlg-back') && !bkStack.some(x => x.el === n)) { bkStack.push({ el: n, close: () => bkCloseDlg(n) }); bkSync(); } });
+    m.removedNodes.forEach(n => { if (n.nodeType !== 1) return; const i = bkStack.findIndex(x => x.el === n); if (i >= 0) { bkStack.splice(i, 1); bkSync(); } });
+  });
+}).observe(document.body, { childList: true });
+function bkWatchPanel(id, close){
+  const el = document.getElementById(id); if (!el) return;
+  new MutationObserver(() => {
+    const open = !el.classList.contains('hidden'), i = bkStack.findIndex(x => x.el === el);
+    if (open && i < 0) { bkStack.push({ el, close }); bkSync(); }
+    else if (!open && i >= 0) { bkStack.splice(i, 1); bkSync(); }
+  }).observe(el, { attributes: true, attributeFilter: ['class'] });
+}
+bkWatchPanel('modal', () => closeModal());
+bkWatchPanel('add-modal', () => closeAdd());
 const calcDue = (d, n) => { const [y, m, dd0] = d.split('-').map(Number), t = new Date(y, m - 1 + n, dd0); return ymd(t.getFullYear(), t.getMonth() + 1, t.getDate()); };
 function openInfo(pid, fromEdu){
   restoreInfoForm();
   if (pid != null) document.getElementById('edit-id').value = pid;   // (v270) 교육 출석 창에서 이름을 누르면 그 분 정보
   const p = current(); if (!p) return;
-  if (fromEdu && !infoHist) { infoHist = true; history.pushState({ jinanInfo: 1 }, ''); }
+  if (fromEdu) infoHist = true;   // 뒤로 가기는 bkStack이 처리 (창이 열리면 자동으로 쌓임)
   const h = p.health || {}, sel = new Set(h.conds || []);
   const callsHtml = (p.calls || []).slice().reverse().map(c => `<div class="log" style="font-size:.9rem;line-height:1.6;margin-bottom:6px;">📞 ${mdw(c.date)} · ${esc(c.text || '(내용 없음)')}${c.dx ? `<br>🩺 병명: ${esc(c.dx)}` : ''}${c.hosp ? ` · 🏥 ${esc(c.hosp)}` : ''}${c.cycle ? ` · 💊 ${c.cycle}개월마다 약` : ''}<br><span class="muted">다음 안내 ${mdw(c.due)} (${c.next}개월 뒤)</span></div>`).join('') || '<div class="muted" style="margin-bottom:8px;">통화 메모가 없어요.</div>';
   const notesHtml = notesListHtml(p, true);
