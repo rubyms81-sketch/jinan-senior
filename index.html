@@ -769,6 +769,7 @@ body.ord-hide .ord-btn { display: none !important; }
   </div>
 
 
+  <div id="sec-edu"></div>
   <details class="chg-box m-sec" id="sec-notes" style="margin-top:0;border-top:none;padding-top:0;"><summary><h3 id="note-title">📝 특이사항</h3><span class="chg-arrow"></span></summary>
   <div id="note-list"></div>
   <button class="secondary full" onclick="openNote()">＋ 특이사항 적기</button>
@@ -6927,13 +6928,14 @@ function renderModal(){
     const detList = (p.eduDone || []).length ? [...p.eduDone].sort((x, y) => x.date < y.date ? -1 : 1).map(d => `${d.date.slice(0, 4)}.${Number(d.date.slice(5, 7))}/${Number(d.date.slice(8, 10))} ${esc(d.name)} · ${esc(d.kind)} ${d.h}시간`) : rc.map(r => `${r.m}월 ${esc(r.kind)}교육 ${r.h}시간`);
     const det = detList.length ? `<details style="margin-top:4px;"><summary style="cursor:pointer;color:#2b6cb0;font-size:.9rem;">자세히 보기</summary><div style="font-size:.88rem;margin-top:4px;line-height:1.7;">${detList.join('<br>')}</div></details>` : '';   // (v226) 받은 교육 + 부족 + 불참을 두 줄로
     const lk = [es.lackSafe && `<b style="color:var(--danger)">안전 ${es.lackSafe}시간</b>`, es.lackAct && `<b style="color:var(--danger)">소양·직무 ${es.lackAct}시간</b>`].filter(Boolean);
-    n = `<div class="notice" style="background:#f7fafc;border-color:#cbd5e0;"><div>📚 <span style="color:#718096;">받은 교육</span> &nbsp; ${es.total > 0 ? `<b style="font-size:1.05rem;color:#1a365d;">총 ${Number(es.total.toFixed(1))}시간</b> <span class="muted" style="font-size:.85rem;">(안전 ${Number((es.by.안전 || 0).toFixed(1))} · 소양·직무 ${Number(es.act.toFixed(1))})</span>` : '현재 받은교육없음'}</div>${det}${missHtml}${lk.length ? `<div>부족 &nbsp; ${lk.join(' · ')}</div>` : ''}${es.missed.length ? `<div class="muted" style="font-size:.88rem;margin-top:4px;">🚫 불참 표시: ${es.missed.map(e => `${Number(e.date.slice(5,7))}월 ${dd(e.date)} ${esc(e.name)}`).join(', ')}</div>` : ''}</div>` + n; }
+    n = `<div class="notice edu-box" style="background:#f7fafc;border-color:#cbd5e0;"><div>📚 <span style="color:#718096;">받은 교육</span> &nbsp; ${es.total > 0 ? `<b style="font-size:1.05rem;color:#1a365d;">총 ${Number(es.total.toFixed(1))}시간</b> <span class="muted" style="font-size:.85rem;">(안전 ${Number((es.by.안전 || 0).toFixed(1))} · 소양·직무 ${Number(es.act.toFixed(1))})</span>` : '현재 받은교육없음'}</div>${det}${missHtml}${lk.length ? `<div>부족 &nbsp; ${lk.join(' · ')}</div>` : ''}${es.missed.length ? `<div class="muted" style="font-size:.88rem;margin-top:4px;">🚫 불참 표시: ${es.missed.map(e => `${Number(e.date.slice(5,7))}월 ${dd(e.date)} ${esc(e.name)}`).join(', ')}</div>` : ''}</div>` + n; }
   if (fixList(p).length) n = fixList(p).map(x => `<div class="notice" style="background:#fffaf0;border-color:#f6ad55;display:flex;align-items:center;gap:8px;"><b style="flex:1;color:#c05621;">🔧 ${esc(x.n)} <span class="muted" style="font-weight:normal;font-size:.85rem;">${md(x.date)}</span></b><button type="button" class="small" onclick="fixDone(${p.id}, '${x.id}')" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">✔ 교체함</button></div>`).join('') + n;
   if (docWait(p) && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;"><span class="tag-doc" style="font-size:1rem;">!</span><b style="flex:1;color:#22543d;">비대면 교육 서류</b><button type="button" class="small" onclick="docConfirm(${p.id})" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">📄 서류 확인</button></div>` + n;
   if (p.docNeed && p.docOk && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="color:#22543d;">📄 ${dName(p)} · 비대면 서류 확인 완료</b>${p.docPhoto ? ` <span>📷 사진 있음</span> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docPhotoView(${p.id})">보기</button>` : ` ${p.docNoNeed ? '<span style="color:#22543d;">📷 사진 필요 없음 (처리됨)</span>' : `<b style="color:#c05621;">📷 사진 없음</b> <button type="button" class="small" style="width:auto;margin:0;" onclick="docPhotoAdd(${p.id})">사진 넣기</button> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docNoNeed(${p.id})">사진 필요 없음</button>`}`}</div>` + n;
   if (p.guess) n = `<div class="notice">📍 경로당 <b>"${esc(p.senior)}"</b>은 주소(${esc(p.address||'')})를 보고 자동으로 넣은 <b>추정</b>입니다.<br>맞으면 아래 "어르신 정보 고치기"에서 그대로 <b>정보 저장</b>, 틀리면 경로당 이름을 고쳐서 저장해 주세요.</div>` + n;
   if (!s.dropped && p.pause) n = `<div class="notice" style="background:#fff5f5;border-color:#742a2a;"><b style="color:#742a2a;">💀 활동 중단 ${mdK(p.pause)} 시작 · 만료 ${mdK(pauseEnd(p))} (${leftTxt(pauseLeft(p))})</b></div>` + n;
   document.getElementById('modal-notice').innerHTML = n;
+  { const eb = document.querySelector('#modal-notice .edu-box'), hold = document.getElementById('sec-edu'); if (hold) hold.innerHTML = eb ? eb.outerHTML : ''; if (eb) eb.remove(); }   // (v296) 받은 교육 칸도 위아래로 옮길 수 있게 sec-edu에 둠
   document.getElementById('check-section').classList.toggle('hidden', s.dropped && !editingLogId);
   document.getElementById('how-bar').classList.toggle('hidden', s.dropped && !editingLogId);
 
@@ -9904,8 +9906,8 @@ setTimeout(() => {
 try { syncHospCalls(); } catch(e) {}
 
 // (v296) 점검 화면 칸 위아래 옮기기: 칸 제목을 0.5초 길게 누르면 ⬆위로 · ⬇아래로 메뉴. 순서는 jinan_mod_order에 저장 (클라우드 동기화)
-const MOD_SECS = ['sec-notes', 'sec-logs', 'ex-panel', 'info-form'];
-const MOD_LBL = { 'sec-notes': '특이사항', 'sec-logs': '점검 기록·벌점', 'ex-panel': '참여 제외', 'info-form': '기본 정보' };
+const MOD_SECS = ['sec-edu', 'sec-notes', 'sec-logs', 'ex-panel', 'info-form'];
+const MOD_LBL = { 'sec-edu': '받은 교육', 'sec-notes': '특이사항', 'sec-logs': '점검 기록·벌점', 'ex-panel': '참여 제외', 'info-form': '기본 정보' };
 function modOrder(){ try { const a = JSON.parse(load('jinan_mod_order')); if (Array.isArray(a)) return [...a.filter(k => MOD_SECS.includes(k)), ...MOD_SECS.filter(k => !a.includes(k))]; } catch(e) {} return [...MOD_SECS]; }
 function modOrderApply(){
   const first = document.getElementById(MOD_SECS[0]); if (!first) return;
@@ -9938,7 +9940,7 @@ function modMenu(id){
 function modInit(){
   MOD_SECS.forEach(id => {
     const el = document.getElementById(id); if (!el) return;
-    const sum = el.querySelector(':scope > summary'); if (!sum || sum._modBound) return;
+    const sum = el.querySelector(':scope > summary') || el; if (sum._modBound) return;
     sum._modBound = true;
     let t = null, fired = false;
     const stop = () => clearTimeout(t);
