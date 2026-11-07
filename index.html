@@ -420,7 +420,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.08-307</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.08-308</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -8708,10 +8708,9 @@ function shortData(mk = monthKey()){
     const p = r.p, qd = quitDayOf(p), qm = qd ? qd.slice(0, 7) : null;
     if (p.start && p.start > mk) return null;   // 이번 달에 아직 안 들어온 분
     if (qm && qm < mk) return null;              // 이미 그만둔 분 (이번 달 근무 없음)
-    if (inHospNow(p)) return null;               // 지금 입원 중인 분은 미달에서 뺌 (사용자 요청 2026-11-08)
     const paid = Math.max(0, workDays(p, mk).length - unpaidIn(p, mk));
     const lack = Math.max(0, WORK_TARGET - paid);
-    return { p, paid, lack, need: WORK_TARGET, endDay: lastDayIn(p, mk), quitDay: qd };
+    return { p, paid, lack, need: WORK_TARGET, endDay: lastDayIn(p, mk), quitDay: qd, hosp: inHospNow(p) };
   }).filter(r => r && r.lack > 0).sort((a, b) => b.lack - a.lack || a.p.town.localeCompare(b.p.town) || a.p.name.localeCompare(b.p.name));
   return { d, rows, mk };
 }
@@ -8731,7 +8730,7 @@ function showShort(){
     ${towns.map((x, i) => { const rs = rows.filter(r => r.p.town === x.t);
       return `<div id="sh-g${i}" class="sg-list hidden" style="margin-top:6px;"><div style="font-weight:bold;padding:6px 8px;border-radius:8px;background:#fffff0;color:${COL[i % 6]};border-left:4px solid ${COL[i % 6]};">📍 ${esc(x.t)} <span style="color:#2d3748;">미달 ${rs.length}명 · -${rs.reduce((k, r) => k + r.lack, 0)}일</span></div>
       ${rs.map((r, k) => `<div style="display:flex;gap:6px;align-items:flex-start;"><input type="checkbox" class="sh-ck" data-ck="${r.p.id}" style="width:22px;height:22px;margin:14px 0 0 4px;flex:none;"><button type="button" class="pen-row" data-id="${r.p.id}" style="flex:1;background:#fff;border-left-color:${COL[i % 6]};margin-top:4px;">
-        <b>${k + 1}. ${nmH(r.p)}</b> <span class="muted">🏠 ${esc(seniorOf(r.p))}</span>${r.quitDay ? ` <span style="color:#805ad5;font-size:.85rem;">🚪 ${md(r.quitDay)} 중도포기</span>` : ''}${r.p.logs.some(l => String(l.date).startsWith(String(d.y)) && (l.vest === '미착용' || l.badge === '미착용')) ? ' <b style="color:#fff;background:var(--danger);border-radius:6px;padding:1px 6px;font-size:1.1rem;line-height:1.2;">🚫</b>' : ''}<br>
+        <b>${k + 1}. ${nmH(r.p)}</b> <span class="muted">🏠 ${esc(seniorOf(r.p))}</span>${r.quitDay ? ` <span style="color:#805ad5;font-size:.85rem;">🚪 ${md(r.quitDay)} 중도포기</span>` : ''}${r.hosp ? ` <span style="color:#c05621;font-size:.85rem;">🏥 현재 입원 중</span>` : ''}${r.p.logs.some(l => String(l.date).startsWith(String(d.y)) && (l.vest === '미착용' || l.badge === '미착용')) ? ' <b style="color:#fff;background:var(--danger);border-radius:6px;padding:1px 6px;font-size:1.1rem;line-height:1.2;">🚫</b>' : ''}<br>
         <span style="font-size:.88rem;"><b style="color:var(--danger)">${r.lack}일 모자람</b><br>근무일 ${r.paid}일 · ${r.endDay ? `${r.endDay}일에 끝남` : '이번 달 근무 없음'}</span> <span class="arrow">›</span></button></div>`).join('')}</div>`; }).join('')}
     <div class="grid-2" style="margin-top:10px;"><button class="secondary" id="sh-close">닫기</button><button id="sh-xls">엑셀로 내려받기</button></div></div>`;
   document.body.appendChild(back);
