@@ -423,7 +423,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-322</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-323</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2860,24 +2860,20 @@ function townAllHtml(){
 const siteQuota = () => { try { return JSON.parse(load('jinan_siteq') || '{}'); } catch(e) { return {}; } };
 // 현황판에 보일 면: 기본은 내 담당 면, 칩으로 다른 면도 골라서 봄 (사용자 요청, 2026-11-09)
 const sbTowns = () => { try { const v = JSON.parse(load('jinan_sbtowns') || 'null'); if (Array.isArray(v) && v.length) return v.filter(t => TOWNS.includes(t)); } catch(e) {} return [...myTowns]; };
-let sbPickOpen = false;
+// 면 띠(예: 동향면(2명))를 누르면 그 면을 보이거나 감춤. 11개 면 띠가 항상 보임 (사용자 요청, 2026-11-09)
 function renderSiteBoard(){
   const box = document.getElementById('site-board'); if (!box) return;
   const towns = sbTowns(), q = siteQuota();
-  // 면 고르기: 한 상자 안에서 누르면 펼쳐져 고르는 방식 (사용자 요청, 2026-11-09)
-  const chips = `<details id="sb-pick" ${sbPickOpen ? 'open' : ''} style="margin-bottom:8px;border:1px solid #cbd5e0;border-radius:10px;padding:6px 10px;background:#f7fafc;">
-    <summary style="cursor:pointer;font-weight:bold;">🏘 보는 면: ${towns.map(esc).join(', ')} ▾</summary>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${TOWNS.map(t => `<button type="button" class="sb-t ${towns.includes(t) ? '' : 'secondary'} small" data-t="${esc(t)}" style="width:auto;margin:0;padding:4px 10px;">${towns.includes(t) ? '✔ ' : ''}${esc(t)}</button>`).join('')}</div></details>`;
-  const people = participants.filter(p => counted(p) && towns.includes(p.town));
-  // 월간 정리표와 같은 표 모양 (면 띠 + 경로당 표)
   const TD = 'border:1px solid #bbb;padding:4px 6px;text-align:center;vertical-align:top;';
-  const body = !people.length ? '<div class="muted">고른 면에 활동 중인 어르신이 없어요.</div>' : towns.map(t => {
+  box.innerHTML = TOWNS.map(t => {
+    const sel = towns.includes(t);
+    const nTown = participants.filter(p => counted(p) && p.town === t).length;
+    const band = `<div class="sb-t" data-t="${esc(t)}" style="cursor:pointer;background:${sel ? '#c6e0b4' : '#edf2f7'};font-weight:bold;padding:6px 10px;${sel ? 'border-radius:10px 10px 0 0;' : 'border-radius:10px;'}">${sel ? '✔ ' : ''}${esc(t)}(${nTown}명) <span class="muted" style="font-weight:normal;font-size:.8rem;">${sel ? '누르면 감춤' : '누르면 보임'}</span></div>`;
+    if (!sel) return `<div style="margin:6px 0;">${band}</div>`;
     const sites = {};
-    people.filter(p => p.town === t).forEach(p => { const s0 = seniorOf(p); (sites[s0] = sites[s0] || []).push(p); });
+    participants.filter(p => counted(p) && p.town === t).forEach(p => { const s0 = seniorOf(p); (sites[s0] = sites[s0] || []).push(p); });
     const names = Object.keys(sites).sort((a, b) => a.localeCompare(b, 'ko'));
-    if (!names.length) return '';
-    const nTown = people.filter(p => p.town === t).length;
-    const trs = names.map(s0 => {
+    const trs = names.length ? names.map(s0 => {
       const ps = sites[s0], now = ps.filter(p => !inHospNow(p)), cur = now.length;
       const quota = q[s0] !== undefined && q[s0] !== '' ? Number(q[s0]) : cur;   // 배정을 안 넣으면 현재와 같게 봄
       const gap = cur - quota;
@@ -2890,18 +2886,15 @@ function renderSiteBoard(){
         <td style="${TD}">${cur}명</td>
         <td style="${TD}">${gapTxt}</td>
         <td style="${TD}text-align:left;">${who}${out}</td></tr>`;
-    }).join('');
-    // 면마다 따로 된 상자로 나눔 (사용자 요청, 2026-11-09)
-    return `<div style="border:1px solid #9ac18a;border-radius:10px;padding:0 0 6px;margin:10px 0;overflow:hidden;">
-      <div style="background:#c6e0b4;font-weight:bold;padding:6px 10px;">${esc(t)}(${nTown}명)</div>
+    }).join('') : `<tr><td colspan="5" style="${TD}color:#718096;">활동 중인 어르신이 없어요</td></tr>`;
+    return `<div style="border:1px solid #9ac18a;border-radius:10px;overflow:hidden;margin:6px 0;">
+      ${band}
       <table style="border-collapse:collapse;width:calc(100% - 12px);margin:6px;font-size:.85rem;">
         <tr style="background:#f7fafc;font-weight:bold;"><td style="${TD}">경로당</td><td style="${TD}">배정</td><td style="${TD}">현재</td><td style="${TD}">보충</td><td style="${TD}">참여자</td></tr>
         ${trs}</table></div>`;
   }).join('');
-  box.innerHTML = chips + body;
-  const pk = box.querySelector('#sb-pick'); if (pk) pk.addEventListener('toggle', () => { sbPickOpen = pk.open; });
-  box.querySelectorAll('.sb-t').forEach(btn => btn.onclick = () => {
-    const t = btn.dataset.t, cur = sbTowns();
+  box.querySelectorAll('.sb-t').forEach(el => el.onclick = () => {
+    const t = el.dataset.t, cur = sbTowns();
     const next = cur.includes(t) ? cur.filter(x => x !== t) : [...cur, t];
     store('jinan_sbtowns', JSON.stringify(next.length ? next : [...myTowns])); renderSiteBoard();
   });
