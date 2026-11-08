@@ -423,7 +423,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.08-316</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-317</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -468,6 +468,14 @@ body.ord-hide .ord-btn { display: none !important; }
       <button type="button" class="small secondary" id="zone-minus" onclick="event.preventDefault();event.stopPropagation();zoneCount(-1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">－</button><b id="zone-n" style="min-width:2.2em;text-align:center;"></b><button type="button" class="small" id="zone-plus" onclick="event.preventDefault();event.stopPropagation();zoneCount(1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">＋</button></div><span class="chg-arrow" style="flex:none;margin-left:6px;"></span></summary>
     <div id="zone-sum" style="font-size:.85rem;margin:-2px 0 4px;"></div>
     <div class="zone-grid" id="zone-btns"></div>
+    </details>
+  </div>
+  <!-- 🏠 경로당 현황판: 내 담당 면별로 경로당마다 배정·오늘 근무 인원과 이름 (사용자 요청, 2026-11-09, 테스트) -->
+  <div class="card" id="site-board-card" style="padding:12px 14px;">
+    <details class="chg-box" id="site-board-box" style="margin-top:0;border-top:none;padding-top:0;">
+    <summary><div style="flex:1;font-weight:bold;">🏠 경로당 현황판 <span class="muted" style="font-weight:normal;font-size:.8rem;">(배정 · 오늘 근무)</span></div></summary>
+    <div class="muted" style="font-size:.8rem;margin:4px 0;">배정 = 그 경로당 활동 어르신 수 · 현재 = 오늘 근무하는 분(빨강 = 아직 다 안 나옴)</div>
+    <div id="site-board"></div>
     </details>
   </div>
 
@@ -2848,7 +2856,32 @@ function townAllHtml(){
       ${c.mons.length ? `<div style="margin:4px 0;">${c.mons.map(m => `<a href="${m.phone ? 'tel:' + m.phone.replace(/[^0-9]/g, '') : '#'}" class="tel-link" style="display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;font-size:.8rem;">👤 ${esc(m.name)}${m.phone ? ' 📞' : ''}</a>`).join('')}</div>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 6px;">${c.ss.map(x => `<span style="padding:2px 7px;border-radius:10px;font-size:.78rem;background:${x.gate ? '#c6f6d5' : '#edf2f7'};color:${x.gate ? '#22543d' : '#2d3748'};">${esc(x.name)}${x.placed ? ` <b>${x.placed}</b>` : ''}${x.n && x.n !== x.placed ? ` <span style="color:#2b6cb0">(앱 ${x.n})</span>` : ''}</span>`).join('')}</div></details>`).join('');
 }
+// 🏠 경로당 현황판 (테스트): 내 담당 면 → 경로당 한 줄씩 · 배정 인원 · 오늘 근무 인원 · 오늘 근무자 이름
+function renderSiteBoard(){
+  const box = document.getElementById('site-board'); if (!box) return;
+  const mk = monthKey(), td = today(), towns = visibleTowns();
+  const people = participants.filter(p => counted(p) && towns.includes(p.town));
+  if (!people.length) { box.innerHTML = '<div class="muted">내 담당 면에 활동 중인 어르신이 없어요.</div>'; return; }
+  const head = '<div style="display:grid;grid-template-columns:1.4fr .8fr .8fr 2.4fr;gap:6px;font-size:.8rem;color:#718096;font-weight:bold;border-bottom:2px solid #cbd5e0;padding:4px;"><div>경로당</div><div>배정</div><div>현재</div><div>오늘 근무자</div></div>';
+  box.innerHTML = towns.map(t => {
+    const sites = {};
+    people.filter(p => p.town === t).forEach(p => { const s0 = seniorOf(p); (sites[s0] = sites[s0] || []).push(p); });
+    const names = Object.keys(sites).sort((a, b) => a.localeCompare(b, 'ko'));
+    if (!names.length) return '';
+    const rows = names.map(s0 => {
+      const ps = sites[s0], work = ps.filter(p => workDays(p, mk).includes(td));
+      return `<div style="display:grid;grid-template-columns:1.4fr .8fr .8fr 2.4fr;gap:6px;align-items:start;padding:6px 4px;border-bottom:1px solid #e2e8f0;font-size:.9rem;">
+        <div style="font-weight:bold;">${esc(s0)}</div>
+        <div>${ps.length}명</div>
+        <div style="font-weight:bold;color:${work.length < ps.length ? 'var(--danger)' : '#2f855a'};">${work.length}명</div>
+        <div class="muted" style="font-size:.85rem;">${work.length ? work.map(p => esc(p.name)).join(', ') : '오늘 근무 없음'}</div></div>`;
+    }).join('');
+    return `<div style="font-weight:bold;margin:10px 0 2px;">📍 ${esc(t)}</div>` + rows;
+  }).join('');
+  box.innerHTML = head + box.innerHTML;
+}
 function renderZones(){
+  renderSiteBoard();
   const box = document.getElementById('zone-btns'); if (!box) return;
   // 면별: 경로당 수 · 지킴이 / 게이트볼 = 전체 (예: 상전 20곳 79명/6명=85)
   const zs = document.getElementById('zone-sum');
