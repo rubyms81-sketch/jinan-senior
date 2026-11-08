@@ -423,7 +423,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-320</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-321</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2860,10 +2860,14 @@ function townAllHtml(){
 const siteQuota = () => { try { return JSON.parse(load('jinan_siteq') || '{}'); } catch(e) { return {}; } };
 // 현황판에 보일 면: 기본은 내 담당 면, 칩으로 다른 면도 골라서 봄 (사용자 요청, 2026-11-09)
 const sbTowns = () => { try { const v = JSON.parse(load('jinan_sbtowns') || 'null'); if (Array.isArray(v) && v.length) return v.filter(t => TOWNS.includes(t)); } catch(e) {} return [...myTowns]; };
+let sbPickOpen = false;
 function renderSiteBoard(){
   const box = document.getElementById('site-board'); if (!box) return;
   const towns = sbTowns(), q = siteQuota();
-  const chips = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">${TOWNS.map(t => `<button type="button" class="sb-t ${towns.includes(t) ? '' : 'secondary'} small" data-t="${esc(t)}" style="width:auto;margin:0;padding:4px 10px;">${towns.includes(t) ? '✔ ' : ''}${esc(t)}</button>`).join('')}</div>`;
+  // 면 고르기: 한 상자 안에서 누르면 펼쳐져 고르는 방식 (사용자 요청, 2026-11-09)
+  const chips = `<details id="sb-pick" ${sbPickOpen ? 'open' : ''} style="margin-bottom:8px;border:1px solid #cbd5e0;border-radius:10px;padding:6px 10px;background:#f7fafc;">
+    <summary style="cursor:pointer;font-weight:bold;">🏘 보는 면: ${towns.map(esc).join(', ')} ▾</summary>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${TOWNS.map(t => `<button type="button" class="sb-t ${towns.includes(t) ? '' : 'secondary'} small" data-t="${esc(t)}" style="width:auto;margin:0;padding:4px 10px;">${towns.includes(t) ? '✔ ' : ''}${esc(t)}</button>`).join('')}</div></details>`;
   const people = participants.filter(p => counted(p) && towns.includes(p.town));
   // 월간 정리표와 같은 표 모양 (면 띠 + 경로당 표)
   const TD = 'border:1px solid #bbb;padding:4px 6px;text-align:center;vertical-align:top;';
@@ -2893,6 +2897,7 @@ function renderSiteBoard(){
         ${trs}</table>`;
   }).join('');
   box.innerHTML = chips + body;
+  const pk = box.querySelector('#sb-pick'); if (pk) pk.addEventListener('toggle', () => { sbPickOpen = pk.open; });
   box.querySelectorAll('.sb-t').forEach(btn => btn.onclick = () => {
     const t = btn.dataset.t, cur = sbTowns();
     const next = cur.includes(t) ? cur.filter(x => x !== t) : [...cur, t];
