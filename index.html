@@ -423,7 +423,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-327</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-328</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -471,7 +471,7 @@ body.ord-hide .ord-btn { display: none !important; }
     <!-- 🏠 경로당 현황판은 구역 안에 둠. 누르면 구역 목록 위·아래로 자리 이동 (사용자 요청, 2026-11-09) -->
     <div id="sb-wrap" style="margin-top:10px;">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-        <div style="flex:1;font-weight:bold;">🏠 경로당 현황판</div>
+        <div id="sb-title" style="flex:1;font-weight:bold;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;">🏠 경로당 현황판</div>
         <button type="button" class="small secondary" id="sb-move" style="width:auto;margin:0;padding:4px 10px;font-size:.85rem;">↕ 위치 바꾸기</button>
       </div>
       <div id="site-board"></div>
@@ -2873,6 +2873,36 @@ function placeSiteBoard(){
   else zb.parentNode.insertBefore(wrap, zb.nextSibling);
   const mv = document.getElementById('sb-move');
   if (mv) mv.onclick = (e) => { e.preventDefault(); e.stopPropagation(); store('jinan_sbpos', sbPos() === 'top' ? 'bottom' : 'top'); placeSiteBoard(); };
+  bindSbDrag();
+}
+// 제목을 0.5초 누르고 있으면 박스를 끌고 다님. 손을 놓을 때 구역 목록 위·아래 중 가까운 쪽으로 자리 잡음 (사용자 요청, 2026-11-09)
+function bindSbDrag(){
+  const h = document.getElementById('sb-title'), wrap = document.getElementById('sb-wrap'), zb = document.getElementById('zone-btns');
+  if (!h || !wrap || !zb || h._sbBound) return; h._sbBound = true;
+  let timer = null, drag = false, sy = 0, pid = null;
+  const cancel = () => { clearTimeout(timer); drag = false; wrap.style.opacity = ''; wrap.style.transform = ''; wrap.style.boxShadow = ''; };
+  h.addEventListener('pointerdown', e => {
+    sy = e.clientY; pid = e.pointerId;
+    timer = setTimeout(() => {
+      drag = true; try { h.setPointerCapture(pid); } catch(x) {}
+      wrap.style.opacity = '.85'; wrap.style.boxShadow = '0 6px 16px rgba(0,0,0,.25)';
+      if (navigator.vibrate) navigator.vibrate(30);
+    }, 500);
+  });
+  h.addEventListener('pointermove', e => {
+    if (!drag) { if (Math.abs(e.clientY - sy) > 10) clearTimeout(timer); return; }
+    wrap.style.transform = `translateY(${e.clientY - sy}px)`;
+  });
+  h.addEventListener('pointerup', e => {
+    clearTimeout(timer);
+    if (!drag) return;
+    const dy = e.clientY - sy;   // 위로 30px 이상 끌면 구역 목록 위, 아래로 30px 이상 끌면 아래
+    cancel();
+    if (dy < -30) store('jinan_sbpos', 'top');
+    else if (dy > 30) store('jinan_sbpos', 'bottom');
+    placeSiteBoard();
+  });
+  h.addEventListener('pointercancel', cancel);
 }
 function renderSiteBoard(){
   placeSiteBoard();
