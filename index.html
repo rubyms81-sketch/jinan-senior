@@ -423,7 +423,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-323</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-324</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2860,44 +2860,39 @@ function townAllHtml(){
 const siteQuota = () => { try { return JSON.parse(load('jinan_siteq') || '{}'); } catch(e) { return {}; } };
 // 현황판에 보일 면: 기본은 내 담당 면, 칩으로 다른 면도 골라서 봄 (사용자 요청, 2026-11-09)
 const sbTowns = () => { try { const v = JSON.parse(load('jinan_sbtowns') || 'null'); if (Array.isArray(v) && v.length) return v.filter(t => TOWNS.includes(t)); } catch(e) {} return [...myTowns]; };
-// 면 띠(예: 동향면(2명))를 누르면 그 면을 보이거나 감춤. 11개 면 띠가 항상 보임 (사용자 요청, 2026-11-09)
+// 경로당 현황판: 면 하나만 골라 보는 방식. "면(인원) ▾" 단추를 누르면 면 목록이 펼쳐지고, 고르면 박스가 하나 생김 (사용자 요청, 2026-11-09)
+let sbListOpen = false;
+const sbTown = () => { const v = load('jinan_sbtown'); return TOWNS.includes(v) ? v : (myTowns[0] || TOWNS[0]); };
 function renderSiteBoard(){
   const box = document.getElementById('site-board'); if (!box) return;
-  const towns = sbTowns(), q = siteQuota();
-  const TD = 'border:1px solid #bbb;padding:4px 6px;text-align:center;vertical-align:top;';
-  box.innerHTML = TOWNS.map(t => {
-    const sel = towns.includes(t);
-    const nTown = participants.filter(p => counted(p) && p.town === t).length;
-    const band = `<div class="sb-t" data-t="${esc(t)}" style="cursor:pointer;background:${sel ? '#c6e0b4' : '#edf2f7'};font-weight:bold;padding:6px 10px;${sel ? 'border-radius:10px 10px 0 0;' : 'border-radius:10px;'}">${sel ? '✔ ' : ''}${esc(t)}(${nTown}명) <span class="muted" style="font-weight:normal;font-size:.8rem;">${sel ? '누르면 감춤' : '누르면 보임'}</span></div>`;
-    if (!sel) return `<div style="margin:6px 0;">${band}</div>`;
-    const sites = {};
-    participants.filter(p => counted(p) && p.town === t).forEach(p => { const s0 = seniorOf(p); (sites[s0] = sites[s0] || []).push(p); });
-    const names = Object.keys(sites).sort((a, b) => a.localeCompare(b, 'ko'));
-    const trs = names.length ? names.map(s0 => {
-      const ps = sites[s0], now = ps.filter(p => !inHospNow(p)), cur = now.length;
-      const quota = q[s0] !== undefined && q[s0] !== '' ? Number(q[s0]) : cur;   // 배정을 안 넣으면 현재와 같게 봄
-      const gap = cur - quota;
-      const gapTxt = gap < 0 ? `<b style="color:#c53030;">${gap}명</b>` : gap > 0 ? `<b style="color:#2b6cb0;">+${gap}명</b>` : '0';
-      const who = now.length ? now.map(p => esc(p.name)).join(', ') : '없음';
-      const out = ps.length > now.length ? `<div style="color:#975a16;font-size:.8rem;">입원 ${ps.length - now.length}명 제외</div>` : '';
-      return `<tr>
-        <td style="${TD}font-weight:bold;">${esc(s0)}</td>
-        <td style="${TD}"><input type="number" inputmode="numeric" min="0" class="sb-q" data-site="${esc(s0)}" value="${q[s0] !== undefined ? esc(String(q[s0])) : ''}" placeholder="${cur}" style="width:52px;padding:2px 3px;text-align:center;margin:0;font-size:.85rem;"></td>
-        <td style="${TD}">${cur}명</td>
-        <td style="${TD}">${gapTxt}</td>
-        <td style="${TD}text-align:left;">${who}${out}</td></tr>`;
-    }).join('') : `<tr><td colspan="5" style="${TD}color:#718096;">활동 중인 어르신이 없어요</td></tr>`;
-    return `<div style="border:1px solid #9ac18a;border-radius:10px;overflow:hidden;margin:6px 0;">
-      ${band}
-      <table style="border-collapse:collapse;width:calc(100% - 12px);margin:6px;font-size:.85rem;">
-        <tr style="background:#f7fafc;font-weight:bold;"><td style="${TD}">경로당</td><td style="${TD}">배정</td><td style="${TD}">현재</td><td style="${TD}">보충</td><td style="${TD}">참여자</td></tr>
-        ${trs}</table></div>`;
-  }).join('');
-  box.querySelectorAll('.sb-t').forEach(el => el.onclick = () => {
-    const t = el.dataset.t, cur = sbTowns();
-    const next = cur.includes(t) ? cur.filter(x => x !== t) : [...cur, t];
-    store('jinan_sbtowns', JSON.stringify(next.length ? next : [...myTowns])); renderSiteBoard();
-  });
+  const t = sbTown(), q = siteQuota(), TD = 'border:1px solid #bbb;padding:4px 6px;text-align:center;vertical-align:top;';
+  const cnt = x => participants.filter(p => counted(p) && p.town === x).length;
+  const btn = `<button type="button" id="sb-open" style="width:100%;background:#c6e0b4;color:#222;font-weight:bold;border:1px solid #9ac18a;border-radius:10px;padding:8px 10px;text-align:left;margin:0;">${esc(t)}(${cnt(t)}명) <span style="float:right;">${sbListOpen ? '▲' : '▼'}</span></button>`;
+  const list = sbListOpen ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0;">${TOWNS.map(x => `<button type="button" class="sb-t" data-t="${esc(x)}" style="margin:0;padding:8px 6px;font-size:.9rem;${x === t ? 'background:#c6e0b4;color:#222;border:2px solid #2f855a;font-weight:bold;' : 'background:#f7fafc;color:#2d3748;border:1px solid #cbd5e0;'}">${esc(x)}(${cnt(x)}명)</button>`).join('')}</div>` : '';
+  const sites = {};
+  participants.filter(p => counted(p) && p.town === t).forEach(p => { const s0 = seniorOf(p); (sites[s0] = sites[s0] || []).push(p); });
+  const names = Object.keys(sites).sort((a, b) => a.localeCompare(b, 'ko'));
+  const trs = names.length ? names.map(s0 => {
+    const ps = sites[s0], now = ps.filter(p => !inHospNow(p)), cur = now.length;
+    const quota = q[s0] !== undefined && q[s0] !== '' ? Number(q[s0]) : cur;   // 배정을 안 넣으면 현재와 같게 봄
+    const gap = cur - quota;
+    const gapTxt = gap < 0 ? `<b style="color:#c53030;">${gap}명</b>` : gap > 0 ? `<b style="color:#2b6cb0;">+${gap}명</b>` : '0';
+    const who = now.length ? now.map(p => esc(p.name)).join(', ') : '없음';
+    const out = ps.length > now.length ? `<div style="color:#975a16;font-size:.8rem;">입원 ${ps.length - now.length}명 제외</div>` : '';
+    return `<tr>
+      <td style="${TD}font-weight:bold;">${esc(s0)}</td>
+      <td style="${TD}"><input type="number" inputmode="numeric" min="0" class="sb-q" data-site="${esc(s0)}" value="${q[s0] !== undefined ? esc(String(q[s0])) : ''}" placeholder="${cur}" style="width:52px;padding:2px 3px;text-align:center;margin:0;font-size:.85rem;"></td>
+      <td style="${TD}">${cur}명</td>
+      <td style="${TD}">${gapTxt}</td>
+      <td style="${TD}text-align:left;">${who}${out}</td></tr>`;
+  }).join('') : `<tr><td colspan="5" style="${TD}color:#718096;">활동 중인 어르신이 없어요</td></tr>`;
+  const table = `<div style="border:1px solid #9ac18a;border-radius:10px;overflow:hidden;margin-top:6px;">
+    <table style="border-collapse:collapse;width:calc(100% - 12px);margin:6px;font-size:.85rem;">
+    <tr style="background:#f7fafc;font-weight:bold;"><td style="${TD}">경로당</td><td style="${TD}">배정</td><td style="${TD}">현재</td><td style="${TD}">보충</td><td style="${TD}">참여자</td></tr>
+    ${trs}</table></div>`;
+  box.innerHTML = btn + list + table;
+  box.querySelector('#sb-open').onclick = () => { sbListOpen = !sbListOpen; renderSiteBoard(); };
+  box.querySelectorAll('.sb-t').forEach(el => el.onclick = () => { store('jinan_sbtown', el.dataset.t); sbListOpen = false; renderSiteBoard(); });
   box.querySelectorAll('.sb-q').forEach(inp => inp.onchange = () => {
     const cur = siteQuota(), v = inp.value.trim();
     if (v === '') delete cur[inp.dataset.site]; else cur[inp.dataset.site] = Math.max(0, Math.round(Number(v) || 0));
