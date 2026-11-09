@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-422</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-423</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3193,7 +3193,7 @@ function openZone(id){
         <div style="padding-top:8px;">
       <div style="display:flex;justify-content:flex-end;gap:6px;margin:0 0 6px;"><button type="button" class="secondary small ord-btn" id="zn-order-btn" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↕ 순서 바꾸기</button></div>
       <button type="button" class="warning full" id="zn-add" data-zk="add" style="margin-bottom:8px;">＋ 경로당 고르기</button>
-      <button type="button" class="warning full" id="zn-fac" style="margin-bottom:8px;">＋ 시설팀 넣기 (진안읍 시설 8곳)</button>
+      <button type="button" class="warning full" id="zn-fac" style="margin-bottom:8px;">＋ 공익·역량 · 직원 넣기</button>
       <button type="button" class="secondary full" id="zn-course" data-zk="course" style="margin:0 0 10px;">📥 모니터링 코스표 내려받기 (엑셀)</button>
       <details id="zn-sites-box" data-zk="sites" class="chg-box" open style="margin-top:0;border-top:none;padding-top:0;">
         <summary><span id="zn-sites-title" style="font-weight:bold;">담당 경로당</span><span class="chg-arrow"></span></summary>
@@ -3417,19 +3417,24 @@ function openZone(id){
   };
   // (v414) ＋ 시설팀 넣기: 팝업 없이 카테고리별로 고르는 창 (공공복지시설 · 어린이집)
   $('#zn-fac').onclick = () => {
-    // 묶음 단추: 보육시설도우미(어린이집 3곳), 공공복지시설도우미(5곳) — 누르면 그 묶음 전체가 한꺼번에 들어가고 빠짐
-    const CATS = [['🧒 보육시설도우미', ['진안어린이집', '진안제일어린이집', '사랑어린이집']], ['🏢 공공복지시설도우미', ['진안군노인회', '일자리센터', '진안군민자치센터', '꿈두레', '문화의집']]];
+    // 묶음 단추: 🎓 공익·역량 사업 4개 + 👔 직원 4개. 누르면 그 묶음 전체가 한꺼번에 들어가고 빠짐
+    const GRP_A = [['🧒 보육시설도우미', ['진안어린이집', '진안제일어린이집', '사랑어린이집']], ['🏢 공공복지시설도우미', ['진안군노인회', '일자리센터', '진안군민자치센터', '꿈두레', '문화의집']], ['🧭 시니어 맥가이버', ['시니어 맥가이버']], ['🛡 시니어 안전 모니터링', ['시니어 안전 모니터링']]];
+    const GRP_B = [['👔 회장', ['회장']], ['📋 사무장', ['사무장']], ['🏅 임원', ['임원']], ['👥 직원', ['직원']]];
+    const CATS = [...GRP_A, ...GRP_B];
+    const ALLG = CATS.flatMap(([, arr]) => arr);
     const fb = document.createElement('div'); fb.className = 'dlg-back';
     const pickF = new Set(z.sites.filter(x => x.town === '진안읍').map(x => x.senior));
     const draw = () => {
-      fb.querySelector('#fp-list').innerHTML = CATS.map(([t, arr], gi) => { const on = arr.every(k => pickF.has(k)); return `<button type="button" class="site ${on ? 'zs-on' : ''}" data-grp="${gi}" style="width:100%;text-align:left;padding:12px;margin:8px 0;${on ? 'background:#c6f6d5;border-color:#38a169;' : ''}">
+      const btn = (t, arr, gi) => { const on = arr.every(k => pickF.has(k)); return `<button type="button" class="site ${on ? 'zs-on' : ''}" data-grp="${gi}" style="width:100%;text-align:left;padding:12px;margin:8px 0;${on ? 'background:#c6f6d5;border-color:#38a169;' : ''}">
         <div>${on ? '✔ ' : ''}<b>${esc(t)}</b> <span class="muted">(${arr.length}곳)</span></div>
-        <div class="muted" style="font-size:.85rem;margin-top:2px;">${arr.map(esc).join(' · ')}</div></button>`; }).join('');
+        <div class="muted" style="font-size:.85rem;margin-top:2px;">${arr.map(esc).join(' · ')}</div></button>`; };
+      fb.querySelector('#fp-list').innerHTML = `<div style="font-weight:bold;margin-top:10px;color:#1a365d;">🎓 공익·역량 사업</div>` + GRP_A.map(([t, arr], k) => btn(t, arr, k)).join('')
+        + `<div style="font-weight:bold;margin-top:14px;color:#1a365d;">👔 회장·사무장·임원·직원</div>` + GRP_B.map(([t, arr], k) => btn(t, arr, GRP_A.length + k)).join('');
       fb.querySelectorAll('[data-grp]').forEach(b => b.onclick = () => { const arr = CATS[Number(b.dataset.grp)][1];
         const allOn = arr.every(k => pickF.has(k)); arr.forEach(k => allOn ? pickF.delete(k) : pickF.add(k)); draw(); });
     };
     fb.innerHTML = `<div class="dlg" style="max-height:90vh;overflow:auto;">
-      <div style="font-weight:bold;font-size:1.1rem;">＋ 시설팀 넣기 (진안읍)</div>
+      <div style="font-weight:bold;font-size:1.1rem;">＋ 공익·역량 · 직원 넣기 (진안읍)</div>
       <div class="muted" style="font-size:.85rem;margin-top:4px;">고른 시설이 이 구역의 경로당처럼 들어갑니다.</div>
       <div id="fp-list"></div>
       <div class="grid-2" style="margin-top:12px;"><button class="secondary" id="fp-no">취소</button><button id="fp-ok">저장</button></div></div>`;
@@ -3438,8 +3443,8 @@ function openZone(id){
     fb.querySelector('#fp-ok').onclick = () => {
       const before = new Set(z.sites.map(x => siteKey(x.town, x.senior)));
       const addK = [...pickF].filter(k => !before.has(siteKey('진안읍', k)));
-      const removeK = [...before].filter(k => k.startsWith('진안읍|') && FAC_SITES.includes(k.split('|')[1]) && !pickF.has(k.split('|')[1]));
-      z.sites = z.sites.filter(x => !(x.town === '진안읍' && FAC_SITES.includes(x.senior) && !pickF.has(x.senior)));
+      const removeK = [...before].filter(k => k.startsWith('진안읍|') && ALLG.includes(k.split('|')[1]) && !pickF.has(k.split('|')[1]));
+      z.sites = z.sites.filter(x => !(x.town === '진안읍' && ALLG.includes(x.senior) && !pickF.has(x.senior)));
       addK.forEach(k => z.sites.push({ town: '진안읍', senior: k }));
       if (addK.length || removeK.length) { z.kind = 'facility'; logEvent('구역 시설팀', null, `${z.name} 시설팀 ${addK.length}곳 넣음${removeK.length ? `, ${removeK.length}곳 뺌` : ''}`); }
       // 묶음 하나만 다 골랐으면 구역 이름도 그 도우미 이름으로 (둘 다면 이름은 그대로)
