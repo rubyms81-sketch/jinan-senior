@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-421</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-422</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -8257,7 +8257,21 @@ function openSmsStaffEdit(onDone){
     <input data-f="tel" data-i="${i}" value="${esc(x.tel || '')}" placeholder="010-0000-0000" inputmode="tel" style="margin:0;">
     <button type="button" class="small secondary" data-del="${i}" style="margin:0;padding:4px 0;">✕</button></div>
     <input data-f="addr" data-i="${i}" value="${esc(x.addr || '')}" placeholder="주소 (진안군 …)" style="margin:4px 0 0;"></div>`;
+  // 그룹 보기: 전체(고치기) | 회장 그룹 | 사무장 그룹 (읍면별로 보기만, 저장한 명단 기준)
+  let grp = 'all';
+  const groupHtml = role => {
+    const L = work.filter(x => x.role === role && (x.name || x.tel));
+    const head = `<div class="muted" style="font-size:.85rem;margin:6px 0;">${role} ${L.length}명${role === '사무장' ? ` · 면 ${STAFF_TOWNS.filter(t => L.some(x => x.town === t)).length}/${STAFF_TOWNS.length}곳` : ''}</div>`;
+    const line = x => `<div style="border-bottom:1px dashed #cbd5e0;padding:8px 2px;"><div><b>${esc(x.name || '(이름 없음)')}</b> <span class="muted">${esc(role === '회장' ? '전체' : (x.town || '면 없음'))}</span></div>
+      ${x.tel ? `<div><a href="tel:${esc(String(x.tel).replace(/[^0-9]/g, ''))}">📞 ${esc(x.tel)}</a></div>` : ''}${x.addr ? `<div class="muted" style="font-size:.85rem;">🏠 ${esc(x.addr)}</div>` : ''}</div>`;
+    if (role === '회장') return head + (L.map(line).join('') || '<div class="muted">회장이 없어요.</div>');
+    return head + STAFF_TOWNS.map(t => { const xs = L.filter(x => x.town === t); return xs.length ? xs.map(line).join('') : `<div class="muted" style="padding:6px 2px;border-bottom:1px dashed #cbd5e0;">${esc(t)} · 사무장 없음</div>`; }).join('') + (L.some(x => !STAFF_TOWNS.includes(x.town)) ? L.filter(x => !STAFF_TOWNS.includes(x.town)).map(line).join('') : '');
+  };
   const draw = () => {
+    bg.querySelectorAll('[data-g]').forEach(b => { const on = b.dataset.g === grp; b.style.background = on ? '#2b6cb0' : '#edf2f7'; b.style.color = on ? '#fff' : '#2d3748'; });
+    bg.querySelector('#stf-rows').style.display = grp === 'all' ? '' : 'none';
+    bg.querySelector('#stf-group').style.display = grp === 'all' ? 'none' : '';
+    bg.querySelector('#stf-group').innerHTML = grp === 'all' ? '' : groupHtml(grp);
     bg.querySelector('#stf-rows').innerHTML = work.map(rowH).join('') || '<div class="muted">아직 없어요.</div>';
     bg.querySelectorAll('[data-f]').forEach(el => el.onchange = () => { work[el.dataset.i][el.dataset.f] = el.value.trim(); if (el.dataset.f === 'role' && el.value === '회장') work[el.dataset.i].town = ''; draw(); });
     bg.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { work.splice(Number(b.dataset.del), 1); draw(); });
@@ -8265,12 +8279,15 @@ function openSmsStaffEdit(onDone){
   bg.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.05rem;margin-bottom:6px;">👔 회장·사무장 연락처</div>
     <div class="muted" style="font-size:.85rem;margin-bottom:4px;">회장은 전체, 사무장은 그 면을 고르면 들어가요. 연락처가 없는 분은 빠져요.<br>엑셀로 한번에 넣을 수 있어요 (구분·이름·담당 면·전화번호·주소).</div>
+    <div style="display:flex;gap:6px;margin:6px 0;">${[['all','📋 전체 (고치기)'],['회장','회장 그룹'],['사무장','사무장 그룹']].map(([g, t]) => `<button type="button" class="small" data-g="${g}" style="flex:1;margin:0;padding:8px 4px;">${t}</button>`).join('')}</div>
+    <div id="stf-group"></div>
     <div id="stf-rows"></div>
     <button type="button" class="secondary full" id="stf-add" style="margin:6px 0;">＋ 한 명 추가</button>
     <div class="grid-2" style="margin:6px 0;"><button class="secondary" id="stf-xls">📂 엑셀로 한번에 넣기</button><button class="secondary" id="stf-tpl">📄 엑셀 양식 받기</button></div>
     <div class="grid-2" style="margin-top:8px;"><button class="secondary" id="stf-cancel">취소</button><button id="stf-save">저장</button></div></div>`;
   document.body.appendChild(bg);
   bg.querySelector('#stf-add').onclick = () => { work.push({ role: '사무장', name: '', town: '진안읍', tel: '', addr: '' }); draw(); };
+  bg.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { grp = b.dataset.g; draw(); });
   bg.querySelector('#stf-cancel').onclick = () => { bg.remove(); if (onDone) onDone(); };
   const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel'; fi.className = 'hidden'; bg.appendChild(fi);
   fi.onchange = () => staffImport(fi, () => { bg.remove(); openSmsStaffEdit(onDone); });
