@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-400</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-401</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2964,14 +2964,14 @@ function renderSiteBoard(){
     const out = hosp.length ? `<div style="color:#975a16;font-size:.8rem;">입원 ${hosp.length}명 제외(${hosp.map(p => dName(p)).join(', ')})</div>` : '';
     return `<tr style="${kind === 'sport' ? 'background:#f0fff4;' : kind === 'ind' ? 'background:#fffbea;' : ''}">
       <td style="${TD}width:16px;padding:4px 0;font-weight:bold;">${num}</td>
-      <td style="${TD}font-weight:bold;text-align:left;min-width:78px;">${esc(boardName(s0))}<button type="button" class="sb-mem" data-site="${esc(s0)}" style="display:block;margin:0;padding:0;width:auto;background:none;border:0;color:#718096;font-size:.72rem;font-weight:normal;">회원 ${mem !== null ? mem : '-'}</button></td>
+      <td style="${TD}font-weight:bold;text-align:left;min-width:66px;">${esc(boardName(s0))}<button type="button" class="sb-mem" data-site="${esc(s0)}" style="display:block;margin:0;padding:0;width:auto;background:none;border:0;color:#718096;font-size:.72rem;font-weight:normal;">회원 ${mem !== null ? mem : '-'}</button></td>
       <td style="${TD}"><input type="number" inputmode="numeric" min="0" class="sb-q" data-site="${esc(s0)}" value="${esc(String(quota))}" placeholder="${cur}" style="width:38px !important;min-width:0;max-width:38px;box-sizing:border-box;padding:2px 2px;text-align:center;margin:0;font-size:.85rem;"></td>
       <td style="${TD}">${curTxt}</td>
       <td style="${TD}text-align:left;">${who}${out}</td></tr>`;
   }).join('') : `<tr><td colspan="5" style="${TD}color:#718096;">활동 중인 어르신이 없어요</td></tr>`;
   const table = `<div style="border:1px solid #9ac18a;border-radius:10px;overflow:hidden;margin-top:6px;">
     <table style="border-collapse:collapse;width:calc(100% - 12px);margin:6px;font-size:.85rem;">
-    <tr style="background:#f7fafc;font-weight:bold;"><td style="${TD}width:16px;padding:4px 0;">번호</td><td style="${TD}min-width:78px;">경로당</td><td style="${TD}">배정</td><td style="${TD}">현재</td><td style="${TD}">참여자</td></tr>
+    <tr style="background:#f7fafc;font-weight:bold;"><td style="${TD}width:16px;padding:4px 0;">번호</td><td style="${TD}min-width:66px;">경로당</td><td style="${TD}">배정</td><td style="${TD}">현재</td><td style="${TD}">참여자</td></tr>
     ${trs}</table></div>`;
   box.innerHTML = (showList ? '' : btn) + list + table + '<button type="button" class="secondary full" id="sb-xls" style="margin:6px 0 0;">📥 현황판 엑셀 받기</button>';   // 면 목록이 펼쳐지면 위의 면 단추는 뺌 (사용자 요청, 2026-11-09)
   const xb = box.querySelector('#sb-xls'); if (xb) xb.onclick = exportSiteBoard;
