@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-389</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-390</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3056,7 +3056,7 @@ function openZone(id){
       <div id="zn-moims" style="margin:0 0 8px;"></div>
       <div id="zn-manage">
         <div style="padding-top:8px;">
-      <div style="display:flex;justify-content:flex-end;gap:6px;margin:0 0 6px;"><button type="button" class="small ord-btn" id="zn-nav1" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;background:#03c75a;">🧭 1번 길안내</button><button type="button" class="secondary small ord-btn" id="zn-order-btn" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↕ 순서 바꾸기</button></div>
+      <div style="display:flex;justify-content:flex-end;gap:6px;margin:0 0 6px;"><button type="button" class="secondary small ord-btn" id="zn-order-btn" style="width:auto;margin:0;padding:6px 12px;font-size:.9rem;">↕ 순서 바꾸기</button></div>
       <button type="button" class="warning full" id="zn-add" data-zk="add" style="margin-bottom:8px;">＋ 경로당 고르기</button>
       <button type="button" class="secondary full" id="zn-course" data-zk="course" style="margin:0 0 10px;">📥 모니터링 코스표 내려받기 (엑셀)</button>
       <details id="zn-sites-box" data-zk="sites" class="chg-box" open style="margin-top:0;border-top:none;padding-top:0;">
@@ -3154,16 +3154,13 @@ function openZone(id){
     // 구역에서 점검하러 들어가면, 점검 화면의 "← 구역으로"로 이 구역 창에 돌아옴
     const backZone = () => { modalBack = { label: `${z.name} 구역으로`, fn: () => openZone(z.id) }; document.getElementById('m-crumb').textContent = `← ${z.name} 구역으로`; };
     bg.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { bg.remove(); navZoneId = z.id; openModal(Number(b.dataset.open)); backZone(); });
-    const zn1 = bg.querySelector('#zn-nav1'); if (zn1) zn1.onclick = () => { const f = zoneSitesOrdered(z)[0]; if (f) openNaverNav(f.town, f.senior); };
     bg.querySelectorAll('[data-zkey]').forEach(b => b.onclick = () => {
       const keep = [...bg.querySelectorAll('#zn-sites details[open] [data-gosite]')].map(x => x.dataset.gosite);
       moveZoneSite(z.id, b.dataset.zkey, Number(b.dataset.zdir)); drawMain();
       bg.querySelectorAll('#zn-sites details').forEach(d => { const g = d.querySelector('[data-gosite]'); if (g && keep.includes(g.dataset.gosite)) d.open = true; });
     });
     $('#zn-visit').innerHTML = zoneVisitHtml(z); $('#zn-visit-box').classList.toggle('hidden', !z.sites.length);
-    const zn = bg.querySelector('#zn-nearest'); if (zn) zn.onclick = async () => { await sortNearest(z); drawMain(); };
-    const zb = bg.querySelector('#zn-near'); if (zb) zb.onclick = nearToggle;
-    const zo = bg.querySelector('#zn-office'); if (zo) zo.onclick = async () => { try { const h = await getHere(); store('jinan_office', JSON.stringify(h)); logEvent('현재 위치 저장', null, '가까운 순서 기준점을 지금 있는 곳으로 저장'); await sortNearest(z); drawMain(); renderZones(); notify('현재 위치를 저장하고 가까운 순서를 다시 정했어요.'); } catch(e) { notify('위치를 가져오지 못했어요.\n휴대폰 위치 권한을 허용한 뒤 다시 눌러 주세요.'); } };   // (v388) 현재 위치 저장 + 바로 순서 정하기
+    const zn1 = bg.querySelector('#zn-nav1'); if (zn1) zn1.onclick = () => openNavPlan(z);   // (v390) 점검 현황 아래 길안내 순서 정하기
     bg.querySelectorAll('[data-gosite]').forEach(b => b.onclick = () => { const [town, senior] = b.dataset.gosite.split('|'); bg.remove(); navZoneId = z.id; document.getElementById('search').value = ''; renderList(); lastTown = town; curSenior = senior; openSiteCheck(); backZone(); });
     $('#zn-sites-title').textContent = `담당 경로당 (${z.sites.length}곳)${z.sites.filter(x => isBest(x.town, x.senior)).length ? ` · 👑 ${z.sites.filter(x => isBest(x.town, x.senior)).length}` : ''}`;
     const reopen = (town, senior) => { drawMain(); const det = [...bg.querySelectorAll('#zn-sites details')].find(d => d.querySelector(`[data-map="${CSS.escape(town+'|'+senior)}"]`)); if (det) det.open = true; };
@@ -4749,48 +4746,26 @@ function startWatch(){
   if (watchId != null || !navigator.geolocation) return;
   watchId = navigator.geolocation.watchPosition(q => {
     const h = { lat: q.coords.latitude, lng: q.coords.longitude };
-    if (navTarget && coords[navTarget] && distM(h, coords[navTarget]) <= NEAR_M) arrivedBanner(navTarget, true);
-    if (nearOn() && navTarget) nearCheck(h);   // 길안내 중에만
+    if (navTarget && coords[navTarget] && distM(h, coords[navTarget]) <= NEAR_M) arrivedBanner(navTarget);   // (v390) 길안내 중 도착 → 바로 점검 화면
   }, () => {}, { enableHighAccuracy: true, maximumAge: 15000 });
 }
 const zoneHasKey = k => zones.some(z => z.sites.some(x => siteKey(x.town, x.senior) === k));
-// 구역 경로당 전부: 200m 안에 들어가면 하루 한 번 알림 (같은 곳은 그날 한 번만)
-function nearCheck(h){
-  if (document.getElementById('arrive-dlg')) return;
-  const day = today(); let st = {}; try { st = JSON.parse(load('jinan_nearday') || '{}'); } catch(e) {}
-  if (st.d !== day) st = { d: day, keys: [] };
-  const hit = Object.keys(coords).find(k => !st.keys.includes(k) && coords[k] && zoneHasKey(k) && distM(h, coords[k]) <= NEAR_M);
-  if (!hit) return;
-  st.keys.push(hit); store('jinan_nearday', JSON.stringify(st));
-  arrivedBanner(hit, true);
-}
-async function nearToggle(){
-  if (nearOn()) { store('jinan_near', 'off'); if (!navTarget) stopWatch(); notify('근처 알림을 껐어요.'); drawMainSafe(); return; }
-  try { if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission(); } catch(e) {}
-  store('jinan_near', 'on');
-  notify(`근처 알림을 켰어요.\n길안내 중에 구역의 경로당 ${NEAR_M}m 안에 가면 알려 드려요.`); drawMainSafe();
-}
-function drawMainSafe(){ try { const zb = document.getElementById('zn-near'); if (zb) zb.textContent = '🔔 근처 알림 ' + (nearOn() ? '끄기' : '켜기'); } catch(e) {} }
 function notifySys(key){
   try { if ('Notification' in window && Notification.permission === 'granted' && navigator.serviceWorker) navigator.serviceWorker.ready.then(r => r.showNotification('📍 경로당 근처입니다', { body: key.split('|')[1] + ' 경로당 근처입니다. 점검 시작하시겠어요?', tag: 'near-' + key, vibrate: [200, 100, 200] })); } catch(e) {}
 }
-function arrivedBanner(key, near){   // (v372) 도착하면 가운데 확인 창으로 알려 줌 (예전엔 위쪽 막대)
-  if (document.getElementById('arrive-dlg')) return;
-  const back = document.createElement('div'); back.className = 'dlg-back'; back.id = 'arrive-dlg';
-  back.innerHTML = `<div class="dlg"><div style="font-weight:bold;font-size:1.15rem;margin-bottom:8px;">📍 도착했어요</div>
-    <div style="font-size:1rem;margin-bottom:12px;"><b>${esc(key.split('|')[1])}</b> 경로당 근처입니다.<br>점검 시작하시겠어요?</div>
-    <div class="grid-2"><button class="secondary" id="ab-no">아직</button><button id="ab-go" style="background:#2f855a;">점검 시작</button></div></div>`;
-  document.body.appendChild(back);
-  const close = () => back.remove();
-  back.querySelector('#ab-no').onclick = close;
-  back.querySelector('#ab-go').onclick = async () => { close(); const ok = await arriveNow(key, true); if (ok) openSiteByKey(key); };
+let arrivedBusy = false;
+function arrivedBanner(key){   // (v390) 길안내 중 GPS로 도착하면 확인 창 없이 바로 그 경로당 점검 화면을 엶 (앱이 화면에 있을 때만)
+  if (arrivedBusy || document.hidden || navTarget !== key) return;
+  arrivedBusy = true; setTimeout(() => { arrivedBusy = false; }, 3000);
+  navTarget = null; stopWatch(); setLastSite(key);
   try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch(e) {}
-  if (near) { notifySys(key); try { if (typeof playDingDong === 'function') playDingDong(); } catch(e) {} }
+  try { if (typeof playDingDong === 'function') playDingDong(); } catch(e) {}
+  openSiteByKey(key);
 }
 // (v372) 지도 앱에 갔다가 우리 앱으로 돌아오면 위치를 바로 다시 확인
 document.addEventListener('visibilitychange', () => {
   if (document.hidden || !navTarget) return;   // 길안내 중에만
-  getHere().then(h => { if (coords[navTarget] && distM(h, coords[navTarget]) <= NEAR_M) arrivedBanner(navTarget, true); if (nearOn()) nearCheck(h); }).catch(() => {});
+  getHere().then(h => { if (coords[navTarget] && distM(h, coords[navTarget]) <= NEAR_M) arrivedBanner(navTarget); }).catch(() => {});
 });
 // 도착 확인: 좌표가 없으면 지금 위치를 이 경로당 위치로 저장, 있으면 거리 확인
 async function arriveNow(key, quiet){
@@ -4875,6 +4850,43 @@ function moveZoneSite(zid, key, dir){
   [list[i], list[j]] = [list[j], list[i]]; z.order = list; saveZones();
   logEvent('방문 순서', null, `${z.name}: ${key.replace('|', ' ')} ${dir < 0 ? '위로' : '아래로'} 옮김`);
 }
+// (v390) 길안내 순서 정하기: 점검 현황 경로당을 누른 순서대로 번호를 붙여 그 순서로 길안내 (저장하지 않음, 앱을 껐다 켜면 다시 고름)
+let navPlan = null;
+function openNavPlan(z){
+  const rows = zoneSitesOrdered(z).filter(x => x.senior !== '개별관리').map(x => siteKey(x.town, x.senior));
+  if (!rows.length) return notify('길안내할 경로당이 없어요.');
+  let sel = [];
+  const lab = k => { const [t, s] = k.split('|'); return `${esc(t.replace(/[면읍]$/, ''))} ${esc(s)}`; };
+  const dlg = document.createElement('div'); dlg.className = 'dlg-back'; dlg.id = 'navplan-dlg';
+  dlg.innerHTML = `<div class="dlg" style="max-height:90vh;overflow:auto;">
+    <div style="font-weight:bold;font-size:1.15rem;margin-bottom:4px;">🧭 길안내 순서 정하기</div>
+    <div class="muted" style="font-size:.9rem;margin-bottom:8px;">가고 싶은 곳을 누른 순서대로 번호가 붙어요. 다시 누르면 빠집니다.</div>
+    <div id="np-list" class="chips"></div>
+    <div style="font-weight:bold;margin:12px 0 4px;">고른 순서</div>
+    <div id="np-sel"></div>
+    <div class="grid-2" style="margin-top:12px;"><button class="secondary" id="np-clear">지우기</button><button id="np-go" style="background:#03c75a;">🧭 이 순서로 길안내 시작</button></div>
+    <button class="secondary full" id="np-close" style="margin-top:8px;">닫기</button>
+  </div>`;
+  document.body.appendChild(dlg);
+  const close = () => dlg.remove();
+  const draw = () => {
+    dlg.querySelector('#np-list').innerHTML = rows.map(k => { const n = sel.indexOf(k); return `<button type="button" class="chip nv-chip" data-npk="${esc(k)}">${n >= 0 ? `<b style="color:#03c75a;">${n + 1}</b> ` : ''}${lab(k)}</button>`; }).join('');
+    dlg.querySelector('#np-sel').innerHTML = sel.length ? sel.map((k, i) => `<div style="display:flex;align-items:center;gap:6px;margin:4px 0;"><b style="min-width:1.6em;">${i + 1}</b><span style="flex:1;">${lab(k)}</span><button type="button" class="small secondary" data-npup="${i}" ${i ? '' : 'disabled'} style="width:auto;margin:0;">▲</button><button type="button" class="small secondary" data-npdn="${i}" ${i < sel.length - 1 ? '' : 'disabled'} style="width:auto;margin:0;">▼</button></div>`).join('') : '<div class="muted" style="font-size:.9rem;">위 경로당을 누르면 여기에 순서대로 쌓여요.</div>';
+    dlg.querySelectorAll('[data-npk]').forEach(b => b.onclick = () => { const k = b.dataset.npk, n = sel.indexOf(k); if (n >= 0) sel.splice(n, 1); else sel.push(k); draw(); });
+    dlg.querySelectorAll('[data-npup]').forEach(b => b.onclick = () => { const i = +b.dataset.npup; [sel[i - 1], sel[i]] = [sel[i], sel[i - 1]]; draw(); });
+    dlg.querySelectorAll('[data-npdn]').forEach(b => b.onclick = () => { const i = +b.dataset.npdn; [sel[i + 1], sel[i]] = [sel[i], sel[i + 1]]; draw(); });
+  };
+  dlg.querySelector('#np-clear').onclick = () => { sel = []; draw(); };
+  dlg.querySelector('#np-close').onclick = close;
+  dlg.querySelector('#np-go').onclick = () => {
+    if (!sel.length) return notify('경로당을 하나 이상 골라 주세요.');
+    navPlan = { zid: z.id, keys: [...sel] };
+    logEvent('길안내 순서', null, `${z.name}: ${sel.length}곳을 고른 순서대로 길안내 (순서는 저장 안 함)`);
+    close();
+    const [t, s] = sel[0].split('|'); openNaverNav(t, s);
+  };
+  draw();
+}
 function renderSiteNav(){
   const box = document.getElementById('site-nav'); if (!box) return;
   const z = navZoneId ? zones.find(x => x.id === navZoneId) : null;
@@ -4886,9 +4898,13 @@ function renderSiteNav(){
   const prev = i > 0 ? list[i-1] : null, next = i >= 0 && i < list.length - 1 ? list[i+1] : null;
   const nm = x => `${esc(x.town.replace(/[면읍]$/, ''))} ${esc(x.senior)}`;
   const curKey = siteKey(cur.town, cur.senior);
-  box.innerHTML = `<div class="site-nav2">${next ? `<button type="button" class="small" data-snav-go="1" style="background:#03c75a;">🧭 다음 경로당 길안내</button>` : ''}<button type="button" class="small secondary" data-arrive="1">📍 여기 도착 확인</button></div><div class="site-nav"><button type="button" class="small secondary" data-snav="prev" ${prev ? '' : 'disabled'}>◀ ${prev ? nm(prev) : '처음'}</button><span class="sn-pos">${i >= 0 ? `${i+1}/${list.length}` : ''}</span><button type="button" class="small secondary" data-snav="next" ${next ? '' : 'disabled'}>${next ? nm(next) : '끝'} ▶</button></div>`;
+  // (v390) 길안내 순서 정하기로 고른 순서가 있으면 그 다음 번호, 없으면 목록 순서의 다음 곳
+  let goKey = null;
+  if (navPlan && navPlan.zid === z.id) { const j = navPlan.keys.indexOf(curKey); if (j >= 0 && j < navPlan.keys.length - 1) goKey = navPlan.keys[j + 1]; }
+  else if (next) goKey = siteKey(next.town, next.senior);
+  box.innerHTML = `<div class="site-nav2">${goKey ? `<button type="button" class="small" data-snav-go="1" style="background:#03c75a;">🧭 다음 경로당 길안내</button>` : ''}<button type="button" class="small secondary" data-arrive="1">📍 여기 도착했어요</button></div><div class="site-nav"><button type="button" class="small secondary" data-snav="prev" ${prev ? '' : 'disabled'}>◀ ${prev ? nm(prev) : '처음'}</button><span class="sn-pos">${i >= 0 ? `${i+1}/${list.length}` : ''}</span><button type="button" class="small secondary" data-snav="next" ${next ? '' : 'disabled'}>${next ? nm(next) : '끝'} ▶</button></div>`;
   box.querySelectorAll('[data-snav]').forEach(b => b.onclick = () => { const t = b.dataset.snav === 'prev' ? prev : next; if (t) goSiteFromNav(z, t); });
-  const gb = box.querySelector('[data-snav-go]'); if (gb && next) gb.onclick = () => openNaverNav(next.town, next.senior);
+  const gb = box.querySelector('[data-snav-go]'); if (gb && goKey) gb.onclick = () => { const [t, s] = goKey.split('|'); openNaverNav(t, s); };
   box.querySelector('[data-arrive]').onclick = async () => { if (await arriveNow(curKey)) renderSiteNav(); };
 }
 function goSiteFromNav(z, x){
@@ -5622,8 +5638,9 @@ function zoneVisitHtml(z){
   const all = [...v.miss.map(r => [r, '']), ...v.ok.map(r => [r, 'ok']), ...v.bad.map(r => [r, 'bad'])]
     .sort((a, b) => pos(a[0]) - pos(b[0]) || TOWNS.indexOf(a[0].town) - TOWNS.indexOf(b[0].town) || seniorRank(a[0].senior) - seniorRank(b[0].senior) || a[0].senior.localeCompare(b[0].senior));
   if (!all.length) return '<div class="muted" style="font-size:.88rem;">경로당을 넣으면 점검 현황이 보여요.</div>';
-  return `${z.sites.length > 1 ? `<div style="display:flex;gap:6px;flex-wrap:wrap;"><button type="button" class="small" id="zn-nearest" style="margin:0 0 6px;">📍 가까운 순서로 정하기</button><button type="button" class="small secondary" id="zn-office" style="margin:0 0 6px;width:auto;">📍 현재 위치 저장${officeSaved() ? ' ✔' : ''}</button><button type="button" class="small secondary" id="zn-near" style="margin:0 0 6px;width:auto;">🔔 근처 알림 ${nearOn() ? '끄기' : '켜기'}</button></div>` : ''}<div style="font-size:.88rem;margin:6px 0 4px;"><b style="color:var(--warning)">안 감 ${v.miss.length}</b> · <b style="color:#2b6cb0">✔ 다녀옴 ${v.ok.length}</b>${v.bad.length ? ` · <b style="color:var(--danger)">미흡 ${v.bad.length}</b>` : ''}</div>
-    <div class="chips">${all.map(([r, k]) => `<button type="button" class="chip nv-chip ${k}" style="${isSportSite(r.senior) ? 'background:#f0fff4;border-color:#9ae6b4;' : ''}" data-gosite="${esc(siteKey(r.town, r.senior))}"><span>${k === 'bad' ? '⚠ ' : k === 'ok' ? '✔ ' : ''}<b style="color:#1a365d;">${ordKeys.indexOf(siteKey(r.town, r.senior)) + 1}</b> ${many ? `<span class="muted" style="font-size:.8rem;">${esc(r.town.replace(/[면읍]$/,''))}</span> ` : ''}${crown(r.town, r.senior)}${esc(r.senior)} <span class="muted" style="font-size:.8rem;">${siteMembers(r.town, r.senior).filter(counted).length}</span></span>${k ? `<small>${md(r.last)}${k === 'bad' ? ' · ' + r.probs.join('·') : ''}</small>` : ''}</button>`).join('')}</div>`;
+  return `<div style="font-size:.88rem;margin:6px 0 4px;"><b style="color:var(--warning)">안 감 ${v.miss.length}</b> · <b style="color:#2b6cb0">✔ 다녀옴 ${v.ok.length}</b>${v.bad.length ? ` · <b style="color:var(--danger)">미흡 ${v.bad.length}</b>` : ''}</div>
+    <div class="chips">${all.map(([r, k]) => `<button type="button" class="chip nv-chip ${k}" style="${isSportSite(r.senior) ? 'background:#f0fff4;border-color:#9ae6b4;' : ''}" data-gosite="${esc(siteKey(r.town, r.senior))}"><span>${k === 'bad' ? '⚠ ' : k === 'ok' ? '✔ ' : ''}<b style="color:#1a365d;">${ordKeys.indexOf(siteKey(r.town, r.senior)) + 1}</b> ${many ? `<span class="muted" style="font-size:.8rem;">${esc(r.town.replace(/[면읍]$/,''))}</span> ` : ''}${crown(r.town, r.senior)}${esc(r.senior)} <span class="muted" style="font-size:.8rem;">${siteMembers(r.town, r.senior).filter(counted).length}</span></span>${k ? `<small>${md(r.last)}${k === 'bad' ? ' · ' + r.probs.join('·') : ''}</small>` : ''}</button>`).join('')}</div>
+    <div style="margin-top:8px;"><button type="button" class="small full" id="zn-nav1" style="background:#03c75a;">🧭 길안내 순서 정하기</button></div>`;
 }
 function renderNotVisited(){}   // 안 간 경로당은 이제 각 구역 안에서 보여요
 function renderList(){
