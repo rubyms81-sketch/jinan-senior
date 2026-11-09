@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-371</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-372</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -4738,15 +4738,23 @@ function startWatch(){
     if (distM({ lat: q.coords.latitude, lng: q.coords.longitude }, coords[navTarget]) <= 150) arrivedBanner(navTarget);
   }, () => {}, { enableHighAccuracy: true, maximumAge: 15000 });
 }
-function arrivedBanner(key){
-  if (document.getElementById('arrive-bar')) return;
-  const bar = document.createElement('div'); bar.id = 'arrive-bar';
-  bar.innerHTML = `📍 ${esc(key.split('|')[1])} 경로당에 도착했어요 <div><button type="button" class="small" id="ab-go" style="background:#fff;color:#276749;">점검 시작</button><button type="button" class="small secondary" id="ab-no">아직</button></div>`;
-  document.body.appendChild(bar);
-  bar.querySelector('#ab-no').onclick = () => bar.remove();
-  bar.querySelector('#ab-go').onclick = async () => { bar.remove(); const ok = await arriveNow(key, true); if (ok) openSiteByKey(key); };
+function arrivedBanner(key){   // (v372) 도착하면 가운데 확인 창으로 알려 줌 (예전엔 위쪽 막대)
+  if (document.getElementById('arrive-dlg')) return;
+  const back = document.createElement('div'); back.className = 'dlg-back'; back.id = 'arrive-dlg';
+  back.innerHTML = `<div class="dlg"><div style="font-weight:bold;font-size:1.15rem;margin-bottom:8px;">📍 도착했어요</div>
+    <div style="font-size:1rem;margin-bottom:12px;"><b>${esc(key.split('|')[1])}</b> 경로당 근처에 왔어요.<br>점검을 시작할까요?</div>
+    <div class="grid-2"><button class="secondary" id="ab-no">아직</button><button id="ab-go" style="background:#2f855a;">점검 시작</button></div></div>`;
+  document.body.appendChild(back);
+  const close = () => back.remove();
+  back.querySelector('#ab-no').onclick = close;
+  back.querySelector('#ab-go').onclick = async () => { close(); const ok = await arriveNow(key, true); if (ok) openSiteByKey(key); };
   try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch(e) {}
 }
+// (v372) 지도 앱에 갔다가 우리 앱으로 돌아오면 위치를 바로 다시 확인
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || !navTarget || !coords[navTarget]) return;
+  getHere().then(h => { if (distM(h, coords[navTarget]) <= 150) arrivedBanner(navTarget); }).catch(() => {});
+});
 // 도착 확인: 좌표가 없으면 지금 위치를 이 경로당 위치로 저장, 있으면 거리 확인
 async function arriveNow(key, quiet){
   let here; try { here = await getHere(); } catch(e) { notify('위치를 가져오지 못했어요. 휴대폰 위치 권한을 허용해 주세요.'); return false; }
