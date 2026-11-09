@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-396</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-397</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2891,6 +2891,10 @@ document.addEventListener('focusin', e => {
   const el = e.target; if (!el || !el.classList || !el.classList.contains('senior-in')) return;
   if (/^\(?\s*(활동지 칸 비어 있음|경로당 미입력)\s*\)?$/.test(el.value.trim())) { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); }
 });
+const SITE_SEED = {"개실(개곡)": [23, 0], "검북": [12, 2], "고향마을@": [45, 2], "관산1": [39, 2], "관산2": [45, 2], "구운": [35, 2], "궁동": [40, 2], "금마": [21, 2], "남광@ (우화5)": [35, 2], "내사양": [24, 2], "내오천": [16, 1], "내후사": [14, 2], "노계1": [16, 1], "노계2": [54, 0], "대광1": [28, 3], "대광1 경모": [36, 2], "대성(군하리)": [19, 3], "대성경모": [35, 0], "대성(연장리)": [55, 3], "대연장": [12, 0], "부곡": [35, 2], "사인동(사옥)": [33, 2], "산암": [20, 2], "상가막": [31, 2], "상도치": [19, 2], "상평": [54, 2], "새마을": [37, 3], "석곡": [20, 0], "선인": [23, 2], "소토실": [13, 2], "송대": [18, 2], "신흥": [17, 2], "암곡": [32, 2], "양지": [25, 1], "어은": [31, 2], "언건": [31, 2], "에코르": [32, 2], "연구1": [61, 3], "연구2(상림)": [37, 2], "예리": [63, 2], "외기": [45, 2], "외사양": [47, 1], "외오천": [49, 2], "외후사": [16, 2], "용지": [18, 1], "우화1": [52, 3], "우화2": [33, 2], "우화3": [41, 3], "우화4": [31, 3], "원가림": [16, 1], "원단양": [64, 5], "원물곡": [64, 3], "원반월": [61, 3], "원연장": [42, 2], "월랑@": [17, 1], "월랑@ 경모": [29, 2], "유산": [21, 1], "은천": [61, 3], "정주동(우무실)": [35, 2], "종평": [23, 2], "주공1@": [22, 2], "주공1 경모": [39, 2], "주공2 (노계3)": [28, 1], "주공2 경모": [30, 1], "중리": [16, 1], "중앙": [55, 3], "중평": [35, 3], "탄곡": [22, 2], "평촌": [24, 2], "하가막": [17, 1], "하도치": [13, 1], "하평": [27, 3], "학천1": [48, 3], "학천2": [12, 2], "학천2 경모": [27, 2], "학천3": [34, 2], "활인동(개활곡)": [17, 0]};   // (v397) 진안읍 10월 13일 기준 경로당지킴이 배치표: 경로당 이름 → [회원 수, 배치 인원]
+const siteMem = () => { try { return JSON.parse(load('jinan_sitemem') || '{}') || {}; } catch(e) { return {}; } };
+const memberOf = s0 => { const v = siteMem()[s0]; if (v !== undefined && v !== '') return Number(v); return SITE_SEED[s0] ? SITE_SEED[s0][0] : null; };
+const quotaOf = (s0, cur) => { const q = siteQuota(); if (q[s0] !== undefined && q[s0] !== '') return Number(q[s0]); return SITE_SEED[s0] ? SITE_SEED[s0][1] : cur; };
 // (v396) 현황판 줄 순서·번호: 개별관리 0번(맨 위), 일반 경로당 1번부터, 노인체육시설(게이트볼 등)은 맨 밑에서 따로 1번부터
 const boardOrder = keys => { let n = 0, g = 0; const rank = { ind: 0, gen: 1, sport: 2 };
   return keys.map(s0 => ({ s0, kind: s0 === '개별관리' ? 'ind' : isSportSite(s0) ? 'sport' : 'gen' }))
@@ -2904,8 +2908,8 @@ function boardRows(towns){
     participants.filter(p => counted(p) && p.town === t).forEach(p => { const s0 = seniorOf(p); (sites[s0] = sites[s0] || []).push(p); });
     boardOrder(Object.keys(sites)).forEach(({ s0, num }) => {
       const ps = sites[s0], now = ps.filter(p => !inHospNow(p)), cur = now.length;
-      const quota = q[s0] !== undefined && q[s0] !== '' ? Number(q[s0]) : cur;
-      out.push({ '읍면': t, '번호': num, '경로당': s0, '배정': quota, '현재': cur, '보충': cur - quota,
+      const quota = quotaOf(s0, cur);
+      out.push({ '읍면': t, '번호': num, '경로당': s0, '회원': memberOf(s0) ?? '', '배정': quota, '현재': cur, '보충': cur - quota,
         '참여자': now.map(p => p.name).join(', ') || '없음', '입원 제외': ps.filter(p => inHospNow(p)).map(p => p.name).join(', ') });
     });
   });
@@ -2933,7 +2937,8 @@ function renderSiteBoard(){
   const names = boardOrder(Object.keys(sites));   // (v379) 사업 순서(개별관리 → 노인체육시설 묶음 …) 따라 정렬
   const trs = names.length ? names.map(({ s0, kind, num }) => {
     const ps = sites[s0], now = ps.filter(p => !inHospNow(p)), cur = now.length;
-    const quota = q[s0] !== undefined && q[s0] !== '' ? Number(q[s0]) : cur;   // 배정을 안 넣으면 현재와 같게 봄
+    const quota = quotaOf(s0, cur);   // 배정을 안 넣으면 시드(배치표)나 현재와 같게 봄
+    const mem = memberOf(s0);
     const gap = cur - quota;
     const gapTxt = gap < 0 ? `<b style="color:#c53030;">${gap}명</b>` : gap > 0 ? `<b style="color:#2b6cb0;">+${gap}명</b>` : '0';
     const who = now.length ? now.map(p => dName(p)).join(', ') : '없음';   // (v380) 괄호 설명이 있는 분은 ★ 표시
@@ -2942,19 +2947,27 @@ function renderSiteBoard(){
     return `<tr style="${kind === 'sport' ? 'background:#f0fff4;' : kind === 'ind' ? 'background:#fffbea;' : ''}">
       <td style="${TD}width:30px;padding:4px 2px;font-weight:bold;">${num}</td>
       <td style="${TD}font-weight:bold;">${esc(s0)}</td>
-      <td style="${TD}"><input type="number" inputmode="numeric" min="0" class="sb-q" data-site="${esc(s0)}" value="${q[s0] !== undefined ? esc(String(q[s0])) : ''}" placeholder="${cur}" style="width:38px !important;min-width:0;max-width:38px;box-sizing:border-box;padding:2px 2px;text-align:center;margin:0;font-size:.85rem;"></td>
+      <td style="${TD}"><input type="number" inputmode="numeric" min="0" class="sb-m" data-site="${esc(s0)}" value="${mem !== null ? mem : ''}" placeholder="-" style="width:38px !important;min-width:0;max-width:38px;box-sizing:border-box;padding:2px 2px;text-align:center;margin:0;font-size:.85rem;"></td>
+      <td style="${TD}"><input type="number" inputmode="numeric" min="0" class="sb-q" data-site="${esc(s0)}" value="${esc(String(quotaOf(s0, cur)))}" placeholder="${cur}" style="width:38px !important;min-width:0;max-width:38px;box-sizing:border-box;padding:2px 2px;text-align:center;margin:0;font-size:.85rem;"></td>
       <td style="${TD}">${cur}</td>
       <td style="${TD}">${gapTxt}</td>
       <td style="${TD}text-align:left;">${who}${out}</td></tr>`;
-  }).join('') : `<tr><td colspan="6" style="${TD}color:#718096;">활동 중인 어르신이 없어요</td></tr>`;
+  }).join('') : `<tr><td colspan="7" style="${TD}color:#718096;">활동 중인 어르신이 없어요</td></tr>`;
   const table = `<div style="border:1px solid #9ac18a;border-radius:10px;overflow:hidden;margin-top:6px;">
     <table style="border-collapse:collapse;width:calc(100% - 12px);margin:6px;font-size:.85rem;">
-    <tr style="background:#f7fafc;font-weight:bold;"><td style="${TD}width:30px;">번호</td><td style="${TD}">경로당</td><td style="${TD}">배정</td><td style="${TD}">현재</td><td style="${TD}">보충</td><td style="${TD}">참여자</td></tr>
+    <tr style="background:#f7fafc;font-weight:bold;"><td style="${TD}width:30px;">번호</td><td style="${TD}">경로당</td><td style="${TD}">회원</td><td style="${TD}">배정</td><td style="${TD}">현재</td><td style="${TD}">보충</td><td style="${TD}">참여자</td></tr>
     ${trs}</table></div>`;
   box.innerHTML = (showList ? '' : btn) + list + table + '<button type="button" class="secondary full" id="sb-xls" style="margin:6px 0 0;">📥 현황판 엑셀 받기</button>';   // 면 목록이 펼쳐지면 위의 면 단추는 뺌 (사용자 요청, 2026-11-09)
   const xb = box.querySelector('#sb-xls'); if (xb) xb.onclick = exportSiteBoard;
   const so = box.querySelector('#sb-open'); if (so) so.onclick = () => { sbListOpen = !sbListOpen; renderSiteBoard(); };
   box.querySelectorAll('.sb-t').forEach(el => el.onclick = () => { store('jinan_sbtown', el.dataset.t); sbListOpen = true; sbPicked = true; renderSiteBoard(); });
+  box.querySelectorAll('.sb-m').forEach(inp => inp.onchange = () => {
+    const m = siteMem(), k = inp.dataset.site, old = memberOf(k), v = inp.value.trim();
+    if (v === '') delete m[k]; else m[k] = Math.max(0, Math.round(Number(v) || 0));
+    store('jinan_sitemem', JSON.stringify(m));
+    if (String(old ?? '') !== String(v)) logEvent('회원 수', null, `${k}: 회원 ${old ?? '-'} → ${v || '-'}`);
+    renderSiteBoard();
+  });
   box.querySelectorAll('.sb-q').forEach(inp => inp.onchange = () => {
     const cur = siteQuota(), v = inp.value.trim();
     if (v === '') delete cur[inp.dataset.site]; else cur[inp.dataset.site] = Math.max(0, Math.round(Number(v) || 0));
