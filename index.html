@@ -252,7 +252,7 @@
   .site-nav2 button { flex:1; min-width:0; margin:0; font-size:.9rem; }
   #arrive-bar { position:fixed; top:0; left:0; right:0; z-index:9999; background:#276749; color:#fff; padding:10px 12px; font-weight:bold; box-shadow:0 2px 8px rgba(0,0,0,.3); }
   #arrive-bar button { margin:6px 6px 0 0; width:auto; }
-  .zs-site summary { padding:9px 10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:6px; list-style:none; }
+  .zs-site summary { padding:9px 10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:6px; list-style:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
   .zs-site summary::-webkit-details-marker { display:none; }
   .zs-site .zs-people { padding:0 10px 8px; }
   .zs-person { border-top:1px dashed #e2e8f0; padding:7px 0; font-size:.92rem; }
@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-432</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-433</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3270,23 +3270,27 @@ function openZone(id){
     logEvent('구역 경로당', null, `${z.name}: ${town} ${v} 넣음 (이름 넣기)`); saveZones(); renderZones(); drawMain();
   };
   // 담당 경로당 줄을 꾹 누르면 "삭제할까요?" (− 단추 대신)
+  // 손가락이 조금 흔들려도 되도록 10px 넘게 움직였을 때만 취소, 꾹 누르기 뒤 생기는 클릭·길게 누르기 메뉴는 막음
   {
-    let timer = null, fired = false;
+    let timer = null, sx = 0, sy = 0, held = false, sup = false;
     const cancel = () => { clearTimeout(timer); timer = null; };
     const box = $('#zn-sites');
     box.addEventListener('pointerdown', e => {
       const sm = e.target.closest('details.zs-site > summary'); if (!sm) return;
       const key = sm.parentElement.querySelector('[data-gosite]')?.dataset.gosite; if (!key) return;
-      fired = false; cancel();
+      sx = e.clientX; sy = e.clientY; held = false; cancel();
       timer = setTimeout(async () => {
-        fired = true; const [town, senior] = key.split('|');
+        timer = null; held = true; sup = true; const [town, senior] = key.split('|');
         if (!await ask(`"${senior}" 경로당을 이 구역에서 뺄까요?`)) return;
         z.sites = z.sites.filter(x => !(x.town === town && x.senior === senior));
         logEvent('구역 경로당 빼기', null, `${z.name}: ${town} ${senior} 뺌 (꾹 누르기)`); saveZones(); renderZones(); drawMain();
       }, 600);
     });
-    ['pointerup', 'pointerleave', 'pointercancel', 'pointermove'].forEach(ev => box.addEventListener(ev, cancel));
-    box.addEventListener('click', e => { if (fired) { e.preventDefault(); e.stopPropagation(); fired = false; } }, true);
+    box.addEventListener('pointermove', e => { if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel(); });
+    box.addEventListener('pointerup', () => { cancel(); if (held) setTimeout(() => { held = false; sup = false; }, 300); });
+    ['pointerleave', 'pointercancel'].forEach(ev => box.addEventListener(ev, cancel));
+    box.addEventListener('click', e => { if (sup) { e.preventDefault(); e.stopPropagation(); } }, true);
+    box.addEventListener('contextmenu', e => { if (e.target.closest('details.zs-site > summary')) e.preventDefault(); });
   }
   nvRange = 'month';
   const drawMain = () => {
