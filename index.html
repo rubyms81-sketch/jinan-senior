@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-359</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-360</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2851,7 +2851,7 @@ async function zoneCount(d){
 const townOpen = {};
 function townSites(t){   // [{ name, gate, placed, n(앱 인원) }]
   const names = [...new Set([...Object.keys(PLACED[t] || {}), ...(KNOWN_SENIORS[t] || []), ...participants.filter(p => p.town === t && p.senior).map(seniorOf), ...(xSites[t] || [])])]
-    .filter(k => k && k !== '개별관리' && k !== NO_SENIOR && !/파크골프|그라운드골프/.test(k));
+    .filter(k => k && k !== '개별관리' && k !== NO_SENIOR && !/파크\s*골프|그라운드\s*골프/.test(k));
   const uniq = []; names.forEach(k => { if (!uniq.some(u => sameSenior(u, k))) uniq.push(k); });
   return uniq.map(k => ({ name: k, gate: k.includes('게이트볼'), placed: (PLACED[t] || {})[k] ?? Object.entries(PLACED[t] || {}).find(([x]) => sameSenior(x, k))?.[1] ?? 0,
     n: participants.filter(p => p.town === t && sameSenior(seniorOf(p), k) && counted(p)).length }))
@@ -3215,7 +3215,7 @@ function openZone(id){
     $('#zn-pick-title').textContent = `${curTown} 경로당을 누르세요 (여러 곳)${taken.length ? ` · 다른 구역 ${taken.length}곳은 숨김` : ''}`;
     const shown = sites.filter(k => !taken.includes(k)), allOn = shown.length && shown.every(k => pick.has(siteKey(curTown, k)));
     const isX = k => (xSites[curTown] || []).includes(k);
-    $('#zn-list').innerHTML = `<div style="display:flex;gap:6px;margin-top:6px;"><select id="zn-cat" style="width:auto;margin:0;"><option value="">일반 경로당 (이름 그대로)</option><option value="공공복지시설">공공복지시설 (어린이집 등)</option><option value="시니어 맥가이버">시니어 맥가이버</option><option value="시니어 안전 모니터링">시니어 안전 모니터링</option></select><input type="text" id="zn-new" placeholder="명단에 없는 경로당 이름 적기" autocomplete="off" style="margin:0;"><button type="button" class="small secondary" id="zn-new-add" style="margin:0;white-space:nowrap;">＋ 추가</button></div>` + (shown.length ? `<button type="button" class="small ${allOn ? 'secondary' : ''}" id="zn-all" style="margin:0 0 4px;">${allOn ? '✕ 전부 빼기' : '✔ 전부 선택'} (${shown.length}곳)</button>` : '') + shown.map(k => {
+    $('#zn-list').innerHTML = `<div style="display:flex;gap:6px;margin-top:6px;"><select id="zn-cat" style="width:auto;margin:0;"><option value="">일반 경로당 (이름 그대로)</option><option value="공공복지시설">공공복지시설 (어린이집 등)</option><option value="시니어 맥가이버">시니어 맥가이버</option><option value="시니어 안전 모니터링">시니어 안전 모니터링</option></select><input type="text" id="zn-new" placeholder="명단에 없는 경로당 이름 적기" autocomplete="off" style="flex:1 1 auto;width:auto;min-width:160px;margin:0;padding:8px;color:#1a202c;background:#fff;font-size:1rem;"><button type="button" class="small secondary" id="zn-new-add" style="margin:0;white-space:nowrap;">＋ 추가</button></div>` + (shown.length ? `<button type="button" class="small ${allOn ? 'secondary' : ''}" id="zn-all" style="margin:0 0 4px;">${allOn ? '✕ 전부 빼기' : '✔ 전부 선택'} (${shown.length}곳)</button>` : '') + shown.map(k => {
       const other = zoneOfSite(curTown, k), mine = pick.has(siteKey(curTown, k));
       const n = siteMembers(curTown, k).filter(counted).length;
       return `<div style="display:flex;gap:4px;align-items:center;"><button type="button" class="site ${mine?'zs-on':''}" data-k="${esc(k)}" style="flex:1;padding:9px 12px;margin:4px 0;${mine?'background:#c6f6d5;border-color:#38a169;':''}">
@@ -4496,7 +4496,7 @@ function showClose(kind){
 const SITE_CATS = [
   { k: '개별관리', r: 0, m: /개별관리/ },
   { k: '게이트볼', r: 1, m: /게이트볼/ },
-  { k: '파크골프', r: 2, m: /파크골프|그라운드골프/ },
+  { k: '파크골프', r: 2, m: /파크\s*골프|그라운드\s*골프/ },
   { k: '노인체육시설', r: 3, m: /체육/ },
   { k: '공공복지시설', r: 4, m: /공공복지|어린이집|보육/ },
   { k: '시니어 맥가이버', r: 5, m: /맥가이버/ },
@@ -6251,7 +6251,7 @@ var bizSnap = (() => { try { return JSON.parse(load('jinan_biz')) || {}; } catch
 var notices = (() => { try { return JSON.parse(load('jinan_notice')) || []; } catch(e) { return []; } })();
 const bizKeyOf = s => String(s || '').replace(/\s/g, '');
 // 경로당 기준: 팀장 명단을 올린 적이 없으면 11개 읍·면 기본 경로당 목록(KNOWN_SENIORS)을 기준으로 씀
-const sitesSnap = () => { try { const v = JSON.parse(load('jinan_sitesnap')); if (Array.isArray(v)) return v; } catch(e) {} return Object.entries(KNOWN_SENIORS).flatMap(([t, a]) => a.filter(k => k !== '개별관리' && !/파크골프|그라운드골프/.test(k)).map(k => t + '|' + k)); };
+const sitesSnap = () => { try { const v = JSON.parse(load('jinan_sitesnap')); if (Array.isArray(v)) return v; } catch(e) {} return Object.entries(KNOWN_SENIORS).flatMap(([t, a]) => a.filter(k => k !== '개별관리' && !/파크\s*골프|그라운드\s*골프/.test(k)).map(k => t + '|' + k)); };
 const sameBizPerson = (a, b) => a.name === b.name && ((a.ph && a.ph === b.ph) || (a.b6 && a.b6 === b.b6));
 const bizLine = r => `${r.name} · ${r.town || '면 모름'}${r.senior ? ' · ' + r.senior : ''}${r.b6 ? ' · 생년 앞 6자리 ' + r.b6 : ''}${r.addr ? ' · ' + r.addr : ''}`;
 function addNotice(text){
