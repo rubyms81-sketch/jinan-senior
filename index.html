@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-356</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-357</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3122,9 +3122,9 @@ function openZone(id){
         + `<div style="font-size:1rem;font-weight:bold;margin:4px 0 0;color:#1a365d;">${zoneTownText(z)}</div>`; }
     const sorted = zoneSitesOrdered(z);
     $('#zn-order').innerHTML = '';
-    $('#zn-sites').innerHTML = sorted.length ? sorted.map(x => {
+    $('#zn-sites').innerHTML = sorted.length ? sorted.map((x, si) => {
       const ms = siteMembers(x.town, x.senior);
-      return `<details class="zs-site"><summary><span><span class="muted">${esc(x.town)}</span> <b>${crown(x.town, x.senior)}${esc(x.senior)}</b></span><span class="muted">${ms.filter(p => !stats(p).dropped).length}명 ▾</span></summary>
+      return `<details class="zs-site"><summary><span><b style="color:#1a365d;">${si + 1}</b> <span class="muted">${esc(x.town)}</span> <b>${crown(x.town, x.senior)}${esc(x.senior)}</b></span><span class="muted">${ms.filter(p => !stats(p).dropped).length}명 ▾</span></summary>
         <button type="button" class="small full" data-gosite="${esc(siteKey(x.town, x.senior))}" style="margin:6px 0 4px;">▶ 이 경로당 점검하기</button>
         <div class="zs-people">${ms.length ? ms.map(p => { const st = stats(p); return `<div class="zs-person">
           <b>${nmH(p)}</b> ${ageSex(p)?`<span class="muted">(${esc(ageSex(p))})</span>`:''} ${st.dropped?`<span class="badge bg-danger">${esc(st.status)}</span>`:(inHospNow(p) && st.status==='정상' ? '' : badgeOf(st))}
@@ -5520,7 +5520,7 @@ function zoneVisitHtml(z){
     .sort((a, b) => pos(a[0]) - pos(b[0]) || TOWNS.indexOf(a[0].town) - TOWNS.indexOf(b[0].town) || seniorRank(a[0].senior) - seniorRank(b[0].senior) || a[0].senior.localeCompare(b[0].senior));
   if (!all.length) return '<div class="muted" style="font-size:.88rem;">경로당을 넣으면 점검 현황이 보여요.</div>';
   return `${z.sites.length > 1 ? '<button type="button" class="small" id="zn-nearest" style="margin:0 0 6px;">📍 가까운 순서로 정하기</button>' : ''}<div style="font-size:.88rem;margin:6px 0 4px;"><b style="color:var(--warning)">안 감 ${v.miss.length}</b> · <b style="color:#2b6cb0">✔ 다녀옴 ${v.ok.length}</b>${v.bad.length ? ` · <b style="color:var(--danger)">미흡 ${v.bad.length}</b>` : ''}</div>
-    <div class="chips">${all.map(([r, k]) => `<button type="button" class="chip nv-chip ${k}" data-gosite="${esc(siteKey(r.town, r.senior))}"><span>${k === 'bad' ? '⚠ ' : k === 'ok' ? '✔ ' : ''}${many ? `<span class="muted" style="font-size:.8rem;">${esc(r.town.replace(/[면읍]$/,''))}</span> ` : ''}${crown(r.town, r.senior)}${esc(r.senior)} <span class="muted" style="font-size:.8rem;">${siteMembers(r.town, r.senior).filter(counted).length}</span></span>${k ? `<small>${md(r.last)}${k === 'bad' ? ' · ' + r.probs.join('·') : ''}</small>` : ''}</button>`).join('')}</div>`;
+    <div class="chips">${all.map(([r, k]) => `<button type="button" class="chip nv-chip ${k}" data-gosite="${esc(siteKey(r.town, r.senior))}"><span>${k === 'bad' ? '⚠ ' : k === 'ok' ? '✔ ' : ''}<b style="color:#1a365d;">${ordKeys.indexOf(siteKey(r.town, r.senior)) + 1}</b> ${many ? `<span class="muted" style="font-size:.8rem;">${esc(r.town.replace(/[면읍]$/,''))}</span> ` : ''}${crown(r.town, r.senior)}${esc(r.senior)} <span class="muted" style="font-size:.8rem;">${siteMembers(r.town, r.senior).filter(counted).length}</span></span>${k ? `<small>${md(r.last)}${k === 'bad' ? ' · ' + r.probs.join('·') : ''}</small>` : ''}</button>`).join('')}</div>`;
 }
 function renderNotVisited(){}   // 안 간 경로당은 이제 각 구역 안에서 보여요
 function renderList(){
