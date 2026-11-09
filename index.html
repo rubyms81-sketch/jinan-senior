@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-383</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-384</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6154,18 +6154,18 @@ function openBulkGuide(){
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📂 엑셀로 한번에 등록</div>
     <div class="notice" style="margin-bottom:8px;font-size:.92rem;">
       · <b>성명</b>은 꼭 · 나머지는 아는 것만<br>· 나이 칸에 <b>1948</b>처럼 태어난 해를 적어도 돼요</div>
-    <button type="button" class="secondary full" id="bk-tpl">⬇️ <b>양식 내려받기</b><br><span style="font-size:.85rem;">엑셀 파일이 없으면 이 양식을 받아서 작성해 올려 주세요</span></button>
-    <button type="button" class="full" id="bk-full" style="text-align:left;">📋 <b>올해 명단으로 정리</b><br><span style="font-size:.85rem;font-weight:normal;">겹치는 분은 건강·정보 그대로 · 새로 오신 분은 넣고 · 올해 명단에 없는 분은 뺌</span></button>
+    <button type="button" class="full" id="bk-tpl" style="background:#718096;color:#fff;">⬇️ <b>양식 내려받기</b><br><span style="font-size:.85rem;">엑셀 파일이 없으면 이 양식을 받아서 작성해 올려 주세요</span></button>
+    <button type="button" class="full" id="bk-full" style="text-align:left;background:#276749;color:#fff;">📋 <b>올해 명단으로 정리</b><br><span style="font-size:.85rem;font-weight:normal;">겹치는 분은 건강·정보 그대로 · 새로 오신 분은 넣고 · 올해 명단에 없는 분은 뺌</span></button>
     <label style="margin-top:12px;">🏷 사업별 명단 (사업마다 따로 올리면 그 사업 명단을 새로 덮어써요)</label>
-    ${BIZ_LIST.map((b, i) => `<button type="button" class="secondary full" id="bk-b${i}" style="margin:0 0 6px;">📂 ${b[0]} 명단 올리기</button>`).join('')}
+    ${BIZ_LIST.map((b, i) => `<button type="button" class="full" id="bk-b${i}" style="margin:0 0 6px;background:#276749;color:#fff;">📂 ${b[0]} 명단 올리기</button>`).join('')}
     <label style="margin-top:12px;">👤 팀장 명단 (구역 자동 정리)</label>
-    <button type="button" class="secondary full" id="bk-ltpl" style="margin:0 0 6px;">⬇️ 팀장 양식 받기</button>
-    <button type="button" class="full" id="bk-lead" style="margin:0 0 6px;background:#276749;">👤 팀장 명단 올리기</button>
+    <button type="button" class="full" id="bk-ltpl" style="margin:0 0 6px;background:#718096;color:#fff;">⬇️ 팀장 양식 받기</button>
+    <button type="button" class="full" id="bk-lead" style="margin:0 0 6px;background:#276749;color:#fff;">👤 팀장 명단 올리기</button>
     <label style="margin-top:12px;">👔 회장·사무장 명단 (문자 받는 분)</label>
-    <button type="button" class="secondary full" id="bk-stpl" style="margin:0 0 6px;">⬇️ 회장·사무장 양식 받기</button>
-    <button type="button" class="full" id="bk-staff" style="margin:0 0 6px;background:#2b6cb0;">👔 회장·사무장 올리기</button>
+    <button type="button" class="full" id="bk-stpl" style="margin:0 0 6px;background:#718096;color:#fff;">⬇️ 회장·사무장 양식 받기</button>
+    <button type="button" class="full" id="bk-staff" style="margin:0 0 6px;background:#276749;color:#fff;">👔 회장·사무장 올리기</button>
     <label style="margin-top:12px;">📚 교육 이수 명단 (받은 교육 시간을 한꺼번에 채움)</label>
-    <button type="button" class="full" id="bk-edu" style="margin:0 0 6px;">📂 교육 이수 엑셀 올리기</button>
+    <button type="button" class="full" id="bk-edu" style="margin:0 0 6px;background:#276749;color:#fff;">📂 교육 이수 엑셀 올리기</button>
     <button type="button" class="secondary full" id="bk-close" style="margin-top:10px;">닫기</button></div>`;
   document.body.appendChild(bg);
   bg.querySelector('#bk-edu').onclick = () => eduImportPick(() => bg.remove());
