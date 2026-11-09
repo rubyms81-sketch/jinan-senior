@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-429</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-430</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -703,7 +703,7 @@ body.ord-hide .ord-btn { display: none !important; }
       <div style="margin-top:8px;">
           <div style="margin-top:6px;"></div>
           <div class="muted" id="bk-info" style="font-size:.85rem;margin-bottom:6px;"></div>
-          <div class="grid-2"><button onclick="saveBackup()">💾 백업 파일 저장</button><button class="warning" onclick="shareBackup()">📤 문자·카톡으로 보내기</button></div>
+          <div class="grid-2"><button onclick="saveBackup()">💾 백업 파일 저장</button></div>
           <button class="secondary full" onclick="document.getElementById('bk-file').click()">📂 백업 파일 불러오기 (복원)</button>
           <input type="file" id="bk-file" accept=".json,application/json" class="hidden" onchange="loadBackupFile(this)">
           <button class="secondary full" id="bk-every-btn" onclick="setBkEvery()">🔔 백업 알림</button>
@@ -9034,7 +9034,7 @@ function restoreFrom(b){
 async function saveBackup(quiet){
   const a = document.createElement('a'); a.href = URL.createObjectURL(bkFile()); a.download = bkName(); a.click();
   await snapSave(); store('jinan_last_backup', nowHM()); logEvent('백업 저장', null, `${bkName()} (어르신 ${participants.length}명)`);
-  renderBackup(); if (!quiet) notify(`💾 백업 파일을 휴대폰에 저장했어요.\n(다운로드 폴더: ${bkName()})\n\n휴대폰이 바뀌어도 쓰려면 "📤 문자·카톡으로 보내기"로 나에게 보내 두세요.`);
+  renderBackup(); if (!quiet) notify(`💾 백업 파일을 휴대폰에 저장했어요.\n(다운로드 폴더: ${bkName()})\n\n휴대폰이 바뀌어도 쓰려면 백업 파일을 따로 보관해 두세요.`);
 }
 async function shareBackup(){
   const f = bkFile();
