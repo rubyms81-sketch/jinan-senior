@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-417</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-418</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -10503,6 +10503,26 @@ drawCkToggle();
 rptInit();
 drawStorage();
 migrateSiteNames();
+// 공공복지시설도우미(8곳)를 보육시설도우미(어린이집 3곳)와 공공복지시설도우미(5곳)로 한 번만 나눔
+(function splitDoumi(){
+  try {
+    if (load('jinan_split_doumi') === '1') return;
+    const BOYUK = ['진안어린이집', '진안제일어린이집', '사랑어린이집'];
+    const isB = x => BOYUK.includes(x.senior);
+    const old = monitors.find(m => m.name === '공공복지시설도우미' && m.town === '진안읍');
+    if (old && (old.sites || []).some(x => isB(x))) {
+      const bySites = (old.sites || []).filter(isB), pubSites = (old.sites || []).filter(x => !isB(x));
+      let b = monitors.find(m => m.name === '보육시설도우미' && m.town === '진안읍');
+      if (!b) { monitors.push(b = { id: Date.now() + Math.random(), town: '진안읍', name: '보육시설도우미', phone: '', addr: '', car: '', carNo: '', sites: [] }); }
+      const have = new Set((b.sites || []).map(x => x.senior));
+      b.sites = [...(b.sites || []), ...bySites.filter(x => !have.has(x.senior))];
+      old.sites = pubSites;
+      saveMonitors();
+      logEvent('팀장 나누기', null, `진안읍 공공복지시설도우미 → 보육시설도우미(어린이집 ${b.sites.length}곳)·공공복지시설도우미(${pubSites.length}곳)로 나눔`);
+    }
+    store('jinan_split_doumi', '1');
+  } catch (e) {}
+})();
 // 근무 시작 달만 있고 시작일이 없는 분: 그 달 1일을 시작일로 채움 (이전 달 근무일이 잘못 세지지 않게, 한 번만)
 (function fillStartDays(){
   let ch = false;
