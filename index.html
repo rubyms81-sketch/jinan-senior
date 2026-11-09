@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-375</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-376</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2056,7 +2056,7 @@ function issuesOn(d){
   return rows.sort((a, b) => a.time.localeCompare(b.time) || a.q.name.localeCompare(b.q.name));
 }
 // 팀장께 문자 보낸 건(l.sentLeader)은 게시판·알림 목록에서 뺌 (기록은 그대로)
-const issuesOpen = d => issuesOn(d).filter(r => !r.l.sentLeader);
+const issuesOpen = d => issuesOn(d).filter(r => !r.l.sentLeader && !r.l.passed);   // (v376) 그냥 넘긴 기록은 목록에서 뺌
 function markIssueSent(rows){ rows.forEach(r => r.l.sentLeader = true); saveData(false); renderList(); }
 // 🔔 점검 결과: 팀장(구역)별로 묶어서 이유·경로당·시간까지 → 팀장에게 문자
 function issuesDialog(d){
@@ -2373,13 +2373,19 @@ function renderNewAlert(){
       <button type="button" class="full" id="bd-sms" style="margin:0;background:#d53f8c;">📋 자세히 보기 · 생일 축하 문자</button>`) : '')
     + (todayIs.length ? alertCard('issue', 'background:#fff5f5;border-color:#e53e3e;padding:4px 10px;', `<b style="color:#c53030;">🔔 오늘 경고·벌점 ${todayIs.length}건</b>`,
       `<div style="font-size:.9rem;margin-bottom:6px;">${todayIs.map(r => `<span style="white-space:nowrap;">${esc(r.q.name)}<span class="muted" style="font-size:.82rem;">(${esc(seniorOf(r.q))}${r.time ? ' ' + r.time : ''})</span></span>`).join(', ')}</div>
-      <button type="button" class="full" id="is-open" style="margin:0;background:#e53e3e;">📋 자세히 보기 · 팀장 문자</button>`) : '')
+      <div style="display:flex;gap:6px;"><button type="button" class="full" id="is-open" style="margin:0;background:#e53e3e;flex:1;">📋 자세히 보기 · 팀장 문자</button><button type="button" class="small secondary" id="is-pass" style="width:auto;margin:0;white-space:nowrap;">⏭ 그냥 넘기기</button></div>`) : '')
     + (qs.length ? alertCard('quit', 'background:#f7fafc;border-color:#718096;padding:4px 10px;', `<b style="color:#2d3748;">🚪 ${m}월 중도포기 어르신 ${qs.length}명</b>`,
       `<div style="font-size:.9rem;">${qs.map(x => `<a href="#" data-open="${x.p.id}" style="color:#2d3748;white-space:nowrap;">${esc(x.p.name)}<span class="muted" style="font-size:.82rem;">(${esc(x.p.town.replace(/[면읍]$/,''))} ${esc(seniorOf(x.p))} · ${md(x.date)} · ${esc(x.why)})</span></a>`).join(', ')}</div>`) : '');
   box.querySelectorAll('[data-open]').forEach(a => a.onclick = e => { e.preventDefault(); openModal(Number(a.dataset.open)); });
   box.querySelector('#bd-sms')?.addEventListener('click', () => bdayDialog(bd));
   box.querySelectorAll('[data-fix]').forEach(b => b.onclick = () => { const [pid, id] = b.dataset.fix.split('|'); fixDone(Number(pid), id); });
   box.querySelector('#is-open')?.addEventListener('click', () => issuesDialog(today()));
+  box.querySelector('#is-pass')?.addEventListener('click', () => {   // (v376) 오늘 경고·벌점을 문자 없이 넘김
+    const rows = issuesOpen(today()); if (!rows.length) return;
+    rows.forEach(r => r.l.passed = true); saveData(false);
+    logEvent('경고·벌점 넘기기', null, `${today()} ${rows.length}건 팀장 문자 없이 넘김`, today());
+    renderCallAlert(); notify(`${rows.length}건을 문자 없이 넘겼어요.`);
+  });
   bindAlerts(box);
 }
 // (v162) 14일·29일 보고 알림: 이번 달 신규·중도포기 목록 + 참여자 변경현황 엑셀 받기 (없으면 없다고 띄움)
