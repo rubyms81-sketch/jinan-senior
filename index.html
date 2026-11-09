@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-415</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-416</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6640,6 +6640,14 @@ function bizSheetImport(input, pick){
         participants.push({ id: Date.now() + Math.random(), town: '진안읍', senior: r.senior, name: r.name, ...(r.b6 ? { b6: r.b6 } : {}), phone: r.phone ? fmtPhone(r.phone) : '', address: r.addr, regDay: today(), quit: false, logs: [], biz: pick });
         added++;
       });
+      // 팀장 고르기에도 도우미 팀장으로 등록 (보육시설도우미·공공복지시설도우미, 담당 경로당 = 이 명단의 시설)
+      { const mName = pick === '보육시설도우미' ? '보육시설도우미' : '공공복지시설도우미';
+        const sites = [...new Set(rows.map(r => r.senior))].map(sn => ({ town: '진안읍', senior: sn }));
+        let m = monitors.find(x => x.name === mName && x.town === '진안읍');
+        if (!m) { monitors.push(m = { id: Date.now() + Math.random(), town: '진안읍', name: mName, phone: '', addr: '', car: '', carNo: '', sites: [] }); logEvent('팀장 등록', null, `진안읍 ${mName} (시설 명단 가져오기)`); }
+        const have = new Set((m.sites || []).map(x => x.senior));
+        m.sites = [...(m.sites || []), ...sites.filter(x => !have.has(x.senior))];
+        saveMonitors(); }
       saveData();
       logEvent('시설 명단', null, `${pick} ${added}명 넣음 (진안읍, 이미 있던 ${same}명은 그대로)`);
       notify(`${pick} 명단을 넣었어요.\n새로 넣은 분 ${added}명 · 이미 있던 분 ${same}명\n\n진안읍 경로당 고르기에서 시설을 고르면 됩니다.`);
