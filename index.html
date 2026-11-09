@@ -242,6 +242,12 @@
   .zone-btn small { display:block; color:#4a5568; font-size:.78rem; }
   .zone-btn.empty { background:#f7fafc; border-color:#e2e8f0; color:#4a5568; }
   .zs-site { border:1px solid #e2e8f0; border-radius:8px; margin:6px 0; padding:0; }
+  .site-nav { display:flex; gap:6px; align-items:center; margin:6px 0; }
+  .site-nav button { flex:1; min-width:0; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sn-pos { font-size:.9rem; font-weight:bold; color:#1a365d; white-space:nowrap; }
+  .ord-box { background:#f7fafc; border:1px solid #e2e8f0; border-radius:10px; padding:8px 10px; margin:6px 0 8px; }
+  .ord-row { display:flex; align-items:center; gap:6px; padding:4px 0; border-bottom:1px dashed #e2e8f0; }
+  .ord-n { width:24px; text-align:center; font-weight:bold; }
   .zs-site summary { padding:9px 10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:6px; list-style:none; }
   .zs-site summary::-webkit-details-marker { display:none; }
   .zs-site .zs-people { padding:0 10px 8px; }
@@ -423,7 +429,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-348</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-349</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -717,6 +723,7 @@ body.ord-hide .ord-btn { display: none !important; }
     <div style="flex:1;min-width:0;"><h3 id="modal-title" class="m-title">참여자 점검</h3>
     </div>
   </div>
+  <div id="site-nav"></div>
   <div id="how-bar" class="how-bar"><div id="modal-sub" class="m-sub"></div><input type="hidden" id="c-how" value="직접"><div id="mate-tabs"></div></div>
   <input type="file" id="photo-cam" accept="image/*" capture="environment" class="hidden" onchange="photoPicked(this)">
   <input type="file" id="photo-file" accept="image/*" class="hidden" onchange="photoPicked(this)">
@@ -3041,6 +3048,7 @@ function openZone(id){
       <button type="button" class="secondary full" id="zn-course" data-zk="course" style="margin:0 0 10px;">📥 모니터링 코스표 내려받기 (엑셀)</button>
       <details id="zn-sites-box" data-zk="sites" class="chg-box" open style="margin-top:0;border-top:none;padding-top:0;">
         <summary><span id="zn-sites-title" style="font-weight:bold;">담당 경로당</span><span class="chg-arrow"></span></summary>
+        <div id="zn-order"></div>
         <div id="zn-sites"></div>
       </details>
       <div data-zk-end="1"></div>
@@ -3108,7 +3116,9 @@ function openZone(id){
     { const zt = zoneTownLines(z), tot = zt.reduce((k, x) => k + x.sp + x.gp, 0);
       $('#zn-title').innerHTML = `🗺 ${esc(z.name)} <span style="font-size:1.3rem;font-weight:800;color:#1a365d;">${zt.map(x => `(${esc(x.t.replace(/[면읍]$/, ''))})`).join('')} 총 ${tot}명</span>`
         + `<div style="font-size:1rem;font-weight:bold;margin:4px 0 0;color:#1a365d;">${zoneTownText(z)}</div>`; }
-    const sorted = [...z.sites].sort((a,b) => a.town.localeCompare(b.town) || seniorRank(a.senior)-seniorRank(b.senior) || a.senior.localeCompare(b.senior));
+    const sorted = zoneSitesOrdered(z);
+    { const ol = sorted.map(x => siteKey(x.town, x.senior));
+      $('#zn-order').innerHTML = sorted.length > 1 ? `<div class="ord-box"><b>🧭 방문 순서</b> <span class="muted" style="font-size:.85rem;">위에서 아래로 차례대로 갑니다</span>${sorted.map((x, i) => `<div class="ord-row"><span class="ord-n">${i+1}</span><span style="flex:1;min-width:0;">${esc(x.town)} <b>${esc(x.senior)}</b></span><button type="button" class="small secondary" data-zkey="${esc(ol[i])}" data-zdir="-1" style="width:auto;margin:0;padding:4px 10px;" ${i===0?'disabled':''}>▲</button><button type="button" class="small secondary" data-zkey="${esc(ol[i])}" data-zdir="1" style="width:auto;margin:0;padding:4px 10px;" ${i===sorted.length-1?'disabled':''}>▼</button></div>`).join('')}</div>` : ''; }
     $('#zn-sites').innerHTML = sorted.length ? sorted.map(x => {
       const ms = siteMembers(x.town, x.senior);
       return `<details class="zs-site"><summary><span><span class="muted">${esc(x.town)}</span> <b>${crown(x.town, x.senior)}${esc(x.senior)}</b></span><span class="muted">${ms.filter(p => !stats(p).dropped).length}명 ▾</span></summary>
@@ -3131,9 +3141,14 @@ function openZone(id){
     }).join('') : '';
     // 구역에서 점검하러 들어가면, 점검 화면의 "← 구역으로"로 이 구역 창에 돌아옴
     const backZone = () => { modalBack = { label: `${z.name} 구역으로`, fn: () => openZone(z.id) }; document.getElementById('m-crumb').textContent = `← ${z.name} 구역으로`; };
-    bg.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { bg.remove(); openModal(Number(b.dataset.open)); backZone(); });
+    bg.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { bg.remove(); navZoneId = z.id; openModal(Number(b.dataset.open)); backZone(); });
+    bg.querySelectorAll('[data-zkey]').forEach(b => b.onclick = () => {
+      const keep = [...bg.querySelectorAll('#zn-sites details[open] [data-gosite]')].map(x => x.dataset.gosite);
+      moveZoneSite(z.id, b.dataset.zkey, Number(b.dataset.zdir)); drawMain();
+      bg.querySelectorAll('#zn-sites details').forEach(d => { const g = d.querySelector('[data-gosite]'); if (g && keep.includes(g.dataset.gosite)) d.open = true; });
+    });
     $('#zn-visit').innerHTML = zoneVisitHtml(z); $('#zn-visit-box').classList.toggle('hidden', !z.sites.length);
-    bg.querySelectorAll('[data-gosite]').forEach(b => b.onclick = () => { const [town, senior] = b.dataset.gosite.split('|'); bg.remove(); document.getElementById('search').value = ''; renderList(); lastTown = town; curSenior = senior; openSiteCheck(); backZone(); });
+    bg.querySelectorAll('[data-gosite]').forEach(b => b.onclick = () => { const [town, senior] = b.dataset.gosite.split('|'); bg.remove(); navZoneId = z.id; document.getElementById('search').value = ''; renderList(); lastTown = town; curSenior = senior; openSiteCheck(); backZone(); });
     $('#zn-sites-title').textContent = `담당 경로당 (${z.sites.length}곳)${z.sites.filter(x => isBest(x.town, x.senior)).length ? ` · 👑 ${z.sites.filter(x => isBest(x.town, x.senior)).length}` : ''}`;
     const reopen = (town, senior) => { drawMain(); const det = [...bg.querySelectorAll('#zn-sites details')].find(d => d.querySelector(`[data-map="${CSS.escape(town+'|'+senior)}"]`)); if (det) det.open = true; };
     bg.querySelectorAll('[data-map]').forEach(b => b.onclick = () => { const [town, senior] = b.dataset.map.split('|'); mapOf(town, senior) ? openSiteMap(town, senior) : editSiteMap(town, senior, () => reopen(town, senior)); });
@@ -4679,6 +4694,38 @@ function onSenior(){
   }, 60);
 }
 // 고른 경로당의 점검 화면 열기: 오늘 아직 점검 안 한 분부터
+let navZoneId = null;   // 구역 창에서 점검 화면으로 들어왔을 때 그 구역 (방문 순서 네비용)
+const zoneSitesOrdered = z => {
+  const ord = z.order || [];
+  const idx = x => { const i = ord.indexOf(siteKey(x.town, x.senior)); return i < 0 ? 1e6 : i; };
+  return [...z.sites].sort((a, b) => idx(a) - idx(b) || a.town.localeCompare(b.town) || seniorRank(a.senior) - seniorRank(b.senior) || a.senior.localeCompare(b.senior));
+};
+function moveZoneSite(zid, key, dir){
+  const z = zones.find(x => x.id === zid); if (!z) return;
+  const list = zoneSitesOrdered(z).map(x => siteKey(x.town, x.senior));
+  const i = list.indexOf(key), j = i + dir; if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]]; z.order = list; saveZones();
+  logEvent('방문 순서', null, `${z.name}: ${key.replace('|', ' ')} ${dir < 0 ? '위로' : '아래로'} 옮김`);
+}
+function renderSiteNav(){
+  const box = document.getElementById('site-nav'); if (!box) return;
+  const z = navZoneId ? zones.find(x => x.id === navZoneId) : null;
+  const p = participants.find(x => x.id === Number(document.getElementById('edit-id').value));
+  const cur = p && z ? z.sites.find(x => x.town === p.town && seniorOf(p) === x.senior) : null;
+  if (!z || !cur) { box.innerHTML = ''; return; }
+  const list = zoneSitesOrdered(z).filter(x => siteMembers(x.town, x.senior).length);
+  const i = list.findIndex(x => x.town === cur.town && x.senior === cur.senior);
+  const prev = i > 0 ? list[i-1] : null, next = i >= 0 && i < list.length - 1 ? list[i+1] : null;
+  const nm = x => `${esc(x.town.replace(/[면읍]$/, ''))} ${esc(x.senior)}`;
+  box.innerHTML = `<div class="site-nav"><button type="button" class="small secondary" data-snav="prev" ${prev ? '' : 'disabled'}>◀ ${prev ? nm(prev) : '처음'}</button><span class="sn-pos">${i >= 0 ? `${i+1}/${list.length}` : ''}</span><button type="button" class="small secondary" data-snav="next" ${next ? '' : 'disabled'}>${next ? nm(next) : '끝'} ▶</button></div>`;
+  box.querySelectorAll('[data-snav]').forEach(b => b.onclick = () => { const t = b.dataset.snav === 'prev' ? prev : next; if (t) goSiteFromNav(z, t); });
+}
+function goSiteFromNav(z, x){
+  const ms = siteMembers(x.town, x.senior), live = ms.filter(p => !stats(p).dropped);
+  const first = live.find(p => !p.logs.some(l => l.date === today())) || live[0] || ms[0]; if (!first) return;
+  lastTown = x.town; curSenior = x.senior; navZoneId = z.id;
+  openFrom(first.id, `${z.name} 구역으로`, () => openZone(z.id));
+}
 function siteMembers2(){ return participants.filter(p => p.town===lastTown && seniorOf(p)===curSenior).sort((a,b) => stats(a).dropped - stats(b).dropped || a.name.localeCompare(b.name)); }
 function openSiteCheck(){
   const ms = siteMembers2(); if (!ms.length) return;
@@ -7039,6 +7086,7 @@ function openModal(id){
   document.getElementById('modal-sub').innerHTML = (p.phone ? `<span class="tel-row">${tel ? `<a class="tel-link" href="tel:${tel}" title="${esc(p.phone)}">📞 ${esc(String(p.phone).replace(/^\s*010[-\s]?/, ''))}</a>` : esc(p.phone)}</span>` : '') + `<span class="place">📍 <b>${crown(p.town, seniorOf(p))}${esc(seniorOf(p))}</b><a class="tel-link" href="#" onclick="siteMapTap('${esc(p.town)}', this.dataset.s);return false;" data-s="${esc(seniorOf(p))}" title="${mapOf(p.town, seniorOf(p)) ? '지도 열기' : '위치 없음 · 누르면 주소 넣기'}" style="${mapOf(p.town, seniorOf(p)) ? '' : 'opacity:.45;'}"><span aria-hidden="true">🗺️</span></a></span>`;
   renderModal();
   document.getElementById('modal').classList.remove('hidden');
+  renderSiteNav();
   window.scrollTo(0,0);
 }
 
