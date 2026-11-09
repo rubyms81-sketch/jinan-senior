@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-363</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-364</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -476,7 +476,8 @@ body.ord-hide .ord-btn { display: none !important; }
     <details class="chg-box" id="zone-box" style="margin-top:0;border-top:none;padding-top:0;">
     <summary><div style="display:flex;align-items:center;gap:6px;flex:1;"><div class="mv-t" style="flex:1;font-weight:bold;">🗺 구역</div>
       <button type="button" class="small secondary" id="zone-minus" onclick="event.preventDefault();event.stopPropagation();zoneCount(-1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">－</button><b id="zone-n" style="min-width:2.2em;text-align:center;"></b><button type="button" class="small" id="zone-plus" onclick="event.preventDefault();event.stopPropagation();zoneCount(1)" style="width:auto;margin:0;padding:4px 12px;font-size:1.1rem;">＋</button></div><span class="chg-arrow" style="flex:none;margin-left:6px;"></span></summary>
-    <div id="zone-sum" style="font-size:.85rem;margin:-2px 0 4px;"></div>
+    <details id="zone-sum-acc" style="margin:0 0 6px;"><summary style="cursor:pointer;font-weight:bold;font-size:.95rem;padding:4px 0;">📊 면별 요약 (펼치기)</summary>
+    <div id="zone-sum" style="font-size:.85rem;margin:4px 0 4px;"></div></details>
     <div class="zone-grid" id="zone-btns"></div>
     </details>
   </div>
