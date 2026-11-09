@@ -423,7 +423,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-335</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-336</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -9836,7 +9836,7 @@ document.getElementById('nq-from').value = monthKey() + '-01'; document.getEleme
 // ---------- 🧩 화면 배치: 칸 제목을 꾹 눌러 옮기기·겹쳐서 묶기·이름 바꾸기 (이 휴대폰에만 저장, jinan_layout) ----------
 const MV_BASE = { chg: '🔄 근무일 변경', wd: '📅 활동일', zone: '🗺 구역', site: '🏠 경로당 현황판', moim: '👥 모임 명단', edu: '🎓 교육 출석', count: '👥 인원 세기', search: '🔍 이름 찾기', board: '⚠️ 감점 현황', diary: '📝 활동일지', tools: '➕ 신규등록', stats: '📊 통계', ui: '🛠️ 설정', me: '👤 현장 점검자 정보', bk: '💾 백업', gg: '☁️ 구글 연결' };
 const MV_IDS = Object.keys(MV_BASE);
-const MV_DEF = { order: ['chg','wd','zone','site','search','diary','tools','g:edu','g:stat','g:set'], groups: { edu: { name: '교육 출석', items: ['count','edu','moim'] }, stat: { name: '통계', items: ['stats','board'] }, set: { name: '설정', items: ['ui','me','bk','gg'] } }, names: {} };
+const MV_DEF = { order: ['site','chg','wd','zone','search','diary','tools','g:edu','g:stat','g:set'], groups: { edu: { name: '교육 출석', items: ['count','edu','moim'] }, stat: { name: '통계', items: ['stats','board'] }, set: { name: '설정', items: ['ui','me','bk','gg'] } }, names: {} };
 let mvL = (() => { try { return JSON.parse(localStorage.getItem('jinan_layout')) || null; } catch(e) { return null; } })();
 function mvFix(){
   // 잘못되거나 새로 생긴 칸도 빠짐없이
