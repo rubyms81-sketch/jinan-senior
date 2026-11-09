@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-409</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-410</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6306,7 +6306,7 @@ function openBulkGuide(){
     <label style="margin-top:0;font-weight:bold;">올리기</label>
     <button type="button" class="full" id="bk-full" style="text-align:left;background:#2b6cb0;color:#fff;">📋 <b>올해 명단으로 정리</b><br><span style="font-size:.85rem;font-weight:normal;">겹치는 분은 건강·정보 그대로 · 새로 오신 분은 넣고 · 올해 명단에 없는 분은 뺌</span></button>
     ${BIZ_LIST.map((b, i) => `<button type="button" class="full" id="bk-b${i}" style="margin:0 0 6px;background:#2b6cb0;color:#fff;">📂 ${b[0]} 명단 올리기</button>`).join('')}
-    <button type="button" class="full" id="bk-lead" style="margin:0 0 6px;background:#2b6cb0;color:#fff;">👤 팀장 명단 올리기</button>
+    <button type="button" class="full" id="bk-lead" style="margin:0 0 6px;background:#2b6cb0;color:#fff;">👤 시니어 안전 모니터링 팀장 명단 올리기</button>
     <button type="button" class="full" id="bk-staff" style="margin:0 0 6px;background:#2b6cb0;color:#fff;">👔 회장·사무장 올리기</button>
     <button type="button" class="full" id="bk-edu" style="margin:0 0 6px;background:#2b6cb0;color:#fff;">📂 교육 이수 엑셀 올리기</button>
     <button type="button" class="full" id="bk-mem" style="margin:0 0 6px;background:#2b6cb0;color:#fff;">📂 경로당 회원수 올리기</button>
@@ -6494,7 +6494,7 @@ function pickSchedule(onPick){
 // ---------- 🏷 사업별 명단 (경로당지킴이 · 노인체육시설 · 시니어 안전 모니터링) ----------
 // 사업마다 따로 올리면 그 사업 이전 명단을 덮어씀. 한 사람이 두 사업에 있으면 알려 줌.
 // 주민번호는 앞 6자리(생년월일)만 저장하고, 뒷자리는 저장하지 않음.
-var BIZ_LIST = [['경로당지킴이'], ['노인체육시설'], ['시니어 안전 모니터링'], ['시니어 맥가이버']];   // (v387) 시니어 맥가이버 추가
+var BIZ_LIST = [['경로당지킴이'], ['노인체육시설'], ['시니어 맥가이버'], ['보육시설도우미'], ['공공복지시설']];   // (v410) 시니어 안전 모니터링 빼고 보육시설도우미·공공복지시설 추가
 var bizPick = null;               // 지금 올리려는 사업 이름 (없으면 null)
 var bizSnap = (() => { try { return JSON.parse(load('jinan_biz')) || {}; } catch(e) { return {}; } })();
 var notices = (() => { try { return JSON.parse(load('jinan_notice')) || []; } catch(e) { return []; } })();
@@ -6553,9 +6553,58 @@ function saveBizCheck(pick, bz){
   bz.notes.forEach(addNotice);
 }
 
+// (v410) 보육시설도우미·공공복지시설 명단: 사업 명단(jinan_biz)으로만 저장 (참여자 정보는 안 건드림)
+const BIZ_SHEET_ONLY = ['보육시설도우미', '공공복지시설'];
+function bizSheetImport(input, pick){
+  const file = input.files && input.files[0]; input.value = '';
+  if (!file) return;
+  if (typeof XLSX === 'undefined') return notify('엑셀을 읽는 기능을 불러오지 못했습니다.\n인터넷 연결을 확인한 뒤 다시 시도해 주세요.');
+  const reader = new FileReader();
+  reader.onerror = () => notify('파일을 열 수 없습니다. 다시 시도해 주세요.');
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      const sn = wb.SheetNames.find(x => x.replace(/\s/g, '').includes(pick));
+      if (!sn) return notify(`엑셀에서 "${pick}" 시트를 찾지 못했어요.\n파일을 확인해 주세요.`);
+      const g = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:'', raw:false});
+      const rows = [];
+      if (pick === '보육시설도우미') {
+        const h = g.findIndex(r => r.some(c => String(c).replace(/\s/g, '') === '성명'));
+        if (h < 0) return notify('"성명" 칸을 찾지 못했어요.');
+        const hd = g[h].map(c => String(c).replace(/\s/g, ''));
+        const at = k => hd.findIndex(x => x.includes(k));
+        const cN = at('성명'), cR = at('주민등록번호'), cT = at('읍면동'), cA = at('주소'), cP = at('연락처');
+        g.slice(h + 1).forEach(r => {
+          const name = String(r[cN] || '').trim(); if (!name) return;
+          rows.push({ name, ph: String(r[cP] || '').replace(/[^0-9]/g, ''), b6: String(r[cR] || '').replace(/[^0-9]/g, '').slice(0, 6), addr: String(r[cA] || '').replace(/\s+/g, ' ').trim(), town: normTown(r[cT]) || '', senior: '', biz: pick });
+        });
+      } else {
+        // 공공복지시설: 번호·시설명 줄 아래로 신청자 이름이 가로 여러 칸, 다음 줄에 이어짐
+        let fac = '';
+        g.forEach(r => {
+          const no = String(r[0] || '').trim(), fn = String(r[1] || '').trim();
+          if (no === '합계') { fac = ''; return; }
+          if (no !== '' && !isNaN(no) && fn) fac = fn;
+          if (!fac) return;
+          for (let k = 3; k < r.length; k++) {
+            const nm = String(r[k] || '').trim();
+            if (nm && /[가-힣]/.test(nm)) rows.push({ name: nm, ph: '', b6: '', addr: fac, town: '', senior: '', biz: pick });
+          }
+        });
+      }
+      if (!rows.length) return notify('명단을 찾지 못했어요.\n파일 양식을 확인해 주세요.');
+      const bz = bizCheck(pick, rows, a => a.slice(0, 10).join('\n'));
+      saveBizCheck(pick, bz);
+      logEvent('사업 명단', null, `${pick} 명단 ${rows.length}명 올림`);
+      notify(bz.msg.trim() + '\n\n사업 명단을 저장했어요.');
+    } catch (err) { notify('엑셀을 읽지 못했어요.\n파일을 확인해 주세요.'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
 function bulkImport(input){
   const file = input.files && input.files[0];
   if (!file) { bizPick = null; return; }
+  if (BIZ_SHEET_ONLY.includes(bizPick)) { const pk = bizPick; bizPick = null; return bizSheetImport(input, pk); }
   if (typeof XLSX === 'undefined') { input.value=''; bizPick = null; return notify('엑셀을 읽는 기능을 불러오지 못했습니다.\n인터넷 연결을 확인한 뒤 앱을 새로고침하고 다시 시도해 주세요.'); }
   const reader = new FileReader();
   reader.onerror = () => notify('파일을 열 수 없습니다. 다시 시도해 주세요.');
