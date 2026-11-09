@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-403</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-404</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -616,11 +616,6 @@ body.ord-hide .ord-btn { display: none !important; }
       <details class="chg-box set-grp" data-sg="mytowns" style="margin:8px 0;"><summary><b>⭐ 내 담당 읍·면</b><span class="chg-arrow"></span></summary><div style="margin-top:6px;">
         <div class="muted" id="mt-now" style="margin-bottom:6px;"></div>
         <button type="button" class="secondary full" onclick="openMyTowns()">⭐ 내 담당 읍·면 정하기</button>
-        <div style="font-weight:bold;margin:12px 0 4px;">👥 경로당 회원 수</div>
-        <div class="muted" style="font-size:.85rem;margin-bottom:6px;">현황판에 나오는 회원 수와 배정을 넣습니다.</div>
-        <button type="button" class="secondary full" onclick="document.getElementById('mem-file').click()">📂 엑셀 파일로 넣기</button>
-        <input type="file" id="mem-file" accept=".xlsx,.xls" class="sr-only" onchange="memFileImport(this)">
-        <button type="button" class="secondary full" style="margin-top:6px;" onclick="openMemEdit()">✏️ 경로당별로 고치기</button>
       </div></details>
       <details class="chg-box set-grp" data-sg="font" style="margin:8px 0;"><summary><b>🔤 글씨·화면 색깔</b><span class="chg-arrow"></span></summary><div style="margin-top:6px;">
         <label>화면 색깔</label>
@@ -2940,38 +2935,6 @@ function memFileImport(input){
   };
   reader.readAsArrayBuffer(file);
 }
-// (v402) 경로당별로 고치기: 회원 수와 배정을 한 줄씩 고침 (빈칸 = 회원 수 모름)
-function quotaVal(s0){ const q = siteQuota()[s0]; if (q !== undefined && q !== '') return q; return SITE_SEED[s0] ? SITE_SEED[s0][1] : ''; }
-function openMemEdit(){
-  const set = new Set([...Object.keys(SITE_SEED), ...participants.filter(p => counted(p)).map(p => seniorOf(p))]);
-  set.delete(NO_SENIOR); set.delete('');
-  const list = [...set].sort((a, b) => seniorRank(a) - seniorRank(b) || a.localeCompare(b, 'ko'));
-  if (!list.length) return notify('고칠 경로당이 없어요.');
-  const back = document.createElement('div'); back.className = 'dlg-back'; back.id = 'mem-edit-dlg';
-  back.innerHTML = `<div class="dlg" style="max-height:90vh;overflow:auto;">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">👥 경로당 회원 수 고치기</div>
-    <div class="muted" style="font-size:.85rem;margin-bottom:8px;">빈칸은 회원 수를 모른다는 뜻이에요.</div>
-    <div style="display:grid;grid-template-columns:1fr 64px 64px;gap:4px 6px;align-items:center;font-size:.9rem;">
-      <b>경로당</b><b style="text-align:center;">회원</b><b style="text-align:center;">배정</b>
-      ${list.map((s0, i) => { const m = memberOf(s0); return `<span>${esc(s0)}</span><input type="number" inputmode="numeric" min="0" data-mi="${i}" value="${m !== null ? m : ''}" style="width:100%;text-align:center;color:#000;font-size:1rem;"><input type="number" inputmode="numeric" min="0" data-qi="${i}" value="${esc(String(quotaVal(s0)))}" style="width:100%;text-align:center;">`; }).join('')}
-    </div>
-    <div class="grid-2" style="margin-top:12px;"><button class="secondary" id="me-no">취소</button><button id="me-ok">저장</button></div></div>`;
-  document.body.appendChild(back);
-  back.querySelector('#me-no').onclick = () => back.remove();
-  back.querySelector('#me-ok').onclick = () => {
-    const m = siteMem(), q = siteQuota(); let changed = 0;
-    list.forEach((s0, i) => {
-      const mv = back.querySelector(`[data-mi="${i}"]`).value.trim(), qv = back.querySelector(`[data-qi="${i}"]`).value.trim();
-      const oldM = memberOf(s0), oldQ = quotaVal(s0);
-      m[s0] = mv === '' ? '' : Math.max(0, Math.round(Number(mv) || 0));
-      if (qv === '') delete q[s0]; else q[s0] = Math.max(0, Math.round(Number(qv) || 0));
-      if (String(oldM ?? '') !== String(mv) || String(oldQ) !== String(qv)) changed++;
-    });
-    store('jinan_sitemem', JSON.stringify(m)); store('jinan_siteq', JSON.stringify(q));
-    if (changed) logEvent('회원 수', null, `경로당 회원·배정 ${changed}곳 고침`);
-    back.remove(); renderSiteBoard();
-  };
-}
 // (v396) 현황판 줄 순서·번호: 개별관리 0번(맨 위), 일반 경로당 1번부터, 노인체육시설(게이트볼 등)은 맨 밑에서 따로 1번부터
 const boardOrder = keys => { let n = 0, g = 0; const rank = { ind: 0, gen: 1, sport: 2 };
   return keys.map(s0 => ({ s0, kind: s0 === '개별관리' ? 'ind' : isSportSite(s0) ? 'sport' : 'gen' }))
@@ -3022,9 +2985,9 @@ function renderSiteBoard(){
     const out = hosp.length ? `<div style="color:#975a16;font-size:.8rem;">입원 ${hosp.length}명 제외(${hosp.map(p => dName(p)).join(', ')})</div>` : '';
     return `<tr style="${kind === 'sport' ? 'background:#f0fff4;' : kind === 'ind' ? 'background:#fffbea;' : ''}">
       <td style="${TD}width:16px;padding:4px 0;font-weight:bold;">${num}</td>
-      <td style="${TD}font-weight:bold;text-align:left;min-width:66px;font-size:1.15rem;">${esc(boardName(s0))}<div style="font-size:1rem;font-weight:normal;color:#000;margin-top:2px;">회원 ${mem !== null ? mem : '-'}</div></td>
+      <td style="${TD}font-weight:bold;text-align:left;min-width:66px;font-size:1.05rem;">${esc(boardName(s0))}<div style="font-size:1rem;font-weight:normal;color:#000;margin-top:2px;">회원 ${mem !== null ? mem : '-'}</div></td>
       <td style="${TD}"><input type="number" inputmode="numeric" min="0" class="sb-q" data-site="${esc(s0)}" value="${esc(String(quota))}" placeholder="${cur}" style="width:38px !important;min-width:0;max-width:38px;box-sizing:border-box;padding:2px 2px;text-align:center;margin:0;font-size:.85rem;"></td>
-      <td style="${TD}">${curTxt}</td>
+      <td style="${TD}font-size:1.15rem;font-weight:bold;">${curTxt}</td>
       <td style="${TD}text-align:left;">${who}${out}</td></tr>`;
   }).join('') : `<tr><td colspan="5" style="${TD}color:#718096;">활동 중인 어르신이 없어요</td></tr>`;
   const table = `<div style="border:1px solid #9ac18a;border-radius:10px;overflow:hidden;margin-top:6px;">
@@ -6295,6 +6258,7 @@ function openBulkGuide(){
     <button type="button" class="full" id="bk-lead" style="margin:0 0 6px;background:#2b6cb0;color:#fff;">👤 팀장 명단 올리기</button>
     <button type="button" class="full" id="bk-staff" style="margin:0 0 6px;background:#2b6cb0;color:#fff;">👔 회장·사무장 올리기</button>
     <button type="button" class="full" id="bk-edu" style="margin:0 0 6px;background:#2b6cb0;color:#fff;">📂 교육 이수 엑셀 올리기</button>
+    <button type="button" class="full" id="bk-mem" style="margin:0 0 6px;background:#2b6cb0;color:#fff;">📂 파일로 엑셀 파일로 넣기 <span style="font-size:.85rem;font-weight:normal;">(경로당 회원 수)</span></button>
     <label style="margin-top:18px;font-weight:bold;">양식 내려받기</label>
     <button type="button" class="full" id="bk-tpl" style="background:#718096;color:#fff;">⬇️ <b>양식 내려받기</b><br><span style="font-size:.85rem;">엑셀 파일이 없으면 이 양식을 받아서 작성해 올려 주세요</span></button>
     <button type="button" class="full" id="bk-ltpl" style="margin:0 0 6px;background:#718096;color:#fff;">⬇️ 팀장 양식 받기</button>
@@ -6302,6 +6266,7 @@ function openBulkGuide(){
     <button type="button" class="secondary full" id="bk-close" style="margin-top:10px;">닫기</button></div>`;
   document.body.appendChild(bg);
   bg.querySelector('#bk-edu').onclick = () => eduImportPick(() => bg.remove());
+  bg.querySelector('#bk-mem').onclick = () => { const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.xlsx,.xls'; fi.className = 'hidden'; document.body.appendChild(fi); fi.onchange = () => { memFileImport(fi); fi.remove(); }; bg.remove(); fi.click(); };
   bg.querySelector('#bk-stpl').onclick = () => staffTemplate();
   bg.querySelector('#bk-staff').onclick = () => { const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.xlsx,.xls,.csv'; fi.className = 'hidden'; document.body.appendChild(fi); fi.onchange = () => { staffImport(fi, () => fi.remove()); }; fi.click(); };
   bg.querySelector('#bk-ltpl').onclick = () => downloadLeaderTpl();
