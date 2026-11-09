@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-435</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-436</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -9053,7 +9053,9 @@ function restoreFrom(b){
     Object.entries(b.data).forEach(([k, v]) => localStorage.setItem(k, v)); } catch(e) { return notify('복원하지 못했어요. 저장 공간을 확인해 주세요.'); }
   let phDone = Promise.resolve(); if (ph) { try { phDone = photoReplaceAll(JSON.parse(ph)).catch(() => {}); } catch(e) {} }
   try { const h = JSON.parse(localStorage.getItem('jinan_history') || '[]'); h.push({ at: nowHM(), date: today(), type: '백업 복원', town:'', senior:'', name:'', detail: `${b.at} 백업 (어르신 ${b.count}명)` }); localStorage.setItem('jinan_history', JSON.stringify(h)); } catch(e) {}
-  notify(`복원했어요. (${b.at} 백업, 어르신 ${b.count}명)\n앱을 다시 불러옵니다.`).then(() => phDone).then(() => location.reload());
+  // 구글(클라우드)에도 같은 자료로 맞춰 둠. 안 그러면 다시 열 때 예전 구글 자료가 이 휴대폰을 덮어씀
+  const pushAll = async () => { if (!fbUser) return; try { Object.entries(b.data).forEach(([k, v]) => cloudPut(k, v)); await new Promise(r => setTimeout(r, 1500)); } catch(e) {} };
+  notify(`복원했어요. (${b.at} 백업, 어르신 ${b.count}명)\n앱을 다시 불러옵니다.`).then(() => pushAll()).then(() => phDone).then(() => location.reload());
 }
 async function saveBackup(quiet){
   const a = document.createElement('a'); a.href = URL.createObjectURL(bkFile()); a.download = bkName(); a.click();
