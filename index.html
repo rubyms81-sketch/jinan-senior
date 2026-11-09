@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-376</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-377</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2904,7 +2904,8 @@ function renderSiteBoard(){
     const gap = cur - quota;
     const gapTxt = gap < 0 ? `<b style="color:#c53030;">${gap}명</b>` : gap > 0 ? `<b style="color:#2b6cb0;">+${gap}명</b>` : '0';
     const who = now.length ? now.map(p => esc(p.name)).join(', ') : '없음';
-    const out = ps.length > now.length ? `<div style="color:#975a16;font-size:.8rem;">입원 ${ps.length - now.length}명 제외</div>` : '';
+    const hosp = ps.filter(p => inHospNow(p));
+    const out = hosp.length ? `<div style="color:#975a16;font-size:.8rem;">입원 ${hosp.length}명 제외(${hosp.map(p => esc(p.name)).join(', ')})</div>` : '';   // (v377) 입원 분 이름도 표시
     return `<tr>
       <td style="${TD}font-weight:bold;">${esc(s0)}</td>
       <td style="${TD}"><input type="number" inputmode="numeric" min="0" class="sb-q" data-site="${esc(s0)}" value="${q[s0] !== undefined ? esc(String(q[s0])) : ''}" placeholder="${cur}" style="width:38px !important;min-width:0;max-width:38px;box-sizing:border-box;padding:2px 2px;text-align:center;margin:0;font-size:.85rem;"></td>
