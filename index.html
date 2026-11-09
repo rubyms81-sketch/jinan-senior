@@ -248,6 +248,10 @@
   .ord-box { background:#f7fafc; border:1px solid #e2e8f0; border-radius:10px; padding:8px 10px; margin:6px 0 8px; }
   .ord-row { display:flex; align-items:center; gap:6px; padding:4px 0; border-bottom:1px dashed #e2e8f0; }
   .ord-n { width:24px; text-align:center; font-weight:bold; }
+  .site-nav2 { display:flex; gap:6px; margin:0 0 6px; }
+  .site-nav2 button { flex:1; min-width:0; margin:0; font-size:.9rem; }
+  #arrive-bar { position:fixed; top:0; left:0; right:0; z-index:9999; background:#276749; color:#fff; padding:10px 12px; font-weight:bold; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+  #arrive-bar button { margin:6px 6px 0 0; width:auto; }
   .zs-site summary { padding:9px 10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:6px; list-style:none; }
   .zs-site summary::-webkit-details-marker { display:none; }
   .zs-site .zs-people { padding:0 10px 8px; }
@@ -429,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-349</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-350</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3118,7 +3122,7 @@ function openZone(id){
         + `<div style="font-size:1rem;font-weight:bold;margin:4px 0 0;color:#1a365d;">${zoneTownText(z)}</div>`; }
     const sorted = zoneSitesOrdered(z);
     { const ol = sorted.map(x => siteKey(x.town, x.senior));
-      $('#zn-order').innerHTML = sorted.length > 1 ? `<div class="ord-box"><b>🧭 방문 순서</b> <span class="muted" style="font-size:.85rem;">위에서 아래로 차례대로 갑니다</span>${sorted.map((x, i) => `<div class="ord-row"><span class="ord-n">${i+1}</span><span style="flex:1;min-width:0;">${esc(x.town)} <b>${esc(x.senior)}</b></span><button type="button" class="small secondary" data-zkey="${esc(ol[i])}" data-zdir="-1" style="width:auto;margin:0;padding:4px 10px;" ${i===0?'disabled':''}>▲</button><button type="button" class="small secondary" data-zkey="${esc(ol[i])}" data-zdir="1" style="width:auto;margin:0;padding:4px 10px;" ${i===sorted.length-1?'disabled':''}>▼</button></div>`).join('')}</div>` : ''; }
+      $('#zn-order').innerHTML = sorted.length > 1 ? `<div class="ord-box"><b>🧭 방문 순서</b> <span class="muted" style="font-size:.85rem;">위에서 아래로 차례대로 갑니다</span><div style="display:flex;gap:6px;margin:6px 0;"><button type="button" class="small" id="zn-nearest" style="margin:0;">📍 가까운 순서로 정하기</button><button type="button" class="small" id="zn-nav1" style="margin:0;background:#03c75a;">🧭 1번 길안내</button></div>${sorted.map((x, i) => `<div class="ord-row"><span class="ord-n">${i+1}</span><span style="flex:1;min-width:0;">${esc(x.town)} <b>${esc(x.senior)}</b></span><button type="button" class="small secondary" data-zkey="${esc(ol[i])}" data-zdir="-1" style="width:auto;margin:0;padding:4px 10px;" ${i===0?'disabled':''}>▲</button><button type="button" class="small secondary" data-zkey="${esc(ol[i])}" data-zdir="1" style="width:auto;margin:0;padding:4px 10px;" ${i===sorted.length-1?'disabled':''}>▼</button></div>`).join('')}</div>` : ''; }
     $('#zn-sites').innerHTML = sorted.length ? sorted.map(x => {
       const ms = siteMembers(x.town, x.senior);
       return `<details class="zs-site"><summary><span><span class="muted">${esc(x.town)}</span> <b>${crown(x.town, x.senior)}${esc(x.senior)}</b></span><span class="muted">${ms.filter(p => !stats(p).dropped).length}명 ▾</span></summary>
@@ -3142,6 +3146,8 @@ function openZone(id){
     // 구역에서 점검하러 들어가면, 점검 화면의 "← 구역으로"로 이 구역 창에 돌아옴
     const backZone = () => { modalBack = { label: `${z.name} 구역으로`, fn: () => openZone(z.id) }; document.getElementById('m-crumb').textContent = `← ${z.name} 구역으로`; };
     bg.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { bg.remove(); navZoneId = z.id; openModal(Number(b.dataset.open)); backZone(); });
+    const zn = bg.querySelector('#zn-nearest'); if (zn) zn.onclick = async () => { await sortNearest(z); drawMain(); };
+    const zn1 = bg.querySelector('#zn-nav1'); if (zn1) zn1.onclick = () => { const f = zoneSitesOrdered(z)[0]; if (f) openNaverNav(f.town, f.senior); };
     bg.querySelectorAll('[data-zkey]').forEach(b => b.onclick = () => {
       const keep = [...bg.querySelectorAll('#zn-sites details[open] [data-gosite]')].map(x => x.dataset.gosite);
       moveZoneSite(z.id, b.dataset.zkey, Number(b.dataset.zdir)); drawMain();
@@ -4694,6 +4700,75 @@ function onSenior(){
   }, 60);
 }
 // 고른 경로당의 점검 화면 열기: 오늘 아직 점검 안 한 분부터
+let coords = (() => { try { return JSON.parse(load('jinan_coords')) || {}; } catch(e) { return {}; } })();
+const saveCoords = () => store('jinan_coords', JSON.stringify(coords));
+let navTarget = null, watchId = null;
+const distM = (a, b) => { const R = 6371000, t = x => x * Math.PI / 180; const dA = t(b.lat - a.lat), dG = t(b.lng - a.lng);
+  const h = Math.sin(dA / 2) ** 2 + Math.cos(t(a.lat)) * Math.cos(t(b.lat)) * Math.sin(dG / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+const getHere = () => new Promise((res, rej) => { if (!navigator.geolocation) return rej(new Error('nogeo'));
+  navigator.geolocation.getCurrentPosition(q => res({ lat: q.coords.latitude, lng: q.coords.longitude }), rej, { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }); });
+const lastSiteKey = () => load('jinan_lastsite') || '';
+const setLastSite = k => store('jinan_lastsite', k);
+const zoneOfKey = key => zones.find(z => z.sites.some(x => siteKey(x.town, x.senior) === key));
+function stopWatch(){ if (watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(watchId); watchId = null; }
+function startWatch(){
+  if (watchId != null || !navigator.geolocation) return;
+  watchId = navigator.geolocation.watchPosition(q => {
+    if (!navTarget || !coords[navTarget]) return;
+    if (distM({ lat: q.coords.latitude, lng: q.coords.longitude }, coords[navTarget]) <= 150) arrivedBanner(navTarget);
+  }, () => {}, { enableHighAccuracy: true, maximumAge: 15000 });
+}
+function arrivedBanner(key){
+  if (document.getElementById('arrive-bar')) return;
+  const bar = document.createElement('div'); bar.id = 'arrive-bar';
+  bar.innerHTML = `📍 ${esc(key.split('|')[1])} 경로당에 도착했어요 <div><button type="button" class="small" id="ab-go" style="background:#fff;color:#276749;">점검 시작</button><button type="button" class="small secondary" id="ab-no">아직</button></div>`;
+  document.body.appendChild(bar);
+  bar.querySelector('#ab-no').onclick = () => bar.remove();
+  bar.querySelector('#ab-go').onclick = async () => { bar.remove(); const ok = await arriveNow(key, true); if (ok) openSiteByKey(key); };
+  try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch(e) {}
+}
+// 도착 확인: 좌표가 없으면 지금 위치를 이 경로당 위치로 저장, 있으면 거리 확인
+async function arriveNow(key, quiet){
+  let here; try { here = await getHere(); } catch(e) { notify('위치를 가져오지 못했어요. 휴대폰 위치 권한을 허용해 주세요.'); return false; }
+  const c = coords[key];
+  if (!c) { coords[key] = { lat: here.lat, lng: here.lng, date: today() }; saveCoords();
+    logEvent('경로당 좌표', null, `${key.replace('|', ' ')} 위치 저장 (도착 확인)`, today()); }
+  else { const d = Math.round(distM(here, c)); if (d > 200 && !(await ask(`아직 ${d}m 떨어져 있어요.\n그래도 도착으로 확인할까요?`))) return false; }
+  setLastSite(key); if (navTarget === key) { navTarget = null; stopWatch(); }
+  if (!quiet) notify('📍 도착 확인했어요.');
+  return true;
+}
+// 네이버 지도로 길안내 (좌표가 있으면 경로, 없으면 주소 검색)
+async function openNaverNav(town, senior){
+  const key = siteKey(town, senior), m = mapOf(town, senior), c = coords[key];
+  if (!m && !c) return quickSiteAddr(town, senior, () => openNaverNav(town, senior));
+  const zz = zoneOfKey(key); if (zz) navZoneId = zz.id;
+  navTarget = key; startWatch();
+  if (c) location.href = `nmap://route/car?dlat=${c.lat}&dlng=${c.lng}&dname=${encodeURIComponent(senior)}&appname=jinan-senior`;
+  else if (m.url) window.open(m.url, '_blank');
+  else location.href = `nmap://search?query=${encodeURIComponent(m.addr || senior)}&appname=jinan-senior`;
+}
+function openSiteByKey(key){
+  const [town, senior] = key.split('|');
+  const ms = siteMembers(town, senior), live = ms.filter(p => !stats(p).dropped);
+  const first = live.find(p => !p.logs.some(l => l.date === today())) || live[0] || ms[0];
+  if (!first) return notify('이 경로당에 어르신이 없어요.');
+  const zz = zoneOfKey(key); if (zz) navZoneId = zz.id;
+  lastTown = town; curSenior = senior; openModal(first.id);
+}
+// 가까운 순서로 정하기: 출발점(지금 위치 또는 마지막으로 도착한 경로당)에서 가장 가까운 곳부터
+async function sortNearest(z){
+  let start = null; try { start = await getHere(); } catch(e) {}
+  if (!start && coords[lastSiteKey()]) start = coords[lastSiteKey()];
+  const items = zoneSitesOrdered(z).map(x => siteKey(x.town, x.senior));
+  const withC = items.filter(k => coords[k]), noC = items.filter(k => !coords[k]);
+  const out = []; let pool = [...withC], cur = start;
+  if (!cur && pool.length) { cur = coords[pool[0]]; out.push(pool.shift()); }
+  while (pool.length) { let bi = 0, bd = Infinity; pool.forEach((k, i) => { const d = distM(cur, coords[k]); if (d < bd) { bd = d; bi = i; } });
+    const k = pool.splice(bi, 1)[0]; out.push(k); cur = coords[k]; }
+  z.order = [...out, ...noC]; saveZones();
+  logEvent('방문 순서', null, `${z.name}: 가까운 순서로 정함${start ? '' : ' (위치를 못 가져와 기존 순서 기준)'}`);
+}
 let navZoneId = null;   // 구역 창에서 점검 화면으로 들어왔을 때 그 구역 (방문 순서 네비용)
 const zoneSitesOrdered = z => {
   const ord = z.order || [];
@@ -4717,8 +4792,11 @@ function renderSiteNav(){
   const i = list.findIndex(x => x.town === cur.town && x.senior === cur.senior);
   const prev = i > 0 ? list[i-1] : null, next = i >= 0 && i < list.length - 1 ? list[i+1] : null;
   const nm = x => `${esc(x.town.replace(/[면읍]$/, ''))} ${esc(x.senior)}`;
-  box.innerHTML = `<div class="site-nav"><button type="button" class="small secondary" data-snav="prev" ${prev ? '' : 'disabled'}>◀ ${prev ? nm(prev) : '처음'}</button><span class="sn-pos">${i >= 0 ? `${i+1}/${list.length}` : ''}</span><button type="button" class="small secondary" data-snav="next" ${next ? '' : 'disabled'}>${next ? nm(next) : '끝'} ▶</button></div>`;
+  const curKey = siteKey(cur.town, cur.senior);
+  box.innerHTML = `<div class="site-nav2">${next ? `<button type="button" class="small" data-snav-go="1" style="background:#03c75a;">🧭 다음 경로당 길안내</button>` : ''}<button type="button" class="small secondary" data-arrive="1">📍 여기 도착 확인</button></div><div class="site-nav"><button type="button" class="small secondary" data-snav="prev" ${prev ? '' : 'disabled'}>◀ ${prev ? nm(prev) : '처음'}</button><span class="sn-pos">${i >= 0 ? `${i+1}/${list.length}` : ''}</span><button type="button" class="small secondary" data-snav="next" ${next ? '' : 'disabled'}>${next ? nm(next) : '끝'} ▶</button></div>`;
   box.querySelectorAll('[data-snav]').forEach(b => b.onclick = () => { const t = b.dataset.snav === 'prev' ? prev : next; if (t) goSiteFromNav(z, t); });
+  const gb = box.querySelector('[data-snav-go]'); if (gb && next) gb.onclick = () => openNaverNav(next.town, next.senior);
+  box.querySelector('[data-arrive]').onclick = async () => { if (await arriveNow(curKey)) renderSiteNav(); };
 }
 function goSiteFromNav(z, x){
   const ms = siteMembers(x.town, x.senior), live = ms.filter(p => !stats(p).dropped);
