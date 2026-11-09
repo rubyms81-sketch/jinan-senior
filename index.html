@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-436</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-437</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -944,8 +944,9 @@ async function cloudSync(){
     const linkedKey = 'hyunjang_linked_' + fbUser.uid;
     const hasLocal = !!local.jinan_participants && local.jinan_participants !== '[]';
     const hasCloud = !!cloud.jinan_participants && cloud.jinan_participants !== '[]';
-    if (hasLocal && hasCloud && !localStorage.getItem(linkedKey)) {
-      const toCloud = !confirm('이 휴대폰에도 자료가 있고, 구글(클라우드)에도 자료가 있습니다.\n\n[확인] 구글 자료를 이 휴대폰에 받기\n[취소] 이 휴대폰 자료를 구글에 올리기 (구글 자료는 바뀜)');
+    // (v437) 두 자료가 다르면 매번 묻기 (예전엔 처음 한 번만 묻고, 그 뒤엔 말없이 구글 자료로 덮어썼음)
+    if (hasLocal && hasCloud) {
+      const toCloud = !confirm('이 휴대폰 자료와 구글 자료가 서로 달라요.\n\n[확인] 구글 자료를 이 휴대폰에 받기 (이 휴대폰 최근 고친 내용은 밀릴 수 있음)\n[취소] 이 휴대폰 자료를 구글에 올리기 (구글 자료는 바뀜)');
       try { rawSet.call(localStorage, linkedKey, '1'); } catch(e) {}
       if (toCloud) {
         lKeys.forEach(k => cloudPut(k, local[k]));
