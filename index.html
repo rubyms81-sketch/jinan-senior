@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-438</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-439</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -5495,6 +5495,9 @@ function wxPop(manual){
 function dayWorkPop(manual){
   const d = today(), all = chgOn(d).map(x => x.p).filter((p, i, a) => a.indexOf(p) === i);
   const list = all.filter(p => !daySent(p, d));   // 안내 문자 보낸 분은 뺌
+  // (v439) 같은 팀장끼리 묶음 (팀장 이름 가나다순, 팀장 없는 분은 맨 뒤)
+  const lk = p => leaderOf(p)?.name || '팀장 없음';
+  list.sort((a, b) => (lk(a) === '팀장 없음') - (lk(b) === '팀장 없음') || lk(a).localeCompare(lk(b), 'ko') || dName(a).localeCompare(dName(b), 'ko'));
   if (!list.length) { if (manual) notify(all.length ? '오늘 근무 안내 문자는 모두 보냈어요.' : '오늘 바뀐 날짜로 근무하는 어르신이 없어요.'); return; }
   if (!manual) { let seen = ''; try { seen = load('jinan_daypop') || ''; } catch(e) {} if (seen === d) return; }
   try { store('jinan_daypop', d); } catch(e) {}
@@ -5502,7 +5505,7 @@ function dayWorkPop(manual){
   back.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">📩 오늘은 바뀐 날짜 근무 · ${list.length}명</div>
     <div style="font-size:.85rem;margin-bottom:6px;">골라서 보내 주세요. 한 명씩 차례로 문자 창이 열립니다. 글을 고치면 다음에도 이 글로 보냅니다.</div>
-    ${list.map((p, i) => `<label style="display:flex;align-items:flex-start;gap:8px;font-weight:normal;margin:6px 0;padding:8px;border-radius:8px;background:#f0f7ff;">
+    ${list.map((p, i) => `${(i === 0 || lk(list[i - 1]) !== lk(p)) ? `<div style="font-weight:bold;color:#2b6cb0;margin:10px 0 0;">👤 ${esc(lk(p))}</div>` : ''}<label style="display:flex;align-items:flex-start;gap:8px;font-weight:normal;margin:6px 0;padding:8px;border-radius:8px;background:#f0f7ff;">
       <input type="checkbox" data-i="${i}" checked style="width:22px;height:22px;margin:2px 0 0;flex:none;">
       <span><b>${nmH(p)}</b> <span class="muted" style="font-size:.85rem;">📍 ${esc(p.town)} ${esc(seniorOf(p))}</span><br>${p.phone ? `<span class="muted" style="font-size:.85rem;">📞 ${esc(p.phone)}</span>` : '<span class="muted" style="font-size:.85rem;">연락처 없음</span>'}</span></label>`).join('')}
     <div style="font-size:.85rem;margin-top:6px;">보낼 글 미리 보기 (맨 위 체크한 분 기준)</div>
