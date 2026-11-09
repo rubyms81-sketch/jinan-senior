@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-433</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-434</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3198,7 +3198,7 @@ function openZone(id){
       <details id="zn-sites-box" data-zk="sites" class="chg-box" open style="margin-top:0;border-top:none;padding-top:0;">
         <summary><span id="zn-sites-title" style="font-weight:bold;">담당 경로당</span><span class="chg-arrow"></span></summary>
         <div id="zn-order"></div>
-        <div style="display:flex;gap:6px;align-items:center;margin:8px 0;"><input type="text" id="zn-site-name" placeholder="경로당·시설 이름 적기" autocomplete="off" style="flex:1 1 auto;min-width:0;margin:0;padding:8px;font-size:1rem;"><button type="button" class="small" id="zn-site-add" style="margin:0;width:auto;background:#38a169;">＋</button></div>
+        <div style="display:flex;gap:6px;align-items:center;margin:8px 0;"><input type="text" id="zn-site-name" placeholder="경로당·시설 이름 적기" autocomplete="off" style="flex:1 1 auto;min-width:0;margin:0;padding:8px;font-size:1rem;"><button type="button" class="small" id="zn-site-add" style="margin:0;width:auto;background:#38a169;">＋</button><button type="button" class="small" id="zn-site-del" style="margin:0;width:auto;background:#e53e3e;">−</button></div>
         <div id="zn-sites"></div>
       </details>
       <div data-zk-end="1"></div>
@@ -3269,29 +3269,20 @@ function openZone(id){
     z.sites.push({ town, senior: v }); $('#zn-site-name').value = '';
     logEvent('구역 경로당', null, `${z.name}: ${town} ${v} 넣음 (이름 넣기)`); saveZones(); renderZones(); drawMain();
   };
-  // 담당 경로당 줄을 꾹 누르면 "삭제할까요?" (− 단추 대신)
-  // 손가락이 조금 흔들려도 되도록 10px 넘게 움직였을 때만 취소, 꾹 누르기 뒤 생기는 클릭·길게 누르기 메뉴는 막음
-  {
-    let timer = null, sx = 0, sy = 0, held = false, sup = false;
-    const cancel = () => { clearTimeout(timer); timer = null; };
-    const box = $('#zn-sites');
-    box.addEventListener('pointerdown', e => {
-      const sm = e.target.closest('details.zs-site > summary'); if (!sm) return;
-      const key = sm.parentElement.querySelector('[data-gosite]')?.dataset.gosite; if (!key) return;
-      sx = e.clientX; sy = e.clientY; held = false; cancel();
-      timer = setTimeout(async () => {
-        timer = null; held = true; sup = true; const [town, senior] = key.split('|');
-        if (!await ask(`"${senior}" 경로당을 이 구역에서 뺄까요?`)) return;
-        z.sites = z.sites.filter(x => !(x.town === town && x.senior === senior));
-        logEvent('구역 경로당 빼기', null, `${z.name}: ${town} ${senior} 뺌 (꾹 누르기)`); saveZones(); renderZones(); drawMain();
-      }, 600);
-    });
-    box.addEventListener('pointermove', e => { if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel(); });
-    box.addEventListener('pointerup', () => { cancel(); if (held) setTimeout(() => { held = false; sup = false; }, 300); });
-    ['pointerleave', 'pointercancel'].forEach(ev => box.addEventListener(ev, cancel));
-    box.addEventListener('click', e => { if (sup) { e.preventDefault(); e.stopPropagation(); } }, true);
-    box.addEventListener('contextmenu', e => { if (e.target.closest('details.zs-site > summary')) e.preventDefault(); });
-  }
+  // 담당 경로당: 줄 앞 체크로 고른 뒤 − 단추로 뺌
+  const zSel = new Set();
+  const selBox = $('#zn-sites');
+  selBox.addEventListener('change', e => { const c = e.target.closest('.zs-pick'); if (!c) return;
+    c.checked ? zSel.add(c.dataset.pick) : zSel.delete(c.dataset.pick); });
+  selBox.addEventListener('click', e => { if (e.target.closest('.zs-pick')) e.stopPropagation(); }, true);
+  $('#zn-site-del').onclick = async () => {
+    if (!zSel.size) return notify('먼저 빼실 경로당을 체크하세요.');
+    if (!await ask(`체크한 ${zSel.size}곳을 이 구역에서 뺄까요?`)) return;
+    const gone = [...zSel].map(k => k.split('|'));
+    z.sites = z.sites.filter(x => !gone.some(([t, s2]) => x.town === t && x.senior === s2));
+    logEvent('구역 경로당 빼기', null, `${z.name}: ${gone.map(([t, s2]) => t + ' ' + s2).join(', ')} 뺌`);
+    zSel.clear(); saveZones(); renderZones(); drawMain();
+  };
   nvRange = 'month';
   const drawMain = () => {
     const total = z.sites.reduce((k, x) => k + siteMembers(x.town, x.senior).filter(counted).length, 0);
@@ -3302,7 +3293,7 @@ function openZone(id){
     $('#zn-order').innerHTML = '';
     $('#zn-sites').innerHTML = sorted.length ? sorted.map((x, si) => {
       const ms = siteMembers(x.town, x.senior);
-      return `<details class="zs-site"><summary><span><b style="color:#1a365d;">${si + 1}</b> <span class="muted">${esc(x.town)}</span> <b>${crown(x.town, x.senior)}${esc(x.senior)}</b></span><span class="muted">${ms.filter(p => !stats(p).dropped).length}명 ▾</span></summary>
+      return `<details class="zs-site"><summary><input type="checkbox" class="zs-pick" data-pick="${esc(siteKey(x.town, x.senior))}" ${zSel.has(siteKey(x.town, x.senior)) ? 'checked' : ''} style="width:20px;height:20px;margin:0 6px 0 0;flex:0 0 auto;"><span style="flex:1 1 auto;min-width:0;"><b style="color:#1a365d;">${si + 1}</b> <span class="muted">${esc(x.town)}</span> <b>${crown(x.town, x.senior)}${esc(x.senior)}</b></span></span><span class="muted">${ms.filter(p => !stats(p).dropped).length}명 ▾</span></summary>
         <button type="button" class="small full" data-gosite="${esc(siteKey(x.town, x.senior))}" style="margin:6px 0 4px;">▶ 이 경로당 점검하기</button>
         <div class="zs-people">${ms.length ? ms.map(p => { const st = stats(p); return `<div class="zs-person">
           <b>${nmH(p)}</b> ${ageSex(p)?`<span class="muted">(${esc(ageSex(p))})</span>`:''} ${st.dropped?`<span class="badge bg-danger">${esc(st.status)}</span>`:(inHospNow(p) && st.status==='정상' ? '' : badgeOf(st))}
