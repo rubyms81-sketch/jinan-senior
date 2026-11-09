@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-439</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-440</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -5534,10 +5534,12 @@ function dayWorkPop(manual){
     }
     // (v438) 여러 명: 어르신들께는 단체 문자 한 통 (이름·날짜 줄을 뺀 공통 글), 팀장께는 마지막에 명단 한 통
     const common = tpl.split('\n').filter(l => !/\{이름\}|\{원래날짜\}|\{바뀐날짜\}/.test(l)).join('\n');
-    const groupText = dayWorkText(common, pick[0], d);
+    const names = pick.map(p => p.name).join(', ');
+    const body = common.replace(/^\[진안군 노인회\]\n?/, '');
+    const groupText = dayWorkText(`[진안군 노인회]\n오늘은 날짜 변경하신 분들의 근무일입니다.\n해당 어르신: ${names} 어르신\n위 어르신들은 오늘 이 날짜로 활동 부탁드립니다. 감사합니다.\n${body}`, pick[0], d);
     await smsBox({ title: `📩 오늘 근무 안내 문자 · ${pick.length}명 (단체)`, people: pick, text: groupText, selfOnly: true, logType: '근무일 당일 안내 문자', logDetail: `${d} ${mdKo(d)} 바뀐 날 근무 (단체 ${pick.length}명)`, onSent: () => pick.forEach(p => markDaySent(p, d)) });
     const lines = pick.map((p, i) => { const c = chgOn(d).find(x => x.p === p); return `${i + 1}. ${p.name} 어르신 (${p.town} ${seniorOf(p)}) · ${c && c.from ? `원래 ${mdKo(c.from)} → ` : ''}오늘`; });
-    const leaderText = `[진안군 노인회]\n오늘(${mdKo(d)}) 바뀐 날 근무 안내 문자를 보낸 어르신입니다. (${pick.length}명)\n${lines.join('\n')}\n\n진안군 노인회 드림`;
+    const leaderText = `[진안군 노인회]\n팀장님, 아래 어르신들이 오늘(${mdKo(d)}) 근무하고 있습니다. 확인 부탁드립니다. 감사합니다. (${pick.length}명)\n${lines.join('\n')}\n\n진안군 노인회 드림`;
     await smsBox({ title: `📩 팀장님께 오늘 근무 명단 보고 (${pick.length}명)`, people: pick, text: leaderText, leaderOnly: true, logType: '근무일 당일 안내 문자', logDetail: `팀장 명단 보고 ${pick.length}명` });
   };
 }
