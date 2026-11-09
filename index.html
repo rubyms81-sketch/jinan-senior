@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-444</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-445</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -4847,49 +4847,66 @@ function renderNoSite(){   // 게시판 칸 (내 담당 면, 중도포기 제외
       + ps.filter(p => p.town === t).map(p => `<button type="button" class="small" onclick="openModal(${p.id})" style="width:auto;margin:4px 4px 0 0;background:#b7791f;white-space:nowrap;">${dName(p)}</button>`).join('')).join('')
     + `<button type="button" class="full" onclick="nositeRename()" style="margin-top:10px;background:#2b6cb0;">✏️ 경로당 이름 한꺼번에 넣기</button>`);
 }
-function nositeRename(){   // 경로당 미입력 분을 이름마다 체크해서 골라 새 경로당 이름을 넣음
+function nositeRename(){   // 경로당 미입력 분을 한 화면에서 한 줄씩 경로당을 골라 한 번에 넣음 (v445)
   const all = sortPs(participants.filter(p => noSiteP(p) && !stats(p).dropped && visibleTowns().includes(p.town)));
   if (!all.length) return notify('경로당이 없는 분이 없어요.');
   const towns = TOWNS.filter(t => all.some(p => p.town === t));
-  const picked = new Set();
+  const val = new Map();      // 어르신 id → 고른(적은) 경로당 이름
+  const chk = new Set();      // 체크한 어르신 id
+  const listOf = t => sitesOf(t).filter(k => k !== '개별관리' && k !== NO_SENIOR);
   const back = document.createElement('div'); back.className = 'dlg-back';
-  back.innerHTML = `<div class="dlg" style="max-height:90vh;overflow:auto;">
-    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">✏️ 경로당 이름 한꺼번에 넣기</div>
-    <label>면</label>
-    <select id="nr-town">${towns.map(t => `<option value="${esc(t)}">${esc(t)} · ${all.filter(p => p.town === t).length}명</option>`).join('')}</select>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0 4px;gap:6px;">
-      <b id="nr-cnt" style="font-size:.95rem;"></b>
-      <button type="button" class="small secondary" id="nr-all" style="width:auto;margin:0;">☑ 전체 선택</button></div>
-    <div id="nr-list" style="border:1px solid #cbd5e0;border-radius:8px;padding:4px 10px;max-height:40vh;overflow:auto;"></div>
-    <label style="margin-top:10px;">새 경로당 이름</label>
-    <input type="text" id="nr-name" placeholder="예: 군상경로당">
-    <div class="muted" style="margin:6px 0 10px;font-size:.85rem;">체크한 분만 이 이름으로 바뀝니다. 면이 바뀌어도 체크는 그대로 남습니다.</div>
-    <div class="grid-2"><button class="secondary" id="nr-cancel">취소</button><button id="nr-save">바꾸기</button></div></div>`;
+  back.innerHTML = `<div class="dlg" style="max-height:92vh;overflow:auto;">
+    <div style="font-weight:bold;font-size:1.1rem;margin-bottom:4px;">✏️ 경로당 이름 넣기</div>
+    <div class="muted" style="font-size:.88rem;margin-bottom:8px;">어르신마다 경로당을 고르고, 다 채운 뒤 맨 아래에서 한 번에 넣습니다.</div>
+    <div id="nr-bar" style="font-weight:bold;background:#fffbea;border:1px solid #e0b84d;border-radius:8px;padding:6px 10px;margin-bottom:8px;color:#744210;"></div>
+    <div id="nr-list"></div>
+    <div style="border-top:1px solid #cbd5e0;margin-top:12px;padding-top:10px;">
+      <label style="margin-top:0;">체크한 분 모두 같은 경로당으로</label>
+      <input type="text" id="nr-same" list="nr-dl-all" placeholder="경로당 이름 (예: 군상경로당)">
+      <button type="button" class="secondary full" id="nr-same-go" style="margin-top:6px;">☑ 체크한 분에게 넣기 (아직 저장 안 됨)</button>
+    </div>
+    <button type="button" class="full" id="nr-save" style="margin-top:12px;">✔ 채운 분 한꺼번에 넣기</button>
+    <button type="button" class="secondary full" id="nr-cancel" style="margin-top:6px;">닫기</button></div>`;
   document.body.appendChild(back);
-  const members = () => all.filter(p => p.town === back.querySelector('#nr-town').value);
-  const draw = () => {
-    const ms = members();
-    back.querySelector('#nr-list').innerHTML = ms.map(p => `<label style="display:flex;align-items:center;gap:10px;margin:8px 0;font-weight:normal;cursor:pointer;">
-      <input type="checkbox" class="nr-chk" value="${p.id}" ${picked.has(p.id) ? 'checked' : ''} style="width:20px;height:20px;margin:0;flex:0 0 20px;">
-      <span>${dName(p)}</span></label>`).join('');
-    back.querySelector('#nr-cnt').textContent = `체크 ${picked.size}명 (이 면 ${ms.filter(p => picked.has(p.id)).length}명)`;
-    back.querySelector('#nr-all').textContent = ms.length && ms.every(p => picked.has(p.id)) ? '✕ 이 면 전체 빼기' : '☑ 이 면 전체 선택';
-    back.querySelectorAll('.nr-chk').forEach(c => c.onchange = () => { const id = +c.value; if (c.checked) picked.add(id); else picked.delete(id); draw(); });
+  const dl = t => `<datalist id="nr-dl-${TOWNS.indexOf(t)}">${listOf(t).map(k => `<option value="${esc(k)}">`).join('')}</datalist>`;
+  const dlAll = [...new Set(towns.flatMap(t => listOf(t)))];
+  back.insertAdjacentHTML('beforeend', `<datalist id="nr-dl-all">${dlAll.map(k => `<option value="${esc(k)}">`).join('')}</datalist>` + towns.map(dl).join(''));
+  const filled = () => all.filter(p => (val.get(p.id) || '').trim());
+  const drawBar = () => {
+    back.querySelector('#nr-bar').textContent = `미입력 ${all.length}명 중 ${filled().length}명 채움 · 체크 ${chk.size}명`;
+    back.querySelector('#nr-save').textContent = `✔ 채운 ${filled().length}명 한꺼번에 넣기`;
+    back.querySelector('#nr-save').disabled = !filled().length;
   };
-  back.querySelector('#nr-town').onchange = draw;
-  back.querySelector('#nr-all').onclick = () => { const ms = members(); const on = ms.every(p => picked.has(p.id)); ms.forEach(p => on ? picked.delete(p.id) : picked.add(p.id)); draw(); };
+  const list = back.querySelector('#nr-list');
+  list.innerHTML = towns.map(t => `<div style="font-weight:bold;font-size:.95rem;margin:10px 0 4px;color:#2b6cb0;">${esc(t)} · ${all.filter(p => p.town === t).length}명</div>`
+    + all.filter(p => p.town === t).map(p => `<div class="nr-row" data-id="${p.id}" style="display:grid;grid-template-columns:auto 1fr 1.25fr;gap:6px;align-items:center;border-bottom:1px solid #eee;padding:6px 0;">
+        <input type="checkbox" class="nr-chk" style="width:20px;height:20px;margin:0;">
+        <div style="font-size:.95rem;">${dName(p)}</div>
+        <input type="text" class="nr-in" list="nr-dl-${TOWNS.indexOf(t)}" placeholder="경로당 고르기" autocomplete="off" style="margin:0;">
+      </div>`).join('')).join('');
+  list.querySelectorAll('.nr-row').forEach(row => {
+    const id = +row.dataset.id, inp = row.querySelector('.nr-in'), cb = row.querySelector('.nr-chk');
+    inp.oninput = () => { val.set(id, inp.value); inp.style.background = inp.value.trim() ? '#e6f7ea' : ''; drawBar(); };
+    cb.onchange = () => { cb.checked ? chk.add(id) : chk.delete(id); drawBar(); };
+  });
+  back.querySelector('#nr-same-go').onclick = () => {
+    const nn = back.querySelector('#nr-same').value.trim();
+    if (!chk.size) return notify('먼저 이름 앞 칸을 체크해 주세요.');
+    if (!nn) return notify('경로당 이름을 적어 주세요.');
+    list.querySelectorAll('.nr-row').forEach(row => { const id = +row.dataset.id; if (!chk.has(id)) return;
+      const inp = row.querySelector('.nr-in'); inp.value = nn; val.set(id, nn); inp.style.background = '#e6f7ea'; });
+    drawBar();
+  };
   back.querySelector('#nr-cancel').onclick = () => back.remove();
   back.querySelector('#nr-save').onclick = async () => {
-    const nn = back.querySelector('#nr-name').value.trim();
-    const sel = all.filter(p => picked.has(p.id));
-    if (!sel.length) return notify('이름을 먼저 체크해 주세요.');
-    if (!nn) return notify('새 경로당 이름을 적어 주세요.');
-    if (!await ask(`체크한 ${sel.length}명을 "${nn}" 경로당으로 넣을까요?`)) return;
-    sel.forEach(p => { logEvent('경로당 변경', p, `${p.senior || '미입력'} → ${nn} (경로당 미입력 한꺼번에)`); p.senior = nn; delete p.guess; });
+    const sel = filled();
+    if (!sel.length) return notify('경로당을 먼저 골라 주세요.');
+    if (!await ask(`${sel.length}명의 경로당을 넣을까요?`)) return;
+    sel.forEach(p => { const nn = val.get(p.id).trim(); logEvent('경로당 변경', p, `${p.senior || '미입력'} → ${nn} (경로당 미입력 한꺼번에)`); p.senior = nn; delete p.guess; });
     saveData(false); back.remove(); renderNewAlert(); renderList();
-    notify(`${sel.length}명을 "${nn}"으로 넣었어요.`);
+    notify(`${sel.length}명의 경로당을 넣었어요.`);
   };
-  draw();
+  drawBar();
 }
 function renameSenior(){
   const town = lastTown, old = curSenior; if (!old || town==='전체') return;
