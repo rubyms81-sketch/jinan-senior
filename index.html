@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-373</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-374</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -4739,7 +4739,7 @@ function startWatch(){
   watchId = navigator.geolocation.watchPosition(q => {
     const h = { lat: q.coords.latitude, lng: q.coords.longitude };
     if (navTarget && coords[navTarget] && distM(h, coords[navTarget]) <= NEAR_M) arrivedBanner(navTarget, true);
-    if (nearOn()) nearCheck(h);
+    if (nearOn() && navTarget) nearCheck(h);   // 길안내 중에만
   }, () => {}, { enableHighAccuracy: true, maximumAge: 15000 });
 }
 const zoneHasKey = k => zones.some(z => z.sites.some(x => siteKey(x.town, x.senior) === k));
@@ -4756,8 +4756,8 @@ function nearCheck(h){
 async function nearToggle(){
   if (nearOn()) { store('jinan_near', 'off'); if (!navTarget) stopWatch(); notify('근처 알림을 껐어요.'); drawMainSafe(); return; }
   try { if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission(); } catch(e) {}
-  store('jinan_near', 'on'); startWatch();
-  notify(`근처 알림을 켰어요.\n구역의 경로당 ${NEAR_M}m 안에 가면 알려 드려요.`); drawMainSafe();
+  store('jinan_near', 'on');
+  notify(`근처 알림을 켰어요.\n길안내 중에 구역의 경로당 ${NEAR_M}m 안에 가면 알려 드려요.`); drawMainSafe();
 }
 function drawMainSafe(){ try { const zb = document.getElementById('zn-near'); if (zb) zb.textContent = '🔔 근처 알림 ' + (nearOn() ? '끄기' : '켜기'); } catch(e) {} }
 function notifySys(key){
@@ -4778,10 +4778,9 @@ function arrivedBanner(key, near){   // (v372) 도착하면 가운데 확인 창
 }
 // (v372) 지도 앱에 갔다가 우리 앱으로 돌아오면 위치를 바로 다시 확인
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden || !(nearOn() || (navTarget && coords[navTarget]))) return;
-  getHere().then(h => { if (navTarget && coords[navTarget] && distM(h, coords[navTarget]) <= NEAR_M) arrivedBanner(navTarget, true); if (nearOn()) nearCheck(h); }).catch(() => {});
+  if (document.hidden || !navTarget) return;   // 길안내 중에만
+  getHere().then(h => { if (coords[navTarget] && distM(h, coords[navTarget]) <= NEAR_M) arrivedBanner(navTarget, true); if (nearOn()) nearCheck(h); }).catch(() => {});
 });
-if (nearOn()) setTimeout(startWatch, 3000);   // 근처 알림을 켜 둔 휴대폰은 앱을 열면 다시 시작
 // 도착 확인: 좌표가 없으면 지금 위치를 이 경로당 위치로 저장, 있으면 거리 확인
 async function arriveNow(key, quiet){
   let here; try { here = await getHere(); } catch(e) { notify('위치를 가져오지 못했어요. 휴대폰 위치 권한을 허용해 주세요.'); return false; }
@@ -4789,7 +4788,7 @@ async function arriveNow(key, quiet){
   if (!c) { coords[key] = { lat: here.lat, lng: here.lng, date: today() }; saveCoords();
     logEvent('경로당 좌표', null, `${key.replace('|', ' ')} 위치 저장 (도착 확인)`, today()); }
   else { const d = Math.round(distM(here, c)); if (d > 200 && !(await ask(`아직 ${d}m 떨어져 있어요.\n그래도 도착으로 확인할까요?`))) return false; }
-  setLastSite(key); if (navTarget === key) { navTarget = null; if (!nearOn()) stopWatch(); }
+  setLastSite(key); if (navTarget === key) { navTarget = null; stopWatch(); }
   if (!quiet) notify('📍 도착 확인했어요.');
   return true;
 }
