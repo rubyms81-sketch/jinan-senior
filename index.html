@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-358</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.09-359</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -4494,9 +4494,9 @@ function showClose(kind){
 // 경로당 순서: 개별관리 → 게이트볼 → 나머지(가나다) → 미입력
 // 경로당 목록 순서: 사업별로 고정 (위에서부터). 같은 사업 안에서는 가나다순
 const SITE_CATS = [
-  { k: '파크골프', r: 0, m: /파크골프/ },
-  { k: '개별관리', r: 1, m: /개별관리/ },
-  { k: '게이트볼', r: 2, m: /게이트볼/ },
+  { k: '개별관리', r: 0, m: /개별관리/ },
+  { k: '게이트볼', r: 1, m: /게이트볼/ },
+  { k: '파크골프', r: 2, m: /파크골프|그라운드골프/ },
   { k: '노인체육시설', r: 3, m: /체육/ },
   { k: '공공복지시설', r: 4, m: /공공복지|어린이집|보육/ },
   { k: '시니어 맥가이버', r: 5, m: /맥가이버/ },
@@ -4506,7 +4506,7 @@ const SITE_CATS = [
 let xCat = (() => { try { return JSON.parse(load('jinan_xcat')) || {}; } catch(e) { return {}; } })();   // 직접 적어 넣은 경로당의 사업 종류 { 이름: 종류 }
 const saveXCat = () => { try { store('jinan_xcat', JSON.stringify(xCat)); } catch(e) {} };
 // 사업 순서 (설정 "↕ 경로당 사업 순서 정하기"): 기본은 SITE_CATS 순서, 사용자가 바꾼 순서를 이 휴대폰에 저장
-let catOrder = (() => { const ks = SITE_CATS.map(c => c.k); try { const v = JSON.parse(load('jinan_catorder')); if (Array.isArray(v) && v.length) return [...v.filter(k => ks.includes(k)), ...ks.filter(k => !v.includes(k))]; } catch(e) {} return ks; })();
+let catOrder = (() => { const ks = SITE_CATS.map(c => c.k); if (load('jinan_catdef') !== 'v358') { try { store('jinan_catdef', 'v358'); localStorage.removeItem('jinan_catorder'); } catch(e) {} } try { const v = JSON.parse(load('jinan_catorder')); if (Array.isArray(v) && v.length) return [...v.filter(k => ks.includes(k)), ...ks.filter(k => !v.includes(k))]; } catch(e) {} return ks; })();
 const saveCatOrder = () => { try { store('jinan_catorder', JSON.stringify(catOrder)); } catch(e) {} };
 const catPos = c => { const i = catOrder.indexOf(c.k); return i < 0 ? c.r : i; };
 function seniorRank(k){
