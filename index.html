@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-471</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-472</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6139,9 +6139,11 @@ function openAdd(){
   document.getElementById('add-modal').classList.remove('hidden');
 }
 function closeAdd(){ document.getElementById('add-modal').classList.add('hidden'); }
+// (v471) 이름 괄호 설명은 뺀 이름으로 비교: "임순자(성태홍팀장배우자)" = "임순자"
+const nameBase = s0 => String(s0 || '').replace(/\s*[(（].*$/, '').trim();
 function isDup(list, name, senior, phone){
   const digits = x => String(x||'').replace(/[^0-9]/g,'');
-  return list.some(p => p.name===name && (
+  return list.some(p => nameBase(p.name)===nameBase(name) && (
     (senior && p.senior===senior) || (digits(phone) && digits(p.phone)===digits(phone)) || (!senior && !p.senior && !digits(phone) && !digits(p.phone))));
 }
 
@@ -6746,7 +6748,7 @@ var notices = (() => { try { return JSON.parse(load('jinan_notice')) || []; } ca
 const bizKeyOf = s => String(s || '').replace(/\s/g, '');
 // 경로당 기준: 팀장 명단을 올린 적이 없으면 11개 읍·면 기본 경로당 목록(KNOWN_SENIORS)을 기준으로 씀
 const sitesSnap = () => { try { const v = JSON.parse(load('jinan_sitesnap')); if (Array.isArray(v)) return v; } catch(e) {} return Object.entries(KNOWN_SENIORS).flatMap(([t, a]) => a.filter(k => k !== '개별관리' && !/파크\s*골프|그라운드\s*골프/.test(k)).map(k => t + '|' + k)); };
-const sameBizPerson = (a, b) => a.name === b.name && ((a.ph && a.ph === b.ph) || (a.b6 && a.b6 === b.b6));
+const sameBizPerson = (a, b) => nameBase(a.name) === nameBase(b.name) && ((a.ph && a.ph === b.ph) || (a.b6 && a.b6 === b.b6));
 const bizLine = r => `${r.name} · ${r.town || '면 모름'}${r.senior ? ' · ' + r.senior : ''}${r.b6 ? ' · 생년 앞 6자리 ' + r.b6 : ''}${r.addr ? ' · ' + r.addr : ''}`;
 function addNotice(text){
   notices.push({ id: Date.now() + Math.random(), at: today(), text, done: false });
@@ -6935,7 +6937,7 @@ function bulkImport(input){
         const phone = get('phone') ? fmtPhone(get('phone')) : '', address = get('address');
         let town = normTown(get('town')) || normTown(address);
         const fill = bulkMode === 'fill';
-        if (!town && fill) { const c = participants.filter(p => !matched.has(p.id) && p.name===name); if (c.length===1) town = c[0].town; else if (filterTown === '전체') { notFound.push(name); return; } }
+        if (!town && fill) { const c = participants.filter(p => !matched.has(p.id) && nameBase(p.name)===nameBase(name)); if (c.length===1) town = c[0].town; else if (filterTown === '전체') { notFound.push(name); return; } }
         if (!town) { if (filterTown !== '전체') town = filterTown; else { noTown.push(name); return; } }
         const senior = get('senior') ? normSenior(town, get('senior')) : '';
         // 참여시작일: 올해 2월 이후 시작한 분만 근무 시작일로 넣음 (1월 시작 = 처음부터, 기록 없음)
@@ -6943,9 +6945,9 @@ function bulkImport(input){
         fileTowns.add(town);
         if (pick) bizRows.push({ name, ph: digits(phone), b6: rrnD.slice(0, 6), addr: address, town, senior, biz: get('biz') });
         // 이미 있는 분 찾기: 이름 + (연락처 또는 경로당 또는 주소), 없으면 같은 면에 같은 이름이 한 분뿐일 때
-        let ex = participants.find(p => !matched.has(p.id) && p.name===name && (
+        let ex = participants.find(p => !matched.has(p.id) && nameBase(p.name)===nameBase(name) && (
           (digits(phone) && digits(p.phone)===digits(phone)) || (senior && p.senior===senior) || (address && p.address===address)));
-        if (!ex) { const c = participants.filter(p => !matched.has(p.id) && p.name===name && p.town===town); if (c.length===1) ex = c[0]; }
+        if (!ex) { const c = participants.filter(p => !matched.has(p.id) && nameBase(p.name)===nameBase(name) && p.town===town); if (c.length===1) ex = c[0]; }
         if (ex) {
           matched.add(ex.id);
           if (rk) reEnters.push([ex, rk]);
@@ -6970,8 +6972,8 @@ function bulkImport(input){
       // (v171) 파일에서 중도포기로 나온 분을 앱 목록과 맞춤 → 중도포기로 바꿈 (추가 정보만 넣기에서는 안 바꿈)
       if (bulkMode !== 'fill') quitIn.forEach(q => {
         if (!q.end || reNames.has(q.name)) return;
-        let ex = participants.find(p => !matched.has(p.id) && p.name === q.name && ((q.ph && digits(p.phone) === q.ph) || (q.address && p.address === q.address)));
-        if (!ex) { const c = participants.filter(p => !matched.has(p.id) && p.name === q.name && (!q.town || p.town === q.town)); if (c.length === 1) ex = c[0]; }
+        let ex = participants.find(p => !matched.has(p.id) && nameBase(p.name) === nameBase(q.name) && ((q.ph && digits(p.phone) === q.ph) || (q.address && p.address === q.address)));
+        if (!ex) { const c = participants.filter(p => !matched.has(p.id) && nameBase(p.name) === nameBase(q.name) && (!q.town || p.town === q.town)); if (c.length === 1) ex = c[0]; }
         if (!ex) return;
         matched.add(ex.id);
         if (!ex.quit) quitDone.push([ex, q]);
