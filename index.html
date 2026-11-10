@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-470</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-471</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6990,23 +6990,36 @@ function bulkImport(input){
       const chLbl = (p, c) => c[0] === 'startDay' ? `근무 시작일 ${p.startDay || '없음'} → ${c[1]}` : c[2];
       msg += `\n✏️ 정보가 바뀐 분: ${updated.length}명${updated.length?` — ${list(updated.map(([p,ch]) => `${p.name}(${ch.map(c => chLbl(p, c)).join('·')})`))}`:''}`;
       const nStart = added.filter(p => p.startDay).length + updated.filter(([p, ch]) => ch.some(c => c[0] === 'startDay')).length;
-      if (nStart) msg += `\n🗓 근무 시작일 반영: ${nStart}명 (참여시작일 칸)`;
-      if (gone.length) msg += `\n➖ 새 명단에 없는 분: ${gone.length}명 — ${list(gone.map(p=>p.name))}`;
+      let rest = '';
+      if (nStart) rest += `\n🗓 근무 시작일 반영: ${nStart}명 (참여시작일 칸)`;
+      if (gone.length) rest += `\n➖ 새 명단에 없는 분: ${gone.length}명 — ${list(gone.map(p=>p.name))}`;
       const nGuess = added.filter(p => p.guess).length;
-      if (nGuess) msg += `\n\n📍 주소를 보고 경로당을 넣은 분: ${nGuess}명 (앱에 "추정"으로 표시)`;
-      if (added.some(p => !p.senior)) msg += `\n※ 경로당을 찾지 못한 분: ${added.filter(p=>!p.senior).length}명`;
-      if (unquit.length) msg += `\n\n🔁 다시 참여하시는 분(중도포기 풀림): ${list(unquit.map(p=>p.name))}`;
-      if (quitDone.length) msg += `\n\n🚪 파일에서 중도포기로 나온 분 ${quitDone.length}명: ${list(quitDone.map(([p]) => p.name))}\n(앱에서 중도포기로 바꿈, 날짜는 파일의 참여종료일)`;
-      if (reEnters.length) msg += `\n\n🔁 중도포기 후 다시 신청한 분 ${reEnters.length}명: ${list(reEnters.map(([p]) => p.name))}\n(활동 중으로 바꾸고 재신청 기록을 남김. 그만둔 기간은 모자란 날로 셈)`;
+      if (nGuess) rest += `\n\n📍 주소를 보고 경로당을 넣은 분: ${nGuess}명 (앱에 "추정"으로 표시)`;
+      if (added.some(p => !p.senior)) rest += `\n※ 경로당을 찾지 못한 분: ${added.filter(p=>!p.senior).length}명`;
+      if (unquit.length) rest += `\n\n🔁 다시 참여하시는 분(중도포기 풀림): ${list(unquit.map(p=>p.name))}`;
+      if (quitDone.length) rest += `\n\n🚪 파일에서 중도포기로 나온 분 ${quitDone.length}명: ${list(quitDone.map(([p]) => p.name))}\n(앱에서 중도포기로 바꿈, 날짜는 파일의 참여종료일)`;
+      if (reEnters.length) rest += `\n\n🔁 중도포기 후 다시 신청한 분 ${reEnters.length}명: ${list(reEnters.map(([p]) => p.name))}\n(활동 중으로 바꾸고 재신청 기록을 남김. 그만둔 기간은 모자란 날로 셈)`;
       const exIn = [...same, ...updated.map(u => u[0])].filter(p => p.exclude && p.exclude.year >= new Date().getFullYear());
       if (exIn.length) msg += `\n\n🚫 참여 제외 대상으로 표시했는데 새 명단에 있는 분: ${list(exIn.map(p => `${p.name}(${p.exclude.reason||'제외'})`))}`;
-      if (notFound.length) msg += `\n\n명단에 없어 건너뜀 ${notFound.length}명: ${list(notFound)}\n(새로 넣으려면 "전체 명단 올리기"로 올려 주세요)`;
-      if (dup.length) msg += `\n\n파일 안에서 겹쳐 건너뜀 ${dup.length}명: ${list(dup)}`;
-      if (notActive.length) msg += `\n\n참여 중이 아니어서 건너뜀 ${notActive.length}명: ${list(notActive)}`;
-      if (noTown.length) msg += `\n\n읍·면을 알 수 없어 건너뜀 ${noTown.length}명: ${list(noTown)}\n(위에서 담당 면을 고른 뒤 다시 넣으면 그 면으로 등록됩니다)`;
+      if (notFound.length) rest += `\n\n명단에 없어 건너뜀 ${notFound.length}명: ${list(notFound)}\n(새로 넣으려면 "전체 명단 올리기"로 올려 주세요)`;
+      if (dup.length) rest += `\n\n파일 안에서 겹쳐 건너뜀 ${dup.length}명: ${list(dup)}`;
+      if (notActive.length) rest += `\n\n참여 중이 아니어서 건너뜀 ${notActive.length}명: ${list(notActive)}`;
+      if (noTown.length) rest += `\n\n읍·면을 알 수 없어 건너뜀 ${noTown.length}명: ${list(noTown)}\n(위에서 담당 면을 고른 뒤 다시 넣으면 그 면으로 등록됩니다)`;
       if (bz) msg += bz.msg;
-      if (!added.length && !updated.length && !gone.length && !unquit.length && !reEnters.length && !quitDone.length) { if (bz) saveBizCheck(pick, bz); return notify(msg + '\n\n바뀐 내용이 없습니다.'); }
-      if (!await ask(msg + '\n\n이대로 정리할까요?')) return;
+      if (!added.length && !updated.length && !gone.length && !unquit.length && !reEnters.length && !quitDone.length) { if (bz) saveBizCheck(pick, bz); return notify(msg + rest + '\n\n바뀐 내용이 없습니다.'); }
+      // (v471) 긴 목록은 접기 칸으로 묶어 한눈에 보이게 함 (사람 목록은 펼쳐서 봄)
+      const secH = (t, body, open) => body ? `<details ${open ? 'open' : ''} style="margin:6px 0;border-top:1px dashed #cbd5e0;padding-top:4px;"><summary style="cursor:pointer;font-weight:bold;">${t}</summary><div style="font-size:.9rem;line-height:1.5;padding:4px 0 2px 10px;">${body}</div></details>` : '';
+      const nm = a => esc(a.map(x => typeof x === 'string' ? x : x.name).join(', '));
+      const exTxt = exIn.length ? `<div style="color:#c53030;font-weight:bold;margin:6px 0;">🚫 참여 제외 대상인데 새 명단에 있는 분 ${exIn.length}명: ${esc(exIn.map(p => `${p.name}(${p.exclude.reason||'제외'})`).join(', '))}</div>` : '';
+      const restHtml = rest.trim() ? `<div style="font-size:.9rem;line-height:1.5;">${esc(rest.trim()).replace(/\n/g,'<br>')}</div>` : '';
+      const sumHtml = `<div style="font-weight:bold;font-size:1.05rem;margin-bottom:6px;">${bulkMode === 'fill' ? '✏️ 추가 정보만 넣기' : '📋 명단 정리'} (${esc([...fileTowns].join(', '))})</div>`
+        + `<div style="line-height:1.8;">✔ 그대로 <b>${same.length}</b>명 · ➕ 새로 <b>${added.length}</b>명 · ✏️ 바뀐 <b>${updated.length}</b>명${gone.length ? ` · ➖ 빠진 <b>${gone.length}</b>명` : ''}</div>`
+        + exTxt
+        + secH(`➕ 새로 오신 분 ${added.length}명`, added.length ? nm(added) : '', false)
+        + secH(`✏️ 정보가 바뀐 분 ${updated.length}명`, updated.length ? esc(updated.map(([p, ch]) => `${p.name}(${ch.map(c => chLbl(p, c)).join('·')})`).join(', ')) : '', false)
+        + secH('📌 그 밖의 알림', restHtml, false)
+        + (bz && bz.msg.trim() ? secH('🏷 사업 명단 변경', `<div style="font-size:.85rem;white-space:pre-wrap;">${esc(bz.msg.trim())}</div>`, false) : '');
+      if (!await askHtml(sumHtml + '<div style="margin-top:8px;font-weight:bold;">이대로 정리할까요?</div>')) return;
       if (bz) saveBizCheck(pick, bz);
 
       participants.push(...added);
