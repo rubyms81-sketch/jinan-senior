@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-465</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-466</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3111,9 +3111,11 @@ function renderSiteBoard(){   // (v458) 내 담당 면은 위에 항상 보이�
   exB.forEach(s0 => { sites[s0] = sites[s0] || []; });
   Object.keys(sites).forEach(s0 => { if (hideB[t + '|' + s0] && !sites[s0].length) delete sites[s0]; });
   const names = boardOrder(Object.keys(sites));   // (v379) 사업 순서(개별관리 → 노인체육시설 묶음 …) 따라 정렬
+  let totQ = 0, totC = 0;   // (v466) 맨 아래 합계 줄용
   const trs = names.length ? names.map(({ s0, kind, num }) => {
     const ps = sites[s0], now = ps.filter(p => !inHospNow(p)), cur = now.length;
     const quota = quotaOf(s0, cur);   // 배정을 안 넣으면 시드(배치표)나 현재와 같게 봄
+    totQ += quota; totC += cur;
     const mem = memberOf(s0), short = quota - cur;
     const curTxt = short > 0 ? `${cur} <b style="color:#c53030;">(-${short})</b>` : `${cur}`;   // 부족한 만큼만 빨강 (보충 칸은 뺌)
     const who = now.length ? now.map(p => dName(p)).join(', ') : '없음';
@@ -3128,11 +3130,11 @@ function renderSiteBoard(){   // (v458) 내 담당 면은 위에 항상 보이�
       <td style="${TD}${BG}text-align:left;">${who}${out}</td></tr>`;
   }).join('') : `<tr><td colspan="5" style="${TD}color:#718096;">활동 중인 어르신이 없어요</td></tr>`;
   const tc = townCount(t);
-  const sumLine = `<div style="font-weight:bold;font-size:.95rem;margin-top:6px;">${esc(t.replace(/[면읍]$/, ''))} · 합계 ${tc.all}명 · 개별 ${tc.ind}명 · 경로당 ${tc.site}곳</div>`;
-  const table = sumLine + `<div style="border:1px solid #9ac18a;border-radius:10px;overflow:hidden;margin-top:6px;">
+  const sumRow = `<tr style="background:#edf2f7;font-weight:bold;"><td style="${TD}width:16px;padding:4px 0;"></td><td style="${TD}min-width:66px;">합계 ${tc.site}곳</td><td style="${TD}">${totQ}</td><td style="${TD}">${totC}</td><td style="${TD}text-align:left;">${tc.all}명 · 개별 ${tc.ind}명</td></tr>`;
+  const table = `<div style="border:1px solid #9ac18a;border-radius:10px;overflow:hidden;margin-top:6px;">
     <table style="border-collapse:collapse;width:calc(100% - 12px);margin:6px;font-size:.85rem;">
     <tr style="background:#f7fafc;font-weight:bold;"><td style="${TD}width:16px;padding:4px 0;">번호</td><td style="${TD}min-width:66px;">경로당</td><td style="${TD}">배정</td><td style="${TD}">현재</td><td style="${TD}">참여자</td></tr>
-    ${trs}</table></div>`;
+    ${trs}${sumRow}</table></div>`;
   const restT = TOWNS.filter(x => !myTowns.includes(x));
   const restHtml = restT.length ? `<details id="sb-rest" ${sbRestOpen ? 'open' : ''} style="margin:6px 0;"><summary style="cursor:pointer;font-weight:bold;padding:6px 0;">▸ 다른 읍·면 ${restT.length}곳 펼치기</summary><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0;">${restT.map(tile).join('')}</div></details>` : '';
   top.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">${sbMine().map(tile).join('')}</div>`;
