@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-464</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-465</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2974,19 +2974,31 @@ function memFileImport(input){
 }
 // (v407) 경로당별로 고치기: 11개 읍·면 중 한 면을 고르면 그 면 경로당만 나와 회원 수·배정을 고침
 const townOfSite = s0 => { for (const t of TOWNS) if ((KNOWN_SENIORS[t] || []).includes(s0)) return t; const p = participants.find(x => seniorOf(x) === s0 && x.town); if (p && TOWNS.includes(p.town)) return p.town; return SITE_SEED[s0] ? '진안읍' : null; };
+// (v465) 경로당 목록 빼기·추가: 빼 둔 곳은 키 "면|경로당" (사람이 없을 때만 숨김), 직접 추가한 곳은 면별 목록
+const siteHide = () => { try { return JSON.parse(load('jinan_sitehide') || '{}') || {}; } catch(e) { return {}; } };
+const siteExtra = () => { try { return JSON.parse(load('jinan_siteextra') || '{}') || {}; } catch(e) { return {}; } };
+const siteListFor = t => {   // 현황판과 같은 기준: 그 면 사람의 경로당 + 기본 목록 + 직접 추가 − 뺀 곳(사람 없을 때)
+  const hide = siteHide(), ex = siteExtra()[t] || [];
+  const fromPeople = participants.filter(p => counted(p) && p.town === t).map(p => seniorOf(p));
+  const seeds = [...Object.keys(SITE_SEED), ...(KNOWN_SENIORS[t] || [])].filter(s0 => townOfSite(s0) === t);
+  return [...new Set([...fromPeople, ...seeds, ...ex])]
+    .filter(s0 => s0 && s0 !== NO_SENIOR && !(hide[t + '|' + s0] && !fromPeople.includes(s0)))
+    .sort((a, b) => seniorRank(a) - seniorRank(b) || a.localeCompare(b, 'ko'));
+};
 function quotaVal(s0){ const q = siteQuota()[s0]; if (q !== undefined && q !== '') return q; return seedOf(s0) ? seedOf(s0)[1] : ''; }
 function openMemEdit(){
   let cur = TOWNS.includes(sbTown()) ? sbTown() : TOWNS[0];
   let curList = [];
   const edits = {};   // 면을 바꾸기 전에 적어 둔 값 (s0 → {m, q})
-  const sitesOf = t => [...new Set([...Object.keys(SITE_SEED), ...participants.filter(p => counted(p)).map(p => seniorOf(p)), ...(KNOWN_SENIORS[t] || [])])]
-    .filter(s0 => s0 && s0 !== NO_SENIOR && townOfSite(s0) === t).sort((a, b) => seniorRank(a) - seniorRank(b) || a.localeCompare(b, 'ko'));
+  const sitesOf = t => siteListFor(t);
   const back = document.createElement('div'); back.className = 'dlg-back'; back.id = 'mem-edit-dlg';
   back.innerHTML = `<div class="dlg" style="max-height:90vh;overflow:auto;">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">👥 경로당 회원 수 고치기</div>
     <div id="me-towns" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">${TOWNS.map(t => `<button type="button" class="secondary" data-mt="${t}" style="margin:0;padding:6px 8px;font-size:.85rem;width:auto;">${t}</button>`).join('')}</div>
     <div class="muted" style="font-size:.85rem;margin-bottom:6px;">빈칸은 회원 수를 모른다는 뜻이에요.</div>
-    <div id="me-body" style="display:grid;grid-template-columns:1fr 64px 64px;gap:4px 6px;align-items:center;font-size:.9rem;"></div>
+    <div id="me-body" style="display:grid;grid-template-columns:1fr 64px 64px 30px;gap:4px 6px;align-items:center;font-size:.9rem;"></div>
+    <div id="me-undo" style="margin-top:8px;"></div>
+    <div id="me-add" style="display:flex;gap:6px;margin-top:10px;"><input id="me-addname" placeholder="빠진 경로당 이름 (예: 지사)" style="flex:1;margin:0;"><button type="button" id="me-addbtn" style="width:auto;margin:0;padding:6px 12px;">＋ 추가</button></div>
     <div class="grid-2" style="margin-top:12px;"><button class="secondary" id="me-no">취소</button><button id="me-ok">저장</button></div></div>`;
   document.body.appendChild(back);
   // (v462) 맨 위 합계: 경로당 수 · 회원 합계 · 배치 합계 (칸을 칠 때마다 바로 바뀜)
@@ -3011,11 +3023,35 @@ function openMemEdit(){
     curList = sitesOf(cur);
     back.querySelectorAll('[data-mt]').forEach(b => { const on = b.dataset.mt === cur; b.style.background = on ? '#2b6cb0' : ''; b.style.color = on ? '#fff' : ''; });
     const body = back.querySelector('#me-body');
-    body.innerHTML = `<div><b>경로당</b><div id="me-h1" style="font-size:.85rem;"></div></div><div style="text-align:center;"><b>회원</b><div id="me-h2" style="font-size:.85rem;"></div></div><div style="text-align:center;"><b>배정</b><div id="me-h3" style="font-size:.85rem;"></div></div>` + (curList.length ? curList.map((s0, i) => {
+    body.innerHTML = `<span></span><div><b>경로당</b><div id="me-h1" style="font-size:.85rem;"></div></div><div style="text-align:center;"><b>회원</b><div id="me-h2" style="font-size:.85rem;"></div></div><div style="text-align:center;"><b>배정</b><div id="me-h3" style="font-size:.85rem;"></div></div>` + (curList.length ? curList.map((s0, i) => {
       const e = edits[s0]; const m = e ? e.m : (memberOf(s0) ?? ''), q = e ? e.q : quotaVal(s0);
-      return `<span>${esc(s0)}</span><input type="number" inputmode="numeric" min="0" data-mi="${i}" value="${esc(String(m))}" style="width:100%;text-align:center;color:#000;font-size:1rem;"><input type="number" inputmode="numeric" min="0" data-qi="${i}" value="${esc(String(q))}" style="width:100%;text-align:center;color:#000;font-size:1rem;">`;
+      return `<span>${esc(s0)}</span><input type="number" inputmode="numeric" min="0" data-mi="${i}" value="${esc(String(m))}" style="width:100%;text-align:center;color:#000;font-size:1rem;"><input type="number" inputmode="numeric" min="0" data-qi="${i}" value="${esc(String(q))}" style="width:100%;text-align:center;color:#000;font-size:1rem;"><button type="button" class="secondary" data-hide="${i}" title="목록에서 빼기" style="width:30px;height:30px;padding:0;margin:0;">✕</button>`;
     }).join('') : `<span class="muted" style="grid-column:1/-1;">이 면에 경로당이 없어요</span>`);
     updateSum();
+    const hid = Object.keys(siteHide()).filter(k => k.startsWith(cur + '|'));
+    const undo = back.querySelector('#me-undo');
+    if (undo) undo.innerHTML = hid.length ? `<div class="muted" style="font-size:.85rem;margin-bottom:4px;">뺀 경로당 (눌러서 다시 넣기)</div>` + hid.map(k => `<button type="button" class="secondary" data-unhide="${esc(k)}" style="width:auto;margin:0 4px 4px 0;padding:4px 8px;font-size:.85rem;">↩ ${esc(k.split('|')[1])}</button>`).join('') : '';
+  };
+  back.addEventListener('click', e => {
+    const hb = e.target.closest('[data-hide]'), ub = e.target.closest('[data-unhide]');
+    if (hb) {
+      const s0 = curList[Number(hb.dataset.hide)]; if (!s0) return;
+      stash(); const h = siteHide(); h[cur + '|' + s0] = true; store('jinan_sitehide', JSON.stringify(h));
+      logEvent('경로당 목록', null, `${cur} ${s0} 목록에서 뺌`, today()); draw();
+    } else if (ub) {
+      const k = ub.dataset.unhide; stash(); const h = siteHide(); delete h[k]; store('jinan_sitehide', JSON.stringify(h));
+      logEvent('경로당 목록', null, `${k.replace('|', ' ')} 다시 넣음`, today()); draw();
+    }
+  });
+  back.querySelector('#me-addbtn').onclick = () => {
+    const nm = back.querySelector('#me-addname').value.trim();
+    if (!nm) return notify('경로당 이름을 적어 주세요.');
+    const s0 = normSenior(cur, nm);
+    stash();
+    const ex = siteExtra(); ex[cur] = ex[cur] || []; if (!ex[cur].includes(s0)) ex[cur].push(s0); store('jinan_siteextra', JSON.stringify(ex));
+    const h = siteHide(); delete h[cur + '|' + s0]; store('jinan_sitehide', JSON.stringify(h));
+    logEvent('경로당 목록', null, `${cur} ${s0} 목록에 추가`, today());
+    back.querySelector('#me-addname').value = ''; draw();
   };
   back.querySelectorAll('[data-mt]').forEach(b => b.onclick = () => { stash(); cur = b.dataset.mt; draw(); });
   back.querySelector('#me-no').onclick = () => back.remove();
@@ -3071,6 +3107,9 @@ function renderSiteBoard(){   // (v458) 내 담당 면은 위에 항상 보이�
   const tile = x => `<button type="button" class="sb-t" data-t="${esc(x)}" style="margin:0;padding:8px 10px;font-size:.85rem;line-height:1.6;white-space:normal;text-align:left;${x === t ? 'background:#c6e0b4;color:#222;border:2px solid #2f855a;font-weight:bold;' : 'background:#f7fafc;color:#2d3748;border:1px solid #cbd5e0;'}">${zsLine(x)}</button>`;
   const sites = {};
   participants.filter(p => counted(p) && p.town === t).forEach(p => { const s0 = seniorOf(p); (sites[s0] = sites[s0] || []).push(p); });
+  const hideB = siteHide(), exB = siteExtra()[t] || [];   // (v465) 직접 추가한 곳은 사람이 없어도 보이고, 뺀 곳은 사람 없을 때 숨김
+  exB.forEach(s0 => { sites[s0] = sites[s0] || []; });
+  Object.keys(sites).forEach(s0 => { if (hideB[t + '|' + s0] && !sites[s0].length) delete sites[s0]; });
   const names = boardOrder(Object.keys(sites));   // (v379) 사업 순서(개별관리 → 노인체육시설 묶음 …) 따라 정렬
   const trs = names.length ? names.map(({ s0, kind, num }) => {
     const ps = sites[s0], now = ps.filter(p => !inHospNow(p)), cur = now.length;
