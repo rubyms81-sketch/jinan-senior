@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-454</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-455</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -930,18 +930,20 @@ function reloadOnce(){
   } catch(e) {}
   location.reload();
 }
-// (v454) 두 자료가 다를 때 고르는 창 — 단추에 최신·과거를 적음 (어느 쪽이 최신인지는 저장 시각으로 정함)
+// (v455) 두 자료가 다를 때 고르는 창 — 단추 안에 최신·과거와 저장 날짜(26/11/10 09:14)를 한 줄로
 function syncPick(localAt, cloudAt){
   return new Promise(resolve => {
     const dev = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ? '📱 핸드폰' : '💻 컴퓨터';
     const localNewer = !!localAt && (!cloudAt || localAt > cloudAt);
+    const p2 = n => String(n).padStart(2, '0');
+    const fmt = d => d ? `${p2(d.getFullYear() % 100)}/${p2(d.getMonth()+1)}/${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}` : '기록 없음';
     const show = () => {
       const bg = document.createElement('div');
       bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
       bg.innerHTML = `<div style="background:#fff;color:#222;border-radius:12px;padding:18px 16px;max-width:420px;width:100%;box-sizing:border-box;font-size:15px;line-height:1.5;">
         <div style="font-weight:bold;font-size:1.2rem;margin-bottom:14px;">⚠️ 자료가 달라요</div>
-        <button type="button" id="sp-local" style="display:block;width:100%;padding:16px 0;border:0;border-radius:10px;font-size:18px;font-weight:bold;color:#fff;background:#e53e3e;margin-bottom:10px;">${dev} (${localNewer ? '최신' : '과거'})</button>
-        <button type="button" id="sp-cloud" style="display:block;width:100%;padding:16px 0;border:0;border-radius:10px;font-size:18px;font-weight:bold;color:#fff;background:#2b6cb0;">☁️ 구글 (${localNewer ? '과거' : '최신'})</button>
+        <button type="button" id="sp-local" style="display:block;width:100%;padding:16px 0;border:0;border-radius:10px;font-size:18px;font-weight:bold;color:#fff;background:#e53e3e;margin-bottom:10px;white-space:nowrap;">${dev} (${localNewer ? '최신' : '과거'})<span style="font-size:17px;font-weight:normal;margin-left:6px;">${fmt(localAt)}</span></button>
+        <button type="button" id="sp-cloud" style="display:block;width:100%;padding:16px 0;border:0;border-radius:10px;font-size:18px;font-weight:bold;color:#fff;background:#2b6cb0;white-space:nowrap;">☁️ 구글 (${localNewer ? '과거' : '최신'})<span style="font-size:17px;font-weight:normal;margin-left:6px;">${fmt(cloudAt)}</span></button>
       </div>`;
       document.body.appendChild(bg);
       bg.querySelector('#sp-local').onclick = () => { bg.remove(); resolve(true); };
