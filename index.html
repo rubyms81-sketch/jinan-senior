@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-469</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-470</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6926,7 +6926,11 @@ function bulkImport(input){
           // (v171) 파일에서 중도포기로 나온 분: 앱 목록과 맞춰 중도포기로 바꿈 (뺄까요 목록에는 안 뜸)
           if (state.includes('중도포기') && !reNames.has(name)) { quitIn.push({ name, end: parseStartDay(get('end')), why: get('reason'), ph: digits(get('phone')), address: get('address'), town: normTown(get('town')) || normTown(get('address')) }); return; }
           notActive.push(`${name} (${state})`); return; }
-        const bd = parseBday(get('bday')), bday = bd.md || '';
+        const bd = parseBday(get('bday'));
+        // (v470) 생일 칸이 비었으면 주민번호 앞 6자리(YYMMDD)에서 월·일을 채움 (뒷자리는 저장하지 않음)
+        const rrnD = digits(get('rrn')); let bdayRrn = '';
+        if (!bd.md && rrnD.length >= 6) { const mo = +rrnD.slice(2,4), dd = +rrnD.slice(4,6); if (mo >= 1 && mo <= 12 && dd >= 1 && dd <= 31) bdayRrn = `${String(mo).padStart(2,'0')}-${String(dd).padStart(2,'0')}`; }
+        const bday = bd.md || bdayRrn;
         const ag = parseAge(get('age') || (bd.year ? String(bd.year) : '')), age = ag.age, birth = ag.birth, sex = normSex(get('sex'));
         const phone = get('phone') ? fmtPhone(get('phone')) : '', address = get('address');
         let town = normTown(get('town')) || normTown(address);
@@ -6937,7 +6941,7 @@ function bulkImport(input){
         // 참여시작일: 올해 2월 이후 시작한 분만 근무 시작일로 넣음 (1월 시작 = 처음부터, 기록 없음)
         const sd = rk ? rk.origStart : parseStartDay(get('start')), sdLater = !!sd && sd.slice(0,4) === String(YEAR) && Number(sd.slice(5,7)) > 1 && sd.slice(0,7) !== today().slice(0,7);
         fileTowns.add(town);
-        if (pick) bizRows.push({ name, ph: digits(phone), b6: digits(get('rrn')).slice(0, 6), addr: address, town, senior, biz: get('biz') });
+        if (pick) bizRows.push({ name, ph: digits(phone), b6: rrnD.slice(0, 6), addr: address, town, senior, biz: get('biz') });
         // 이미 있는 분 찾기: 이름 + (연락처 또는 경로당 또는 주소), 없으면 같은 면에 같은 이름이 한 분뿐일 때
         let ex = participants.find(p => !matched.has(p.id) && p.name===name && (
           (digits(phone) && digits(p.phone)===digits(phone)) || (senior && p.senior===senior) || (address && p.address===address)));
@@ -6951,7 +6955,7 @@ function bulkImport(input){
           if (phone && digits(ex.phone)!==digits(phone)) ch.push(['phone', phone, '연락처']);
           if (address && ex.address!==address) ch.push(['address', address, '주소']);
           if (sex && ex.sex !== sex) ch.push(['sex', sex, '성별']);
-          if (bday && ex.bday !== bday) ch.push(['bday', bday, '생일']);
+          if (bday && ex.bday !== bday) ch.push(['bday', bday, bdayRrn && !bd.md ? '생일(주민번호)' : '생일']);
           if (age && String(ex.age)!==age) ch.push(['age', age, '나이']);
           if (birth && ex.birth !== birth) ch.push(['birth', birth, '태어난 해']);
           if (sdLater && ex.startDay !== sd) ch.push(['start', sd.slice(0,7), '근무 시작 달'], ['startDay', sd, '근무 시작일']);   // (v469) 파일이 최신이라고 보고 다르면 파일 값으로 덮어씀
