@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-467</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-468</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6765,8 +6765,12 @@ function noticeHtml(){
     open.map(n => `<div class="call-row"><span style="font-size:.9rem;">${esc(n.at)} · ${esc(n.text)}</span><button class="done-btn" onclick="noticeDone(${n.id})">✔ 확인</button></div>`).join(''));
 }
 // 사업 파일 검사: 새로 온 분·빠진 분·두 사업 중복·팀장 명단에 없는 경로당
-function bizCheck(pick, rows, list){
-  const prev = (bizSnap[pick] && bizSnap[pick].rows) || [];
+// (v468) 파일에 든 면만 바꿈: 파일에 없는 면의 명단은 그대로 두고, 파일에 든 면끼리만 비교
+function bizCheck(pick, rows, list, towns){
+  const prevAll = (bizSnap[pick] && bizSnap[pick].rows) || [];
+  const tset = towns instanceof Set ? towns : new Set(rows.map(r => r.town));
+  const kept = prevAll.filter(q => !tset.has(q.town));
+  const prev = prevAll.filter(q => tset.has(q.town));
   const added = prev.length ? rows.filter(r => !prev.some(q => sameBizPerson(q, r))) : [];
   const gone = prev.filter(q => !rows.some(r => sameBizPerson(q, r)));
   const others = Object.keys(bizSnap).filter(k => k !== pick);
@@ -6778,7 +6782,9 @@ function bizCheck(pick, rows, list){
   const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
   const mismatch = !!top && !(bizKeyOf(pick).includes(bizKeyOf(top[0])) || bizKeyOf(top[0]).includes(bizKeyOf(pick)));
   const notes = [];
-  let msg = `\n\n🏷 사업: ${pick} · ${rows.length}명 (이 사업 명단은 새 파일로 덮어쓰고, 다른 사업 명단은 그대로 둬요)`;
+  const partial = prevAll.some(q => !tset.has(q.town)) || (tset.size && tset.size < 11);
+  let msg = `\n\n🏷 사업: ${pick} · ${rows.length}명 (${[...tset].join(', ') || '면 모름'} 명단만 바꾸고, 파일에 없는 면과 다른 사업 명단은 그대로 둬요)`;
+  if (!partial) msg = `\n\n🏷 사업: ${pick} · ${rows.length}명 (이 사업 명단은 새 파일로 덮어쓰고, 다른 사업 명단은 그대로 둬요)`;
   if (mismatch) msg += `\n⚠️ 파일의 사업명(${top[0]})이 고른 사업(${pick})과 달라요. 맞는지 확인해 주세요.`;
   if (!prev.length) msg += '\n(이 사업은 처음 올리는 거예요)';
   else {
@@ -6790,7 +6796,7 @@ function bizCheck(pick, rows, list){
     notes.push(`두 사업 중복 확인: ${dups.map(x => x.r.name + '(' + x.w.join('·') + ')').join(', ')}`);
   }
   if (noSite.length) { msg += `\n📍 팀장 명단에 없는 경로당 ${noSite.length}곳: ${noSite.join(', ')}`; notes.push(`${pick} 파일의 팀장 명단에 없는 경로당: ${noSite.join(', ')}`); }
-  const snap = { at: today(), rows: rows.map(r => ({ name: r.name, ph: r.ph, b6: r.b6, addr: r.addr, town: r.town, senior: r.senior || '', biz: r.biz || '' })) };
+  const snap = { at: today(), rows: [...kept, ...rows.map(r => ({ name: r.name, ph: r.ph, b6: r.b6, addr: r.addr, town: r.town, senior: r.senior || '', biz: r.biz || '' }))] };
   return { msg, notes, snap };
 }
 function saveBizCheck(pick, bz){
@@ -6971,7 +6977,7 @@ function bulkImport(input){
       const gone = (bulkMode === 'fill' || pick) ? [] : participants.filter(p => fileTowns.has(p.town) && !matched.has(p.id));
 
       const list = (a) => a.slice(0,10).join(', ') + (a.length>10 ? ` 외 ${a.length-10}명` : '');
-      const bz = pick ? bizCheck(pick, bizRows, list) : null;
+      const bz = pick ? bizCheck(pick, bizRows, list, fileTowns) : null;
       // 경로당이 비어 있으면 주소로 추정
       added.filter(p => !p.senior).forEach(p => { const g = guessSenior(p, participants); if (g) { p.senior = g; p.guess = true; } });
       let msg = `${bulkMode === 'fill' ? '✏️ 추가 정보만 넣기' : '📋 명단 정리'} (${[...fileTowns].join(', ')})\n`;
