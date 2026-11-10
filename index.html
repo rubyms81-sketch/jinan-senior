@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-448</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-449</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -905,8 +905,8 @@ function cloudPut(k, v){
 function cloudDel(k){ try { kvCol().doc(k).delete().catch(() => {}); } catch(e) {} }
 async function cloudRead(){
   const snap = await kvCol().get();
-  const docs = {};
-  snap.forEach(d => { docs[d.id] = d.data(); });
+  const docs = {}; let maxT = 0;
+  snap.forEach(d => { docs[d.id] = d.data(); if (!d.id.includes('#') && docs[d.id].t) maxT = Math.max(maxT, docs[d.id].t); });
   const out = {};
   Object.keys(docs).forEach(id => {
     if (id.includes('#') || docs[id].n === undefined) return;
@@ -914,7 +914,7 @@ async function cloudRead(){
     for (let i = 1; i < docs[id].n; i++) s += (docs[id + '#' + i] ? docs[id + '#' + i].v : '');
     out[id] = s;
   });
-  return { out, fromCache: snap.metadata.fromCache };
+  return { out, fromCache: snap.metadata.fromCache, at: maxT ? new Date(maxT) : null };
 }
 function localMap(){
   const m = {};
@@ -930,25 +930,27 @@ function reloadOnce(){
   } catch(e) {}
   location.reload();
 }
-// (v446) 두 자료가 다를 때 고르는 창 — 단추 이름을 분명히 (브라우저 기본 확인·취소 창 대신)
-function syncPick(){
+// (v449) 두 자료가 다를 때 고르는 창 — 어느 쪽이 최신인지 날짜와 함께 보여 줌
+function syncPick(localAt, cloudAt){
   return new Promise(resolve => {
+    const fmt = d => `${d.getMonth()+1}월 ${d.getDate()}일 ${d.getHours()}시 ${String(d.getMinutes()).padStart(2,'0')}분`;
+    const dev = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ? '📱 핸드폰' : '💻 컴퓨터';
+    const localNewer = !!localAt && (!cloudAt || localAt > cloudAt);
+    const lLine = `${dev} (${localNewer ? '최신' : '늦은 자료'}): ${localAt ? fmt(localAt) : '시간 기록 없음'}`;
+    const cLine = `☁️ 구글 (${localNewer ? '늦은 자료' : '최신'}): ${cloudAt ? fmt(cloudAt) : '시간 기록 없음'}`;
     const show = () => {
       const bg = document.createElement('div');
       bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
       bg.innerHTML = `<div style="background:#fff;color:#222;border-radius:12px;padding:18px 16px;max-width:420px;width:100%;box-sizing:border-box;font-size:15px;line-height:1.5;">
         <div style="font-weight:bold;font-size:1.1rem;margin-bottom:8px;">⚠️ 자료가 서로 달라요</div>
-        <div style="margin-bottom:12px;">이 기기(휴대폰·컴퓨터)와 구글에 있는 자료가 달라서, 한쪽을 골라야 합니다.</div>
-        <div style="font-size:.9rem;color:#444;margin-bottom:14px;">
-          <div style="margin-bottom:6px;">▸ <b>구글 자료로 바꾸기</b>: 이 기기의 자료는 지우고 구글 자료를 받습니다.</div>
-          <div>▸ <b>이 기기 자료로 올리기</b>: 구글 자료는 지우고 이 기기의 자료를 올립니다.</div>
-        </div>
-        <button type="button" id="sp-cloud" style="width:100%;padding:12px;border:0;border-radius:8px;font-size:15px;font-weight:bold;color:#fff;background:#2b6cb0;margin-bottom:8px;">구글 자료로 바꾸기</button>
-        <button type="button" id="sp-local" style="width:100%;padding:12px;border:0;border-radius:8px;font-size:15px;font-weight:bold;color:#fff;background:#c05621;">이 기기 자료로 올리기</button>
+        <div style="margin-bottom:6px;">어느 자료를 쓸까요?</div>
+        <div style="margin-bottom:14px;">${lLine}<br>${cLine}</div>
+        <button type="button" id="sp-local" style="width:100%;padding:12px;border:0;border-radius:8px;font-size:15px;font-weight:bold;color:#fff;background:#c05621;margin-bottom:8px;">${dev} 자료 쓰기</button>
+        <button type="button" id="sp-cloud" style="width:100%;padding:12px;border:0;border-radius:8px;font-size:15px;font-weight:bold;color:#fff;background:#2b6cb0;">구글 자료 쓰기</button>
       </div>`;
       document.body.appendChild(bg);
-      bg.querySelector('#sp-cloud').onclick = () => { bg.remove(); resolve(false); };
       bg.querySelector('#sp-local').onclick = () => { bg.remove(); resolve(true); };
+      bg.querySelector('#sp-cloud').onclick = () => { bg.remove(); resolve(false); };
     };
     if (document.body) show(); else document.addEventListener('DOMContentLoaded', show, { once: true });
   });
@@ -957,7 +959,7 @@ async function cloudSync(){
   if (!fbUser || cloudBusy) return;
   cloudBusy = true;
   try {
-    const { out: cloud, fromCache } = await cloudRead();
+    const { out: cloud, fromCache, at: cloudAt } = await cloudRead();
     if (fromCache) return; // 인터넷이 안 되면 이 휴대폰 자료 그대로 둠
     const local = localMap();
     const cKeys = Object.keys(cloud), lKeys = Object.keys(local);
@@ -969,7 +971,8 @@ async function cloudSync(){
     const hasCloud = !!cloud.jinan_participants && cloud.jinan_participants !== '[]';
     // (v437) 두 자료가 다르면 매번 묻기 (예전엔 처음 한 번만 묻고, 그 뒤엔 말없이 구글 자료로 덮어썼음)
     if (hasLocal && hasCloud) {
-      const toCloud = await syncPick();   // true = 이 기기 자료로 바꾸기 (구글에 올림)
+      const le = eventLog[eventLog.length - 1], lt = le && le.at ? new Date(String(le.at).replace(' ', 'T')) : null;
+      const toCloud = await syncPick(lt && !isNaN(lt) ? lt : null, cloudAt);   // true = 이 기기 자료로 바꾸기 (구글에 올림)
       try { rawSet.call(localStorage, linkedKey, '1'); } catch(e) {}
       if (toCloud) {
         lKeys.forEach(k => cloudPut(k, local[k]));
