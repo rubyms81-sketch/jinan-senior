@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-473</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-474</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3125,7 +3125,7 @@ function renderSiteBoard(){   // (v458) 내 담당 면은 위에 항상 보이�
     return `<tr>
       <td style="${TD}${BG}width:16px;padding:4px 0;font-weight:bold;">${num}</td>
       <td style="${TD}${BG}font-weight:bold;text-align:left;min-width:66px;font-size:1.05rem;">${esc(boardName(s0))}<div style="font-size:1rem;font-weight:normal;color:#000;margin-top:2px;">회원 ${mem !== null ? mem : '-'}</div></td>
-      <td style="${TD}${BG}"><input type="number" inputmode="numeric" min="0" class="sb-q" data-site="${esc(s0)}" value="${esc(String(quota))}" placeholder="${cur}" style="width:38px !important;min-width:0;max-width:38px;box-sizing:border-box;padding:2px 2px;text-align:center;margin:0;font-size:.85rem;"></td>
+      <td style="${TD}${BG}font-weight:bold;">${quota}</td>
       <td style="${TD}${BG}font-weight:bold;">${curTxt}</td>
       <td style="${TD}${BG}text-align:left;">${who}${out}</td></tr>`;
   }).join('') : `<tr><td colspan="5" style="${TD}color:#718096;">활동 중인 어르신이 없어요</td></tr>`;
@@ -3141,11 +3141,7 @@ function renderSiteBoard(){   // (v458) 내 담당 면은 위에 항상 보이�
   box.innerHTML = restHtml + table + '<button type="button" class="secondary full" id="sb-xls" style="margin:6px 0 0;">📥 현황판 엑셀 받기</button>';
   const xb = box.querySelector('#sb-xls'); if (xb) xb.onclick = exportSiteBoard;
   document.querySelectorAll('#site-card .sb-t').forEach(el => el.onclick = () => { store('jinan_sbtown', el.dataset.t); const d = document.getElementById('site-det'); if (d) d.open = true; renderSiteBoard(); });
-  document.querySelectorAll('#site-card .sb-q').forEach(inp => inp.onchange = () => {
-    const cur = siteQuota(), v = inp.value.trim();
-    if (v === '') delete cur[inp.dataset.site]; else cur[inp.dataset.site] = Math.max(0, Math.round(Number(v) || 0));
-    store('jinan_siteq', JSON.stringify(cur)); renderSiteBoard();
-  });
+  // (v474) 배정 칸은 입력칸 없이 숫자만 보임. 고치는 곳: 설정 › 경로당 회원 수 › 경로당별로 고치기
 }
 function renderZones(){
   renderSiteBoard();
