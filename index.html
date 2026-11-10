@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-452</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-453</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -9106,7 +9106,10 @@ function backupData(){
   try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith('jinan_') && !BK_SKIP.includes(k)) data[k] = localStorage.getItem(k); } } catch(e) {}
   return { app: 'jinan-senior', at: nowHM(), count: participants.length, data };
 }
-const bkName = () => `현장점검_백업_${today()}.json`;
+// (v453) 파일 이름에 시각(시·분)을 넣어 같은 날 여러 번 저장해도 덮어쓰지 않게 함
+let bkStamp = null;   // 한 번 저장할 때 쓰는 이름 (저장 중 분이 바뀌어도 같은 이름)
+const bkName = () => `현장점검_백업_${today()}_${bkStamp || nowHMc()}.json`;
+const nowHMc = () => { const d = new Date(); return String(d.getHours()).padStart(2,'0') + String(d.getMinutes()).padStart(2,'0'); };
 const bkFile = () => { const b = backupData(); if (Object.keys(photos).length) b.data.jinan_photos = JSON.stringify(photos); return new File([JSON.stringify(b)], bkName(), { type: 'application/json' }); };
 function idb(){ return new Promise((res, rej) => { try { const r = indexedDB.open('jinan-backup', 1); r.onupgradeneeded = () => r.result.createObjectStore('snaps'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch(e) { rej(e); } }); }
 async function snapSave(){   // 이 휴대폰 안에 백업 남기기 (최근 7개)
@@ -9145,6 +9148,7 @@ async function backupAndCloud(){
 }
 // (v452) 컴퓨터(Chrome·Edge)는 저장 위치를 고르는 창을 띄움, 그 밖(휴대폰 등)은 다운로드 폴더에 저장
 async function saveBackup(quiet){
+  bkStamp = nowHMc();
   const file = bkFile(); let where = '';
   if (window.showSaveFilePicker) {   // 이 줄은 사용자가 누른 바로 그 순간에 실행되어야 함
     try {
@@ -9152,13 +9156,14 @@ async function saveBackup(quiet){
       const w = await h.createWritable(); await w.write(file); await w.close();
       where = '고르신 위치';
     } catch(e) {
-      if (e && e.name === 'AbortError') return;   // 저장 창에서 취소함
+      if (e && e.name === 'AbortError') { bkStamp = null; return; }   // 저장 창에서 취소함
       where = '';   // 다른 오류면 아래 다운로드로 저장
     }
   }
   if (!where) { const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = bkName(); a.click(); where = '다운로드 폴더'; }
   await snapSave(); store('jinan_last_backup', nowHM()); logEvent('백업 저장', null, `${bkName()} (어르신 ${participants.length}명, ${where})`);
-  renderBackup(); if (!quiet) notify(`💾 백업 파일을 저장했어요.\n(저장 위치: ${where})\n(파일 이름: ${bkName()})\n\n휴대폰이나 컴퓨터가 바뀌어도 쓰려면 백업 파일을 따로 보관해 두세요.`);
+  const savedName = bkName(); bkStamp = null;
+  renderBackup(); if (!quiet) notify(`💾 백업 파일을 저장했어요.\n(저장 위치: ${where})\n(파일 이름: ${savedName})\n\n휴대폰이나 컴퓨터가 바뀌어도 쓰려면 백업 파일을 따로 보관해 두세요.`);
 }
 async function shareBackup(){
   const f = bkFile();
