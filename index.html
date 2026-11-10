@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-474</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-475</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -825,6 +825,7 @@ body.ord-hide .ord-btn { display: none !important; }
       <div><label>소속 면</label><select id="m-town"></select></div>
     </div>
     <label>경로당 이름</label><div class="senior-combo"><input type="text" id="m-senior" class="senior-in" data-town="m-town" placeholder="예: 지사" autocomplete="off"><button type="button" class="combo-btn" data-for="m-senior" aria-label="경로당 목록">▼</button><div class="combo-list hidden"></div></div>
+    <div id="m-own-wrap" style="display:none;"><label>소속 경로당 (개별관리 분은 꼭 고르기)</label><select id="m-ownsite"></select></div>
     <label>근무 시작 달 · 시작일</label><div class="grid-2"><select id="m-start" class="start-sel"></select><select id="m-startday" style="margin:0;"></select></div>
     <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-bottom:12px;"><input type="checkbox" id="m-link" style="width:22px;height:22px;margin:0;"> 🔗 신규 연계 중</label>
     <button class="full" onclick="saveInfo()">정보 저장</button>
@@ -847,6 +848,7 @@ body.ord-hide .ord-btn { display: none !important; }
   <div id="n-moim-box" class="hidden"><label>넣을 모임</label><select id="n-moim"></select><button type="button" class="small secondary" onclick="newMoimFromAdd()" style="width:auto;margin:0 0 8px;">＋ 새 모임 만들기</button><div class="muted" style="font-size:.85rem;margin-bottom:8px;">임원·여행 등 면·경로당이 없는 분입니다. 이름과 전화번호만 받고, 근무·감점·구역 인원에는 안 들어갑니다. 여러 명은 👥 모임 명단의 "엑셀로 한번에 넣기"를 쓰세요.</div></div>
   <div class="n-geo"><label>소속 면</label><select id="n-town"></select></div>
   <div class="n-geo"><label>경로당 이름</label><div class="senior-combo"><input type="text" id="n-senior" class="senior-in" data-town="n-town" placeholder="예: 지사" autocomplete="off"><button type="button" class="combo-btn" data-for="n-senior" aria-label="경로당 목록">▼</button><div class="combo-list hidden"></div></div></div>
+  <div id="n-own-wrap" class="n-geo" style="display:none;"><label>소속 경로당 (개별관리 분은 꼭 고르기)</label><select id="n-ownsite"></select></div>
   <label>어르신 성명</label><input type="text" id="n-name" placeholder="예: 김진안">
   <div class="n-geo"><label>나이 (주민번호 앞자리 6자리도 됨)</label><input type="text" inputmode="numeric" id="n-age" class="age-in" placeholder="예: 480315, 1948 또는 78"></div>
   <div class="n-geo"><label>성별</label><div class="grid-2 sex-pick" data-for="n-sex" style="margin-bottom:10px;"><button type="button" class="reason" data-v="남">👨 남</button><button type="button" class="reason" data-v="여">👩 여</button></div><input type="hidden" id="n-sex"></div>
@@ -3076,16 +3078,38 @@ const boardOrder = keys => { let n = 0, g = 0; const rank = { ind: 0, gen: 1, sp
   return keys.map(s0 => ({ s0, kind: s0 === '개별관리' ? 'ind' : isSportSite(s0) ? 'sport' : 'gen' }))
     .sort((a, b) => rank[a.kind] - rank[b.kind] || seniorRank(a.s0) - seniorRank(b.s0) || a.s0.localeCompare(b.s0, 'ko'))
     .map(x => ({ s0: x.s0, kind: x.kind, num: x.kind === 'ind' ? '0' : x.kind === 'gen' ? String(++n) : String(++g) })); };
+// (v475) 개별관리 분은 소속 경로당을 같이 고름 (소속은 명단에 저장, 현황판에서는 소속 경로당 숫자에 셈)
+function syncOwn(pre){
+  const wrap = document.getElementById(pre + '-own-wrap'), sel = document.getElementById(pre + '-ownsite'); if (!wrap || !sel) return;
+  const t = document.getElementById(pre + '-town').value, on = document.getElementById(pre + '-senior').value.trim() === '개별관리';
+  wrap.style.display = on ? '' : 'none'; if (!on) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">(고르기)</option>' + sitesOf(t).filter(k => k !== '개별관리' && k !== NO_SENIOR).map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join('');
+  sel.value = cur;
+}
+['input', 'change'].forEach(ev => document.addEventListener(ev, e => {
+  if (e.target.id === 'n-senior' || e.target.id === 'n-town') syncOwn('n');
+  if (e.target.id === 'm-senior' || e.target.id === 'm-town') syncOwn('m');
+}, true));
+document.addEventListener('click', () => setTimeout(() => { syncOwn('n'); syncOwn('m'); }, 0), true);
+// 현황판용: 개별관리 분은 개별관리 줄(이름)과 소속 경로당 줄(숫자)에 함께 들어감
+function boardSites(t){
+  const sites = {};
+  participants.filter(p => counted(p) && p.town === t).forEach(p => {
+    const s0 = seniorOf(p); (sites[s0] = sites[s0] || []).push(p);
+    if (s0 === '개별관리' && p.ownSite && p.ownSite !== s0) (sites[p.ownSite] = sites[p.ownSite] || []).push(p);
+  });
+  return sites;
+}
 // (v391) 경로당 현황판 표를 엑셀 행으로 (면 여러 곳도 한 번에)
 function boardRows(towns){
   const q = siteQuota(), out = [];
   towns.forEach(t => {
-    const sites = {};
-    participants.filter(p => counted(p) && p.town === t).forEach(p => { const s0 = seniorOf(p); (sites[s0] = sites[s0] || []).push(p); });
+    const sites = boardSites(t);
     boardOrder(Object.keys(sites)).forEach(({ s0, num }) => {
-      const ps = sites[s0], now = ps.filter(p => !inHospNow(p)), cur = now.length;
-      const quota = quotaOf(s0, cur);
-      out.push({ '읍면': t, '번호': num, '경로당': s0, '회원': memberOf(s0) ?? '', '배정': quota, '현재': cur, '보충': cur - quota,
+      const ps = sites[s0], now = ps.filter(p => !inHospNow(p)), isInd = s0 === '개별관리', cur = (isInd ? now.filter(p => !p.ownSite) : now).length;
+      const quota = isInd ? null : quotaOf(s0, cur);
+      out.push({ '읍면': t, '번호': num, '경로당': s0, '회원': memberOf(s0) ?? '', '배정': quota ?? '-', '현재': cur, '보충': quota == null ? '' : cur - quota,
         '참여자': now.map(p => p.name).join(', ') || '없음', '입원 제외': ps.filter(p => inHospNow(p)).map(p => p.name).join(', ') });
     });
   });
@@ -3105,27 +3129,26 @@ function renderSiteBoard(){   // (v458) 내 담당 면은 위에 항상 보이�
   const box = document.getElementById('site-board'), top = document.getElementById('site-top'); if (!box || !top) return;
   const t = sbTown(), q = siteQuota(), TD = 'border:1px solid #bbb;padding:4px 6px;text-align:center;vertical-align:top;';
   const tile = x => `<button type="button" class="sb-t" data-t="${esc(x)}" style="margin:0;padding:8px 10px;font-size:.85rem;line-height:1.6;white-space:normal;text-align:left;${x === t ? 'background:#c6e0b4;color:#222;border:2px solid #2f855a;font-weight:bold;' : 'background:#f7fafc;color:#2d3748;border:1px solid #cbd5e0;'}">${zsLine(x)}</button>`;
-  const sites = {};
-  participants.filter(p => counted(p) && p.town === t).forEach(p => { const s0 = seniorOf(p); (sites[s0] = sites[s0] || []).push(p); });
+  const sites = boardSites(t);
   const hideB = siteHide(), exB = siteExtra()[t] || [];   // (v465) 직접 추가한 곳은 사람이 없어도 보이고, 뺀 곳은 사람 없을 때 숨김
   exB.forEach(s0 => { sites[s0] = sites[s0] || []; });
   Object.keys(sites).forEach(s0 => { if (hideB[t + '|' + s0] && !sites[s0].length) delete sites[s0]; });
   const names = boardOrder(Object.keys(sites));   // (v379) 사업 순서(개별관리 → 노인체육시설 묶음 …) 따라 정렬
   let totQ = 0, totC = 0;   // (v466) 맨 아래 합계 줄용
   const trs = names.length ? names.map(({ s0, kind, num }) => {
-    const ps = sites[s0], now = ps.filter(p => !inHospNow(p)), cur = now.length;
-    const quota = quotaOf(s0, cur);   // 배정을 안 넣으면 시드(배치표)나 현재와 같게 봄
-    totQ += quota; totC += cur;
+    const ps = sites[s0], now = ps.filter(p => !inHospNow(p)), isInd = s0 === '개별관리', cur = (isInd ? now.filter(p => !p.ownSite) : now).length;
+    const quota = isInd ? null : quotaOf(s0, cur);   // 배정을 안 넣으면 시드(배치표)나 현재와 같게 봄
+    totQ += quota || 0; totC += cur;
     const mem = memberOf(s0), short = quota - cur;
-    const curTxt = short > 0 ? `${cur} <b style="color:#c53030;">(-${short})</b>` : `${cur}`;   // 부족한 만큼만 빨강 (보충 칸은 뺌)
-    const who = now.length ? now.map(p => dName(p)).join(', ') : '없음';
+    const curTxt = isInd && !cur ? '-' : short > 0 ? `${cur} <b style="color:#c53030;">(-${short})</b>` : `${cur}`;   // 부족한 만큼만 빨강 (보충 칸은 뺌)
+    const who = now.length ? now.map(p => dName(p) + (isInd && p.ownSite ? ' (' + p.ownSite + ')' : (!isInd && p.ownSite ? '(개별)' : ''))).join(', ') : '없음';
     const hosp = ps.filter(p => inHospNow(p));
     const out = hosp.length ? `<div style="color:#975a16;font-size:.8rem;">입원 ${hosp.length}명 제외(${hosp.map(p => dName(p)).join(', ')})</div>` : '';
     const BG = kind === 'sport' ? 'background:#c6f6d5;' : kind === 'ind' ? 'background:#fefcbf;' : '';   // (v457) 칸마다 직접 색 (컴퓨터에서 tr 배경이 안 보이던 문제)
     return `<tr>
       <td style="${TD}${BG}width:16px;padding:4px 0;font-weight:bold;">${num}</td>
       <td style="${TD}${BG}font-weight:bold;text-align:left;min-width:66px;font-size:1.05rem;">${esc(boardName(s0))}<div style="font-size:1rem;font-weight:normal;color:#000;margin-top:2px;">회원 ${mem !== null ? mem : '-'}</div></td>
-      <td style="${TD}${BG}font-weight:bold;">${quota}</td>
+      <td style="${TD}${BG}font-weight:bold;">${quota ?? '-'}</td>
       <td style="${TD}${BG}font-weight:bold;">${curTxt}</td>
       <td style="${TD}${BG}text-align:left;">${who}${out}</td></tr>`;
   }).join('') : `<tr><td colspan="5" style="${TD}color:#718096;">활동 중인 어르신이 없어요</td></tr>`;
@@ -3431,7 +3454,7 @@ function openZone(id){
     });
     bg.querySelectorAll('[data-new]').forEach(b => b.onclick = () => {
       const [town, senior] = b.dataset.new.split('|'); bg.remove(); openAdd();
-      document.getElementById('n-town').value = town; document.getElementById('n-senior').value = senior;
+      document.getElementById('n-town').value = town; document.getElementById('n-senior').value = senior; syncOwn('n');
     });
     // 이 구역 어르신 중에서 팀장 고르기 → 팀장 연락처도 자동으로
     bg.querySelectorAll('[data-lead]').forEach(b => b.onclick = () => {
@@ -6328,8 +6351,9 @@ async function addParticipant(){
   if (!v('n-name')) return notify('어르신 성명은 꼭 적어 주세요.');
   if (startVal('n-start') && !startDayVal('n-start')) return notify('근무 시작 달을 골랐어요. 시작일(며칠부터)도 골라 주세요.');
   if (isDup(participants, v('n-name'), normSenior(v('n-town'), v('n-senior')), v('n-phone')) && !await ask('같은 분이 이미 등록되어 있습니다. 그래도 등록할까요?')) return;
+  if (v('n-senior').trim() === '개별관리' && !v('n-ownsite')) return notify('개별관리 분은 소속 경로당을 골라 주세요.');
   const ag = parseAge(v('n-age')); if (ag.bad) return notify(AGE_BAD);
-  participants.push({ id: Date.now(), town:v('n-town'), senior:normSenior(v('n-town'), v('n-senior')), name:v('n-name'), ...(normSex(v('n-sex')) ? { sex: normSex(v('n-sex')) } : {}), age:ag.age, ...(ag.birth ? { birth: ag.birth } : {}),
+  participants.push({ id: Date.now(), town:v('n-town'), senior:normSenior(v('n-town'), v('n-senior')), ...(v('n-senior').trim() === '개별관리' ? { ownSite: v('n-ownsite') } : {}), name:v('n-name'), ...(normSex(v('n-sex')) ? { sex: normSex(v('n-sex')) } : {}), age:ag.age, ...(ag.birth ? { birth: ag.birth } : {}),
     phone:fmtPhone(v('n-phone')), address:v('n-address'), ...(startVal('n-start') ? { start: startVal('n-start') } : {}),
     ...(document.getElementById('n-link').checked ? { linking: { since: today() } } : {}), ...(startVal('n-start') ? { startDay: startDayVal('n-start') } : {}), regDay: today(), quit:false, logs:[] });
   { const np = participants[participants.length-1]; if (np.start && np.start < monthKey()) np.lateN = { day: np.startDay || (np.start + '-01'), ok: false }; }   // (v277) 지난 달 활동으로 늦게 등록
@@ -6373,7 +6397,7 @@ function guessSenior(p, pool){
 // ---------- 엑셀로 여러 명 한번에 등록 ----------
 // 직접 만든 양식과 노인일자리 업무시스템에서 내려받은 명단 둘 다 읽습니다.
 const COLS = { town:['읍면','면','소속면','읍·면','읍면동'], senior:['경로당','경로당이름','경로당명','근무장소','근무지'], name:['성명','이름','어르신성명'],
-  sex:['성별','남녀'], bday:['생일','생년월일','출생일'], age:['나이','연령'], phone:['연락처','전화번호','휴대폰'], address:['주소','거주지'], state:['참여상태'], start:['참여시작일','시작일'], end:['참여종료일','종료일'], reason:['중도포기사유','중도포기 사유'], rrn:['주민등록번호','주민번호'], biz:['사업명'] };
+  sex:['성별','남녀'], bday:['생일','생년월일','출생일'], age:['나이','연령'], phone:['연락처','전화번호','휴대폰'], address:['주소','거주지'], state:['참여상태'], start:['참여시작일','시작일'], end:['참여종료일','종료일'], reason:['중도포기사유','중도포기 사유'], rrn:['주민등록번호','주민번호'], ownsite:['소속 경로당','소속경로당','소속 경로'], biz:['사업명'] };
 // 참여시작일 글자 → 'YYYY-MM-DD' (엑셀 날짜 칸의 여러 표시 모양을 다 받음)
 const parseStartDay = v => {
   const s = String(v ?? '').trim(); if (!s) return '';
@@ -6936,6 +6960,7 @@ function bulkImport(input){
         if (!town && fill) { const c = participants.filter(p => !matched.has(p.id) && nameBase(p.name)===nameBase(name)); if (c.length===1) town = c[0].town; else if (filterTown === '전체') { notFound.push(name); return; } }
         if (!town) { if (filterTown !== '전체') town = filterTown; else { noTown.push(name); return; } }
         const senior = get('senior') ? normSenior(town, get('senior')) : '';
+        const ownS = senior === '개별관리' && get('ownsite') ? normSenior(town, get('ownsite')) : '';   // (v475) 개별관리 분의 소속 경로당
         // 참여시작일: 올해 2월 이후 시작한 분만 근무 시작일로 넣음 (1월 시작 = 처음부터, 기록 없음)
         const sd = rk ? rk.origStart : parseStartDay(get('start')), sdLater = !!sd && sd.slice(0,4) === String(YEAR) && Number(sd.slice(5,7)) > 1 && sd.slice(0,7) !== today().slice(0,7);
         fileTowns.add(town);
@@ -6953,6 +6978,7 @@ function bulkImport(input){
           if (phone && digits(ex.phone)!==digits(phone)) ch.push(['phone', phone, '연락처']);
           if (address && ex.address!==address) ch.push(['address', address, '주소']);
           if (sex && ex.sex !== sex) ch.push(['sex', sex, '성별']);
+          if (senior === '개별관리' && ownS && (ex.ownSite || '') !== ownS) ch.push(['ownSite', ownS, '소속 경로당']);
           if (bday && ex.bday !== bday) ch.push(['bday', bday, bdayRrn && !bd.md ? '생일(주민번호)' : '생일']);
           if (age && String(ex.age)!==age) ch.push(['age', age, '나이']);
           if (birth && ex.birth !== birth) ch.push(['birth', birth, '태어난 해']);
@@ -6963,7 +6989,7 @@ function bulkImport(input){
         }
         if (fill) { notFound.push(name); return; }   // 추가 정보만 넣기: 명단에 없는 분은 건너뜀
         if (isDup(added, name, senior, phone)) { dup.push(name); return; }
-        const np = { id: Date.now() + (seq++), town, senior, name, ...(sex ? { sex } : {}), ...(bday ? { bday } : {}), age, ...(birth ? { birth } : {}), phone, address, ...(sdLater ? { start: sd.slice(0,7), startDay: sd } : {}), quit:false, logs:[] }; added.push(np); if (rk) reEnters.push([np, rk]);
+        const np = { id: Date.now() + (seq++), town, senior, name, ...(ownS ? { ownSite: ownS } : {}), ...(sex ? { sex } : {}), ...(bday ? { bday } : {}), age, ...(birth ? { birth } : {}), phone, address, ...(sdLater ? { start: sd.slice(0,7), startDay: sd } : {}), quit:false, logs:[] }; added.push(np); if (rk) reEnters.push([np, rk]);
       });
       // (v171) 파일에서 중도포기로 나온 분을 앱 목록과 맞춤 → 중도포기로 바꿈 (추가 정보만 넣기에서는 안 바꿈)
       if (bulkMode !== 'fill') quitIn.forEach(q => {
@@ -7732,6 +7758,7 @@ function openModal(id){
   document.getElementById('m-start').value = p.start && Number(p.start.slice(0,4)) === viewYear() ? String(Number(p.start.slice(5,7))) : '0';
   syncStartDay('m-start'); if (p.startDay && p.start && p.startDay.startsWith(p.start)) document.getElementById('m-startday').value = String(Number(p.startDay.slice(8,10)));
   document.getElementById('m-senior').value = p.senior || '';
+  syncOwn('m'); document.getElementById('m-ownsite').value = p.ownSite || '';
   setCheckDate(today());
   editingLogId = null; showEditBar();
   setSeg('c-how','직접'); ['c-badge','c-vest','c-leave'].forEach(i => setSeg(i,'정상'));
@@ -9050,8 +9077,10 @@ function saveInfo(){
   const ns = startVal('m-start'), os = p.start && Number(p.start.slice(0,4)) === viewYear() ? p.start : '';
   const nsDay = startDayVal('m-start');
   if (ns !== os || (ns && nsDay !== (p.startDay || ''))) { logEvent('정보 수정', p, `근무 시작: ${os ? Number(os.slice(5))+'월' : '처음부터'} → ${ns ? Number(ns.slice(5))+'월 '+Number(nsDay.slice(8))+'일' : '처음부터'}`); if (ns) { p.start = ns; p.startDay = nsDay; } else { delete p.start; delete p.startDay; } }
-  const NEWV = { town:g('m-town'), name:p.name, sex:p.sex, age:p.age, senior:normSenior(g('m-town'), g('m-senior')), phone:p.phone, address:p.address };
-  const LB = { town:'읍면', name:'성명', sex:'성별', age:'나이', senior:'경로당', phone:'연락처', address:'주소' };
+  const ownNew = g('m-senior').trim() === '개별관리' ? g('m-ownsite') : '';
+  if (g('m-senior').trim() === '개별관리' && !ownNew) return notify('개별관리 분은 소속 경로당을 골라 주세요.');
+  const NEWV = { town:g('m-town'), name:p.name, sex:p.sex, age:p.age, senior:normSenior(g('m-town'), g('m-senior')), phone:p.phone, address:p.address, ownSite: ownNew };
+  const LB = { town:'읍면', name:'성명', sex:'성별', age:'나이', senior:'경로당', ownSite:'소속 경로당', phone:'연락처', address:'주소' };
   const diff = Object.keys(NEWV).filter(k => String(p[k]||'') !== NEWV[k]).map(k => `${LB[k]}: ${p[k]||'(없음)'} → ${NEWV[k]||'(없음)'}`);
   if (diff.length) logEvent('정보 수정', p, diff.join(' / '));
   else if (p.guess) logEvent('경로당 확정', p, `추정 경로당 "${seniorOf(p)}" 확정`);
@@ -10387,7 +10416,7 @@ function exportExcel(){
 
   const kinds1 = list.map(p => monthKind(p, monthKey()));
   const sheet1 = list.map((p, i) => { const s = stats(p), m = mstats(p); return {
-    '표시':KIND_TXT[kinds1[i]] || '', '읍면':p.town, '경로당':p.senior, '우수 경로당':isBest(p.town, seniorOf(p)) ? '👑' : '', '구역':zoneOf(p)?.name || '', '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '성별':p.sex || '', '생일':bdayText(p.bday), '근무 시작':startTag(p) ? `${Number(p.start.slice(5))}월부터` : '', '신규 등록일':newUntil(p) ? p.regDay : '', '중도포기일':quitDayOf(p), '중도포기 사유':stats(p).dropped ? (p.quitWhy || stats(p).status) : '', '활동 중단 시작':p.pause || '', '장기요양 탈락':p.ltc || '', '중도포기서':p.quitPaper ? (p.quitPaper.ok ? `받음 (${p.quitPaper.ok})` : '미확인') : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : p.linkDone ? `연계 끝 (${p.linkDone.day})` : '', '비대면 교육 서류':p.docNeed ? (p.docOk ? `확인 (${p.docOk})` : '미확인') : '', '서류 사진':p.docNeed && p.docOk ? (p.docPhoto ? `있음 (${p.docPhoto})` : (p.docNoNeed ? `사진 필요 없음 (${p.docNoNeed})` : '없음')) : '', '교체 필요':fixList(p).map(x => `${x.n} (${x.date})`).join(', '), '교체 완료':(p.fixDone || []).map(x => `${x.n.replace(/\s*파손$/, '')} ${x.day}`).join(', '), '나이':p.age, '태어난 해':p.birth || '', '연락처':p.phone, '주소':p.address,
+    '표시':KIND_TXT[kinds1[i]] || '', '읍면':p.town, '경로당':p.senior, '소속 경로당':p.ownSite || '', '우수 경로당':isBest(p.town, seniorOf(p)) ? '👑' : '', '구역':zoneOf(p)?.name || '', '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '성별':p.sex || '', '생일':bdayText(p.bday), '근무 시작':startTag(p) ? `${Number(p.start.slice(5))}월부터` : '', '신규 등록일':newUntil(p) ? p.regDay : '', '중도포기일':quitDayOf(p), '중도포기 사유':stats(p).dropped ? (p.quitWhy || stats(p).status) : '', '활동 중단 시작':p.pause || '', '장기요양 탈락':p.ltc || '', '중도포기서':p.quitPaper ? (p.quitPaper.ok ? `받음 (${p.quitPaper.ok})` : '미확인') : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : p.linkDone ? `연계 끝 (${p.linkDone.day})` : '', '비대면 교육 서류':p.docNeed ? (p.docOk ? `확인 (${p.docOk})` : '미확인') : '', '서류 사진':p.docNeed && p.docOk ? (p.docPhoto ? `있음 (${p.docPhoto})` : (p.docNoNeed ? `사진 필요 없음 (${p.docNoNeed})` : '없음')) : '', '교체 필요':fixList(p).map(x => `${x.n} (${x.date})`).join(', '), '교체 완료':(p.fixDone || []).map(x => `${x.n.replace(/\s*파손$/, '')} ${x.day}`).join(', '), '나이':p.age, '태어난 해':p.birth || '', '연락처':p.phone, '주소':p.address,
     [`${curMonth}월 점검 횟수`]:mLogs(p).length, [`${curMonth}월 감점`]:-m.pts, [`${curMonth}월 자리 비움`]:m.aways.length, [`${curMonth}월 일당 미지급 일수`]:m.unpaid,
     [`${curMonth}월 조끼 미착용`]:m.vest, [`${curMonth}월 명찰 미착용`]:m.badge, '누적 이탈 횟수':s.leaves, '누적 감점':s.penalty, '상태':s.status, '마지막 점검일':s.last, '2027 제외':p.ex27 ? '제외 표시' : '',
     [`${curMonth}월 활동 날짜`]: personDays(p, monthKey()).map(d => Number(d.slice(8,10))).join(', '),
