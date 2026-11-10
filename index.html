@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-462</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-464</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2985,22 +2985,25 @@ function openMemEdit(){
   back.innerHTML = `<div class="dlg" style="max-height:90vh;overflow:auto;">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">👥 경로당 회원 수 고치기</div>
     <div id="me-towns" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">${TOWNS.map(t => `<button type="button" class="secondary" data-mt="${t}" style="margin:0;padding:6px 8px;font-size:.85rem;width:auto;">${t}</button>`).join('')}</div>
-    <div id="me-sum" style="font-weight:bold;font-size:.98rem;background:#edf2f7;border-radius:8px;padding:6px 8px;margin-bottom:8px;"></div>
     <div class="muted" style="font-size:.85rem;margin-bottom:6px;">빈칸은 회원 수를 모른다는 뜻이에요.</div>
     <div id="me-body" style="display:grid;grid-template-columns:1fr 64px 64px;gap:4px 6px;align-items:center;font-size:.9rem;"></div>
     <div class="grid-2" style="margin-top:12px;"><button class="secondary" id="me-no">취소</button><button id="me-ok">저장</button></div></div>`;
   document.body.appendChild(back);
   // (v462) 맨 위 합계: 경로당 수 · 회원 합계 · 배치 합계 (칸을 칠 때마다 바로 바뀜)
   const updateSum = () => {
-    let mSum = 0, mBlank = 0, qSum = 0;
+    let mSum = 0, mBlank = 0, qSum = 0, nSite = 0;
     curList.forEach((s0, i) => {
+      if (String(s0).includes('게이트볼')) return;   // 게이트볼은 합계에서 뺌 (사용자 요청)
+      nSite++;
       const mi = back.querySelector(`[data-mi="${i}"]`), qi = back.querySelector(`[data-qi="${i}"]`);
       const mv = mi ? mi.value.trim() : String(memberOf(s0) ?? ''), qv = qi ? qi.value.trim() : String(quotaVal(s0));
       if (mv === '') mBlank++; else mSum += Math.max(0, Math.round(Number(mv) || 0));
       qSum += Math.max(0, Math.round(Number(qv) || 0));
     });
-    const sum = back.querySelector('#me-sum');
-    if (sum) sum.innerHTML = `${esc(cur)} · 경로당 ${curList.length}곳 · 회원 ${mSum}명${mBlank ? ` <span style="font-weight:normal;color:#718096;">(모름 ${mBlank}곳)</span>` : ''} · 배치 ${qSum}명`;
+    const h1 = back.querySelector('#me-h1'), h2 = back.querySelector('#me-h2'), h3 = back.querySelector('#me-h3');
+    if (h1) h1.innerHTML = `<b>${nSite}곳</b>`;
+    if (h2) h2.innerHTML = `<b>${mSum}명</b>${mBlank ? ` <span style="color:#718096;">(모름 ${mBlank}곳)</span>` : ''}`;
+    if (h3) h3.innerHTML = `<b>${qSum}명</b>`;
   };
   back.addEventListener('input', e => { if (e.target.dataset && (e.target.dataset.mi !== undefined || e.target.dataset.qi !== undefined)) updateSum(); });
   const stash = () => curList.forEach((s0, i) => { const mi = back.querySelector(`[data-mi="${i}"]`), qi = back.querySelector(`[data-qi="${i}"]`); if (mi && qi) edits[s0] = { m: mi.value.trim(), q: qi.value.trim() }; });
@@ -3008,7 +3011,7 @@ function openMemEdit(){
     curList = sitesOf(cur);
     back.querySelectorAll('[data-mt]').forEach(b => { const on = b.dataset.mt === cur; b.style.background = on ? '#2b6cb0' : ''; b.style.color = on ? '#fff' : ''; });
     const body = back.querySelector('#me-body');
-    body.innerHTML = `<b>경로당</b><b style="text-align:center;">회원</b><b style="text-align:center;">배정</b>` + (curList.length ? curList.map((s0, i) => {
+    body.innerHTML = `<div><b>경로당</b><div id="me-h1" style="font-size:.85rem;"></div></div><div style="text-align:center;"><b>회원</b><div id="me-h2" style="font-size:.85rem;"></div></div><div style="text-align:center;"><b>배정</b><div id="me-h3" style="font-size:.85rem;"></div></div>` + (curList.length ? curList.map((s0, i) => {
       const e = edits[s0]; const m = e ? e.m : (memberOf(s0) ?? ''), q = e ? e.q : quotaVal(s0);
       return `<span>${esc(s0)}</span><input type="number" inputmode="numeric" min="0" data-mi="${i}" value="${esc(String(m))}" style="width:100%;text-align:center;color:#000;font-size:1rem;"><input type="number" inputmode="numeric" min="0" data-qi="${i}" value="${esc(String(q))}" style="width:100%;text-align:center;color:#000;font-size:1rem;">`;
     }).join('') : `<span class="muted" style="grid-column:1/-1;">이 면에 경로당이 없어요</span>`);
