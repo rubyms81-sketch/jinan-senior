@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-459</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-460</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6511,12 +6511,53 @@ function openAddrGuide(){
       <table class="st-tbl" style="margin:6px 0 4px;background:#fff;"><tr><th>읍면</th><th>경로당</th><th>주소 또는 네이버 지도 링크</th></tr><tr><td>동향면</td><td>용암</td><td>동향면 자산리 977-5</td></tr><tr><td>상전면</td><td>지사</td><td>https://naver.me/…</td></tr></table>
       · 넣고 나면 경로당을 고를 때 <b>🗺️ 위치 보기</b>로 바로 지도가 열려요<br>· 지금 내 담당 경로당 <b>${all}곳 중 ${have}곳</b>에 주소가 있어요</div>
     <button type="button" class="secondary full" id="ad-tpl">⬇️ <b>양식 내려받기</b><br><span style="font-size:.85rem;">내 담당 면 경로당 이름이 미리 들어 있어요. 빈 주소만 채우세요</span></button>
+    <button type="button" class="secondary full" id="ad-miss">📋 <b>주소 없는 경로당 ${noAddrList().length}곳 · 한 번에 입력</b></button>
     <button type="button" class="full" id="ad-up">📂 <b>엑셀 파일 올리기</b></button>
     <button type="button" class="secondary full" id="ad-close">닫기</button></div>`;
   document.body.appendChild(bg);
   bg.querySelector('#ad-tpl').onclick = () => downloadAddrTemplate();
   bg.querySelector('#ad-up').onclick = () => { bg.remove(); document.getElementById('addr-file').click(); };
   bg.querySelector('#ad-close').onclick = () => bg.remove();
+  bg.querySelector('#ad-miss').onclick = () => { bg.remove(); openNoAddrBulk(); };
+}
+// (v460) 주소가 아직 없는 경로당을 면별로 보여 주고, 칸마다 적어서 한꺼번에 넣음
+function noAddrList(){
+  const out = [];
+  visibleTowns().forEach(tw => sitesOf(tw).filter(k => k !== '개별관리' && k !== NO_SENIOR && !mapOf(tw, k)).forEach(k => out.push({ town: tw, senior: k })));
+  return out;
+}
+function openNoAddrBulk(){
+  const miss = noAddrList();
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  const body = miss.length ? visibleTowns().map(tw => {
+    const ks = miss.filter(x => x.town === tw); if (!ks.length) return '';
+    return `<div style="font-weight:bold;margin:10px 0 4px;">${esc(tw)} · ${ks.length}곳</div>` + ks.map(x =>
+      `<div style="display:flex;align-items:center;gap:6px;margin:4px 0;"><span style="min-width:84px;font-weight:bold;">${esc(x.senior)}</span><input class="na-in" data-k="${esc(x.town + '|' + x.senior)}" placeholder="주소 또는 네이버 지도 링크" style="flex:1;margin:0;"></div>`).join('');
+  }).join('') : '<div class="muted" style="margin:10px 0;">주소가 없는 경로당이 없어요.</div>';
+  bg.innerHTML = `<div class="dlg" style="max-height:88vh;overflow:auto;">
+    <div style="font-weight:bold;font-size:1.05rem;">📋 주소 없는 경로당 ${miss.length}곳</div>
+    <div class="muted" style="font-size:.85rem;">주소를 적을 칸만 채우고 맨 아래 "한꺼번에 넣기"를 누르세요. 비워 둔 칸은 그대로 둬요.</div>
+    ${body}
+    <button type="button" class="full" id="na-save" style="margin-top:10px;">✔ 채운 칸 한꺼번에 넣기</button>
+    <button type="button" class="secondary full" id="na-close">닫기</button></div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('#na-close').onclick = () => bg.remove();
+  bg.querySelector('#na-save').onclick = async () => {
+    const ok = [];
+    bg.querySelectorAll('.na-in').forEach(inp => {
+      const val = inp.value.trim(); if (!val) return;
+      const [town, senior] = inp.dataset.k.split('|');
+      const url = (val.match(/https?:\/\/[^\s<>"']+/) || [])[0];
+      const v = url ? { url, label: '', date: today() }
+        : { addr: /진안/.test(val) ? val.replace(/^.*?(진안군)/, '$1') : '진안군 ' + (TOWNS.some(t => val.includes(t)) ? val : town + ' ' + val), label: '', date: today() };
+      ok.push({ town, senior, v });
+    });
+    if (!ok.length) return notify('넣을 주소를 적어 주세요.');
+    if (!await ask(`주소 ${ok.length}곳을 넣을까요?`)) return;
+    ok.forEach(x => { maps[x.town + '|' + x.senior] = x.v; logEvent('경로당 위치', null, `${x.town} ${x.senior} → ${x.v.addr || x.v.url} (주소 없는 목록에서 입력)`, today()); });
+    saveMaps(); bg.remove(); renderList(); renderZones();
+    notify(`🗺️ 경로당 주소 ${ok.length}곳을 넣었어요.`);
+  };
 }
 function addrImport(input){
   const file = input.files && input.files[0]; if (!file) return;
