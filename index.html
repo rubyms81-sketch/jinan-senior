@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-468</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-469</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6782,7 +6782,7 @@ function bizCheck(pick, rows, list, towns){
   const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
   const mismatch = !!top && !(bizKeyOf(pick).includes(bizKeyOf(top[0])) || bizKeyOf(top[0]).includes(bizKeyOf(pick)));
   const notes = [];
-  const partial = prevAll.some(q => !tset.has(q.town)) || (tset.size && tset.size < 11);
+  const partial = tset.size < TOWNS.length;
   let msg = `\n\n🏷 사업: ${pick} · ${rows.length}명 (${[...tset].join(', ') || '면 모름'} 명단만 바꾸고, 파일에 없는 면과 다른 사업 명단은 그대로 둬요)`;
   if (!partial) msg = `\n\n🏷 사업: ${pick} · ${rows.length}명 (이 사업 명단은 새 파일로 덮어쓰고, 다른 사업 명단은 그대로 둬요)`;
   if (mismatch) msg += `\n⚠️ 파일의 사업명(${top[0]})이 고른 사업(${pick})과 달라요. 맞는지 확인해 주세요.`;
@@ -6954,7 +6954,7 @@ function bulkImport(input){
           if (bday && ex.bday !== bday) ch.push(['bday', bday, '생일']);
           if (age && String(ex.age)!==age) ch.push(['age', age, '나이']);
           if (birth && ex.birth !== birth) ch.push(['birth', birth, '태어난 해']);
-          if (sdLater && !ex.start && !ex.startDay) ch.push(['start', sd.slice(0,7), '근무 시작 달'], ['startDay', sd, '근무 시작일']);
+          if (sdLater && ex.startDay !== sd) ch.push(['start', sd.slice(0,7), '근무 시작 달'], ['startDay', sd, '근무 시작일']);   // (v469) 파일이 최신이라고 보고 다르면 파일 값으로 덮어씀
           if (ch.length) updated.push([ex, ch]); else same.push(ex);
           if (ex.quit) unquit.push(ex);
           return;
@@ -6983,7 +6983,8 @@ function bulkImport(input){
       let msg = `${bulkMode === 'fill' ? '✏️ 추가 정보만 넣기' : '📋 명단 정리'} (${[...fileTowns].join(', ')})\n`;
       msg += `\n✔ 그대로인 분: ${same.length}명`;
       msg += `\n➕ 새로 오신 분: ${added.length}명${added.length?` — ${list(added.map(p=>p.name))}`:''}`;
-      msg += `\n✏️ 정보가 바뀐 분: ${updated.length}명${updated.length?` — ${list(updated.map(([p,ch]) => `${p.name}(${ch.map(c=>c[2]).join('·')})`))}`:''}`;
+      const chLbl = (p, c) => c[0] === 'startDay' ? `근무 시작일 ${p.startDay || '없음'} → ${c[1]}` : c[2];
+      msg += `\n✏️ 정보가 바뀐 분: ${updated.length}명${updated.length?` — ${list(updated.map(([p,ch]) => `${p.name}(${ch.map(c => chLbl(p, c)).join('·')})`))}`:''}`;
       const nStart = added.filter(p => p.startDay).length + updated.filter(([p, ch]) => ch.some(c => c[0] === 'startDay')).length;
       if (nStart) msg += `\n🗓 근무 시작일 반영: ${nStart}명 (참여시작일 칸)`;
       if (gone.length) msg += `\n➖ 새 명단에 없는 분: ${gone.length}명 — ${list(gone.map(p=>p.name))}`;
