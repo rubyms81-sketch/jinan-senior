@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.12-486</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.12-487</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -6680,9 +6680,11 @@ function openBulkGuide(){
     <button type="button" class="full" id="bk-staff" style="margin:0 0 6px;background:#2b6cb0;color:#fff;">👔 회장·사무장 올리기</button>
     <button type="button" class="full" id="bk-edu" style="margin:0 0 6px;background:#2b6cb0;color:#fff;">📂 교육 이수 엑셀 올리기</button>
     <button type="button" class="full" id="bk-mem" style="margin:0 0 6px;background:#2b6cb0;color:#fff;">📂 경로당 회원수 올리기</button>
+    <button type="button" class="full" id="bk-goods" style="margin:0 0 6px;background:#2b6cb0;color:#fff;">📦 물품 명단 올리기 (사용 확인)</button>
     <label style="margin-top:18px;font-weight:bold;">양식 내려받기</label>
     <button type="button" class="full" id="bk-tpl" style="background:#718096;color:#fff;">⬇️ <b>양식 내려받기</b><br><span style="font-size:.85rem;">엑셀 파일이 없으면 이 양식을 받아서 작성해 올려 주세요</span></button>
     <button type="button" class="full" id="bk-ltpl" style="margin:0 0 6px;background:#718096;color:#fff;">⬇️ 팀장 양식 받기</button>
+    <button type="button" class="full" id="bk-gtpl" style="margin:0 0 6px;background:#718096;color:#fff;">⬇️ 물품 명단 양식 받기</button>
     <button type="button" class="full" id="bk-stpl" style="margin:0 0 6px;background:#718096;color:#fff;">⬇️ 회장·사무장 양식 받기</button>
     <button type="button" class="secondary full" id="bk-close" style="margin-top:10px;">닫기</button></div>`;
   document.body.appendChild(bg);
@@ -6691,6 +6693,8 @@ function openBulkGuide(){
   bg.querySelector('#bk-stpl').onclick = () => staffTemplate();
   bg.querySelector('#bk-staff').onclick = () => { const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.xlsx,.xls,.csv'; fi.className = 'hidden'; document.body.appendChild(fi); fi.onchange = () => { staffImport(fi, () => fi.remove()); }; fi.click(); };
   bg.querySelector('#bk-ltpl').onclick = () => downloadLeaderTpl();
+  bg.querySelector('#bk-gtpl').onclick = () => goodsTemplate();
+  bg.querySelector('#bk-goods').onclick = () => { const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.xlsx,.xls,.csv'; fi.className = 'hidden'; document.body.appendChild(fi); fi.onchange = () => { goodsImport(fi); fi.remove(); }; bg.remove(); fi.click(); };
   bg.querySelector('#bk-lead').onclick = () => { bg.remove(); document.getElementById('lead-file').click(); };
   bg.querySelector('#bk-tpl').onclick = () => downloadTemplate();
   bg.querySelector('#bk-full').onclick = () => { bulkMode = 'full'; bizPick = null; bg.remove(); document.getElementById('bulk-file').click(); };
@@ -7958,6 +7962,7 @@ function renderModal(){
       <div style="margin-top:6px;"><button type="button" class="small secondary" onclick="openHistory(current())" style="width:auto;margin:0;padding:4px 14px;">📜 지난 행적 보기 (월별)</button></div>   <!-- v292: 중도포기 화면에서 바로 지난 행적 (사용자 요청, 2026-11-06) -->
       ${s.quitNow && qd ? `<div style="margin-top:6px;"><button type="button" class="small" onclick="quitDocAsk(${p.id})" style="width:auto;margin:0;padding:4px 14px;background:${p.quitDocOk ? '#38a169' : '#c53030'};">📄 중도포기 서류 ${p.quitDocOk ? '✔ 확인 ' + md(p.quitDocOk) : '확인'}</button>${p.quitDocPhoto ? ` <button type="button" class="small secondary" onclick="quitDocView(${p.id})" style="width:auto;margin:0;padding:4px 10px;">📷 사진 보기</button>` : ''}</div>` : ''}</div>` + n; }
   if (!s.dropped) n = eduBoxHtml(p) + n;   // (v486) 받은 교육 칸 간단히 (eduBoxHtml)
+  if (!s.dropped) n = goodsHtml(p) + n;   // (v487) 📦 확인할 물품 (물품 명단)
   if (fixList(p).length) n = fixList(p).map(x => `<div class="notice" style="background:#fffaf0;border-color:#f6ad55;display:flex;align-items:center;gap:8px;"><b style="flex:1;color:#c05621;">🔧 ${esc(x.n)} <span class="muted" style="font-weight:normal;font-size:.85rem;">${md(x.date)}</span></b><button type="button" class="small" onclick="fixDone(${p.id}, '${x.id}')" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">✔ 교체함</button></div>`).join('') + n;
   if (docWait(p) && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;"><span class="tag-doc" style="font-size:1rem;">!</span><b style="flex:1;color:#22543d;">비대면 교육 서류</b><button type="button" class="small" onclick="docConfirm(${p.id})" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">📄 서류 확인</button></div>` + n;
   if (p.docNeed && p.docOk && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="color:#22543d;">📄 ${dName(p)} · 비대면 서류 확인 완료</b>${p.docPhoto ? ` <span>📷 사진 있음</span> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docPhotoView(${p.id})">보기</button>` : ` ${p.docNoNeed ? '<span style="color:#22543d;">📷 사진 필요 없음 (처리됨)</span>' : `<b style="color:#c05621;">📷 사진 없음</b> <button type="button" class="small" style="width:auto;margin:0;" onclick="docPhotoAdd(${p.id})">사진 넣기</button> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docNoNeed(${p.id})">사진 필요 없음</button>`}`}</div>` + n;
@@ -9891,6 +9896,77 @@ function xlpwClear(){
   xlPw = {}; store('jinan_xlpw', '{}'); logEvent('엑셀 비밀번호', null, '저장된 비밀번호 지움'); xlpwShow(); notify('저장된 엑셀 비밀번호를 지웠어요.');
 }
 // 엑셀 읽기 공통 입구: 파일을 읽은 뒤 암호가 걸렸으면 비밀번호를 묻고 풀어서 기존 reader.onload에 넘김
+// 📦 물품 명단 (v487): 서명부를 받은 뒤 취합한 엑셀을 올리면, 그 경로당을 점검할 때 "확인할 물품"이 뜸. 사용 확인을 누르면 날짜가 남음
+// 행 = { id, month:'YYYY-MM', item, qty, town, senior, ok:'' (사용 확인 날짜) }
+const goodsAll = () => { try { const v = JSON.parse(load('jinan_goods') || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
+const goodsWrite = arr => store('jinan_goods', JSON.stringify(arr));
+const goodsMonth = v => {
+  const s = String(v || '').trim();
+  let m = s.match(/(\d{4})\D+(\d{1,2})/); if (m) return `${m[1]}-${String(m[2]).padStart(2, '0')}`;
+  m = s.match(/(\d{1,2})\s*월/) || s.match(/^(\d{1,2})$/); if (m) return `${viewYear()}-${String(m[1]).padStart(2, '0')}`;
+  return '';
+};
+const goodsMonthLbl = mk => `${Number(String(mk).slice(5, 7))}월`;
+function goodsTemplate(){
+  if (typeof XLSX === 'undefined') return notify('엑셀 양식을 만드는 기능을 불러오지 못했습니다.\n인터넷 연결을 확인해 주세요.');
+  const ws = XLSX.utils.aoa_to_sheet([['지급 달', '면', '경로당', '물품', '수량'], ['10월', '진안읍', '예시 경로당', '슬리퍼', 1], ['10월', '동향면', '예시 경로당', '슬리퍼', 2]]);
+  ws['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 20 }, { wch: 14 }, { wch: 8 }];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '물품 명단'); XLSX.writeFile(wb, '물품_명단_양식.xlsx');
+}
+function goodsImport(input){
+  const file = input.files && input.files[0]; if (!file) return;
+  if (typeof XLSX === 'undefined') { input.value = ''; return notify('엑셀을 읽는 기능을 불러오지 못했습니다.\n인터넷 연결을 확인해 주세요.'); }
+  const reader = new FileReader();
+  reader.onerror = () => notify('파일을 열 수 없습니다. 다시 시도해 주세요.');
+  reader.onload = e => {
+    input.value = '';
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+      const hi = rows.findIndex(r => r.some(c => /물품/.test(String(c))));
+      if (hi < 0) return notify('"물품" 칸을 찾지 못했습니다.\n첫 줄에 지급 달·면·경로당·물품·수량 제목이 있는지 확인해 주세요.');
+      const head = rows[hi].map(c => String(c).replace(/\s/g, ''));
+      const mi = head.findIndex(h => /달|월/.test(h)), ti = head.findIndex(h => /면|읍/.test(h)), si = head.findIndex(h => /경로당/.test(h)), ii = head.findIndex(h => /물품/.test(h)), qi = head.findIndex(h => /수량|개수/.test(h));
+      if (si < 0) return notify('"경로당" 칸을 찾지 못했습니다.');
+      const all = goodsAll(), seen = new Set(all.map(g => [g.month, g.item, g.town, g.senior].join('|')));
+      let add = 0, skip = 0, bad = 0; const sites = new Set();
+      rows.slice(hi + 1).forEach(r => {
+        const item = String(r[ii] || '').trim(), senior = String(r[si] || '').trim();
+        if (!item && !senior) return;
+        const month = goodsMonth(r[mi]), town = ti >= 0 ? String(r[ti] || '').trim() : '', qty = qi >= 0 ? String(r[qi] || '').trim() : '';
+        if (!month || !item || !senior) { bad++; return; }
+        const key = [month, item, town, senior].join('|');
+        if (seen.has(key)) { skip++; return; }
+        seen.add(key); add++; sites.add(senior);
+        all.push({ id: Date.now() + add, month, item, qty, town, senior, ok: '' });
+      });
+      if (!add) return notify(`새로 올라간 물품이 없어요.${skip ? `\n이미 있는 줄 ${skip}건은 그대로 둡니다.` : ''}${bad ? `\n달·물품·경로당이 빈 줄 ${bad}건은 건너뛰었어요.` : ''}`);
+      goodsWrite(all);
+      logEvent('물품 명단 올리기', null, `${add}건 (경로당 ${sites.size}곳)`, today());
+      notify(`물품 명단 ${add}건을 넣었어요. (경로당 ${sites.size}곳)${skip ? `\n이미 있던 ${skip}건은 그대로 둡니다.` : ''}${bad ? `\n빈 줄 ${bad}건은 건너뛰었어요.` : ''}\n그 경로당을 점검할 때 점검 창에 뜹니다.`);
+    } catch (err) { notify('엑셀을 읽지 못했습니다. 양식이 맞는지 확인해 주세요.'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+// 점검 창: 이 경로당에 아직 확인 안 한 물품 (같은 달·같은 물품은 한 줄)
+function goodsHtml(p){
+  const sn = seniorOf(p);
+  const rows = goodsAll().filter(g => !g.ok && g.senior === sn && (!g.town || g.town === p.town));
+  if (!rows.length) return '';
+  const groups = new Map();
+  rows.forEach(g => { const k = g.month + '|' + g.item; if (!groups.has(k)) groups.set(k, { month: g.month, item: g.item, qty: g.qty }); });
+  return [...groups.values()].map(g => `<div class="notice" style="background:#faf5ff;border:2px solid #805ad5;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="flex:1;color:#44337a;">📦 확인할 물품: ${esc(g.item)} <span style="font-weight:normal;font-size:.9rem;">(${goodsMonthLbl(g.month)} 지급${g.qty ? `, ${esc(g.qty)}개` : ''})</span></b><button type="button" class="small" onclick="goodsOk(${p.id},'${g.month}','${encodeURIComponent(g.item)}')" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">✔ 사용 확인</button></div>`).join('');
+}
+function goodsOk(pid, month, itemEnc){
+  const p = participants.find(x => x.id === pid); if (!p) return;
+  const item = decodeURIComponent(itemEnc), sn = seniorOf(p), t = today();
+  const arr = goodsAll(); let n = 0;
+  arr.forEach(g => { if (!g.ok && g.month === month && g.item === item && g.senior === sn && (!g.town || g.town === p.town)) { g.ok = t; n++; } });
+  if (!n) return;
+  goodsWrite(arr);
+  logEvent('물품 사용 확인', p, `${sn} ${item} (${goodsMonthLbl(month)} 지급)`, t);
+  renderModal();
+}
 function excelRead(reader, file){
   const fr = new FileReader();
   fr.onerror = () => { if (reader.onerror) reader.onerror(new Event('error')); };
@@ -10770,6 +10846,11 @@ function exportExcel(){
   const wsSn = snRows.length ? XLSX.utils.json_to_sheet(snRows) : XLSX.utils.aoa_to_sheet([['경로당 특이사항을 아직 쓰지 않았습니다.']]);
   wsSn['!cols'] = [{wch:12},{wch:10},{wch:20},{wch:50}];
   XLSX.utils.book_append_sheet(wb, wsSn, '경로당 특이사항');
+  // (v487) 물품 확인 시트
+  const gdRows = goodsAll().map(g => ({ '지급 달': goodsMonthLbl(g.month), '면': g.town || '', '경로당': g.senior, '물품': g.item, '수량': g.qty || '', '사용 확인일': g.ok || '(아직)' }));
+  const wsGd = gdRows.length ? XLSX.utils.json_to_sheet(gdRows) : XLSX.utils.aoa_to_sheet([['물품 명단을 아직 올리지 않았습니다.']]);
+  wsGd['!cols'] = [{wch:10},{wch:12},{wch:20},{wch:14},{wch:8},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, wsGd, '물품 확인');
   XLSX.utils.book_append_sheet(wb, ws5, '변경 이력');
   // 올려서 넣은 일정표 (활동일·역량강화교육)
   const sch = schedLoad();
