@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.11-485</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.12-486</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -7957,12 +7957,7 @@ function renderModal(){
       ${s.quitNow ? `<button type="button" class="small secondary" onclick="toggleQuit()" style="width:auto;margin:8px auto 0;padding:4px 14px;">↩ 중도포기 해제</button>` : ''}${p.ltc ? `<button type="button" class="small secondary" onclick="ltcUndo(${p.id})" style="width:auto;margin:8px auto 0;padding:4px 14px;">↩ 장기요양 탈락 해제</button>` : ''}
       <div style="margin-top:6px;"><button type="button" class="small secondary" onclick="openHistory(current())" style="width:auto;margin:0;padding:4px 14px;">📜 지난 행적 보기 (월별)</button></div>   <!-- v292: 중도포기 화면에서 바로 지난 행적 (사용자 요청, 2026-11-06) -->
       ${s.quitNow && qd ? `<div style="margin-top:6px;"><button type="button" class="small" onclick="quitDocAsk(${p.id})" style="width:auto;margin:0;padding:4px 14px;background:${p.quitDocOk ? '#38a169' : '#c53030'};">📄 중도포기 서류 ${p.quitDocOk ? '✔ 확인 ' + md(p.quitDocOk) : '확인'}</button>${p.quitDocPhoto ? ` <button type="button" class="small secondary" onclick="quitDocView(${p.id})" style="width:auto;margin:0;padding:4px 10px;">📷 사진 보기</button>` : ''}</div>` : ''}</div>` + n; }
-  if (!s.dropped) { const rc = eduRecs(p), es = eduStatus(p);   // (v275) 받은교육 박스는 항상 보임(없으면 "현재 받은교육없음"); (v228) 자세히 보기 칸: 과정별 날짜·이름·시간
-    const mc = eduMissed(p), missHtml = mc.length ? `<div style="color:#c53030;font-weight:700;margin-top:4px;">❗ 못 받은 교육 ${mc.length}건: ${missTxt(mc)}</div>` : '';
-    const detList = (p.eduDone || []).length ? [...p.eduDone].sort((x, y) => x.date < y.date ? -1 : 1).map(d => `${d.date.slice(0, 4)}.${Number(d.date.slice(5, 7))}/${Number(d.date.slice(8, 10))} ${esc(d.name)} · ${esc(d.kind)} ${d.h}시간`) : rc.map(r => `${r.m}월 ${esc(r.kind)}교육 ${r.h}시간`);
-    const det = detList.length ? `<details style="margin-top:4px;"><summary style="cursor:pointer;color:#2b6cb0;font-size:.9rem;">자세히 보기</summary><div style="font-size:.88rem;margin-top:4px;line-height:1.7;">${detList.join('<br>')}</div></details>` : '';   // (v226) 받은 교육 + 부족 + 불참을 두 줄로
-    const lk = [es.lackSafe && `<b style="color:var(--danger)">안전 ${es.lackSafe}시간</b>`, es.lackAct && `<b style="color:var(--danger)">소양·직무 ${es.lackAct}시간</b>`].filter(Boolean);
-    n = `<div class="notice edu-box" style="background:#f7fafc;border-color:#cbd5e0;"><div>📚 <span style="color:#718096;">받은 교육</span> &nbsp; ${es.total > 0 ? `<b style="font-size:1.05rem;color:#1a365d;">총 ${Number(es.total.toFixed(1))}시간</b> <span class="muted" style="font-size:.85rem;">(안전 ${Number((es.by.안전 || 0).toFixed(1))} · 소양·직무 ${Number(es.act.toFixed(1))})</span>` : '현재 받은교육없음'}</div>${det}${missHtml}${lk.length ? `<div>부족 &nbsp; ${lk.join(' · ')}</div>` : ''}${es.missed.length ? `<div class="muted" style="font-size:.88rem;margin-top:4px;">🚫 불참 표시: ${es.missed.map(e => `${Number(e.date.slice(5,7))}월 ${dd(e.date)} ${esc(e.name)}`).join(', ')}</div>` : ''}</div>` + n; }
+  if (!s.dropped) n = eduBoxHtml(p) + n;   // (v486) 받은 교육 칸 간단히 (eduBoxHtml)
   if (fixList(p).length) n = fixList(p).map(x => `<div class="notice" style="background:#fffaf0;border-color:#f6ad55;display:flex;align-items:center;gap:8px;"><b style="flex:1;color:#c05621;">🔧 ${esc(x.n)} <span class="muted" style="font-weight:normal;font-size:.85rem;">${md(x.date)}</span></b><button type="button" class="small" onclick="fixDone(${p.id}, '${x.id}')" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">✔ 교체함</button></div>`).join('') + n;
   if (docWait(p) && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;"><span class="tag-doc" style="font-size:1rem;">!</span><b style="flex:1;color:#22543d;">비대면 교육 서류</b><button type="button" class="small" onclick="docConfirm(${p.id})" style="width:auto;margin:0;background:#38a169;white-space:nowrap;">📄 서류 확인</button></div>` + n;
   if (p.docNeed && p.docOk && !s.dropped) n = `<div class="notice" style="background:#f0fff4;border-color:#68d391;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="color:#22543d;">📄 ${dName(p)} · 비대면 서류 확인 완료</b>${p.docPhoto ? ` <span>📷 사진 있음</span> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docPhotoView(${p.id})">보기</button>` : ` ${p.docNoNeed ? '<span style="color:#22543d;">📷 사진 필요 없음 (처리됨)</span>' : `<b style="color:#c05621;">📷 사진 없음</b> <button type="button" class="small" style="width:auto;margin:0;" onclick="docPhotoAdd(${p.id})">사진 넣기</button> <button type="button" class="small secondary" style="width:auto;margin:0;" onclick="docNoNeed(${p.id})">사진 필요 없음</button>`}`}</div>` + n;
@@ -9945,14 +9940,24 @@ function eduMissed(p){
 }
 const missTxt = mc => mc.map(c => `${Number(c.date.slice(5, 7))}월 ${esc(c.name)} ${c.h}시간`).join(' · ');
 // (v273) 어르신 정보 창의 📚 교육 이력 칸 (점검 화면 받은 교육 칸과 같은 내용)
+// (v486) 받은 교육 칸 간단히: 요약 한 줄 + 완료/부족 띠. 세부 목록·못 받은 교육은 "자세히 보기" 안에
+// 12시간(안전 6 포함)을 채운 분은 못 받은 교육 목록을 보이지 않음 (추가 교육은 12시간 미만인 분만)
+function eduBoxHtml(p){
+  const rc = eduRecs(p), es = eduStatus(p), mc = eduMissed(p);
+  const complete = es.total >= 12 && !es.lackSafe && !es.lackAct;
+  const sumHtml = es.total > 0 ? `<b style="font-size:1.05rem;color:#1a365d;">${Number(es.total.toFixed(1))}시간</b> <span class="muted" style="font-size:.85rem;">(안전 ${Number((es.by.안전 || 0).toFixed(1))} · 소양·직무 ${Number(es.act.toFixed(1))})</span>` : '현재 받은교육없음';
+  const band = es.total <= 0 ? '' : complete
+    ? `<div style="margin-top:6px;border-radius:8px;padding:6px 10px;font-weight:700;background:#c6f6d5;color:#22543d;">✔ 교육 완료 (추가 교육 대상 아님)</div>`
+    : `<div style="margin-top:6px;border-radius:8px;padding:6px 10px;font-weight:700;background:#fed7d7;color:#9b2c2c;">${[es.lackSafe && `안전교육 ${es.lackSafe}시간 부족`, es.lackAct && `소양·직무 ${es.lackAct}시간 부족`].filter(Boolean).join(' · ') || '교육 시간 부족'}</div>`;
+  const detList = (p.eduDone || []).length ? [...p.eduDone].sort((x, y) => x.date < y.date ? -1 : 1).map(d => `${d.date.slice(0, 4)}.${Number(d.date.slice(5, 7))}/${Number(d.date.slice(8, 10))} ${esc(d.name)} · ${esc(d.kind)} ${d.h}시간`) : rc.map(r => `${r.m}월 ${esc(r.kind)}교육 ${r.h}시간`);
+  const missPart = !complete && mc.length ? `<div style="color:#c53030;font-weight:700;margin-top:8px;">❗ 못 받은 교육 ${mc.length}건</div>` + mc.map(c => `<div style="color:#c53030;">${Number(c.date.slice(5, 7))}월 ${esc(c.name)} · ${c.h}시간</div>`).join('') : '';
+  const absPart = es.missed.length ? `<div class="muted" style="font-size:.88rem;margin-top:6px;">🚫 불참 표시: ${es.missed.map(e => `${Number(e.date.slice(5,7))}월 ${dd(e.date)} ${esc(e.name)}`).join(', ')}</div>` : '';
+  const det = (detList.length || missPart || absPart) ? `<details style="margin-top:6px;"><summary style="cursor:pointer;color:#2b6cb0;font-size:.9rem;">자세히 보기</summary><div style="font-size:.88rem;margin-top:4px;line-height:1.7;">${detList.join('<br>')}${missPart}${absPart}</div></details>` : '';
+  return `<div class="notice edu-box" style="background:#f7fafc;border-color:#cbd5e0;"><div>📚 <span style="color:#718096;">받은 교육</span> &nbsp; ${sumHtml}</div>${band}${det}</div>`;
+}
 function eduNoticeHtml(p, s){
   if (s && s.dropped) return '';   // (v275) 기록이 없어도 박스는 보임
-  const rc = eduRecs(p), es = eduStatus(p), mc = eduMissed(p);
-  const missHtml = mc.length ? `<div style="color:#c53030;font-weight:700;margin-top:4px;">❗ 못 받은 교육 ${mc.length}건: ${missTxt(mc)}</div>` : '';
-  const detList = (p.eduDone || []).length ? [...p.eduDone].sort((x, y) => x.date < y.date ? -1 : 1).map(d => `${d.date.slice(0, 4)}.${Number(d.date.slice(5, 7))}/${Number(d.date.slice(8, 10))} ${esc(d.name)} · ${esc(d.kind)} ${d.h}시간`) : rc.map(r => `${r.m}월 ${esc(r.kind)}교육 ${r.h}시간`);
-  const det = detList.length ? `<details style="margin-top:4px;"><summary style="cursor:pointer;color:#2b6cb0;font-size:.9rem;">자세히 보기</summary><div style="font-size:.88rem;margin-top:4px;line-height:1.7;">${detList.join('<br>')}</div></details>` : '';
-  const lk = [es.lackSafe && `<b style="color:var(--danger)">안전 ${es.lackSafe}시간</b>`, es.lackAct && `<b style="color:var(--danger)">소양·직무 ${es.lackAct}시간</b>`].filter(Boolean);
-  return `<div class="notice" style="background:#f7fafc;border-color:#cbd5e0;"><div>📚 <span style="color:#718096;">받은 교육</span> &nbsp; ${es.total > 0 ? `<b style="font-size:1.05rem;color:#1a365d;">총 ${Number(es.total.toFixed(1))}시간</b> <span class="muted" style="font-size:.85rem;">(안전 ${Number((es.by.안전 || 0).toFixed(1))} · 소양·직무 ${Number(es.act.toFixed(1))})</span>` : '현재 받은교육없음'}</div>${det}${missHtml}${lk.length ? `<div>부족 &nbsp; ${lk.join(' · ')}</div>` : ''}${es.missed.length ? `<div class="muted" style="font-size:.88rem;margin-top:4px;">🚫 불참 표시: ${es.missed.map(e => `${Number(e.date.slice(5,7))}월 ${dd(e.date)} ${esc(e.name)}`).join(', ')}</div>` : ''}</div>`;
+  return eduBoxHtml(p);
 }
 function eduScopeTowns(){ return eduScope === 'all' ? TOWNS.slice() : eduScope === 'mine' ? myTowns.slice() : [eduScope]; }
 // (v230) 📥 전체 부족 엑셀: 11개 면 전체에서 교육 시간이 모자란 분 전부를 한 시트로 받음(면 칸으로 구분)
