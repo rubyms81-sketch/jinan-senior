@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.11-483</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.11-484</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -739,7 +739,7 @@ body.ord-hide .ord-btn { display: none !important; }
     <button type="button" class="small warning" onclick="addChange()" style="width:auto;margin:0 auto 0 0;padding:4px 10px;font-size:.85rem;">🔄 근무일 변경</button>
   </div>
   <details class="days-acc" id="days-acc" open><summary></summary>
-  <div class="date-row" style="display:flex;gap:6px;align-items:center;margin:0 0 8px;"><button type="button" class="date-btn" id="c-date-btn" onclick="pickCheckDate()" style="flex:1 1 auto;width:auto;min-width:0;margin:0;"></button><button type="button" class="small secondary" onclick="openNote()" style="flex:none;width:auto;margin:0;padding:8px 10px;">📝 특이사항</button></div>
+  <div class="date-row" style="display:flex;gap:6px;align-items:center;margin:0 0 8px;"><button type="button" class="date-btn" id="c-date-btn" onclick="pickCheckDate()" style="flex:1 1 auto;width:auto;min-width:0;margin:0;"></button><button type="button" class="secondary" id="c-site-note" onclick="openSiteNote()" style="flex:none;width:auto;margin:0;padding:10px 14px;font-size:1.05rem;font-weight:bold;white-space:nowrap;">📝 경로당 특이사항</button></div>
   <div id="day-tabs" class="hist-tabs"></div>
   <div id="m-days" class="chips"></div>
   <details class="chg-box m-sec hidden" id="sec-moved" style="margin-top:8px;"><summary><h4 id="m-chg-title" style="font-size:.95rem;">🔄 이동한 날짜</h4><span class="chg-arrow"></span></summary>
@@ -784,10 +784,12 @@ body.ord-hide .ord-btn { display: none !important; }
     <div id="ex-items"></div>
     </div>
 
+    <div style="display:none;">
     <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:6px;margin-top:4px;">
       <label id="memo-label" style="margin:0;">점검 메모</label>
     </div>
     <textarea id="c-memo" rows="3" placeholder="예: 경로당 청소 상태 좋음" style="margin-top:6px;"></textarea>
+    </div>
     <div id="edit-bar" class="notice hidden" style="margin-bottom:6px;"></div>
     <button class="full" id="btn-save-check" onmousedown="event.preventDefault()" onclick="saveCheck()">점검 저장</button>
     <button class="secondary full hidden" id="btn-cancel-edit" onclick="cancelEdit()">수정 취소</button>
@@ -2911,6 +2913,50 @@ function openNote(id, after){
     saveData(false); bg.remove(); if (after) after(); else renderModal();
   };
   // 자판은 내용 칸을 눌렀을 때만 뜨도록 자동 포커스 안 함
+}
+// 📝 경로당 특이사항 (v484): 경로당 하나에 적고 그 경로당 어르신 모두가 봄. 그날 활동일지에도 들어감
+const siteNoteKey = (town, senior) => `${town}|${senior}`;
+const siteNotesAll = () => { try { const v = JSON.parse(load('jinan_sitenotes') || '{}'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } };
+const siteNotesWrite = o => store('jinan_sitenotes', JSON.stringify(o));
+const siteNotesOf = (town, senior) => siteNotesAll()[siteNoteKey(town, senior)] || [];
+function openSiteNote(){
+  const p = current(); if (!p) return;
+  const town = p.town, senior = seniorOf(p), key = siteNoteKey(town, senior);
+  let date = today();
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = `<div class="dlg" style="max-height:90vh;overflow:auto;">
+    <div style="font-weight:bold;font-size:1.15rem;margin-bottom:2px;">📝 경로당 특이사항 · ${esc(senior)}</div>
+    <div class="muted" style="font-size:.85rem;margin-bottom:6px;">${esc(town)} · 이 경로당 어르신 모두에게 보입니다</div>
+    <div id="sn-list"></div>
+    <div style="border-top:1px dashed #cbd5e0;margin-top:8px;padding-top:8px;">
+      <label>날짜 (일이 있었던 날)</label>
+      <button type="button" class="secondary full" id="sn-date" style="margin-bottom:8px;"></button>
+      <label>내용</label>
+      <textarea id="sn-text" rows="3" placeholder="예: 화장실 전구 나감, 보일러 점검 필요"></textarea>
+    </div>
+    <div class="grid-2" style="margin-top:8px;"><button class="secondary" id="sn-close">닫기</button><button id="sn-save">저장</button></div></div>`;
+  document.body.appendChild(bg);
+  const $ = q => bg.querySelector(q);
+  const draw = () => {
+    const ns = siteNotesOf(town, senior).slice().sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+    $('#sn-date').innerHTML = `📅 <b>${dd(date)}</b>${date === today() ? ' 오늘' : ''} <span class="muted">바꾸기 ▾</span>`;
+    $('#sn-list').innerHTML = ns.length ? ns.map(x => `<div style="display:flex;align-items:center;gap:6px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:5px 8px;margin-bottom:4px;"><span style="flex:1;"><b>${dd(x.date)}</b> ${esc(x.text)}</span><button type="button" class="small secondary" data-sdel="${x.id}" style="width:auto;margin:0;padding:2px 8px;">✕</button></div>`).join('') : '<div class="muted" style="font-size:.9rem;margin-bottom:6px;">아직 적은 경로당 특이사항이 없어요.</div>';
+    bg.querySelectorAll('[data-sdel]').forEach(b => b.onclick = async () => {
+      const all = siteNotesAll(), arr = all[key] || [], x = arr.find(z => String(z.id) === b.dataset.sdel);
+      if (!x || !await ask(`${dd(x.date)} "${x.text}" 특이사항을 지울까요?`)) return;
+      all[key] = arr.filter(z => z !== x); siteNotesWrite(all); logEvent('경로당 특이사항 삭제', null, `${senior} ${x.text}`, x.date); draw();
+    });
+  };
+  $('#sn-date').onclick = () => openDatePicker(date, k => { date = k; draw(); }, '📝 일이 있었던 날을 누르세요');
+  $('#sn-close').onclick = () => bg.remove();
+  $('#sn-save').onclick = () => {
+    const text = $('#sn-text').value.trim();
+    if (!text) return notify('내용을 적어 주세요.');
+    const all = siteNotesAll(); (all[key] ||= []).push({ id: Date.now(), date, text }); siteNotesWrite(all);
+    logEvent('경로당 특이사항', null, `${senior} ${text}`, date);
+    $('#sn-text').value = ''; draw();
+  };
+  draw();
 }
 async function delNote(id, after){
   const p = current(); if (!p) return;
@@ -5836,6 +5882,7 @@ function diaryAuto(site, date){
     (p.notes || []).filter(x => x.date === date).forEach(x => out.push(`특이사항: ${p.name} 어르신 ${endDot(x.text)}${HEALTH_RE.test(x.text) ? ' 건강 상태를 계속 살필 필요가 있음.' : ''}`));
     const cu = customOf(p, mk); if (cu && cu.inHosp) out.push(`${p.name} 어르신 입원 중${cu.reason ? `(${cu.reason})` : ''}.`);
   });
+  siteNotesOf(site.town, site.senior).filter(x => x.date === date).forEach(x => out.push(`${site.senior} 경로당 특이사항: ${endDot(x.text)}`));   // (v484) 경로당 특이사항
   return [...new Set(out)].join(' ');   // 같은 날 두 번 저장해도 같은 문장은 한 번만
 }
 const townsText = sites => TOWNS.filter(t => sites.some(x => x.town === t)).map(t => `${t} ${sites.filter(x => x.town === t).length}곳`).join(' · ');
@@ -10715,6 +10762,11 @@ function exportExcel(){
   const wsMemo = memoRows.length ? XLSX.utils.json_to_sheet(memoRows) : XLSX.utils.aoa_to_sheet([['일정 메모를 아직 쓰지 않았습니다.']]);
   wsMemo['!cols'] = [{wch:12},{wch:6},{wch:40},{wch:8},{wch:20}];
   XLSX.utils.book_append_sheet(wb, wsMemo, '일정 메모');
+  // (v484) 경로당 특이사항 시트
+  const snRows = Object.entries(siteNotesAll()).flatMap(([k, arr]) => arr.map(x => ({ '날짜': x.date, '면': k.split('|')[0] || '', '경로당': k.split('|')[1] || '', '내용': x.text })));
+  const wsSn = snRows.length ? XLSX.utils.json_to_sheet(snRows) : XLSX.utils.aoa_to_sheet([['경로당 특이사항을 아직 쓰지 않았습니다.']]);
+  wsSn['!cols'] = [{wch:12},{wch:10},{wch:20},{wch:50}];
+  XLSX.utils.book_append_sheet(wb, wsSn, '경로당 특이사항');
   XLSX.utils.book_append_sheet(wb, ws5, '변경 이력');
   // 올려서 넣은 일정표 (활동일·역량강화교육)
   const sch = schedLoad();
