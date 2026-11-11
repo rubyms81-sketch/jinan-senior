@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.10-475</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.11-476</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -467,7 +467,7 @@ body.ord-hide .ord-btn { display: none !important; }
   </div>
   <div class="card" id="wd-card" data-mv="wd">
     <details class="chg-box" id="wd-box" style="margin-top:0;border-top:none;padding-top:0;">
-    <summary><div class="wd-head" style="flex:1;min-width:0;justify-content:flex-start;"><h3 id="wd-title" style="flex:0 1 auto;min-width:0;"></h3><button class="small secondary" onclick="event.preventDefault();event.stopPropagation();openWorkdays()" style="white-space:nowrap;flex:none;">활동일 수정</button><span id="wd-lock" style="align-self:center;"></span></div><span class="chg-arrow" style="flex:none;margin-left:6px;"></span></summary>
+    <summary><div class="wd-head" style="flex:1;min-width:0;justify-content:flex-start;"><h3 id="wd-title" style="flex:0 1 auto;min-width:0;"></h3><button class="small secondary" onclick="event.preventDefault();event.stopPropagation();openWorkdays()" style="white-space:nowrap;flex:none;">활동일 수정</button><button class="small secondary" onclick="event.preventDefault();event.stopPropagation();openSchedMemo()" style="white-space:nowrap;flex:none;">📆 일정표</button><span id="wd-lock" style="align-self:center;"></span></div><span class="chg-arrow" style="flex:none;margin-left:6px;"></span></summary>
     <div id="wd-chips" class="chips"></div>
     <div id="wd-note" class="muted hidden"></div>
     </details>
@@ -1864,9 +1864,10 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
   const y = Number(mk.slice(0,4)), m = Number(mk.slice(5,7)), last = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
   // (v181) ed 키 = `날짜|시간`(09:00 오전, 13:00 오후) → 같은 날 오전·오후 교육 각각 넣을 수 있음
   let sel = new Set(days), ed = new Map((edu || []).map(e => [`${e.date}|${e.time || '09:00'}`, e.name])), curEdu = '', curTime = '09:00';
-  const extD = new Set((edu || []).filter(notCounted).map(e => e.date));   // 역량강화교육: 10일에 안 셈
+  // (v476) 역량강화교육은 10일에 안 셈: 그 날 교육 이름이 모두 역량강화면 제외 (날짜를 고칠 때마다 다시 계산)
+  const extOn = d => { const ns = [...ed].filter(([key]) => key.startsWith(d + '|')).map(([, n]) => n); return ns.length > 0 && ns.every(n => notCounted({ name: n })); };
   const edDates = () => [...new Set([...ed.keys()].map(k => k.slice(0, 10)))];   // 교육·행사가 있는 날짜(중복 없이)
-  const cntE = () => edDates().filter(d => !extD.has(d)).length;   // 날짜 기준: 오전·오후 교육이 같은 날이면 1일
+  const cntE = () => edDates().filter(d => !extOn(d)).length;   // 날짜 기준: 오전·오후 교육이 같은 날이면 1일
   const snap = () => [...sel].sort().join() + '|' + [...ed].sort().join();
   const s0 = snap();
   const back = document.createElement('div'); back.className = 'dlg-back';
@@ -1898,7 +1899,7 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
     tr.innerHTML = curEdu ? Object.entries(EDU_TIMES).map(([t, l]) => `<button type="button" class="small ${t === curTime ? '' : 'secondary'}" data-t="${t}" style="width:auto;flex:1;margin:0;${t === curTime ? 'background:#2b6cb0;' : ''}">🕐 ${l}</button>`).join('') : '';
     tr.querySelectorAll('button').forEach(b => b.onclick = () => { curTime = b.dataset.t; draw(); });
     let h = WEEK.map(w => `<div class="h">${w}</div>`).join('') + '<div></div>'.repeat(first);
-    const endD = [...sel, ...edDates().filter(d => !extD.has(d))].sort().pop();
+    const endD = [...sel, ...edDates().filter(d => !extOn(d))].sort().pop();
     for (let d = 1; d <= last; d++) {
       const k = ymd(y,m,d), w = new Date(y, m-1, d).getDay(), am = ed.get(k + '|09:00'), pm = ed.get(k + '|13:00'), en2 = am || pm;
       const hn = HOLIDAY_NAMES[k] ? HOLIDAY_NAMES[k].replace('대체공휴일','대체휴일').slice(0,4) : '';
@@ -1927,7 +1928,7 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
       if (curEdu) {   // 🎓 교육·행사 넣기
         const key = k + '|' + curTime;   // 같은 날 같은 시간 → 빼기, 다른 시간이면 그 시간에 넣음
         if (ed.get(key) === curEdu) ed.delete(key);
-        else { ed.set(key, curEdu); extD.delete(k); sel.delete(k); }   // 교육·행사는 근무 10일과 상관없이 넣을 수 있음
+        else { ed.set(key, curEdu); sel.delete(k); }   // 교육·행사는 근무 10일과 상관없이 넣을 수 있음
       } else {        // 📅 근무일 넣기
         const w = new Date(y, m-1, Number(k.slice(8))).getDay();
         if (!sel.has(k) && (w === 0 || w === 6 || HOLIDAYS.has(k))) return notify(`${dd(k)}은 토·일·공휴일이라 근무일로 넣을 수 없어요.`);
@@ -1967,8 +1968,56 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
   $('#sc-save').onclick = async () => {
     if (!sel.size) return notify('근무일을 하루 이상 골라 주세요.');
     if (sel.size + cntE() < WORK_TARGET && !await ask(`근무일이 교육·행사 포함 ${sel.size + cntE()}일입니다. (보통 ${WORK_TARGET}일)\n이대로 저장할까요?`)) return;
-    back.remove(); onSave({ days: [...sel].sort(), edu: [...ed].sort().map(([key, name]) => { const date = key.slice(0, 10); return { date, name, time: key.slice(11), ...(extD.has(date) ? { ext: true } : {}) }; }) });
+    back.remove(); onSave({ days: [...sel].sort(), edu: [...ed].sort().map(([key, name]) => { const date = key.slice(0, 10); return { date, name, time: key.slice(11), ...(extOn(date) ? { ext: true } : {}) }; }) });
   };
+  draw();
+}
+// (v476) 📆 일정표: 근무와 상관없는 행사·출장 메모 (나만 봄). 근무일·마감 셈에는 안 들어감
+const memoAll = () => { try { const v = JSON.parse(load('jinan_memo') || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
+const memoWrite = arr => store('jinan_memo', JSON.stringify(arr));
+let smMk = today().slice(0, 7);
+function openSchedMemo(){
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg" style="max-height:88vh;overflow:auto;"><div id="sm-head" style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"></div><div id="sm-list"></div>
+    <div style="border-top:1px dashed #cbd5e0;margin-top:8px;padding-top:8px;"><select id="sm-day" style="margin:0 0 6px;"></select><input type="text" id="sm-text" placeholder="예: 부장님 출장 (회사 없음)" autocomplete="off" style="margin:0;"><button type="button" id="sm-add" class="full" style="margin-top:6px;background:#805ad5;">＋ 메모 추가</button></div>
+    <button type="button" class="secondary full" id="sm-close" style="margin-top:8px;">닫기</button></div>`;
+  document.body.appendChild(back);
+  const $ = q => back.querySelector(q);
+  const draw = () => {
+    const [y, m] = smMk.split('-').map(Number), last = new Date(y, m, 0).getDate(), mk = smMk;
+    $('#sm-head').innerHTML = `<button type="button" class="small secondary" data-mv="-1" style="width:auto;margin:0;">◀</button><div style="flex:1;text-align:center;font-weight:bold;">📆 ${m}월 일정표 <span class="muted" style="font-weight:normal;font-size:.8rem;">${y}년</span></div><button type="button" class="small secondary" data-mv="1" style="width:auto;margin:0;">▶</button>`;
+    const wd = monthDays(mk), edu = eduAll[mk] || [], memos = memoAll();
+    let rows = '';
+    for (let d = 1; d <= last; d++) {
+      const k = ymd(y, m, d), items = [];
+      if (wd.includes(k)) items.push('<span style="color:#2b6cb0;font-weight:bold;">📅 근무일</span>');
+      edu.filter(e => e.date === k).forEach(e => items.push(`<span>${notCounted(e) ? '🎓' : '📚'} ${esc(e.name)}${notCounted(e) ? ' <span class="muted">(근무일 셈 제외)</span>' : ''}</span>`));
+      memos.filter(x => x.date === k).forEach(x => items.push(`<span style="color:#c05621;">📝 ${esc(x.text)}</span> <button type="button" class="small secondary" data-mdel="${x.id}" style="width:auto;margin:0;padding:0 6px;">✕</button>`));
+      if (!items.length) continue;
+      rows += `<div style="display:flex;gap:8px;border-bottom:1px solid #e2e8f0;padding:6px 2px;font-size:.92rem;"><div style="width:64px;flex:none;font-weight:bold;">${d}일(${WEEK[new Date(y, m-1, d).getDay()]})</div><div style="flex:1;line-height:1.6;">${items.join('<br>')}</div></div>`;
+    }
+    $('#sm-list').innerHTML = rows || '<div class="muted" style="padding:10px 0;">이번 달에 적어 둔 일정이 없어요.</div>';
+    const keep = $('#sm-day').value;
+    $('#sm-day').innerHTML = Array.from({ length: last }, (_, i) => `<option value="${ymd(y, m, i + 1)}">${i + 1}일(${WEEK[new Date(y, m-1, i + 1).getDay()]})</option>`).join('');
+    if (keep && keep.startsWith(mk)) $('#sm-day').value = keep;
+    back.querySelectorAll('[data-mdel]').forEach(b => b.onclick = async () => {
+      const arr = memoAll(), x = arr.find(z => String(z.id) === b.dataset.mdel); if (!x || !await ask(`${dd(x.date)} "${x.text}" 메모를 지울까요?`)) return;
+      memoWrite(arr.filter(z => z !== x)); logEvent('일정 메모 삭제', null, `${dd(x.date)} ${x.text}`, x.date); draw();
+    });
+  };
+  back.addEventListener('click', e => {
+    const mv = e.target.closest && e.target.closest('[data-mv]'); if (!mv) return;
+    const [y, m] = smMk.split('-').map(Number), dt = new Date(y, m - 1 + Number(mv.dataset.mv), 1);
+    smMk = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`; draw();
+  });
+  $('#sm-add').onclick = () => {
+    const text = $('#sm-text').value.trim(), date = $('#sm-day').value;
+    if (!text) return notify('내용을 적어 주세요.');
+    const arr = memoAll(); arr.push({ id: Date.now(), date, text }); memoWrite(arr);
+    logEvent('일정 메모', null, `${dd(date)} ${text}`, date);
+    $('#sm-text').value = ''; draw();
+  };
+  $('#sm-close').onclick = () => back.remove();
   draw();
 }
 // 🔒 활동일 수정 잠금 (달마다): 잠그면 활동일을 실수로 못 바꿈
@@ -10611,6 +10660,11 @@ function exportExcel(){
   const wsC = cRows.length ? XLSX.utils.json_to_sheet(cRows) : XLSX.utils.aoa_to_sheet([['통화 메모를 아직 쓰지 않았습니다.']]);
   wsC['!cols'] = [{wch:8},{wch:12},{wch:10},{wch:12},{wch:40},{wch:12},{wch:12},{wch:10},{wch:14},{wch:12}];
   XLSX.utils.book_append_sheet(wb, wsC, '통화·건강 메모');
+  // (v476) 일정 메모 (나만 보는 행사·출장 메모, 근무일 셈과 무관)
+  const memoRows = memoAll().slice().sort((a, b) => a.date.localeCompare(b.date)).map(x => { const [yy, mm, dd2] = x.date.split('-').map(Number); return { '날짜': x.date, '요일': WEEK[new Date(yy, mm - 1, dd2).getDay()], '내용': x.text, '근무일': monthDays(x.date.slice(0, 7)).includes(x.date) ? '근무' : '', '교육·행사': (eduAll[x.date.slice(0, 7)] || []).filter(z => z.date === x.date).map(z => z.name).join(', ') }; });
+  const wsMemo = memoRows.length ? XLSX.utils.json_to_sheet(memoRows) : XLSX.utils.aoa_to_sheet([['일정 메모를 아직 쓰지 않았습니다.']]);
+  wsMemo['!cols'] = [{wch:12},{wch:6},{wch:40},{wch:8},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, wsMemo, '일정 메모');
   XLSX.utils.book_append_sheet(wb, ws5, '변경 이력');
   // 올려서 넣은 일정표 (활동일·역량강화교육)
   const sch = schedLoad();
