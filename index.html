@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.11-476</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.11-477</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3409,7 +3409,8 @@ function openZone(id){
     };
   };
   $('#zn-reset').onclick = async () => {
-    if (!await ask(`${z.name}을(를) 리셋할까요?\n이 구역의 경로당 ${z.sites.length}곳 배정과 팀장 이름이 지워져요.\n(어르신·팀장 명단은 그대로예요)`)) return;
+    if (!await ask(`${z.name}을(를) 리셋할까요?\n이 구역의 경로당 ${z.sites.length}곳 배정과 팀장 이름, 길안내 순서가 지워져요.\n(어르신·팀장 명단은 그대로예요)`)) return;
+    if (navPlan && navPlan.zid === z.id) navPlanSave(null);
     logEvent('구역 리셋', null, `${z.name} 리셋 (경로당 ${z.sites.length}곳 배정 지움${z.leaderName ? `, 팀장 ${z.leaderName} 해제` : ''})`);
     z.sites = []; delete z.leaderName; delete z.leaderId; delete z.phone; delete z.leaderAddr; delete z.car; delete z.carNo;
     saveZones(); bg.remove(); renderZones();
@@ -5230,12 +5231,14 @@ function moveZoneSite(zid, key, dir){
   [list[i], list[j]] = [list[j], list[i]]; z.order = list; saveZones();
   logEvent('방문 순서', null, `${z.name}: ${key.replace('|', ' ')} ${dir < 0 ? '위로' : '아래로'} 옮김`);
 }
-// (v390) 길안내 순서 정하기: 점검 현황 경로당을 누른 순서대로 번호를 붙여 그 순서로 길안내 (저장하지 않음, 앱을 껐다 켜면 다시 고름)
-let navPlan = null;
+// (v477) 길안내 순서 정하기: 누른 순서대로 번호를 붙여 그 순서로 길안내. 고를 때마다 자동 저장, 다음 날이 되면 자동으로 지움
+const navPlanLoad = () => { try { const v = JSON.parse(load('jinan_navplan') || 'null'); return v && v.day === today() && Array.isArray(v.keys) ? v : null; } catch (e) { return null; } };
+const navPlanSave = v => { navPlan = v && v.keys && v.keys.length ? v : null; store('jinan_navplan', navPlan ? JSON.stringify(navPlan) : ''); };
+let navPlan = navPlanLoad();
 function openNavPlan(z){
   const rows = zoneSitesOrdered(z).filter(x => x.senior !== '개별관리').map(x => siteKey(x.town, x.senior));
   if (!rows.length) return notify('길안내할 경로당이 없어요.');
-  let sel = [];
+  let sel = (navPlan && navPlan.zid === z.id) ? navPlan.keys.filter(k => rows.includes(k)) : [];   // (v477) 저장된 순서를 그대로 보여 줌
   const lab = k => { const [t, s] = k.split('|'); return `${esc(t.replace(/[면읍]$/, ''))} ${esc(s)}`; };
   const dlg = document.createElement('div'); dlg.className = 'dlg-back'; dlg.id = 'navplan-dlg';
   dlg.innerHTML = `<div class="dlg" style="max-height:90vh;overflow:auto;">
@@ -5249,19 +5252,21 @@ function openNavPlan(z){
   </div>`;
   document.body.appendChild(dlg);
   const close = () => dlg.remove();
+  // (v477) 바꿀 때마다 자동 저장 (나갔다 와도 남음). 다른 구역의 저장은 건드리지 않음
+  const persist = () => { if (sel.length) navPlanSave({ zid: z.id, day: today(), keys: [...sel] }); else if (navPlan && navPlan.zid === z.id) navPlanSave(null); };
   const draw = () => {
     dlg.querySelector('#np-list').innerHTML = rows.map(k => { const n = sel.indexOf(k); return `<button type="button" class="chip nv-chip" data-npk="${esc(k)}">${n >= 0 ? `<b style="color:#03c75a;">${n + 1}</b> ` : ''}${lab(k)}</button>`; }).join('');
     dlg.querySelector('#np-sel').innerHTML = sel.length ? sel.map((k, i) => `<div style="display:flex;align-items:center;gap:6px;margin:4px 0;"><b style="min-width:1.6em;">${i + 1}</b><span style="flex:1;">${lab(k)}</span><button type="button" class="small secondary" data-npup="${i}" ${i ? '' : 'disabled'} style="width:auto;margin:0;">▲</button><button type="button" class="small secondary" data-npdn="${i}" ${i < sel.length - 1 ? '' : 'disabled'} style="width:auto;margin:0;">▼</button></div>`).join('') : '<div class="muted" style="font-size:.9rem;">위 경로당을 누르면 여기에 순서대로 쌓여요.</div>';
-    dlg.querySelectorAll('[data-npk]').forEach(b => b.onclick = () => { const k = b.dataset.npk, n = sel.indexOf(k); if (n >= 0) sel.splice(n, 1); else sel.push(k); draw(); });
-    dlg.querySelectorAll('[data-npup]').forEach(b => b.onclick = () => { const i = +b.dataset.npup; [sel[i - 1], sel[i]] = [sel[i], sel[i - 1]]; draw(); });
-    dlg.querySelectorAll('[data-npdn]').forEach(b => b.onclick = () => { const i = +b.dataset.npdn; [sel[i + 1], sel[i]] = [sel[i], sel[i + 1]]; draw(); });
+    dlg.querySelectorAll('[data-npk]').forEach(b => b.onclick = () => { const k = b.dataset.npk, n = sel.indexOf(k); if (n >= 0) sel.splice(n, 1); else sel.push(k); persist(); draw(); });
+    dlg.querySelectorAll('[data-npup]').forEach(b => b.onclick = () => { const i = +b.dataset.npup; [sel[i - 1], sel[i]] = [sel[i], sel[i - 1]]; persist(); draw(); });
+    dlg.querySelectorAll('[data-npdn]').forEach(b => b.onclick = () => { const i = +b.dataset.npdn; [sel[i + 1], sel[i]] = [sel[i], sel[i + 1]]; persist(); draw(); });
   };
-  dlg.querySelector('#np-clear').onclick = () => { sel = []; draw(); };
+  dlg.querySelector('#np-clear').onclick = () => { sel = []; persist(); draw(); };   // 지우면 저장된 순서도 지움
   dlg.querySelector('#np-close').onclick = close;
   dlg.querySelector('#np-go').onclick = () => {
     if (!sel.length) return notify('경로당을 하나 이상 골라 주세요.');
-    navPlan = { zid: z.id, keys: [...sel] };
-    logEvent('길안내 순서', null, `${z.name}: ${sel.length}곳을 고른 순서대로 길안내 (순서는 저장 안 함)`);
+    navPlanSave({ zid: z.id, day: today(), keys: [...sel] });
+    logEvent('길안내 순서', null, `${z.name}: ${sel.length}곳을 고른 순서대로 길안내`);
     close();
     const [t, s] = sel[0].split('|'); openNaverNav(t, s);
   };
@@ -5280,7 +5285,7 @@ function renderSiteNav(){
   const curKey = siteKey(cur.town, cur.senior);
   // (v390) 길안내 순서 정하기로 고른 순서가 있으면 그 다음 번호, 없으면 목록 순서의 다음 곳
   let goKey = null;
-  if (navPlan && navPlan.zid === z.id) { const j = navPlan.keys.indexOf(curKey); if (j >= 0 && j < navPlan.keys.length - 1) goKey = navPlan.keys[j + 1]; }
+  if (navPlan && navPlan.day === today() && navPlan.zid === z.id) { const j = navPlan.keys.indexOf(curKey); if (j >= 0 && j < navPlan.keys.length - 1) goKey = navPlan.keys[j + 1]; }
   else if (next) goKey = siteKey(next.town, next.senior);
   box.innerHTML = `<div class="site-nav2">${goKey ? `<button type="button" class="small" data-snav-go="1" style="background:#03c75a;">🧭 다음 경로당 길안내</button>` : ''}<button type="button" class="small secondary" data-arrive="1">📍 여기 도착했어요</button></div><div class="site-nav"><button type="button" class="small secondary" data-snav="prev" ${prev ? '' : 'disabled'}>◀ ${prev ? nm(prev) : '처음'}</button><span class="sn-pos">${i >= 0 ? `${i+1}/${list.length}` : ''}</span><button type="button" class="small secondary" data-snav="next" ${next ? '' : 'disabled'}>${next ? nm(next) : '끝'} ▶</button></div>`;
   box.querySelectorAll('[data-snav]').forEach(b => b.onclick = () => { const t = b.dataset.snav === 'prev' ? prev : next; if (t) goSiteFromNav(z, t); });
