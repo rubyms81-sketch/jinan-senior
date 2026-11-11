@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.11-480</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.11-481</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -467,7 +467,7 @@ body.ord-hide .ord-btn { display: none !important; }
   </div>
   <div class="card" id="wd-card" data-mv="wd">
     <details class="chg-box" id="wd-box" style="margin-top:0;border-top:none;padding-top:0;">
-    <summary><div class="wd-head" style="flex:1;min-width:0;justify-content:flex-start;"><h3 id="wd-title" style="flex:0 1 auto;min-width:0;"></h3><button class="small secondary" onclick="event.preventDefault();event.stopPropagation();openWorkdays()" style="white-space:nowrap;flex:none;">활동일 수정</button><span id="wd-lock" style="align-self:center;"></span></div><span class="chg-arrow" style="flex:none;margin-left:6px;"></span></summary>
+    <summary><div class="wd-head" style="flex:1;min-width:0;justify-content:flex-start;"><h3 id="wd-title" style="flex:0 1 auto;min-width:0;"></h3><button class="small secondary" onclick="event.preventDefault();event.stopPropagation();openWorkdays()" style="white-space:nowrap;flex:none;">활동일 수정</button><button class="small secondary" onclick="event.preventDefault();event.stopPropagation();openWorkdays(true)" style="white-space:nowrap;flex:none;background:#805ad5;color:#fff;">📆 일정 추가</button><span id="wd-lock" style="align-self:center;"></span></div><span class="chg-arrow" style="flex:none;margin-left:6px;"></span></summary>
     <div id="wd-chips" class="chips"></div>
     <div id="wd-note" class="muted hidden"></div>
     </details>
@@ -1859,7 +1859,7 @@ function renderWork(){
 
 // 활동일 정하기 (달력)
 // 📅 달력 편집 (활동일 정하기 · 팀장님 일정 같이 씀): 근무일 + 교육(여러 개, 이름별)
-function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched }){
+function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched, startPlan }){
   let locked = !!(lockable && wdLock[mk]);
   const y = Number(mk.slice(0,4)), m = Number(mk.slice(5,7)), last = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
   // (v181) ed 키 = `날짜|시간`(09:00 오전, 13:00 오후) → 같은 날 오전·오후 교육 각각 넣을 수 있음
@@ -1880,7 +1880,7 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
     <div id="sc-edu" style="background:#f7fafc;border:1px solid #cbd5e0;border-radius:10px;padding:8px;margin:4px 0 6px;">
       <div id="sc-edu-names" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;"></div>
       <div id="sc-edu-time" style="display:flex;gap:4px;margin-bottom:4px;"></div>
-      <div style="display:flex;gap:4px;"><input type="text" id="sc-edu-new" placeholder="새 이름 (예: 문화활동, 소양교육)" autocomplete="off" style="margin:0;"><button type="button" class="small" id="sc-edu-add" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button><button type="button" class="small" id="sc-plan-add" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">📆 일정 추가</button></div>
+      <div style="display:flex;gap:4px;"><input type="text" id="sc-edu-new" placeholder="새 이름 (예: 문화활동, 소양교육)" autocomplete="off" style="margin:0;"><button type="button" class="small" id="sc-edu-add" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button></div>
     </div>
     <div class="cal" id="sc-cal"></div>
     <div style="text-align:center;margin-bottom:6px;">총 근무 <b id="sc-t"></b>일 / ${WORK_TARGET}일 <span class="muted">(근무 <span id="sc-n"></span>일 + 교육·행사 <span id="sc-e"></span>일)</span></div>
@@ -1990,7 +1990,6 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
     $('#sc-plan-list').innerHTML = planItems.length ? planItems.map((x, i) => `<div style="display:flex;align-items:center;gap:6px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:5px 8px;margin-top:4px;"><span style="flex:1;"><b>${dd(x.date)}</b> ${esc(x.text)}</span><button type="button" class="small secondary" data-pdel="${i}" style="width:auto;margin:0;padding:2px 8px;">✕</button></div>`).join('') : '<div class="muted" style="font-size:.9rem;">아직 추가한 일정이 없어요.</div>';
     back.querySelectorAll('[data-pdel]').forEach(b => b.onclick = () => { planItems.splice(Number(b.dataset.pdel), 1); draw(); });
   };
-  $('#sc-plan-add').onclick = () => { planMode = true; planK = ''; planItems = []; draw(); };
   $('#sc-plan-back').onclick = () => { planMode = false; planK = ''; planItems = []; draw(); };
   $('#sc-plan-go').onclick = () => {
     const text = $('#sc-plan-text').value.trim();
@@ -2005,6 +2004,7 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
     memoWrite(arr); planItems = []; planK = ''; planMode = false; draw();
     notify('일정을 저장했어요. 게시판에 떠 있어요.');
   };
+  if (startPlan) planMode = true;   // 메인 📆 일정 추가 버튼: 바로 일정 모드로 열기
   draw();
 }
 // (v476) 📆 일정표: 근무와 상관없는 행사·출장 메모 (나만 봄). 근무일·마감 셈에는 안 들어감
@@ -2070,9 +2070,9 @@ async function toggleWdLock(){
   if (on) delete wdLock[mk]; else wdLock[mk] = today();
   store('jinan_wdlock', JSON.stringify(wdLock)); logEvent(on ? '활동일 잠금 풀기' : '활동일 잠금', null, `${curMonth}월`); drawWdLock();
 }
-function openWorkdays(){
+function openWorkdays(startPlan){
   const mk = monthKey(), m = curMonth;
-  schedEditor({ title: `📅 ${m}월 활동일 정하기`, mk, lockable: true, sched: true, days: monthDays(mk), edu: eduAll[mk] || [], nav: d => { moveMonth(d); openWorkdays(); },
+  schedEditor({ title: `📅 ${m}월 활동일 정하기`, mk, lockable: true, sched: true, startPlan: !!startPlan, days: monthDays(mk), edu: eduAll[mk] || [], nav: d => { moveMonth(d); openWorkdays(); },
     onSave: ({ days, edu }) => {
       workdays[mk] = days; store('jinan_workdays', JSON.stringify(workdays));
       logEvent('활동일 설정', null, `${m}월: ${days.map(d => Number(d.slice(8,10))).join(', ')}일`, days[0]);
