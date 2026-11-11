@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.11-478</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.11-479</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -467,7 +467,7 @@ body.ord-hide .ord-btn { display: none !important; }
   </div>
   <div class="card" id="wd-card" data-mv="wd">
     <details class="chg-box" id="wd-box" style="margin-top:0;border-top:none;padding-top:0;">
-    <summary><div class="wd-head" style="flex:1;min-width:0;justify-content:flex-start;"><h3 id="wd-title" style="flex:0 1 auto;min-width:0;"></h3><button class="small secondary" onclick="event.preventDefault();event.stopPropagation();openWorkdays()" style="white-space:nowrap;flex:none;">활동일 수정</button><button class="small secondary" onclick="event.preventDefault();event.stopPropagation();openSchedMemo()" style="white-space:nowrap;flex:none;">📆 일정표</button><span id="wd-lock" style="align-self:center;"></span></div><span class="chg-arrow" style="flex:none;margin-left:6px;"></span></summary>
+    <summary><div class="wd-head" style="flex:1;min-width:0;justify-content:flex-start;"><h3 id="wd-title" style="flex:0 1 auto;min-width:0;"></h3><button class="small secondary" onclick="event.preventDefault();event.stopPropagation();openWorkdays()" style="white-space:nowrap;flex:none;">활동일 수정</button><span id="wd-lock" style="align-self:center;"></span></div><span class="chg-arrow" style="flex:none;margin-left:6px;"></span></summary>
     <div id="wd-chips" class="chips"></div>
     <div id="wd-note" class="muted hidden"></div>
     </details>
@@ -1879,7 +1879,7 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
     <div id="sc-edu" style="background:#f7fafc;border:1px solid #cbd5e0;border-radius:10px;padding:8px;margin:4px 0 6px;">
       <div id="sc-edu-names" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;"></div>
       <div id="sc-edu-time" style="display:flex;gap:4px;margin-bottom:4px;"></div>
-      <div style="display:flex;gap:4px;"><input type="text" id="sc-edu-new" placeholder="새 이름 (예: 문화활동, 소양교육)" autocomplete="off" style="margin:0;"><button type="button" class="small" id="sc-edu-add" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button></div>
+      <div style="display:flex;gap:4px;"><input type="text" id="sc-edu-new" placeholder="새 이름 (예: 문화활동, 소양교육)" autocomplete="off" style="margin:0;"><button type="button" class="small" id="sc-edu-add" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button><button type="button" class="small" id="sc-plan-add" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">📆 일정 추가</button></div>
     </div>
     <div class="cal" id="sc-cal"></div>
     <div style="text-align:center;margin-bottom:6px;">총 근무 <b id="sc-t"></b>일 / ${WORK_TARGET}일 <span class="muted">(근무 <span id="sc-n"></span>일 + 교육·행사 <span id="sc-e"></span>일)</span></div>
@@ -1889,6 +1889,7 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched 
     <div class="grid-2"><button class="secondary" id="sc-cancel">취소</button><button id="sc-save">저장</button></div></div>`;
   document.body.appendChild(back);
   const $ = q => back.querySelector(q);
+  $('#sc-plan-add').onclick = () => openPlanCal(mk);
   const PRESET = EDU_NAMES;
   const draw = () => {
     const names = eduNamesShown([...new Set([...PRESET, ...ed.values(), ...(curEdu ? [curEdu] : [])])]);
@@ -2024,6 +2025,54 @@ function openSchedMemo(){
     $('#sm-text').value = ''; draw();
   };
   $('#sm-close').onclick = () => back.remove();
+  draw();
+}
+// 📆 일정 추가 (v479): 빈 달력에서 날짜를 누르고 내용을 적어 여러 개 모은 뒤 아래 저장. 활동일·근무 셈에는 안 들어가고 게시판에 뜸
+function openPlanCal(mk0){
+  let [y, m] = mk0.split('-').map(Number), selK = '', items = [];
+  const back = document.createElement('div'); back.className = 'dlg-back';
+  back.innerHTML = `<div class="dlg" style="max-height:92vh;overflow:auto;">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+      <button type="button" class="small" id="pl-prev" style="width:auto;margin:0;padding:6px 12px;">◀</button>
+      <div id="pl-title" style="flex:1;text-align:center;font-weight:bold;font-size:1.1rem;"></div>
+      <button type="button" class="small" id="pl-next" style="width:auto;margin:0;padding:6px 12px;">▶</button></div>
+    <div class="cal" id="pl-cal"></div>
+    <div id="pl-sel" style="text-align:center;margin:6px 0;font-weight:bold;color:#553c9a;"></div>
+    <div style="display:flex;gap:4px;"><input type="text" id="pl-text" placeholder="예: 부장님 출장 (회사 없음)" autocomplete="off" style="margin:0;"><button type="button" class="small" id="pl-add" style="width:auto;margin:0;white-space:nowrap;background:#805ad5;">＋ 추가</button></div>
+    <div id="pl-list" style="margin:8px 0;"></div>
+    <div class="grid-2"><button class="secondary" id="pl-cancel">취소</button><button id="pl-save">저장</button></div></div>`;
+  document.body.appendChild(back);
+  const $ = q => back.querySelector(q), mkNow = () => `${y}-${String(m).padStart(2,'0')}`;
+  const draw = () => {
+    const last = new Date(y, m, 0).getDate(), first = new Date(y, m-1, 1).getDay();
+    $('#pl-title').innerHTML = `📆 ${m}월 일정 추가 <span class="muted" style="font-size:.8rem;font-weight:normal;">${y}년</span>`;
+    let h = WEEK.map(w => `<div class="h">${w}</div>`).join('') + '<div></div>'.repeat(first);
+    for (let d = 1; d <= last; d++) {
+      const k = ymd(y, m, d), w = new Date(y, m-1, d).getDay(), n = items.filter(x => x.date === k).length;
+      h += `<button type="button" data-k="${k}" class="${(w===0||w===6||HOLIDAYS.has(k)) ? 'red' : ''} ${k === selK ? 'on' : ''}">${d}${n ? `<small>📝${n}</small>` : ''}</button>`;
+    }
+    $('#pl-cal').innerHTML = h;
+    back.querySelectorAll('#pl-cal button[data-k]').forEach(b => b.onclick = () => { selK = b.dataset.k; draw(); $('#pl-text').focus(); });
+    $('#pl-sel').textContent = selK ? `${dd(selK)} 선택됨 · 내용을 적고 ＋ 추가` : '날짜를 눌러 주세요';
+    $('#pl-list').innerHTML = items.length ? items.map((x, i) => `<div style="display:flex;align-items:center;gap:6px;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:5px 8px;margin-top:4px;"><span style="flex:1;"><b>${dd(x.date)}</b> ${esc(x.text)}</span><button type="button" class="small secondary" data-pdel="${i}" style="width:auto;margin:0;padding:2px 8px;">✕</button></div>`).join('') : '<div class="muted" style="font-size:.9rem;">아직 추가한 일정이 없어요.</div>';
+    back.querySelectorAll('[data-pdel]').forEach(b => b.onclick = () => { items.splice(Number(b.dataset.pdel), 1); draw(); });
+  };
+  $('#pl-prev').onclick = () => { const dt = new Date(y, m - 2, 1); y = dt.getFullYear(); m = dt.getMonth() + 1; selK = ''; draw(); };
+  $('#pl-next').onclick = () => { const dt = new Date(y, m, 1); y = dt.getFullYear(); m = dt.getMonth() + 1; selK = ''; draw(); };
+  $('#pl-add').onclick = () => {
+    const text = $('#pl-text').value.trim();
+    if (!selK) return notify('날짜를 먼저 눌러 주세요.');
+    if (!text) return notify('내용을 적어 주세요.');
+    items.push({ date: selK, text }); $('#pl-text').value = ''; draw();
+  };
+  $('#pl-cancel').onclick = () => back.remove();
+  $('#pl-save').onclick = () => {
+    if (!items.length) return notify('추가한 일정이 없어요.');
+    const arr = memoAll(), base = Date.now();
+    items.forEach((x, i) => { arr.push({ id: base + i, date: x.date, text: x.text }); logEvent('일정 메모', null, `${dd(x.date)} ${x.text}`, x.date); });
+    memoWrite(arr); back.remove();
+    notify(`일정 ${items.length}건을 저장했어요. 게시판에 떠 있어요.`);
+  };
   draw();
 }
 // 🔒 활동일 수정 잠금 (달마다): 잠그면 활동일을 실수로 못 바꿈
