@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.11-482</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.11-483</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2010,11 +2010,11 @@ function schedEditor({ title, mk, days, edu, note, onSave, nav, lockable, sched,
 // (v476) 📆 일정표: 근무와 상관없는 행사·출장 메모 (나만 봄). 근무일·마감 셈에는 안 들어감
 const memoAll = () => { try { const v = JSON.parse(load('jinan_memo') || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
 const memoWrite = arr => { store('jinan_memo', JSON.stringify(arr)); try { renderNewAlert(); } catch (e) {} };
-// 📆 일정 메모를 게시판에서 지움 (v478)
-async function memoDel(id){
+// 📆 일정 메모: 게시판 ✕ → 게시판에서만 숨김 (기록·엑셀은 그대로) (v483)
+function memoDel(id){
   const arr = memoAll(), x = arr.find(z => String(z.id) === String(id));
-  if (!x || !await ask(`${dd(x.date)} "${x.text}" 메모를 지울까요?`)) return;
-  memoWrite(arr.filter(z => z !== x)); logEvent('일정 메모 삭제', null, `${dd(x.date)} ${x.text}`, x.date);
+  if (!x) return;
+  x.done = true; memoWrite(arr); logEvent('일정 메모 확인', null, `${dd(x.date)} ${x.text}`, x.date);
 }
 let smMk = today().slice(0, 7);
 function openSchedMemo(){
@@ -2484,7 +2484,7 @@ function renderNewAlert(){
   const lateHtml = lateL.length ? alertCard('late', 'background:#fffbea;border-color:#d69e2e;padding:4px 10px;', `<b style="color:#975a16;">📝 늦게 등록한 기록 ${lateL.length}건 · 확인해 주세요</b>`,
     lateL.map(x => `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-top:1px dashed #ecc94b;font-size:.9rem;"><span style="flex:1;color:#744210;">${dName(x.p)} <span class="muted" style="font-size:.82rem;">${x.t} ${mdK(x.p[x.k].day)}${x.k === 'lateN' ? ' 활동 시작' : ''} · ${esc(seniorOf(x.p))}</span></span><button type="button" class="small" onclick="lateAck(${x.p.id}, '${x.k}')" style="width:auto;margin:0;padding:4px 10px;background:#38a169;white-space:nowrap;">✔ 확인</button></div>`).join('')) : '';
   // 📆 일정 메모 (v478): 활동일에는 반영하지 않고, 오늘 이후 메모를 게시판에 띄움 (지울 때까지)
-  const memoBoard = memoAll().filter(x => x.date >= today()).sort((a, b) => a.date.localeCompare(b.date));
+  const memoBoard = memoAll().filter(x => x.date === today() && !x.done).sort((a, b) => a.date.localeCompare(b.date));   // (v483) 당일에만, ✕ 누르면 숨김
   const memoHtml = memoBoard.length ? alertCard('memo', 'background:#f7f5ff;border-color:#805ad5;padding:4px 10px;', `<b style="color:#553c9a;">📆 일정 메모 ${memoBoard.length}건</b>`,
     memoBoard.map(x => `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-top:1px dashed #d6bcfa;font-size:.9rem;"><span style="flex:1;color:#44337a;"><b>${dd(x.date)}</b> ${esc(x.text)}</span><button type="button" class="small secondary" onclick="memoDel('${x.id}')" style="width:auto;margin:0;padding:4px 8px;">✕</button></div>`).join('')) : '';
   box.innerHTML = pauseHtml + ltHtml + qdHtml + renderNoSite() + lateHtml + memoHtml + (nf.length ? alertCard('nf', 'background:#f0fff4;border-color:#38a169;padding:4px 10px;', `<b style="color:#22543d;"><span class="tag-doc">!</span> 비대면 교육 미실시 ${nf.length}명</b>`,
