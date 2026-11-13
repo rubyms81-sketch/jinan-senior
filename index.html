@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.12-487</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.13-488</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2155,7 +2155,8 @@ function renderPersonDays(p){
     + (p.hospCall ? `<div class="log" style="border-left-color:#d53f8c;">📞 <b>안부 전화</b> · 마지막 ${mdw(p.hospCall.last)} · <b style="color:${p.hospCall.due <= today() ? 'var(--danger)' : '#97266d'}">다음 ${mdw(p.hospCall.due)}${p.hospCall.due <= today() ? ' (오늘 전화하세요)' : ''}</b>
       <br><button class="small secondary" onclick="callDone(${p.id})">✔ 오늘 통화했어요</button></div>` : '')
     + chg.map(c => `<div class="log warn">🔄 <b>${dd(c.from)} → ${dd(c.to)}</b>${c.reason?` <span class="muted">(${esc(c.reason)})</span>`:''}${c.memo ? ` <span class="muted">📝 ${esc(c.memo)}</span>` : ''}${c.leaderSms ? ` <span class="badge bg-gray">📩 ${mdK(c.leaderSms)} 팀장님께 보고 보냄</span>` : ''}
-      <br><button class="small secondary" onclick="delChange(${c.id})">이 변경 지우기</button></div>`).join('');
+      <br><button class="small secondary" onclick="delChange(${c.id})">이 변경 지우기</button></div>`).join('')
+    + smsRetryHtml(p, chg);
   document.getElementById('btn-custom').textContent = cu ? '🏥 입원 체크 고치기' : '🏥 입원 체크';
   const nMv = chg.length + (cu ? 1 : 0) + (p.hospCall ? 1 : 0);
   document.getElementById('sec-moved').classList.toggle('hidden', !nMv);
@@ -4726,7 +4727,7 @@ function addChange(pre){
     targets.forEach(x => pairs.forEach(({ from: f, to: t }) => {
       const xd = personDays(x, f.slice(0,7));
       if (!xd.includes(f) || (t && xd.includes(t))) return;
-      const rec = { id: Date.now() + (seq++), from: f, to: t, reason, memo }; (x.changes ||= []).push(rec); made.push(rec);
+      const rec = { id: Date.now() + (seq++), from: f, to: t, reason, memo, pid: x.id, sms: 1 }; (x.changes ||= []).push(rec); made.push(rec);
       logEvent('근무일 변경', x, `${dd(f)} → ${dd(t)}${reason?` (${reason})`:''}${memo ? ` · ${memo}` : ''}`, f); done.add(x);
     }));
     saveData(false); back.remove(); renderModal();
@@ -4737,13 +4738,33 @@ function addChange(pre){
       // 1) 어르신 본인께 한 분씩 (본인 글: 바뀐 날짜 안내 + 팀장 연락 문구)
       for (const x of dl) {
         await smsBox({ title: '어르신께 근무일 변경 안내 문자', people: [x], selfOnly: true, text: changeText(x, pairs.map(q => ({ from: q.from, to: q.to })), null, reason),
-          logType: '근무일 변경 안내 문자', logDetail: pairs.map(q => `${dd(q.from)} → ${dd(q.to)}`).join(', ') });
+          logType: '근무일 변경 안내 문자', logDetail: pairs.map(q => `${dd(q.from)} → ${dd(q.to)}`).join(', '),
+          onSent: () => { made.filter(r => r.pid === x.id).forEach(r => r.smsSelf = 1); saveData(false); } });
       }
       // 2) 팀장님께 보고 (한 번에 묶어서)
       await smsBox({ title: '팀장님께 날짜 변경 보고 문자', people: dl, leaderOnly: true, text: leaderChangeText(dl, pairs, reason, memo), logType: '근무일 변경 문자',
         logDetail: pairs.map(x => `${dd(x.from)} → ${dd(x.to)}`).join(', '), onSent: () => { made.forEach(r => r.leaderSms = today()); saveData(false); renderModal(); } });
     });
   };
+}
+// (v488) 문자를 안 보내거나 실수로 닫은 날짜 변경·장기요양 탈락 문자를 다시 보내는 칸
+function smsRetryHtml(p, chg){
+  let h = '';
+  if (chg.some(c => c.sms && !(c.smsSelf && c.leaderSms))) h += `<div class="log warn" style="border-left-color:#2b6cb0;">📩 <b>근무일 변경 문자가 아직 안 끝났어요</b><br><button class="small" onclick="resendChangeSms()">📩 문자 다시 보내기</button></div>`;
+  if (p.ltcSmsTodo && !(p.ltcSmsSelf && p.ltcSmsLeader)) h += `<div class="log warn" style="border-left-color:#2b6cb0;">📩 <b>장기요양 탈락 문자가 아직 안 끝났어요</b><br><button class="small" onclick="resendLtcSms()">📩 문자 다시 보내기</button></div>`;
+  return h;
+}
+async function resendChangeSms(){
+  const p = current(); if (!p) return;
+  const todo = (p.changes||[]).filter(c => c.sms && !(c.smsSelf && c.leaderSms));
+  if (!todo.length) return;
+  const pairs = todo.map(c => ({ from: c.from, to: c.to })), reason = todo[0].reason, memo = todo[0].memo;
+  const txt = pairs.map(q => `${dd(q.from)} → ${dd(q.to)}`).join(', ');
+  if (!todo.every(c => c.smsSelf)) await smsBox({ title: '어르신께 근무일 변경 안내 문자 (다시 보내기)', people: [p], selfOnly: true, text: changeText(p, pairs, null, reason),
+    logType: '근무일 변경 안내 문자', logDetail: txt, onSent: () => { todo.forEach(c => c.smsSelf = 1); saveData(false); } });
+  if (!todo.every(c => c.leaderSms)) await smsBox({ title: '팀장님께 날짜 변경 보고 문자 (다시 보내기)', people: [p], leaderOnly: true, text: leaderChangeText([p], pairs, reason, memo),
+    logType: '근무일 변경 문자', logDetail: txt, onSent: () => { todo.forEach(c => c.leaderSms = today()); saveData(false); } });
+  renderModal();
 }
 function delChange(cid){
   const p = current(); if (!p) return;
@@ -7838,21 +7859,23 @@ function smsBox({ title, people, text, logType, logDetail, free, leaderOnly, sel
         await copyText(rs.map(r => r.num).join(','));
         try { await navigator.share({ files: [img], text: ta.value }); } catch(e) { if (e.name !== 'AbortError') notify('공유 창을 열지 못했어요.'); return; }
         if (logType) logEvent(logType, people.length === 1 ? people[0] : null, `${logDetail || ''} · 사진 포함 → ${rs.length}명`); if (onSent) onSent();
+        back.remove(); resolve(true);   // (v488) 보내면 창 닫고 다음 단계로
         return;
       }
       if (logType) logEvent(logType, people.length === 1 ? people[0] : null, `${logDetail || ''} → ${rs.map(r => r.leader ? '팀장' : r.staff ? r.label : r.p.name).join(', ')}`); if (onSent) onSent();
       await copyText(ta.value); openSmsApp(rs.map(r => r.num), ta.value);
+      back.remove(); resolve(true);   // (v488) 문자 앱을 열면 창을 닫음 (돌아와도 참여자 화면이 다시 뜨지 않음)
     };
     // 카톡: 휴대폰 공유 창 → 카카오톡 → 받는 사람(팀장 등) 고르기
     back.querySelector('#sb-kakao').onclick = async () => {
       if (onSendText) onSendText(ta.value);
       if (logType) logEvent(logType, people.length === 1 ? people[0] : null, `${logDetail || ''} → 카카오톡`); if (onSent) onSent();
-      try { if (navigator.share) { await navigator.share(img && navigator.canShare && navigator.canShare({ files: [img] }) ? { files: [img], text: ta.value } : { text: ta.value }); return; } }
+      try { if (navigator.share) { await navigator.share(img && navigator.canShare && navigator.canShare({ files: [img] }) ? { files: [img], text: ta.value } : { text: ta.value }); back.remove(); resolve(true); return; } }
       catch(e) { if (e.name === 'AbortError') return; }
       const ok = await copyText(ta.value);
       notify(ok ? '글을 복사했어요.\n카카오톡을 열어 대화방에 붙여 넣어 보내세요.' : '이 휴대폰에서는 바로 보낼 수 없어요.\n"문구 복사" 후 카카오톡에 붙여 넣어 주세요.');
     };
-    back.querySelector('#sb-close').onclick = () => { back.remove(); resolve(); };
+    back.querySelector('#sb-close').onclick = () => { back.remove(); resolve(false); };
   });
 }
 function smsDialog(p, l){
@@ -8391,10 +8414,17 @@ async function ltcCheck(pid){
   logEvent('장기요양 탈락', p, `${mdK(d)} 탈락 · 장기요양 1~5등급 판정 (사업별 참여자 관리에서 참여상태 "탈락"으로 고치기)`, d);
   saveData(false); renderList(); renderNewAlert(); if (current()?.id === p.id) renderModal();
   // 사유(장기요양 1~5등급)와 함께 본인께 · 담당 팀장께 각각 문자 (사용자 요청, 2026-11-01)
-  if (await showDialog(`${p.name} 어르신께 중도포기 안내 문자(사유: 장기요양 1~5등급)를 보낼까요?\n받는 분: 본인, 그다음 담당 팀장님`, true, ['문자 보내기', '나중에'])) {
-    await smsBox({ title: '본인께 중도포기 안내 문자', people: [p], selfOnly: true, text: quitText(p).replace(/\n※[^\n]*/, ''), logType: '중도포기 문자', logDetail: `${mdK(d)}부터 · 장기요양 1~5등급` });
-    await smsBox({ title: '팀장님께 중도포기 보고 문자', people: [p], leaderOnly: true, text: ltcLeaderText(p), logType: '중도포기 문자', logDetail: `${mdK(d)}부터 · 장기요양 1~5등급` });
-  }
+  p.ltcSmsTodo = true; delete p.ltcSmsSelf; delete p.ltcSmsLeader; saveData(false);
+  if (await showDialog(`${p.name} 어르신께 중도포기 안내 문자(사유: 장기요양 1~5등급)를 보낼까요?\n받는 분: 본인, 그다음 담당 팀장님`, true, ['문자 보내기', '나중에'])) await ltcSendSteps(p);
+}
+// (v488) 본인 문자 → 팀장 문자. 이미 보낸 단계는 건너뜀
+async function ltcSendSteps(p){
+  if (!p.ltcSmsSelf) await smsBox({ title: '본인께 중도포기 안내 문자', people: [p], selfOnly: true, text: quitText(p).replace(/\n※[^\n]*/, ''), logType: '중도포기 문자', logDetail: `${mdK(p.ltc)}부터 · 장기요양 1~5등급`, onSent: () => { p.ltcSmsSelf = 1; saveData(false); } });
+  if (!p.ltcSmsLeader) await smsBox({ title: '팀장님께 중도포기 보고 문자', people: [p], leaderOnly: true, text: ltcLeaderText(p), logType: '중도포기 문자', logDetail: `${mdK(p.ltc)}부터 · 장기요양 1~5등급`, onSent: () => { p.ltcSmsLeader = 1; saveData(false); } });
+}
+async function resendLtcSms(){
+  const p = current(); if (!p) return;
+  await ltcSendSteps(p); renderModal();
 }
 // 장기요양 탈락 때 팀장님께 드리는 문자 (사용자 승인 문안, 2026-11-01)
 function ltcLeaderText(p){
