@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.14-489</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.14-490</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2154,7 +2154,8 @@ function renderPersonDays(p){
       <br><button class="small secondary" onclick="addChange({ reason: '입원' })">고치기</button> <button class="small secondary" onclick="delCustom()">지우기</button></div>` : '')
     + (p.hospCall ? `<div class="log" style="border-left-color:#d53f8c;">📞 <b>안부 전화</b> · 마지막 ${mdw(p.hospCall.last)} · <b style="color:${p.hospCall.due <= today() ? 'var(--danger)' : '#97266d'}">다음 ${mdw(p.hospCall.due)}${p.hospCall.due <= today() ? ' (오늘 전화하세요)' : ''}</b>
       <br><button class="small secondary" onclick="callDone(${p.id})">✔ 오늘 통화했어요</button></div>` : '')
-    + chg.map(c => `<div class="log warn">🔄 <b>${dd(c.from)} → ${dd(c.to)}</b>${c.reason?` <span class="muted">(${esc(c.reason)})</span>`:''}${c.memo ? ` <span class="muted">📝 ${esc(c.memo)}</span>` : ''}${c.leaderSms ? ` <span class="badge bg-gray">📩 ${mdK(c.leaderSms)} 팀장님께 보고 보냄</span>` : ''}
+    + [...chg].sort((a, b) => { const ka = a.to && a.to < a.from ? a.to : a.from, kb = b.to && b.to < b.from ? b.to : b.from; return ka < kb ? -1 : ka > kb ? 1 : (a.id || 0) - (b.id || 0); })   // (v490) 날짜순 (빠진 날·바꾼 날 중 이른 날)
+    .map(c => `<div class="log warn">🔄 <b>${dd(c.from)} → ${dd(c.to)}</b>${c.reason?` <span class="muted">(${esc(c.reason)})</span>`:''}${c.memo ? ` <span class="muted">📝 ${esc(c.memo)}</span>` : ''}${c.leaderSms ? ` <span class="badge bg-gray">📩 ${mdK(c.leaderSms)} 팀장님께 보고 보냄</span>` : ''}
       <br><button class="small secondary" onclick="delChange(${c.id})">이 변경 지우기</button></div>`).join('')
     + smsRetryHtml(p, chg);
   document.getElementById('btn-custom').textContent = cu ? '🏥 입원 체크 고치기' : '🏥 입원 체크';
