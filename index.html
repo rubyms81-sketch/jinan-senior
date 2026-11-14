@@ -120,7 +120,7 @@
   .chip { background:var(--tint); color:var(--primary); border-radius:14px; padding:5px 10px; font-size:.9rem; font-weight:bold; }
   .chip.gray { background:#edf2f7; color:#718096; font-weight:normal; }
   .chip.moved { background:#fffaf0; color:var(--warning); }
-  .chip.off { background:#edf2f7; color:#a0aec0; text-decoration:line-through; font-weight:normal; }
+  .chip.off { background:#edf2f7; color:#a0aec0; text-decoration:line-through; text-decoration-color:#e53e3e; text-decoration-thickness:2px; font-weight:normal; }   /* (v492) 빼는 날 짝대기 빨강 */
   .chip.daybtn.sms-chip { flex:1 1 90px; justify-content:center; background:var(--tint); color:var(--primary); border:2px solid var(--tint-bd); }
   .chip.daybtn.sms-chip .trip { color:var(--primary); }
   .grp-chk { display:flex; align-items:center; gap:10px; padding:11px 12px; margin:6px 0; border:1px solid #e2e8f0; border-radius:10px; background:#fff; font-weight:normal; cursor:pointer; }
@@ -216,7 +216,7 @@
   .cal button.work { background:var(--primary); color:#fff; border-color:var(--primary); opacity:.55; }
   .cal button.from { background:#fffaf0; color:var(--warning); border:2px dashed var(--warning); opacity:1; }
   .cal button.pick { background:var(--warning); color:#fff; border-color:var(--warning); font-weight:bold; }
-  .cal button.skip { background:#fff; color:#a0aec0; border:2px dashed #a0aec0; text-decoration:line-through; }
+  .cal button.skip { background:#fff; color:#a0aec0; border:2px dashed #a0aec0; text-decoration:line-through; text-decoration-color:#e53e3e; text-decoration-thickness:2px; }
   #cg-cal button:disabled.work { opacity:.4; }
   #cg-cal button.red:disabled, #sc-cal button.red { color:#e53e3e; }   /* 빨간 날(토·일·공휴일)은 빨간 글씨로 */
   #cg-cal button.red:disabled { background:#fff5f5; opacity:.6; }   /* 지난 근무일은 흐리게 (못 바꿈) */
@@ -433,7 +433,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.14-491</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.14-492</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
