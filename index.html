@@ -436,7 +436,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.15-502</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.15-503</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2116,7 +2116,7 @@ function renderOtherDays(p, mk){
     const e = eduOn(p, d);
     return e ? `<span class="chip edu">🎓 ${dd(d)} ${esc(e.name)}</span>`
       : `<span class="chip wd ${moved.has(d) ? 'moved' : ''} ${d < today() ? 'past' : ''}">${dd(d)}${moved.has(d) ? ' 변경' : ''}</span>`; }).join('')
-    + chg.filter(c => !days.includes(c.from)).map(c => `<span class="chip off">${dd(c.from)}</span>`).join('')
+    + chg.filter(c => !days.includes(c.from) && !c.to).map(c => `<span class="chip off">${dd(c.from)}</span>`).join('')
     + (cu ? `<div class="muted" style="width:100%;margin-top:6px;">${cu.inHosp ? '🏥 입원 중' : '🩹 보충 근무'}${cu.reason && !cu.inHosp ? ` · ${esc(cu.reason)}` : ''}${cu.hosp?.length ? ` · 🏥 입원 ${rangeText([...cu.hosp])}` : ''}</div>` : '');
   drawDayTabs();
 }
@@ -2129,13 +2129,14 @@ function renderPersonDays(p){
   document.getElementById('m-days-title').innerHTML = `📅 ${curMonth}월 근무일 (${days.length}일)${cu ? (cu.inHosp ? '' : ' <span class="badge bg-warning" style="vertical-align:2px;">🩹 보충 근무</span>') : ''}`;
   if (cu) {
     // 보충 근무: 원래 근무일 중 쉰 날(줄 긋기) + 실제 근무일(보충한 날은 주황)
-    const all = cu.inHosp ? [...hosp].sort() : [...new Set([...days, ...reg, ...hosp])].sort();   // 입원 중이면 입원 날만 (근무일·보충 날짜 숨김)
+    const movedFrom = new Set(chg.filter(c => c.to).map(c => c.from));   // 다른 날로 바꾼 원래 날은 아예 안 보임 (사용자 요청, 2026-11-15)
+    const all = (cu.inHosp ? [...hosp].sort() : [...new Set([...days, ...reg, ...hosp])].sort()).filter(d => !movedFrom.has(d) || days.includes(d) || hosp.has(d));   // 입원 중이면 입원 날만 (근무일·보충 날짜 숨김)
     document.getElementById('m-days').innerHTML = all.map(d => hosp.has(d) ? `<span class="chip hosp">${dd(d)} ${hospIsIn(p, addDays(d, -1)) ? '입원중' : '입원'}</span>` : hospOutDay(p, d) ? `<span class="chip hosp">${dd(d)} 퇴원</span>` : days.includes(d)
       ? `<span class="chip wd ${(!reg.includes(d) || moved.has(d))?'moved':''} ${d < today()?'past':''}" data-d="${d}">${dd(d)}${moved.has(d)?' 변경':!reg.includes(d)?' 보충':''}</span>`
       : `<span class="chip off">${dd(d)} 쉼</span>`).join('');
   } else {
     document.getElementById('m-days').innerHTML = days.map(d => `<span class="chip wd ${moved.has(d)?'moved':''} ${d < today()?'past':''}" data-d="${d}">${dd(d)}${moved.has(d)?' 변경':''}</span>`).join('')
-      + chg.filter(c => !days.includes(c.from)).map(c => `<span class="chip off">${dd(c.from)}</span>`).join('');
+      + chg.filter(c => !days.includes(c.from) && !c.to).map(c => `<span class="chip off">${dd(c.from)}</span>`).join('');
   }
   // 교육 날은 보라색 🎓 (누르면 지우기)
   document.querySelectorAll('#m-days .chip.wd').forEach(c => { const e = eduOn(p, c.dataset.d); if (!e) return;
