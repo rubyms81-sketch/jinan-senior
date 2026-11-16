@@ -442,7 +442,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.16-514</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.17-515</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2410,6 +2410,14 @@ const dayCalled = (p, k) => (p.dayCalls || []).includes(k);
 // 📩 바뀐 날짜 근무 안내 문자를 보낸 날 (보낸 분은 오늘 칸·팝업에서 뺌)
 const daySent = (p, k) => (p.daySent || []).includes(k);
 function markDaySent(p, k){ if (!daySent(p, k)) (p.daySent ||= []).push(k); saveData(false); renderList(); }
+// (v515) 당일 안내 문자를 보낸 분은 '확인'을 누를 때까지 게시판에 남겨 두고, 잘못 보냈으면 다시 보내기
+const daySentOk = (p, k) => (p.daySentOk || []).includes(k);
+function daySentOkMark(id, k){ const p = participants.find(x => x.id === id); if (!p) return; if (!daySentOk(p, k)) (p.daySentOk ||= []).push(k); logEvent('안내 문자 확인', p, `${k} 바뀐 날 안내 문자 확인`, k); saveData(false); renderList(); }
+async function resendDaySms(id){
+  const p = participants.find(x => x.id === id); if (!p) return;
+  const d = today();
+  await smsBox({ title: `📩 오늘 근무 안내 문자 다시 · ${p.name}`, people: [p], text: dayWorkText(dayWorkTpl(), p, d), logType: '근무일 당일 안내 문자', logDetail: `${d} ${mdKo(d)} 바뀐 날 근무 (다시 보냄)` });
+}
 // 🆕 그달 새로 들어온 어르신 (2월 이후 근무 시작으로 등록한 분) — 그 달에만 간단히 보여 줌
 // 맨 위 알림 칸: 오른쪽 화살표로 접기·펼치기 (처음엔 접힘, 펼친 상태는 다시 그려도 그대로)
 const alertOpen = {};
@@ -2580,6 +2588,13 @@ function renderCallAlert(){
       ${chg.length ? `<button type="button" class="small full" onclick="dayWorkPop(true)" style="margin:6px 0 2px;background:#2b6cb0;">📩 오늘 근무 안내 문자 보내기</button>` : ''}
       ${wxHeavyKind() && !wxPassedToday() ? `<div style="display:flex;gap:6px;margin:6px 0 2px;"><button type="button" class="small" onclick="wxPop(true)" style="flex:1;margin:0;background:#2f855a;">☔ 오늘 ${wxHeavyKind() === 'snow' ? '눈' : '비'} 안내 문자 보내기</button><button type="button" class="small secondary" onclick="wxPass()" style="width:auto;margin:0;white-space:nowrap;">⏭ 그냥 넘기기</button></div>` : ''}
       ${tmr.length ? `<div class="muted" style="font-size:.85rem;margin-top:4px;">내일 바뀐 날짜로 근무:${tmr.map(x => `<a href="#" onclick="openModal(${x.p.id});return false;" style="color:inherit;">${nmH(x.p)}</a>`).join(', ')}</div>` : ''}`);
+  }
+  // (v515) 안내 문자를 보낸 분 중 아직 확인 안 한 분: 다시 보내기·확인 칸
+  const sentOpen = chgAll.filter((x, i, a) => daySent(x.p, td) && !daySentOk(x.p, td) && a.findIndex(y => y.p === x.p) === i);
+  if (sentOpen.length) {
+    h += alertCard('daysent', 'background:#f0fff4;border-color:#38a169;', `<div style="font-weight:bold;color:#2f855a;">📩 오늘 안내 문자 보낸 어르신 ${sentOpen.length}명 · 잘못 보냈으면 다시 보내세요</div>`, `
+    ${sentOpen.map(x => `<div class="call-row"><button class="who" onclick="openModal(${x.p.id})"><b>${nmH(x.p)}</b> <span class="muted">${esc(x.p.town)} · ${esc(seniorOf(x.p))}</span></button>
+      <button class="small" style="margin:0;" onclick="resendDaySms(${x.p.id})">📩 다시 보내기</button> <button class="small secondary" style="margin:0;" onclick="daySentOkMark(${x.p.id}, '${td}')">✔ 확인</button></div>`).join('')}`);
   }
   h += rptDayHtml();
   // (v152) 약 안내 알림: 통화 메모에서 정한 기간(N개월)이 되면 게시판에 띄움
