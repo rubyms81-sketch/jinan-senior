@@ -436,7 +436,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.15-504</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.16-505</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -4141,7 +4141,7 @@ function tripShort(d){
   if (!t || (!t.towns?.length && !t.staff?.length)) return '';
   return tripHTML(t.towns, t.staff, t.writer);
 }
-const tripLong = d => { const t = trips[d]; if (t?.none) return '출장 안 나감'; return t ? `${(t.towns||[]).join('·')}${t.staff?.length?` (${t.staff.map(x => (t.writer||[]).includes(x) ? x + '✍' : x).join('·')})`:''}` : ''; };
+const tripLong = d => { const t = trips[d]; if (t?.none) return '출장 안 나감' + (t.why ? ` (${t.why})` : ''); return t ? `${(t.towns||[]).join('·')}${t.staff?.length?` (${t.staff.map(x => (t.writer||[]).includes(x) ? x + '✍' : x).join('·')})`:''}` : ''; };
 function openTrip(d){
   const t = trips[d] || {towns:[], staff:[]};
   const selT = new Set(t.towns||[]), selS = new Set(t.staff||[]), selW = new Set(t.writer||[]);
@@ -4149,6 +4149,9 @@ function openTrip(d){
   const back = document.createElement('div'); back.className = 'dlg-back';
   back.innerHTML = `<div class="dlg">
     <div style="font-weight:bold;font-size:1.1rem;margin-bottom:6px;">🚗 ${Number(d.slice(5,7))}월 ${dd(d)} 출장</div>
+    <label>출장 안 나가는 사유</label>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">${['병원','개인 사정','행사','집안일'].map(w => `<button type="button" class="small secondary" data-why="${w}" style="width:auto;margin:0;">${w}</button>`).join('')}</div>
+    <input type="text" id="tp-why" placeholder="예: 병원 진료 (직접 적기)" autocomplete="off" value="${esc(t.why || '')}" style="margin:0 0 10px;">
     <button type="button" class="full ${t.none?'danger':'secondary'}" id="tp-none" style="margin-bottom:10px;">${t.none ? '✕ 이날은 출장 안 나감 <small>(누르면 취소)</small>' : '✕ 이날은 출장 안 나감'}</button>
     <label>가는 지역</label>
     <div class="pick-grid" id="tp-towns">${order.map(x => `<button type="button" class="pick2" data-v="${x}">${x}</button>`).join('')}</div>
@@ -4213,9 +4216,14 @@ function openTrip(d){
     done();
   };
   // 바빠서 출장을 안 나가는 날: 바깥 날짜 칸에 ✕ 표시
+  back.querySelectorAll('[data-why]').forEach(b => b.onclick = () => { back.querySelector('#tp-why').value = b.dataset.why; });
   back.querySelector('#tp-none').onclick = () => {
     if (t.none) { delete trips[d]; logEvent('출장 일정', null, `${dd(d)} 출장 안 나감 취소`, d); }
-    else { trips[d] = { none: true }; logEvent('출장 일정', null, `${dd(d)} 출장 안 나감`, d); }
+    else {
+      const why = back.querySelector('#tp-why').value.trim();   // 사유는 꼭 적어야 함 (사용자 요청, 2026-11-16)
+      if (!why) return notify('출장 안 나가는 사유를 적어 주세요.');
+      trips[d] = { none: true, why }; logEvent('출장 일정', null, `${dd(d)} 출장 안 나감 (${why})`, d);
+    }
     done();
   };
   back.querySelector('#tp-clear').onclick = () => { delete trips[d]; logEvent('출장 일정', null, `${dd(d)} 지움`, d); done(); };
