@@ -442,7 +442,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.19-528</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.19-529</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -4648,7 +4648,7 @@ function addChange(pre){
       const tag = ee ? ee.slice(0, 4) : onK ? (prevOn ? '입원중' : '입원') : hospOutDay(p, k) ? '퇴원' : isStart() && k === startFrom ? '시작' : isStart() && startFrom && k < startFrom && rawDays.includes(k) ? '빠짐' : isQuit() && quitFrom && k === quitFrom ? '포기' : isQuit() && quitFrom && k > quitFrom && isWork ? '빠짐' : fromSet.has(k) ? `→${dd(fromSet.get(k)).replace(/\(.*/, '')}` : k === from ? '원래' : isTo ? '바꿈' : isH ? '입원' : k === end ? '마감' : '';
       const red = w === 0 || w === 6 || HOLIDAYS.has(k);   // 토·일·공휴일(빨간 날)로는 못 옮김
       const qd = quitDayOf(p), gone = qd && k >= qd;   // 이미 중도포기한 날 이후는 못 넣음
-      /* 중도포기: 마감일 뒤 날짜도 고를 수 있음 (v268) */ const off = isHosp() || isEdu() || (!$('#cg-type').value && (isH || hospOutDay(p, k))) ? false : isStart() ? (after || red) : isQuit() ? (red && !isWork) : ((past || after || gone || (red && !isWork)) && !isFrom && !isTo);
+      /* 중도포기: 마감일 뒤 날짜도 고를 수 있음 (v268) */ const off = isHosp() || isEdu() || (!$('#cg-type').value && (isH || hospOutDay(p, k))) ? false : isStart() ? (after || red) : isQuit() ? (red && !isWork) : (((past && !(isWork && mk === monthKey())) || after || gone || (red && !isWork)) && !isFrom && !isTo);   /* (v529) 이번 달 지난 근무일은 고칠 수 있음(사유 필수) */
       h += `<button data-k="${k}" class="${cls}" ${off ? 'disabled' : ''}>${d}${tag ? `<small>${tag}</small>` : ''}</button>`;
     }
     $('#cg-cal').innerHTML = h;
@@ -4830,6 +4830,8 @@ function addChange(pre){
       return;
     }
     if (!pairs.length) return notify(from ? `${dd(from)}을 옮길 날짜를 누르거나 "이 날 빼기"를 눌러 주세요.` : '바꿀 근무일을 골라 주세요.');
+    const pastEdit = pairs.some(x => x.from < td);   // (v529) 지난 날짜 수정: 사유 필수, 변경 이력에 표시
+    if (pastEdit && !reason) return notify('지난 날짜를 바꾸려면 사유를 골라 주세요.');
     const targets = [p, ...(($('#cg-all')?.checked) ? mates : [])];
     let seq = 0; const done = new Set();
     const made = [];
@@ -4837,7 +4839,7 @@ function addChange(pre){
       const xd = personDays(x, f.slice(0,7));
       if (!xd.includes(f) || (t && xd.includes(t))) return;
       const rec = { id: Date.now() + (seq++), from: f, to: t, reason, memo, pid: x.id, sms: 1 }; (x.changes ||= []).push(rec); made.push(rec);
-      logEvent('근무일 변경', x, `${dd(f)} → ${dd(t)}${reason?` (${reason})`:''}${memo ? ` · ${memo}` : ''}`, f); done.add(x);
+      logEvent('근무일 변경', x, `${dd(f)} → ${dd(t)}${reason?` (${reason})`:''}${memo ? ` · ${memo}` : ''}${f < td ? ' · 지난 날짜 수정' : ''}`, f); done.add(x);
     }));
     saveData(false); back.remove(); renderModal();
     const dl = [...done], txt = pairs.map(x => `${dd(x.from)} → ${dd(x.to)}`).join('\n');
