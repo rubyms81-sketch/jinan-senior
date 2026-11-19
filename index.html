@@ -442,7 +442,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.19-525</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.19-526</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -2436,7 +2436,25 @@ async function resendDaySms(id){
 const alertOpen = {};
 const alertCard = (key, cardStyle, title, body) => `<div class="call-card" style="${cardStyle}"><details class="chg-box" data-alert="${key}" ${alertOpen[key] ? 'open' : ''} style="margin-top:0;border-top:none;padding-top:0;">
   <summary>${title}<span class="chg-arrow"></span></summary><div style="margin-top:4px;">${body}</div></details></div>`;
-const bindAlerts = box => box.querySelectorAll('details[data-alert]').forEach(d => d.ontoggle = () => { alertOpen[d.dataset.alert] = d.open; });
+// 📌 게시판 확인 사항 (v526): 특이사항에서 "게시판에 올리기"를 켠 것. ✕로 내려야 사라짐(특이사항 기록은 그대로)
+function boardItems(){ const out = []; participants.forEach(p => (p.notes || []).forEach(n => { if (n.board) out.push({ p, n }); })); return out.sort((a, b) => String(b.n.date).localeCompare(String(a.n.date)) || a.p.name.localeCompare(b.p.name)); }
+function boardHtml(){
+  const items = boardItems(); if (!items.length) return '';
+  return alertCard('board', 'background:#fff5f5;border-color:#e53e3e;', `<div style="font-weight:bold;color:#c53030;">📌 게시판 확인 사항 ${items.length}건</div>`,
+    items.map(({ p, n }) => `<div class="call-row"><button class="who" onclick="openModal(${p.id})"><b>${nmH(p)}</b> <span class="muted">${esc(p.town)} · ${esc(seniorOf(p))}</span></button>
+      <div style="font-size:.92rem;margin:2px 0 6px;">${n.cat ? `<span class="muted">[${esc(n.cat)}]</span> ` : ''}${esc(n.text)} <span class="muted">(${esc(n.date)})</span></div>
+      <button class="small" style="margin:0;" onclick="boardEdit(${p.id}, ${n.id})">✏️ 고치기</button>
+      <button class="small secondary" style="margin:0;" onclick="boardOff(${p.id}, ${n.id})">✕ 게시판에서 내리기</button></div>`).join(''));
+}
+async function boardOff(pid, nid){
+  const p = participants.find(x => x.id === pid), n = p && (p.notes || []).find(x => x.id === nid); if (!n) return;
+  if (!await ask('게시판에서 내릴까요?\n(특이사항 기록은 그대로 남아요)')) return;
+  n.board = false; saveData(false);
+  logEvent('게시판 내림', p, `${n.cat ? `[${n.cat}] ` : ''}${n.text}`, n.date);
+  renderCallAlert(); if (current() && current().id === pid) renderModal();
+}
+function boardEdit(pid, nid){ openModal(pid); setTimeout(() => openNote(nid), 250); }
+const bindAlerts = box =>box.querySelectorAll('details[data-alert]').forEach(d => d.ontoggle = () => { alertOpen[d.dataset.alert] = d.open; });
 const sortPs = ps => ps.sort((a,b) => TOWNS.indexOf(a.town) - TOWNS.indexOf(b.town) || seniorRank(seniorOf(a)) - seniorRank(seniorOf(b)) || a.name.localeCompare(b.name));
 // 그달 중도포기한 어르신 (본인 사정 · 감점 누적) → [{p, date, why}]
 function quitsIn(mk){
@@ -2609,6 +2627,7 @@ function renderCallAlert(){
     ${sentOpen.map(x => `<div class="call-row"><button class="who" onclick="openModal(${x.p.id})"><b>${nmH(x.p)}</b> <span class="muted">${esc(x.p.town)} · ${esc(seniorOf(x.p))}</span></button>
       <button class="small" style="margin:0;" onclick="resendDaySms(${x.p.id})">📩 다시 보내기</button> <button class="small secondary" style="margin:0;" onclick="daySentOkMark(${x.p.id}, '${td}')">✔ 확인</button></div>`).join('')}`);
   }
+  h += boardHtml();   // (v526) 📌 게시판에 올린 특이사항
   h += rptDayHtml();
   // (v152) 약 안내 알림: 통화 메모에서 정한 기간(N개월)이 되면 게시판에 띄움
   const memoDue = participants.filter(p => (p.calls || []).length && p.calls[p.calls.length - 1].due <= td)
@@ -2944,26 +2963,32 @@ function openNote(id, after){
     <div class="grid-2" id="nt-cats" style="margin-bottom:10px;">${NOTE_CATS.map(([c,i]) => `<button type="button" class="reason" data-v="${c}">${i} ${c}</button>`).join('')}</div>
     <label>내용</label>
     <textarea id="nt-text" rows="4" placeholder="예: 집에서 넘어져 손목 골절, 진안의료원 입원 (일자리 하다 다친 것 아님)"></textarea>
+    <label style="display:flex;align-items:center;gap:8px;margin:8px 0 10px;"><input type="checkbox" id="nt-board" style="width:auto;margin:0;"> 📌 게시판에 올리기 (✕로 내릴 때까지 게시판에 보임)</label>
     <div class="grid-2"><button class="secondary" id="nt-cancel">취소</button><button id="nt-save">저장</button></div></div>`;
   document.body.appendChild(bg);
   const showDate = () => bg.querySelector('#nt-date').innerHTML = `📅 <b>${date.slice(0,4)}년 ${Number(date.slice(5,7))}월 ${dd(date)}</b>${date===today()?' 오늘':''} <span class="muted">바꾸기 ▾</span>`;
   const pick = v => { cat = v; bg.querySelectorAll('#nt-cats button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); };
   showDate(); pick(cat);
   bg.querySelector('#nt-text').value = old?.text || '';
+  bg.querySelector('#nt-board').checked = !!old?.board;
   bg.querySelectorAll('#nt-cats button').forEach(b => b.onclick = () => pick(b.classList.contains('on') ? '' : b.dataset.v));
   bg.querySelector('#nt-date').onclick = () => openDatePicker(date, k => { date = k; showDate(); }, '📝 일이 있었던 날을 누르세요');
   bg.querySelector('#nt-cancel').onclick = () => bg.remove();
   bg.querySelector('#nt-save').onclick = () => {
     const text = bg.querySelector('#nt-text').value.trim();
     if (!text) return notify('내용을 적어 주세요.');
+    const board = bg.querySelector('#nt-board').checked, wasBoard = !!old?.board;   // (v526) 📌 게시판 올림·내림
     if (old) {
       logEvent('특이사항 수정', p, `${cat?`[${cat}] `:''}${text}${old.date!==date?` (날짜 ${old.date} → ${date})`:''}`, date);
-      Object.assign(old, { date, cat, text });
+      Object.assign(old, { date, cat, text, board });
+      if (board && !wasBoard) logEvent('게시판 올림', p, `${cat?`[${cat}] `:''}${text}`, date);
+      if (!board && wasBoard) logEvent('게시판 내림', p, `${cat?`[${cat}] `:''}${text}`, date);
     } else {
-      (p.notes ||= []).push({ id: Date.now(), date, cat, text });
+      (p.notes ||= []).push({ id: Date.now(), date, cat, text, board });
       logEvent('특이사항', p, `${cat?`[${cat}] `:''}${text}`, date);
+      if (board) logEvent('게시판 올림', p, `${cat?`[${cat}] `:''}${text}`, date);
     }
-    saveData(false); bg.remove(); if (after) after(); else renderModal();
+    saveData(false); bg.remove(); if (after) after(); else renderModal(); renderCallAlert();
   };
   // 자판은 내용 칸을 눌렀을 때만 뜨도록 자동 포커스 안 함
 }
