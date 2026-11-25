@@ -442,7 +442,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.23-533</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.25-534</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -3525,6 +3525,7 @@ function openZone(id){
       <button type="button" class="warning full" id="zn-add" data-zk="add" style="margin-bottom:8px;">＋ 경로당 고르기</button>
       <button type="button" class="warning full" id="zn-fac-b" style="margin-bottom:8px;">＋ 역량 넣기 (보육·공공복지·맥가이버·안전)</button>
       <button type="button" class="secondary full" id="zn-course" data-zk="course" style="margin:0 0 10px;">📥 모니터링 코스표 내려받기 (엑셀)</button>
+      <button type="button" class="warning full" id="zn-diary" data-zk="diary" style="margin:0 0 10px;">📝 활동일지 제출 체크</button>
       <details id="zn-sites-box" data-zk="sites" class="chg-box" open style="margin-top:0;border-top:none;padding-top:0;">
         <summary><span id="zn-sites-title" style="font-weight:bold;">담당 경로당</span><span class="chg-arrow"></span></summary>
         <div id="zn-order"></div>
@@ -3545,6 +3546,7 @@ function openZone(id){
   document.body.appendChild(bg);
   const $ = q => bg.querySelector(q);
   if ($('#zn-name')) $('#zn-name').value = z.name; $('#zn-phone').value = z.phone || '';
+  $('#zn-diary').onclick = () => openDiaryCheck(z);   // (v534) 활동일지 제출 체크
   $('#zn-lead-ed').onclick = () => {
     const L = participants.find(x => x.id === z.leaderId), d2 = document.createElement('div'); d2.className = 'dlg-back';
     const zTown0 = zoneTown(z) || myTowns[0];
@@ -9135,8 +9137,8 @@ function zoneAttStat(z, d){
 }
 // 구역 창 안: 오늘 도착·미착용 줄 (구역 칸에는 안 보임)
 // ⚙️ 메뉴 안 단추 순서 (이 휴대폰에만 저장, 2026-11-01). ▲▼로 바꿈
-const ZMENU_DEF = ['add','course','sites'];
-const ZMENU_TXT = {add:'경로당 고르기', sites:'담당 경로당', course:'모니터링 코스표'};
+const ZMENU_DEF = ['add','course','sites','diary'];
+const ZMENU_TXT = {add:'경로당 고르기', sites:'담당 경로당', course:'모니터링 코스표', diary:'활동일지 제출 체크'};
 let zmEdit = false, zmBefore = '';
 function zmenuOrder(){
   try { const a = JSON.parse(localStorage.getItem('jinan_zmenu') || 'null');
@@ -9291,6 +9293,45 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+// (v534) 📝 활동일지 제출 체크 (말일에 걷을 때): 구역 안 경로당별로 이번 달 낸 분을 체크. 저장: p.diary = {'YYYY-MM': 낸 날}
+const diaryOn = (p, mk) => !!((p.diary || {})[mk || monthKey()]);
+function openDiaryCheck(z){
+  const mk = monthKey(), mon = Number(mk.slice(5));
+  const bg = document.createElement('div'); bg.className = 'dlg-back';
+  bg.innerHTML = '<div class="dlg" style="text-align:left;max-height:90vh;overflow:auto;"></div>';
+  document.body.appendChild(bg);
+  const dlg = bg.querySelector('.dlg'); let onlyMiss = false;
+  const toggle = p => {
+    p.diary = p.diary || {};
+    const on = !p.diary[mk];
+    if (on) p.diary[mk] = today(); else delete p.diary[mk];
+    saveData(false);
+    logEvent('활동일지 제출', p, `${z.name} · ${mon}월 활동일지 ${on ? '제출 체크' : '제출 취소'}`, today());
+    draw();
+  };
+  const draw = () => {
+    const ms = zoneMembers(z), okN = ms.filter(p => diaryOn(p, mk)).length;
+    const list = ms.filter(p => !onlyMiss || !diaryOn(p, mk));
+    const groups = {}; list.forEach(p => (groups[seniorOf(p)] ||= []).push(p));
+    dlg.innerHTML = `<div style="font-weight:bold;font-size:1.05rem;margin-bottom:4px;">📝 ${esc(z.name)} · ${mon}월 활동일지 제출</div>
+      <div style="text-align:center;margin:6px 0 2px;"><span style="font-size:1.8rem;font-weight:700;color:#2b6cb0;">${okN}</span> <span class="muted">/ ${ms.length}명 제출</span></div>
+      <div class="grid-2" style="margin:8px 0 6px;"><button type="button" class="${onlyMiss ? 'secondary' : ''}" data-act="all" style="margin:0;">전체 ${ms.length}명</button><button type="button" class="${onlyMiss ? '' : 'secondary'}" data-act="miss" style="margin:0;">안 낸 사람만 ${ms.length - okN}명</button></div>
+      ${Object.keys(groups).sort((a, b) => seniorRank(a) - seniorRank(b) || a.localeCompare(b)).map(k => `
+        <div style="font-weight:bold;margin:10px 0 4px;">🏠 ${esc(k)} <span class="muted" style="font-weight:400;font-size:.85rem;">${groups[k].filter(p => diaryOn(p, mk)).length}/${groups[k].length}</span></div>
+        ${groups[k].map(p => { const on = diaryOn(p, mk); return `<div style="display:flex;align-items:center;gap:6px;padding:7px 4px;border-bottom:1px solid #edf2f7;${on ? '' : 'background:#fff5f5;'}">
+          <span style="flex:1;font-weight:600;">${dName(p)}</span>
+          <button type="button" class="small ${on ? '' : 'secondary'}" data-dy="${p.id}" style="width:auto;margin:0;padding:6px 10px;${on ? 'background:#38a169;' : ''}">${on ? '✔ 제출' : '미제출'}</button></div>`; }).join('')}`).join('') || '<div class="muted" style="padding:8px 0;">해당하는 사람이 없습니다.</div>'}
+      <button type="button" class="full secondary" data-act="close" style="margin-top:10px;">닫기</button>`;
+  };
+  dlg.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.act === 'all') { onlyMiss = false; return draw(); }
+    if (b.dataset.act === 'miss') { onlyMiss = true; return draw(); }
+    if (b.dataset.act === 'close') return bg.remove();
+    if (b.dataset.dy) { const p = participants.find(x => String(x.id) === String(b.dataset.dy)); if (p) toggle(p); }
+  });
+  draw();
+}
 function zoneTodayHtml(z){
   const A = zoneAttStat(z, today());
   return A.n ? `🙋 오늘 도착 <b style="font-size:1.2rem;">${A.arr}/${A.n}</b> <span class="muted" style="font-size:.85rem;">· 🦺 미착용 ${A.vNo} · 🪪 미착용 ${A.bNo}</span>` : '';
@@ -10894,7 +10935,7 @@ function exportExcel(){
   const sheet1 = list.map((p, i) => { const s = stats(p), m = mstats(p); return {
     '표시':KIND_TXT[kinds1[i]] || '', '읍면':p.town, '경로당':p.senior, '소속 경로당':p.ownSite || '', '우수 경로당':isBest(p.town, seniorOf(p)) ? '👑' : '', '구역':zoneOf(p)?.name || '', '경로당 확인':p.guess?'추정(확인 필요)':'', '성명':p.name, '성별':p.sex || '', '생일':bdayText(p.bday), '근무 시작':startTag(p) ? `${Number(p.start.slice(5))}월부터` : '', '신규 등록일':newUntil(p) ? p.regDay : '', '중도포기일':quitDayOf(p), '중도포기 사유':stats(p).dropped ? (p.quitWhy || stats(p).status) : '', '활동 중단 시작':p.pause || '', '장기요양 탈락':p.ltc || '', '중도포기서':p.quitPaper ? (p.quitPaper.ok ? `받음 (${p.quitPaper.ok})` : '미확인') : '', '연계':p.linking ? `연계 중 (${p.linking.since} 등록)` : p.linkDone ? `연계 끝 (${p.linkDone.day})` : '', '비대면 교육 서류':p.docNeed ? (p.docOk ? `확인 (${p.docOk})` : '미확인') : '', '서류 사진':p.docNeed && p.docOk ? (p.docPhoto ? `있음 (${p.docPhoto})` : (p.docNoNeed ? `사진 필요 없음 (${p.docNoNeed})` : '없음')) : '', '교체 필요':fixList(p).map(x => `${x.n} (${x.date})`).join(', '), '교체 완료':(p.fixDone || []).map(x => `${x.n.replace(/\s*파손$/, '')} ${x.day}`).join(', '), '나이':p.age, '태어난 해':p.birth || '', '연락처':p.phone, '주소':p.address,
     [`${curMonth}월 점검 횟수`]:mLogs(p).length, [`${curMonth}월 감점`]:-m.pts, [`${curMonth}월 자리 비움`]:m.aways.length, [`${curMonth}월 일당 미지급 일수`]:m.unpaid,
-    [`${curMonth}월 조끼 미착용`]:m.vest, [`${curMonth}월 명찰 미착용`]:m.badge, '누적 이탈 횟수':s.leaves, '누적 감점':s.penalty, '상태':s.status, '마지막 점검일':s.last, '2027 제외':p.ex27 ? '제외 표시' : '',
+    [`${curMonth}월 조끼 미착용`]:m.vest, [`${curMonth}월 명찰 미착용`]:m.badge, '누적 이탈 횟수':s.leaves, '누적 감점':s.penalty, '상태':s.status, '마지막 점검일':s.last, [`${curMonth}월 활동일지 제출`]: stats(p).dropped ? '' : (diaryOn(p) ? `제출 (${p.diary[monthKey()]})` : '미제출'), '2027 제외':p.ex27 ? '제외 표시' : '',
     [`${curMonth}월 활동 날짜`]: personDays(p, monthKey()).map(d => Number(d.slice(8,10))).join(', '),
     [`${curMonth}월 교육 날짜`]: eduOf(p, monthKey()).map(e => `${Number(e.date.slice(8,10))}일 ${e.name}`).join(', '),
     [`${curMonth}월 활동일 수`]: personDays(p, monthKey()).length,
