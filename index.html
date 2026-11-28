@@ -12,9 +12,6 @@
 <meta name="apple-mobile-web-app-title" content="현장점검">
 <title>현장점검</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';document.head.appendChild(s);"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.14.1/firebase-app-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.14.1/firebase-auth-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.14.1/firebase-firestore-compat.js"></script>
 <style>
   :root { --primary-dk:#2c5282; --tint:#ebf8ff; --tint-bd:#90cdf4; --primary:#2b6cb0; --danger:#e53e3e; --warning:#dd6b20; --success:#38a169; --gray:#718096; --bg:#f7fafc; }
   * { box-sizing:border-box; }
@@ -442,7 +439,7 @@ body.ord-hide .ord-btn { display: none !important; }
 <body>
 <div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:99999;background:#f7fafc;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;"><div style="font-size:1.3rem;font-weight:800;color:#1a365d;margin-bottom:12px;">진안군 노인회 일자리 현장 점검</div><div id="login-msg" style="color:#4a5568;margin-bottom:18px;line-height:1.6;">로그인 확인 중입니다…</div><button type="button" onclick="cloudLogin()" style="padding:12px 22px;border-radius:10px;border:none;background:#2b6cb0;color:#fff;font-size:1.05rem;font-weight:700;">구글 계정으로 로그인</button><div style="margin-top:14px;color:#718096;font-size:.9rem;line-height:1.5;">로그인하면 컴퓨터와 휴대폰에서 같은 자료를 봅니다.</div></div>
 
-<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.28-536</span></div></header>
+<header><div id="hd-scene" aria-hidden="true"></div><div class="hd-text"><span id="hd-title" style="word-break:keep-all;">진안군 노인회 일자리 현장 점검</span><div id="wx-label" style="font-size:.78rem;font-weight:normal;opacity:.95;margin-top:2px;min-height:1em;"></div></div><div id="ver-top" style="position:absolute;left:6px;bottom:6px;z-index:3;font-size:.66rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);"><span style="opacity:.85;">버전 2026.11.28-537</span></div></header>
 <div id="wx-layer" aria-hidden="true"></div>
 
 <div class="container">
@@ -885,7 +882,7 @@ const FB_CONFIG = {
   appId: "1:976802627283:web:eb623f93cb4568773c9e26"
 };
 // 이 휴대폰에만 두는 설정(클라우드에 올리지 않음)
-const CLOUD_DEVICE_ONLY = ['jinan_xlpw','jinan_lock','jinan_edu_draft','jinan_weather','jinan_def148','jinan_def151','jinan_photos','jinan_size_dev'];   // jinan_size_dev: 글씨 크기(기기별)
+const CLOUD_DEVICE_ONLY = ['jinan_xlpw','jinan_lock','jinan_edu_draft','jinan_weather','jinan_def148','jinan_def151','jinan_photos','jinan_size_dev','jinan_cloud_off'];   // jinan_size_dev: 글씨 크기(기기별)
 const CLOUD_DEVICE_PREFIX = ['jinan_rptalarm_','jinan_daypop'];
 const CLOUD_CH = 200000; // 문서 하나에 넣을 글자 수 (Firestore 문서 1MB 제한 대비)
 let fbAuth = null, fbDb = null, fbUser = null, cloudBusy = false;
@@ -1015,21 +1012,55 @@ function gateShow(on, msg){
   const m = document.getElementById('login-msg');
   if (m && msg != null) m.textContent = msg;
 }
+// (v537) 구글 연동 켜기·끄기: 끄면 구글 라이브러리를 아예 받지 않고 이 휴대폰 자료로만 씀 (jinan_cloud_off = '1')
+function cloudIsOff(){ try { return localStorage.getItem('jinan_cloud_off') === '1'; } catch(e) { return false; } }
 function cloudBar(u){
   const b = document.getElementById('cloud-bar');
   const gc = document.getElementById('gg-card');
-  if (gc) gc.style.display = u ? '' : 'none';
+  if (gc) gc.style.display = '';
   if (!b) return;
   b.textContent = '';
-  if (!u) return;
-  const s = document.createElement('span');
-  s.textContent = '☁️ 구글 연결됨: ' + (u.email || '');
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.textContent = '로그아웃';
-  btn.style.cssText = 'display:block;margin:8px 0 0;padding:4px 12px;border-radius:6px;border:1px solid #a0aec0;background:#fff;font-size:.85rem;';
-  btn.onclick = cloudLogout;
-  b.appendChild(s); b.appendChild(btn);
+  const off = cloudIsOff();
+  const s = document.createElement('div');
+  s.textContent = off ? '📱 휴대폰만 사용 중 (구글 연동 꺼짐)' : (u ? '☁️ 구글 연결됨: ' + (u.email || '') : '☁️ 구글 연동 켜짐 (로그인 필요)');
+  b.appendChild(s);
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;';
+  const tg = document.createElement('button');
+  tg.type = 'button';
+  tg.textContent = off ? '▶ 구글 연동 켜기' : '■ 구글 연동 끄기';
+  tg.style.cssText = 'padding:4px 12px;border-radius:6px;border:1px solid #a0aec0;background:#fff;font-size:.85rem;';
+  tg.onclick = cloudSwitch;
+  row.appendChild(tg);
+  if (!off && u) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '로그아웃';
+    btn.style.cssText = 'padding:4px 12px;border-radius:6px;border:1px solid #a0aec0;background:#fff;font-size:.85rem;';
+    btn.onclick = cloudLogout;
+    row.appendChild(btn);
+  }
+  b.appendChild(row);
+}
+function cloudSwitch(){
+  const turnOff = !cloudIsOff();
+  if (!confirm(turnOff ? '구글 연동을 끌까요?\n앞으로 이 휴대폰에서만 자료를 씁니다.' : '구글 연동을 켤까요?\n앱을 다시 불러와서 구글 자료와 맞춥니다.')) return;
+  if (turnOff) markSynced();   // 끄기 전 두 쪽이 같은 상태였다고 표시 (다시 켤 때 불필요하게 묻지 않게)
+  try { if (typeof logEvent === 'function') logEvent('설정', null, turnOff ? '구글 연동 끔 (휴대폰만 사용)' : '구글 연동 켬', today()); } catch(e) {}
+  try { rawSet.call(localStorage, 'jinan_cloud_off', turnOff ? '1' : '0'); } catch(e) {}
+  location.reload();
+}
+// 구글 라이브러리는 연동을 켰을 때만 받음 (끄면 인터넷에서 아무것도 받지 않음)
+const FB_SRC = ['https://cdn.jsdelivr.net/npm/firebase@10.14.1/firebase-app-compat.js','https://cdn.jsdelivr.net/npm/firebase@10.14.1/firebase-auth-compat.js','https://cdn.jsdelivr.net/npm/firebase@10.14.1/firebase-firestore-compat.js'];
+function loadFirebase(done){
+  let i = 0;
+  const step = () => {
+    if (i >= FB_SRC.length) return done();
+    const s = document.createElement('script'); s.src = FB_SRC[i++];
+    s.onload = step; s.onerror = () => done();   // 못 받으면 이 휴대폰 자료로 씀
+    document.head.appendChild(s);
+  };
+  step();
 }
 async function cloudLogin(){
   if (!fbAuth) return;
@@ -1074,7 +1105,7 @@ function cloudInit(){
     await cloudSync();
   });
 }
-cloudInit();
+if (cloudIsOff()) { gateShow(false); cloudBar(null); } else loadFirebase(cloudInit);
 </script>
 <script>
 const TOWNS = ['진안읍','용담면','안천면','동향면','상전면','백운면','성수면','마령면','부귀면','정천면','주천면'];
